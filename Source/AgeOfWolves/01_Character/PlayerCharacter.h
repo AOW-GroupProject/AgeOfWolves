@@ -13,6 +13,8 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayer, Log, All)
 
+class UCurveFloat;
+
 UCLASS()
 class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase
 {
@@ -25,14 +27,33 @@ public:
 	APlayerCharacter(const FObjectInitializer& ObjectInitializer);
 
 protected:
+	//~AActor interface
 	virtual void PostInitializeComponents() override;
-	virtual void PossessedBy(AController* NewController) override;
-
-	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	virtual void Tick(float DeltaSeconds) override;
+	//~End Of AActor interface
 
+	//~APawn interface
+	virtual void PossessedBy(AController* NewController) override;
+	//~End Of APawn interface
+
+	//~APawn Interface.
 	virtual void PawnClientRestart() override;
+	//~ End Of APawn Interface.
+
+
+#pragma endregion
+
+#pragma region Control Rotaion
+
+protected:
+	// ~Custom
+	void AdjustControllerRotation(float DeltaSeconds);
+
+	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Control Rotation")
+		UCurveFloat* DirectionCurve;
+	// ~End Of Custom
 
 #pragma endregion
 

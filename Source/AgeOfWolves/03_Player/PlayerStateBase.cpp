@@ -12,6 +12,7 @@
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 
+// @목적 : 로그 메크로입니다. 복사+붙여넣기 활용
 // UE_LOGFMT(LogPlayerStateBase, Log, "");
 
 APlayerStateBase::APlayerStateBase()
@@ -125,6 +126,10 @@ void APlayerStateBase::OnAnyAttributeChanged(const FOnAttributeChangeData& Data)
 				}
 			}
 		}
+	}
+	else if (Data.Attribute == AttributeSet->GetStaminaAttribute())
+	{
+		UE_LOGFMT(LogPlayerStateBase, Log, "{0}", FString::SanitizeFloat(Data.NewValue));
 	}
 
 }
