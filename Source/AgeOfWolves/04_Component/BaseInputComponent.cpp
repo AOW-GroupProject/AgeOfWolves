@@ -33,7 +33,7 @@ void UBaseInputComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InitPlayerInput();
+	InitializePlayersInputActionsSetup();
 
 }
 
@@ -42,8 +42,7 @@ void UBaseInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-// @TODO : Bind Native and Ability Input Action
-void UBaseInputComponent::InitPlayerInput()
+void UBaseInputComponent::InitializePlayersInputActionsSetup()
 {
 	const APawn* Pawn = Cast<APawn>(GetOwner());
 	if (!Pawn)

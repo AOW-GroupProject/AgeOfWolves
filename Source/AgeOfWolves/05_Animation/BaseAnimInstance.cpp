@@ -1,10 +1,14 @@
 #include "BaseAnimInstance.h"
+#include "Logging/StructuredLog.h"
 
 #include "01_Character/CharacterBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 
 #include "KismetAnimationLibrary.h"
+#include "Kismet/KismetMathLibrary.h"
 
+DEFINE_LOG_CATEGORY(LogAnimInstance)
+// UE_LOGFMT(LogAnimInstance, Log, "");
 
 void UBaseAnimInstance::NativeBeginPlay()
 {
@@ -26,19 +30,87 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
 	Super::NativeUpdateAnimation(DeltaSeconds);
 
-	if (OwnerCharacterBase.IsValid())
+	if (OwnerCharacterBase.IsValid() && OwnerCharacterBase->GetController())
 	{
-		//떨어지는 중인가 저장합니다.
+		// 떨어지는 중인가 저장합니다.
 		bFalling = OwnerCharacterBase->GetMovementComponent()->IsFalling();
-		//캐릭터의 움직이는 속도값을 가져옵니다.
-		Speed = OwnerCharacterBase->GetVelocity().Length();
-
+		// 캐릭터의 가속도를 가져옵니다.
 		Velocity = OwnerCharacterBase->GetVelocity();
+		// 캐릭터으 현재 속도를 정의합니다.
+		Speed = OwnerCharacterBase->GetVelocity().Length();
+		// 캐릭터의 이동/비이동 상태를 확인합니다.
 		bShouldMove = Speed > 3.f && OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration() != FVector::ZeroVector;
-
-
-		const auto& characterRotation = OwnerCharacterBase->GetActorRotation();
-		Direction = UKismetAnimationLibrary::CalculateDirection(Velocity, characterRotation);
-
+		// 캐릭터의 이동 방향을 정의합니다.
+		FindMovementDirection();
+		// 캐릭터의 이동 상태를 정의합니다. EMovementState(열거형) 유형의 변수로 나타냅니다.
+		FindMovementState();
 	}
+}
+
+void UBaseAnimInstance::FindMovementState()
+{
+	// 캐릭터의 이동 상태를 정의합니다.
+	FVector Vector1 = OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration();
+	FVector Vector2 = Velocity;
+
+	float Length1 = OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration().Length();
+	float Length2 = Speed;
+
+	Vector1.Normalize();
+	Vector2.Normalize();
+
+	// #1. 방향 전환
+	if (FVector::DotProduct(Vector1, Vector2) < -0.75f)
+	{
+		MovementState = EMovementState::Pivoting;
+	}
+	// #2. 뛰기
+	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 300.f && Length1 > 0.5f && Length2 > 1.0)
+	{
+		MovementState = EMovementState::Run;
+	}
+	// #3. 걷기
+	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 1.f && Length1 > 0.01f && Length2 > 0.f)
+	{
+		MovementState = EMovementState::Walk;
+	}
+	// #4. 정지
+	else
+	{
+		MovementState = EMovementState::Idle;
+	}
+}
+
+void UBaseAnimInstance::FindMovementDirection()
+{
+	// 캐릭터의 현재 가속도 벡터를 기반으로 한 로테이션을 계산
+	FRotator Rotation1 = UKismetMathLibrary::MakeRotFromX(OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration());
+
+	// 캐릭터가 바라보는 방향의 벡터를 기반으로 로테이션을 계산
+	FRotator Rotation2 = OwnerCharacterBase->GetControlRotation();
+
+	// 두 방향 사이의 최소 각도 차이를 계산
+	float Angle = FMath::FindDeltaAngleDegrees(Rotation1.Yaw, Rotation2.Yaw);
+
+	if (Angle >= -70.f && Angle <= 70.f)
+	{
+		MovementDirection = EMovementDirection::Fwd;
+		UE_LOG(LogAnimInstance, Log, TEXT("Fwd : %f"), Angle);
+	}
+	else if (Angle > 70.f && Angle < 110.f)
+	{
+		MovementDirection = EMovementDirection::Left;
+		UE_LOG(LogAnimInstance, Log, TEXT("Left : %f"), Angle);
+	}
+	else if (Angle > -110.f && Angle < -70.f)
+	{
+		MovementDirection = EMovementDirection::Right;
+		UE_LOG(LogAnimInstance, Log, TEXT("Right : %f"), Angle);
+	}
+	else
+	{
+		MovementDirection = EMovementDirection::Bwd;
+		UE_LOG(LogAnimInstance, Log, TEXT("Bwd : %f"), Angle);
+	}
+
 }
