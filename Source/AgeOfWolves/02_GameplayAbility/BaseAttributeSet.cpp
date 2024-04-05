@@ -33,8 +33,7 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 }
 
 UBaseAttributeSet::UBaseAttributeSet()
-{
-}
+{}
 
 
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)

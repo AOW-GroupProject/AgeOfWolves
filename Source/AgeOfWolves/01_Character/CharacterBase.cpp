@@ -11,7 +11,7 @@ DEFINE_LOG_CATEGORY(LogCharacter)
 ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
 {
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = false;
+	PrimaryActorTick.bCanEverTick = true;
 }
 
 // Called when the game starts or when spawned
@@ -24,7 +24,6 @@ void ACharacterBase::BeginPlay()
 void ACharacterBase::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-
 }
 
 UAbilitySystemComponent* ACharacterBase::GetAbilitySystemComponent() const
