@@ -5,6 +5,8 @@
 #include "Logging/StructuredLog.h"
 
 DEFINE_LOG_CATEGORY(LogInputConfig)
+// 로크 매크로
+//UE_LOGFMT(LogInputConfig, Log, "<FString 형식>")
 
 
 UInputConfig::UInputConfig(const FObjectInitializer& ObjectInitializer)
