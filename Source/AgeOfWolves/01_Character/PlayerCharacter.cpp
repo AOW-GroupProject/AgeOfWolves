@@ -67,7 +67,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
 	// [24-03-20] TEST : 임시 Anim Instance 적용
-	static ConstructorHelpers::FClassFinder<UAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/New/AnimationBlueprints/ABP_AkaOni_Base'"));
+	static ConstructorHelpers::FClassFinder<UAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/ABP_AkaOni_Base'"));
 	if (animInstance.Class != NULL)
 		GetMesh()->SetAnimInstanceClass(animInstance.Class);
 
