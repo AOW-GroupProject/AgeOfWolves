@@ -11,12 +11,11 @@
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Camera/CameraComponent.h"
-#include "04_Component/BaseCharacterMovementComponent.h"
 
+#include "04_Component/BaseCharacterMovementComponent.h"
 #include "03_Player/BasePlayerController.h"
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
-
 
 
 DEFINE_LOG_CATEGORY(LogPlayer)
@@ -67,7 +66,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	// Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
 	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
 
-	// [24-03-20] TEST : ÀÓ½Ã Anim Instance Àû¿ë
+	// [24-03-20] TEST : ì„ì‹œ Anim Instance ì ìš©
 	static ConstructorHelpers::FClassFinder<UAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/New/AnimationBlueprints/ABP_AkaOni_Base'"));
 	if (animInstance.Class != NULL)
 		GetMesh()->SetAnimInstanceClass(animInstance.Class);
@@ -109,7 +108,7 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 
 	Super::PossessedBy(NewController);
 
-	// @TODO : Player State·ÎºÎÅÍ ASC¿¡ ´ëÇÑ ÂüÁ¶¸¦ °¡Á®¿É´Ï´Ù.
+	// @TODO : Player Stateë¡œë¶€í„° ASCì— ëŒ€í•œ ì°¸ì¡°ë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
 	if (const auto& PlayerController = CastChecked<ABasePlayerController>(NewController))
 	{
 		if (const auto& PS = PlayerController->GetPlayerState<APlayerStateBase>())
@@ -137,18 +136,18 @@ void APlayerCharacter::AdjustControllerRotation(float DeltaSeconds)
 
 	check(DirectionCurve);
 
-	// Ä³¸¯ÅÍÀÇ ÇöÀç °¡¼Óµµ º¤ÅÍ¸¦ ±â¹İÀ¸·Î ÇÑ ·ÎÅ×ÀÌ¼ÇÀ» °è»ê
+	// ìºë¦­í„°ì˜ í˜„ì¬ ê°€ì†ë„ ë²¡í„°ë¥¼ ê¸°ë°˜ìœ¼ë¡œ í•œ ë¡œí…Œì´ì…˜ì„ ê³„ì‚°
 	FRotator Rotation1 = UKismetMathLibrary::MakeRotFromX(GetCharacterMovement()->GetCurrentAcceleration());
 
-	// Ä³¸¯ÅÍ°¡ ¹Ù¶óº¸´Â ¹æÇâÀÇ º¤ÅÍ¸¦ ±â¹İÀ¸·Î ·ÎÅ×ÀÌ¼ÇÀ» °è»ê
+	// ìºë¦­í„°ê°€ ë°”ë¼ë³´ëŠ” ë°©í–¥ì˜ ë²¡í„°ë¥¼ ê¸°ë°˜ìœ¼ë¡œ ë¡œí…Œì´ì…˜ì„ ê³„ì‚°
 	FRotator Rotation2 = GetControlRotation();
 
-	// µÎ ¹æÇâ »çÀÌÀÇ ÃÖ¼Ò °¢µµ Â÷ÀÌ¸¦ °è»ê
+	// ë‘ ë°©í–¥ ì‚¬ì´ì˜ ìµœì†Œ ê°ë„ ì°¨ì´ë¥¼ ê³„ì‚°
 	float OffsetAngle = DirectionCurve->GetFloatValue(FMath::FindDeltaAngleDegrees(Rotation1.Yaw, Rotation2.Yaw));
 
 	FRotator Rotaion3 = UKismetMathLibrary::MakeRotator(0.f, 0.f, GetControlRotation().Yaw + OffsetAngle);
 
-	// ¼±Çü º¸°£
+	// ì„ í˜• ë³´ê°„
 	FRotator TargetRotation = UKismetMathLibrary::RInterpTo(GetActorRotation(), Rotaion3, DeltaSeconds, 10.f);
 
 	SetActorRotation(TargetRotation);

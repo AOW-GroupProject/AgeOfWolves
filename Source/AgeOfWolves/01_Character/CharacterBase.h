@@ -21,18 +21,19 @@ class AGEOFWOLVES_API ACharacterBase : public ACharacter, public IAbilitySystemI
 {
 	GENERATED_BODY()
 
-public:
-	// Sets default values for this character's properties
-	ACharacterBase(const FObjectInitializer& ObjectInitializer);
-
 #pragma region Default Setting
 
-protected:
-	// Called when the game starts or when spawned
-	virtual void BeginPlay() override;
-
 public:
+	ACharacterBase(const FObjectInitializer& ObjectInitializer);
+
+protected:
+	//~AActor interface
+	virtual void BeginPlay() override;
+	//~End Of AActor Interface
+
+	//~APawn interface
 	virtual void PossessedBy(AController* NewController) override;
+	//~End Of APawn interface
 
 #pragma endregion
 
@@ -40,17 +41,17 @@ public:
 
 protected:
 	/*
-	* [¸ñÀû] : Character °´Ã¼´Â ASC¸¦ WeakObjectPtr Çü½ÄÀ¸·Î ÂüÁ¶ÇÕ´Ï´Ù.
-	* [¼³¸í] : ASC´Â Player State¿¡¼­ °ü¸®ÇÏ¿© Ä¿ÇÃ¸µÀ» ¿ÏÈ­ÇÏ°í, Ä³¸¯ÅÍ °´Ã¼´Â TWeakObjectPtr Çü½ÄÀÇ ´À½¼ÇÑ ÂüÁ¶ Çü½ÄÀÇ Æ÷ÀÎÅÍ¸¸ °®°í ÀÖ½À´Ï´Ù.
+	* @ëª©ì  : Player Stateë¡œë¶€í„° ê°€ì ¸ì˜¨ ASCì— ëŒ€í•œ ì•½í•œ ì°¸ì¡°ë¥¼ ê´€ë¦¬í•©ë‹ˆë‹¤.
+	* @ì„¤ëª… : ì´í›„ ASCê´€ë ¨ ë‚´ìš©ì„ ì •ì˜í•  ê²ƒì„ ëŒ€ë¹„í•˜ì—¬, ì¼ë‹¨ ì•½í•œ ì°¸ì¡°ë§Œ ë“¤ê³  ìˆìŠµë‹ˆë‹¤.
+	* @ì°¸ì¡° : -
 	*/
 	TWeakObjectPtr<UBaseAbilitySystemComponent> AbilitySystemComponent;
 
 public:
 	/*
-	* [¸ñÀû] :	AbilitySytemComponent¸¦ °¡Á®¿À´Â Getter¸¦ Á¤ÀÇÇÕ´Ï´Ù.
-	* [¼³¸í] :	ÇØ´ç ÇÔ¼ö´Â ÀÎÅÍÆäÀÌ½º ÇÔ¼ö·Î, IAbilitySytemInterface Å¬·¡½º¿¡¼­ ¼±¾ğµÇ¾î, ÇØ´ç ÇÔ¼ö È£Ãâ ½Ã ¼¼ºÎÀûÀÎ ¾×ÅÍ Å¬·¡½ºÀÇ ÀÌ¸§À» ¾Ë ÇÊ¿ä ¾øÀÌ,
-	*			IAbilitySystemInterface¸¦ °¡Á®¿Í È£ÃâÇÒ ¼ö ÀÖ½À´Ï´Ù. µû¶ó¼­, GetAbilitySystemComponent() ÀÎÅÍÆäÀÌ½º ÇÔ¼ö´Â ÀÎÅÍÆäÀÌ½º Å¬·¡½½¸£ ÅëÇØ
-	*			È£ÃâÇÏ´Â °ÍÀÌ ±ÇÀåµË´Ï´Ù.
+	* @ëª©ì  : IAbilitySystemInterface ì¸í„°í˜ì´ìŠ¤ í´ë˜ìŠ¤ì˜ ì¸í„°í˜ì´ìŠ¤ í•¨ìˆ˜ë¥¼ ì˜¤ë²„ë¼ì´ë”© í•©ë‹ˆë‹¤.
+	* @ì„¤ëª… : -
+	* @ì°¸ì¡° : - 
 	*/
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 

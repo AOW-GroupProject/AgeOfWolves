@@ -20,7 +20,7 @@ class UBaseAbilitySystemComponent;
 class APlayerStateBase;
 
 /**
- * FLyraAbilitySet_GameplayAbility
+ * FAbilitySet_GameplayAbility
  *
  *	Data used by the ability set to grant gameplay abilities.
  */
@@ -46,7 +46,7 @@ public:
 
 
 /**
- * FLyraAbilitySet_GameplayEffect
+ * FAbilitySet_GameplayEffect
  *
  *	Data used by the ability set to grant gameplay effects.
  */
@@ -67,7 +67,7 @@ public:
 };
 
 /**
- * FLyraAbilitySet_AttributeSet
+ * FAbilitySet_AttributeSet
  *
  *	Data used by the ability set to grant attribute sets.
  */
@@ -117,8 +117,9 @@ protected:
 };
 
 /**
- * @¸ñÀû	: Ä³¸¯ÅÍ¿¡°Ô ºÎ¿©ÇÒ GA, GE, AttributeSet ¸ñ·ÏÀ» °ü¸®ÇÏ´Â Data AssetÀÔ´Ï´Ù.
- * @¼³¸í	: GA, GE, AttributeSet ¸ñ·ÏÀ» Ä³¸¯ÅÍÀÇ ASC¿¡ µî·ÏÇÏ°í, µî·ÏµÈ GA, GE, ±×¸®°í AttributeSet°ú ¹ÙÀÎµùµÈ HandleÀ» Á¦°øÇÕ´Ï´Ù.
+ * @ëª©ì 	: ì‚¬ìš©ì ìºë¦­í„°ê°€ ë¶€ì—¬ë°›ì„ Gameplay Ability System ê´€ë ¨ ì •ë³´ë“¤ì„ í•œë° ë¬¶ì–´ ë†“ì€ Data Assetì…ë‹ˆë‹¤.
+ * @ì„¤ëª…	: Gameplay Ability, Gameplay Effect, ê·¸ë¦¬ê³  Attribute Setê³¼ ê° í•­ëª©ì— ëŒ€í•œ ë¶€ê°€ ì •ë³´ë“¤ì„ êµ¬ì¡°ì²´ í˜•ì‹ìœ¼ë¡œ í•œë° ë¬¶ì–´ ë†“ìŠµë‹ˆë‹¤.
+ * @ì°¸ì¡° : APlayerStateBase::InitializeGameplayAbilitySystem()
  */
 UCLASS()
 class AGEOFWOLVES_API UBaseAbilitySet : public UPrimaryDataAsset
@@ -129,7 +130,9 @@ public:
 	UBaseAbilitySet(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	/*
-	* @¸ñÀû : »ç¿ëÀÚ Ä³¸¯ÅÍÀÇ ±âº» AttributeSet, Gameplay Ability, Gameplay Effect¸¦ ASC¿¡ µî·ÏÇÏ´Â ÇÔ¼öµéÀÔ´Ï´Ù.
+	* @ëª©ì  : ì‚¬ìš©ì ìºë¦­í„°ì˜ ê¸°ë³¸ AttributeSet, Gameplay Ability, Gameplay Effectë¥¼ í•´ë‹¹ ìºë¦­í„° ê°ì²´ì˜ ASCì— ë“±ë¡í•˜ëŠ” í•¨ìˆ˜ë“¤ì…ë‹ˆë‹¤.
+	* @ì„¤ëª… : ê°ìì˜ ë°©ì‹ìœ¼ë¡œ ASCì— ë“±ë¡í•œ í›„, í•´ë‹¹ ë“±ë¡ ì´ë²¤íŠ¸ ê´€ë ¨í•œ Out Paramìœ¼ë¡œ ì „ë‹¬ ë°›ì€ GrantHandleì„ ë°˜í™˜í•©ë‹ˆë‹¤.
+	* @ì°¸ì¡° : -
 	*/
 	void GiveStartupAttributeSetToAbilitySystem(UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles, UObject* SourceObject) const;
 	void GiveStartupGameplayEffectToAbilitySystem(UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles, UObject* SourceObject) const;

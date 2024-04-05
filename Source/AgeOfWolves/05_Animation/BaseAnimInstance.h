@@ -15,7 +15,8 @@ enum class EMovementState : uint8
 	Idle = 0	UMETA(DisplayName = "Idle"),
 	Walk		UMETA(DisplayName = "Walk"),
 	Run			UMETA(DisplayName = "Run"),
-	Pivoting	UMETA(DisplayName = "Pivoting")
+	Pivoting	UMETA(DisplayName = "Pivoting"),
+	MAX			UMETA(DisplayName = "MAX"),
 };
 
 UENUM(BlueprintType)
@@ -24,7 +25,8 @@ enum class EMovementDirection : uint8
 	Fwd = 0		UMETA(DisplayName = "Fwd"),
 	Bwd			UMETA(DisplayName = "Bwd"),
 	Left		UMETA(DisplayName = "Left"),
-	Right		UMETA(DisplayName = "Right")
+	Right		UMETA(DisplayName = "Right"),
+	MAX			UMETA(DisplayName = "MAX"),
 };
 
 /**

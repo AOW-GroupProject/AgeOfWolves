@@ -48,13 +48,13 @@ void UBaseAbilitySet::GiveStartupAttributeSetToAbilitySystem(UBaseAbilitySystemC
 
 		if (!IsValid(SetToGrant.AttributeSet))
 		{
-			UE_LOG(LogAbilitySet, Error, TEXT("Attribute Set on ability set [%s] is not valid"), SetIndex, *GetNameSafe(this));
+			UE_LOGFMT(LogAbilitySet, Error, "Ability Set의 Attribute Set이 유효하지 않습니다!");
 			continue;
 		}
-		// #1. ASC�� AttributeSet ���
+		// #1. ASC에 AttributeSet 등록
 		UBaseAttributeSet* NewSet = NewObject<UBaseAttributeSet>(ASC->GetOwner(), SetToGrant.AttributeSet);
 		ASC->AddAttributeSetSubobject(NewSet);
-		// #2. BaseAilitySet�� GrantedHandle �߰�
+		// #2. BaseAilitySet에 GrantedHandle 추가
 		if (OutGrantedHandles)
 		{
 			OutGrantedHandles->AddAttributeSet(NewSet);
@@ -73,7 +73,7 @@ void UBaseAbilitySet::GiveStartupGameplayEffectToAbilitySystem(UBaseAbilitySyste
 
 		if (!IsValid(EffectToGrant.GameplayEffect))
 		{
-			UE_LOG(LogAbilitySet, Error, TEXT("GrantedGameplayEffects[%d] on ability set [%s] is not valid"), EffectIndex, *GetNameSafe(this));
+			UE_LOGFMT(LogAbilitySet, Error, "Ability Set의 {0}번째 Gameplay Effect가 유효하지 않습니다!", FString::FromInt(EffectIndex));
 			continue;
 		}
 
@@ -96,7 +96,7 @@ void UBaseAbilitySet::GiveStartupGameplayAbilityToAbilitySystem(UBaseAbilitySyst
 
 		if (!IsValid(AbilityToGrant.Ability))
 		{
-			UE_LOG(LogAbilitySet, Error, TEXT("GrantedGameplayAbilities[%d] on ability set [%s] is not valid."), AbilityIndex, *GetNameSafe(this));
+			UE_LOGFMT(LogAbilitySet, Error, "Ability Set의 {0}번째 Gameplay Ability가 유효하지 않습니다!", FString::FromInt(AbilityIndex));
 			continue;
 		}
 

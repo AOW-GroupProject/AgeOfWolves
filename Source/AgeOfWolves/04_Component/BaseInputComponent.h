@@ -17,39 +17,44 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInputComponent, Log, All)
 DECLARE_DYNAMIC_DELEGATE(FPlayerInputInit);
 
 /**
- * @breif : Component used to manage Input Actions' bindings using 'Input Config' Data Asset 
+ * @목적 : Enhanced Input System 활용을 위한 사용자 정의 Input Component를 정의합니다.
+ * @설명 : 일반적인 Input Component 대신, Enhanced Input System 활용이 가능한 사용자 정의 Input Component를 정의하고,
+ *		   해당 컴포넌트를 ACharacterBase(사용자 캐릭터 클래스)의 Default Input Component로 설정합니다.	
+ * @참조 : APlayerCharacter() 생성자
  */
 UCLASS()
 class AGEOFWOLVES_API UBaseInputComponent : public UEnhancedInputComponent
 {
 	GENERATED_BODY()
 	
+#pragma region Default Setting
 public:
 	UBaseInputComponent(const FObjectInitializer& ObjectInitializer);
 
-	//void AddInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
-	//void RemoveInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
-
-#pragma region Default Setting
-
 protected:
+	//~UActorComponent interface
 	virtual void OnRegister() override;
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	//~End Of UActorComponent interface
 
-	// @brief : Initialize Player Input(IMC, Native IA, Ability IA)
-	void InitPlayerInput();
+	/*
+	* @목적 : 사용자의 입력 시스템의 초기화 작업을 수행하는 함수입니다.
+	* @설명 : 사용자 캐릭터의 Pawn Data의 InputConfing(Data Asset)을 통해 Enhanced Input System의 초기화 작업을 진행합니다.
+	*/
+	void InitializePlayersInputActionsSetup();
 
 public:
-	// @brief : Handle for Player Input Mapping Initialization finished
+	// @목적 : 사용자 입력 시스템 초기화 작업 완료 이벤트
 	FPlayerInputInit OnPlayerInputInitFinished;
 
 #pragma endregion 
 
 #pragma region Binding
-
 public:
+	// @설명 : Enhanced Input System에 사용자의 IMC(Input Mapping Context)를 등록합니다.
 	void AddInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
+	// @설명 : Enhanced Input System에 등록된 사용자의 특정 IMC(Input Mapping Context)를 제거합니다.
 	void RemoveInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
 	// @brief : Tempalte function in which Native Input Action matching to the Input Tag will bind to User's Callback Function
 	template<typename UserClass, typename FuncType>
@@ -87,7 +92,6 @@ public:
 
 	// @breif : Remove BindHandles Interacting with corressponding Ability Input Action
 	void RemoveBinds(TArray<uint32>& BindHandles);
-
 #pragma endregion
 
 #pragma region Callbacks bind to Native Input Action
