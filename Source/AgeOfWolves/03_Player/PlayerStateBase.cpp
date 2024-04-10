@@ -120,9 +120,9 @@ void APlayerStateBase::OnAnyAttributeChanged(const FOnAttributeChangeData& Data)
 			{
 				// @설명 : GE_StartupAttributeSet을 통해 '초기화'작업이 이루어졌을 경우에만 일시적으로 Player State에서 직접 캐릭터의 MoveSpeed를 조정해줍니다.
 				// @설명 : 이후에 Move Speed 속성의 수치 변화 이벤트는 Gameplay Ability의 블루프린트에서 작업합니다.(eg. BP_GA_Sprint)
-				if (const auto InputComp = CastChecked<UBaseCharacterMovementComponent>(Character->GetCharacterMovement()))
+				if (const auto CharacterMovementComponent = CastChecked<UBaseCharacterMovementComponent>(Character->GetCharacterMovement()))
 				{
-					InputComp->ChangeMoveSpeed(Data.OldValue, Data.NewValue);
+					CharacterMovementComponent->ChangeMoveSpeed(Data.OldValue, Data.NewValue);
 				}
 			}
 		}

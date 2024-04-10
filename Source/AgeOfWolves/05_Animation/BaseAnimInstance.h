@@ -91,9 +91,7 @@ protected:
 #pragma endregion
 
 #pragma region Movement
-
 protected:
-
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		bool bFalling;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
@@ -102,18 +100,16 @@ protected:
 		FVector Velocity;
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		float Speed;
-
 #pragma endregion
 
 #pragma region IK
-
+protected:
 	UPROPERTY(Transient, BlueprintReadOnly)
 		bool bModifyBoneTransform;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
 		float BoneTransformLerpSpeed = 10.f;
 
 protected:
-
 	UFUNCTION(BlueprintNativeEvent)
 		void ChangeBoneTransform(float DeltaTime);
 	virtual void ChangeBoneTransform_Implementation(float DeltaTime) { }
@@ -121,7 +117,6 @@ protected:
 	UFUNCTION(BlueprintNativeEvent)
 		void ClearBoneTransform(float DeltaTime);
 	virtual void ClearBoneTransform_Implementation(float DeltaTime) { }
-
 #pragma endregion
 
 };

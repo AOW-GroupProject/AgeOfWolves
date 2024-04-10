@@ -3,19 +3,18 @@
 
 #include "PlayerCharacter.h"
 #include "Logging/StructuredLog.h"
-#include "Kismet/KismetMathLibrary.h"
 
 #include "04_Component/BaseInputComponent.h"
-
-#include "GameFramework/CharacterMovementComponent.h"
+#include "04_Component/BaseCharacterMovementComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Camera/CameraComponent.h"
 
-#include "04_Component/BaseCharacterMovementComponent.h"
 #include "03_Player/BasePlayerController.h"
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
+
+#include "Kismet/KismetMathLibrary.h"
 
 
 DEFINE_LOG_CATEGORY(LogPlayer)
@@ -34,13 +33,13 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
 
-	// Replace Input Component to User defined Base Input Component 
+	// Replace Input Component to User defined Base Input Component
 	InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
-
+	
 	// Configure character movement
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;
-	GetCharacterMovement()->bOrientRotationToMovement = false; // Character moves in the direction of input...	
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 0.0f, 0.0f); // ...at this rotation rate
+	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 300.0f, 0.0f); // ...at this rotation rate
 
 	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
 	// instead of recompiling to adjust them
@@ -94,11 +93,6 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
-	if (GetCharacterMovement()->GetCurrentAcceleration().Length() > 0.f)
-	{
-		AdjustControllerRotation(DeltaSeconds);
-	}
-
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)
@@ -150,6 +144,7 @@ void APlayerCharacter::AdjustControllerRotation(float DeltaSeconds)
 	// 선형 보간
 	FRotator TargetRotation = UKismetMathLibrary::RInterpTo(GetActorRotation(), Rotaion3, DeltaSeconds, 10.f);
 
+	// 결과 값을 액터 객체의 회전 값으로 설정
 	SetActorRotation(TargetRotation);
 
 }

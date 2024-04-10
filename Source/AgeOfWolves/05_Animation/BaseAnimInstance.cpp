@@ -40,10 +40,11 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		Speed = OwnerCharacterBase->GetVelocity().Length();
 		// 캐릭터의 이동/비이동 상태를 확인합니다.
 		bShouldMove = Speed > 3.f && OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration() != FVector::ZeroVector;
-		// 캐릭터의 이동 방향을 정의합니다.
-		FindMovementDirection();
 		// 캐릭터의 이동 상태를 정의합니다. EMovementState(열거형) 유형의 변수로 나타냅니다.
 		FindMovementState();
+		// [TODO] : LockOn 기능 구현 후 활용할 함수, 일시적으로 주석 처리 
+		// 캐릭터의 이동 방향을 정의합니다.
+		//FindMovementDirection();
 	}
 }
 
@@ -89,28 +90,28 @@ void UBaseAnimInstance::FindMovementDirection()
 	// 캐릭터가 바라보는 방향의 벡터를 기반으로 로테이션을 계산
 	FRotator Rotation2 = OwnerCharacterBase->GetControlRotation();
 
-	// 두 방향 사이의 최소 각도 차이를 계산
+	// 두 방향 사이의 최소 각도 차이를 계산, 오른손 좌표계 기준 캐릭터의 Yaw 회전 값 기준 시계 방향은 음수, 반 시계 방향은 양수
 	float Angle = FMath::FindDeltaAngleDegrees(Rotation1.Yaw, Rotation2.Yaw);
 
+	// #1. Fwd
 	if (Angle >= -70.f && Angle <= 70.f)
 	{
 		MovementDirection = EMovementDirection::Fwd;
-		UE_LOG(LogAnimInstance, Log, TEXT("Fwd : %f"), Angle);
 	}
+	// #2. Left
 	else if (Angle > 70.f && Angle < 110.f)
 	{
 		MovementDirection = EMovementDirection::Left;
-		UE_LOG(LogAnimInstance, Log, TEXT("Left : %f"), Angle);
 	}
+	// #3. Right
 	else if (Angle > -110.f && Angle < -70.f)
 	{
 		MovementDirection = EMovementDirection::Right;
-		UE_LOG(LogAnimInstance, Log, TEXT("Right : %f"), Angle);
 	}
+	// #4. Back
 	else
 	{
 		MovementDirection = EMovementDirection::Bwd;
-		UE_LOG(LogAnimInstance, Log, TEXT("Bwd : %f"), Angle);
 	}
 
 }
