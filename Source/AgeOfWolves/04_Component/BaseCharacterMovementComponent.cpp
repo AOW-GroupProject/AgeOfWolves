@@ -9,18 +9,18 @@ UBaseCharacterMovementComponent::UBaseCharacterMovementComponent(const FObjectIn
 
 void UBaseCharacterMovementComponent::ChangeMoveSpeed(float InOldVal, float InNewVal)
 {
-	MaxWalkSpeed = InNewVal;
-
-	if (InOldVal > 0.f && InOldVal <= 500.f)
+	if (InOldVal >= 0.f && InOldVal <= 550.f)
 	{
 		if (InNewVal > InOldVal)
 		{
 			IsSprinting = true;
+			MaxAcceleration = 300.f;
 			MaxWalkSpeed = InNewVal;
 		}
 		else
 		{
 			IsSprinting = false;
+			MaxAcceleration = 150.f;
 			MaxWalkSpeed = InNewVal;
 		}
 	}
