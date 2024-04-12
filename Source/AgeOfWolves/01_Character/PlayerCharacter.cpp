@@ -20,9 +20,13 @@
 DEFINE_LOG_CATEGORY(LogPlayer)
 
 APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
-	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName))
+	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
+	)
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	// Replace Input Component to User defined Base Input Component
+	InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
 
 	// Set size for collision capsule
 	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
@@ -32,9 +36,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	bUseControllerRotationPitch = false;
 	bUseControllerRotationYaw = false;
 	bUseControllerRotationRoll = false;
-
-	// Replace Input Component to User defined Base Input Component
-	InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
 	
 	// Configure character movement
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;

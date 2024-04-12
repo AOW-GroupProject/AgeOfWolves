@@ -9,7 +9,7 @@
 AAgeOfWolvesGameMode::AAgeOfWolvesGameMode()
 {
 	// set default pawn class to our Blueprinted character
-	static ConstructorHelpers::FClassFinder<ACharacterBase> PlayerPawnBPClass(TEXT("Blueprint'/Game/Blueprints/01_Character/01_Test/BP_AkaOni'"));
+	static ConstructorHelpers::FClassFinder<ACharacterBase> PlayerPawnBPClass(TEXT("Blueprint'/Game/Blueprints/01_Character/01_AkaOni/BP_AkaOni'"));
 	if (PlayerPawnBPClass.Class != NULL)
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;

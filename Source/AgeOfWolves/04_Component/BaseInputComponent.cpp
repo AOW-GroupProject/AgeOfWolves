@@ -80,6 +80,8 @@ void UBaseInputComponent::InitializePlayersInputActionsSetup()
 
 				// #4. Delegate Executed
 				OnPlayerInputInitFinished.ExecuteIfBound();
+
+				UE_LOGFMT(LogInputComponent, Log, "?????");
 			}
 		}
 	}
