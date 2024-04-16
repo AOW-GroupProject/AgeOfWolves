@@ -63,7 +63,7 @@ void APlayerStateBase::InitializeGameplayAbilitySystem()
 								TArray<FGameplayAttribute> Attributes = AttributeSet->GetAllAttributes();
 								for (const FGameplayAttribute& Attribute : Attributes)
 								{
-									FDelegateHandle DelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddUObject(this, &APlayerStateBase::OnAnyAttributeChanged);
+									FDelegateHandle DelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddUObject(this, &APlayerStateBase::OnAttributeValueChanged);
 								}
 							}
 						}
@@ -77,7 +77,7 @@ void APlayerStateBase::InitializeGameplayAbilitySystem()
 						SetToGrant->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
 					}
 
-					// @TODO : ASC의 Startup Setting의 초기화 작업 완료에 대한 이벤트 호출
+					// @TODO : ASC에 Startup GA, GE, AttributeSet의 등록 완료 이벤트 호출
 				}
 			}
 		}
@@ -99,30 +99,11 @@ UPawnData* APlayerStateBase::GetPawnData() const
 	return PawnData.Get();
 }
 
-void APlayerStateBase::OnAnyAttributeChanged(const FOnAttributeChangeData& Data)
+void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
 {
-	check(AttributeSet);
-
-	// #1. Move Speed
-	if (Data.Attribute == AttributeSet->GetMoveSpeedAttribute())
+	if (OnAnyAttributeValueChanged.IsBound())
 	{
-		if (const auto& Controller = Cast<AController>(GetOwner()))
-		{
-			if (const auto& Character = Cast<ACharacterBase>(Controller->GetPawn()))
-			{
-				// @설명 : GE_StartupAttributeSet을 통해 '초기화'작업이 이루어졌을 경우에만 일시적으로 Player State에서 직접 캐릭터의 MoveSpeed를 조정해줍니다.
-				// @설명 : 이후에 발생하는 Move Speed 속성의 수치 변화 이벤트는 Gameplay Ability의 블루프린트에서 작업합니다.(eg. BP_GA_Sprint)
-				if (const auto CharacterMovementComponent = CastChecked<UBaseCharacterMovementComponent>(Character->GetCharacterMovement()))
-				{
-					CharacterMovementComponent->ChangeMoveSpeed(Data.OldValue, Data.NewValue);
-				}
-			}
-		}
-	}
-	// #2. 그 외 항목
-	else if (Data.Attribute == AttributeSet->GetStaminaAttribute())
-	{	
-
+		OnAnyAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);	
 	}
 
 }

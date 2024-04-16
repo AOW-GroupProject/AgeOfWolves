@@ -15,8 +15,21 @@ class AGEOFWOLVES_API UBaseCharacterMovementComponent : public UCharacterMovemen
 {
 	GENERATED_BODY()
 	
+#pragma region Default Setting
 public:
 	UBaseCharacterMovementComponent(const FObjectInitializer& ObjectInitializer);
+
+protected:
+	//Begin UActorComponent Interface
+	virtual void OnRegister() override;
+	virtual void BeginPlay() override;
+	//End UActorComponent Interface
+#pragma endregion
+
+#pragma region Move Speed
+protected:
+	UFUNCTION()
+		void MoveSpeedChanged(FGameplayAttribute Attribute, float OldValue, float NewValue);
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Character Movement")
@@ -24,5 +37,6 @@ public:
 
 private:
 	bool IsSprinting;
+#pragma endregion
 
 };

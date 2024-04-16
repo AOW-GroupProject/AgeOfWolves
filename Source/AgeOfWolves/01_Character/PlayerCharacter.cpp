@@ -16,8 +16,11 @@
 
 #include "Kismet/KismetMathLibrary.h"
 
+// @설명 : UI 구현을 위한 테스트 코드, 실제 UI구현시 아래 헤더 파일 삭제 후 진행
+#include "08_UI/TestWidget.h"
 
 DEFINE_LOG_CATEGORY(LogPlayer)
+// UE_LOGFMT(LogPlayer, LoG, "");
 
 APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
@@ -46,7 +49,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 500.f;
+	GetCharacterMovement()->MaxWalkSpeed = 230.f;
 	GetCharacterMovement()->MaxAcceleration = 150.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
@@ -71,6 +74,10 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	if (animInstance.Class != NULL)
 		GetMesh()->SetAnimInstanceClass(animInstance.Class);
 
+	// @목적: UI관련 테스트 진행 코드, 실제 UI 구현 시 아래 코드 삭제후 진행
+	WidgetClass = nullptr;
+	HUD = nullptr;
+
 }
 
 void APlayerCharacter::PostInitializeComponents()
@@ -82,7 +89,6 @@ void APlayerCharacter::PostInitializeComponents()
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
 }
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -103,7 +109,7 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 
 	Super::PossessedBy(NewController);
 
-	// @TODO : Player State로부터 ASC에 대한 참조를 가져옵니다.
+	// @설명 : Player State로부터 ASC에 대한 참조를 가져옵니다.
 	if (const auto& PlayerController = CastChecked<ABasePlayerController>(NewController))
 	{
 		if (const auto& PS = PlayerController->GetPlayerState<APlayerStateBase>())
@@ -111,6 +117,19 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 			if (IsValid(PS->GetAbilitySystemComponent()) && PS->GetAbilitySystemComponent()->IsA<UBaseAbilitySystemComponent>())
 			{
 				AbilitySystemComponent = MakeWeakObjectPtr<UBaseAbilitySystemComponent>(Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()));
+			}
+		}
+	}
+
+	// @설명 : UI 관련 테스트 코드, 임시 코드, 삭제 예정
+	if (IsLocallyControlled() && WidgetClass->IsValidLowLevel())
+	{
+		if (ABasePlayerController* PC = Cast<ABasePlayerController>(GetController()))
+		{
+			HUD = CreateWidget<UTestWidget>(PC, WidgetClass);
+			if (IsValid(HUD))
+			{
+				HUD->AddToViewport();
 			}
 		}
 	}

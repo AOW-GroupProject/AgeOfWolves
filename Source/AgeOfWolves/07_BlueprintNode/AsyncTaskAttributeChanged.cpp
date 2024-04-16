@@ -11,7 +11,7 @@ UAsyncTaskAttributeChanged* UAsyncTaskAttributeChanged::ListenToAttributeChange(
 		return nullptr;
 	}
 
-	// AsyncTask의 인스턴스 생성ㄴ
+	// AsyncTask의 인스턴스 생성
 	UAsyncTaskAttributeChanged* AsyncTask = NewObject<UAsyncTaskAttributeChanged>();
 	AsyncTask->ASC = AbilitySystemComponent;
 	AsyncTask->AttributeListenTo = Attribute;

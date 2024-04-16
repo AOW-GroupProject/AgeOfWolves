@@ -6,15 +6,22 @@
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
 
-#include "GameplayEffectTypes.h"
-#include "02_GameplayAbility/BaseAbilitySet.h"
 #include "02_GameplayAbility/BaseAttributeSet.h"
+#include "02_GameplayAbility/BaseAbilitySet.h"
 
 #include "PlayerStateBase.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayerStateBase, Log, All)
 
+/*
+* @목적 : ASC에 등록된 AttributeSet의 각 Attribute 값 변화 이벤트를 전파하는 이벤트
+* @설명 : Attribute 값 변화 이벤트 발생 시 이를 UI 등 다양한 곳에 알리기 위함
+* @참조 : -
+*/
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGameplayAttribute, Attribute, float, OldValue, float, NewValue);
+
 class UPawnData;
+class UBaseAttributeSet;
 class UBaseAbilitySystemComponent; 
 
 /**
@@ -35,10 +42,6 @@ protected:
 	virtual void BeginPlay() override;
 	//~End Of APlayerState Interface
 
-public:
-	//~IAbilitySystemInterface Interface
-	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-	//~End Of IAbilitySystemInterface Interface
 #pragma endregion
 
 #pragma region Gameplay Ability System
@@ -62,6 +65,9 @@ protected:
 
 public:
 	UPawnData* GetPawnData() const;
+	//~IAbilitySystemInterface Interface
+	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	//~End Of IAbilitySystemInterface Interface
 	TSoftObjectPtr<UBaseAttributeSet> GetAttributeSet() const;
 #pragma endregion
 
@@ -73,7 +79,15 @@ protected:
 	*		  HUD 구현을 위해 PS에서 제공하는 AttributeBase 관련 인터페이스로 활용 가능합니다(C++환경).
 	* @참조 : APlayerStateBase::InitializeGameplayAbilitySystem()
 	*/
-	void OnAnyAttributeChanged(const FOnAttributeChangeData& Data);
+	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);
+
+public:
+	/*
+	* @목적 : ASC에 등록된 AttributeSet의 각 Attribute 값 변화 이벤트를 전파하는 이벤트
+	* @설명 : Attribute 값 변화 이벤트 발생 시 이를 UI 등 다양한 곳에 알리기 위함
+	* @참조 : -
+	*/
+	FAnyAttributeValueChanged OnAnyAttributeValueChanged;
 #pragma endregion
 
 #pragma region Getter&Setter
