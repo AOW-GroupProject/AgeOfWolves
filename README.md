@@ -1,6 +1,6 @@
 ## GitHub 정책, [24-04-06, Updated by YongSeol]
 
-관련 링크 : https://webddevys.tistory.com/439
+관련 링크 : https://webddevys.tistory.com/440
 
 ### 브랜치 정책
 
