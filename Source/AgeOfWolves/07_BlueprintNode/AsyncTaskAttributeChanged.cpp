@@ -3,7 +3,7 @@
 
 #include "AsyncTaskAttributeChanged.h"
 
-UAsyncTaskAttributeChanged* UAsyncTaskAttributeChanged::ListenToAttributeChange(UAbilitySystemComponent* AbilitySystemComponent, FGameplayAttribute Attribute)
+UAsyncTaskAttributeChanged* UAsyncTaskAttributeChanged::ListenToAttributeValueChange(UAbilitySystemComponent* AbilitySystemComponent, FGameplayAttribute Attribute)
 {
 
 	if (!IsValid(AbilitySystemComponent) && !Attribute.IsValid())
@@ -21,7 +21,7 @@ UAsyncTaskAttributeChanged* UAsyncTaskAttributeChanged::ListenToAttributeChange(
 	return AsyncTask;
 }
 
-UAsyncTaskAttributeChanged* UAsyncTaskAttributeChanged::ListenToAttributesChange(UAbilitySystemComponent* AbilitySystemComponent, TArray<FGameplayAttribute>& Attributes)
+UAsyncTaskAttributeChanged* UAsyncTaskAttributeChanged::ListenToAttributesValueChange(UAbilitySystemComponent* AbilitySystemComponent, TArray<FGameplayAttribute>& Attributes)
 {
 	if (!IsValid(AbilitySystemComponent))
 	{
@@ -52,7 +52,7 @@ UAsyncTaskAttributeChanged* UAsyncTaskAttributeChanged::ListenToAttributesChange
 void UAsyncTaskAttributeChanged::EndTask()
 {
 	// 수치 값 변화 이벤트를 구독한 콜백 함수를 모두 삭제합니다.
-	if (IsValid(ASC))
+	if (IsValid(ASC.Get()))
 	{
 		ASC->GetGameplayAttributeValueChangeDelegate(AttributeListenTo).RemoveAll(this);
 

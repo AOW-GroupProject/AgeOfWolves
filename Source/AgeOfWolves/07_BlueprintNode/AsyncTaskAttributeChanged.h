@@ -30,14 +30,14 @@ public:
 	* @참조 : -
 	*/
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true"))
-		static UAsyncTaskAttributeChanged* ListenToAttributeChange(UAbilitySystemComponent* AbilitySystemComponent, FGameplayAttribute Attribute);
+		static UAsyncTaskAttributeChanged* ListenToAttributeValueChange(UAbilitySystemComponent* AbilitySystemComponent, FGameplayAttribute Attribute);
 	/*
 	* @목적 : 두 개 이상의 Attribute 항목의 수치 값 변화 이벤트에 등록되는 콜백 함수를 갖는 AsyncAction의 생성자
 	* @설명 : 위와 동일
 	* @참조 : -
 	*/
 	UFUNCTION(BlueprintCallable, meta = (BlueprintInternalUseOnly = "true"))
-		static UAsyncTaskAttributeChanged* ListenToAttributesChange(UAbilitySystemComponent* AbilitySystemComponent, TArray<FGameplayAttribute>& Attributes);
+		static UAsyncTaskAttributeChanged* ListenToAttributesValueChange(UAbilitySystemComponent* AbilitySystemComponent, TArray<FGameplayAttribute>& Attributes);
 
 	/*
 	* @목적 : Async Task의 메모리 해제
@@ -63,8 +63,7 @@ protected:
 	* @설명 : -
 	* @참조 : -
 	*/
-	UPROPERTY()
-		UAbilitySystemComponent* ASC;
+	TWeakObjectPtr<UAbilitySystemComponent> ASC;
 
 	FGameplayAttribute AttributeListenTo;
 	TArray<FGameplayAttribute> AttributesListenTo;
