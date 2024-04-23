@@ -67,7 +67,7 @@ public:
 };
 
 /**
- * FAbilitySet_AttributeSet
+ * FBaseAbilitySet_AttributeSet
  *
  *	Data used by the ability set to grant attribute sets.
  */
@@ -84,9 +84,9 @@ public:
 };
 
 /**
- * FLyraAbilitySet_GrantedHandles
+ * FBaseAbilitySet_GrantedHandles
  *
- *	Data used to store handles to what has been granted by the ability set.
+ *	@목적 : GA, GE, 그리고 AttributeSet의 ASC 등록 이벤트 관련 핸들을 관리하는 구조체입니다.
  */
 USTRUCT(BlueprintType)
 struct FBaseAbilitySet_GrantedHandles
@@ -94,7 +94,6 @@ struct FBaseAbilitySet_GrantedHandles
 	GENERATED_BODY()
 
 public:
-
 	void AddAbilitySpecHandle(const FGameplayAbilitySpecHandle& Handle);
 	void AddGameplayEffectHandle(const FActiveGameplayEffectHandle& Handle);
 	void AddAttributeSet(UBaseAttributeSet* Set);

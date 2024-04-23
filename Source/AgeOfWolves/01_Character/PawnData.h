@@ -11,8 +11,9 @@
 #include "PawnData.generated.h"
 
 /**
- * [목적] : Pawn 생성에 필요한 정보들을 한데 묶어 놓은 Data Asset
- * [설명] : Pawn과 관련된 데이터들을 한데 묶어놓음으로써, 수월한 관리를 위함입니다.
+ * @목적 : Pawn 생성에 필요한 정보들을 한데 묶어 놓은 Data Asset
+ * @설명 : Pawn과 관련된 데이터들을 한데 묶어놓음으로써, 수월한 관리를 위함입니다.
+ * @참조 : -
  */
 UCLASS()
 class AGEOFWOLVES_API UPawnData : public UPrimaryDataAsset

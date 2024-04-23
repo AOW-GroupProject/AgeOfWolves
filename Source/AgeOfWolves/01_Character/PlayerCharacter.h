@@ -14,6 +14,8 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayer, Log, All)
 
 class UCurveFloat;
+// @목적 : UI 관련 테스트 진행을 위해 작성한 임시 코드입니다. 실제 UI 구현을 위해선 아래 코드를 삭제하고 시작해주세요.
+class UTestWidget;
 
 UCLASS()
 class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase
@@ -26,17 +28,17 @@ public:
 	APlayerCharacter(const FObjectInitializer& ObjectInitializer);
 
 protected:
-	//~AActor interface
+	//~BeginAActor interface
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Tick(float DeltaSeconds) override;
-	//~End Of AActor interface
+	//~End AActor interface
 
-	//~APawn interface
+	//~Begin APawn interface
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void PawnClientRestart() override;
-	//~End Of APawn Interface.
+	//~End APawn Interface.
 
 	//~Components
 	UPROPERTY(VisibleAnywhere, Category = Camera, meta = (AllowPrivateAccess = "true"))
@@ -63,6 +65,18 @@ protected:
 	*/
 	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Control Rotation")
 		UCurveFloat* DirectionCurve;
+#pragma endregion
+
+/*
+* @목적 : UI 관련 테스트를 진행하기 위한 임시 코드
+* @설명 : 가이드라인을 확인하고, 실제 UI 구현을 위해 아래 코드를 삭제하고 진행해주시면 됩니다!
+* @참조 : -
+*/
+#pragma region UI
+	UPROPERTY(EditDefaultsOnly)
+		TSubclassOf<UTestWidget> WidgetClass;
+	UPROPERTY()
+		UTestWidget* HUD;
 #pragma endregion
 
 };
