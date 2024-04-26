@@ -1,3 +1,4 @@
+
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
@@ -99,7 +100,7 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-
+	AdjustControllerRotation(DeltaSeconds);
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)
@@ -147,9 +148,8 @@ void APlayerCharacter::PawnClientRestart()
 
 void APlayerCharacter::AdjustControllerRotation(float DeltaSeconds)
 {
-
 	check(DirectionCurve);
-
+	
 	// 캐릭터의 현재 가속도 벡터를 기반으로 한 로테이션을 계산
 	FRotator Rotation1 = UKismetMathLibrary::MakeRotFromX(GetCharacterMovement()->GetCurrentAcceleration());
 
