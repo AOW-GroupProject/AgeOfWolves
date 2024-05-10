@@ -14,15 +14,24 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayerStateBase, Log, All)
 
 /*
+* @목적 : ASC에 등록된 AttributeSet의 각 Attribute 값의 초기화 이벤트
+* @설명 : Attribute 값 초기화 이벤트 발생 시 이를 UI 등 다양한 곳에 알리기 위함
+* @참조 : -
+*/
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAttributeSetInitialized);
+
+/*
 * @목적 : ASC에 등록된 AttributeSet의 각 Attribute 값 변화 이벤트를 전파하는 이벤트
 * @설명 : Attribute 값 변화 이벤트 발생 시 이를 UI 등 다양한 곳에 알리기 위함
 * @참조 : -
 */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGameplayAttribute, Attribute, float, OldValue, float, NewValue);
 
+class ABasePlayerController;
 class UPawnData;
 class UBaseAttributeSet;
 class UBaseAbilitySystemComponent; 
+class UUserWidget;
 
 /**
  * Player State contaions pawn's info interacting with others
@@ -31,6 +40,8 @@ UCLASS()
 class AGEOFWOLVES_API APlayerStateBase : public APlayerState, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
+	// Player Controller의 friend 클래스로 설정
+	friend class ABasePlayerController;
 
 #pragma region Default Setting
 public:
@@ -51,7 +62,8 @@ protected:
 	* @설명: 등록 순서는 AttributeBase -> GE -> GA 순서를 유지합니다. AttributeBase의 각 Attribute의 초기 값을 GE를 통해 초기화하기 때문입니다!
 	* @참고: 
 	*/
-	void InitializeGameplayAbilitySystem();
+	UFUNCTION()
+		void InitializeGameplayAbilitySystem();
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Ability System|Pawn Data")
@@ -82,6 +94,13 @@ protected:
 	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);
 
 public:
+
+	/*
+	* @목적 : ASC에 등록된 AttributeSet의 각 Attribute 값 초기화 이벤트를 전파하는 이벤트
+	* @설명 : Attribute 값 변화 이벤트 발생 시 이를 UI 등 다양한 곳에 알리기 위함
+	* @참조 : -
+	*/
+	FAttributeSetInitialized OnAttributeSetInitialized;
 	/*
 	* @목적 : ASC에 등록된 AttributeSet의 각 Attribute 값 변화 이벤트를 전파하는 이벤트
 	* @설명 : Attribute 값 변화 이벤트 발생 시 이를 UI 등 다양한 곳에 알리기 위함
@@ -90,53 +109,33 @@ public:
 	FAnyAttributeValueChanged OnAnyAttributeValueChanged;
 #pragma endregion
 
+#pragma region UI
+protected:
+	UPROPERTY(EditDefaultsOnly)
+		TSubclassOf<UUserWidget> HUDClass;
+	UPROPERTY()
+		UUserWidget* HUD;
+#pragma endregion
+
 #pragma region Getter&Setter
 public:
+	template<typename T>
+	T GetAttributeCurrentValue(FString FindingAttriubteName)
+	{
+		check(AttributeSet.Get());
 
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE float GetHealth() const { return AttributeSet.Get()->GetHealth(); }
+		TArray<FGameplayAttribute> Attributes = AttributeSet.Get()->GetAllAttributes();
+		for (const auto Attribute : Attributes)
+		{
+			if (Attribute.IsValid() && Attribute.AttributeName == FindingAttriubteName)
+			{
+				return Attribute.GetNumericValue(AttributeSet.Get());
+			}
+		}
 
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE float GetMaxHealth() const { return AttributeSet.Get()->GetMaxHealth(); }
+		return -1;
+	}
 
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE float GetHealthRegenRate() const { return AttributeSet.Get()->GetHealthRegenRate(); }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE bool IsAlive() const { return GetHealth() > 0.f; }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE float GetMana() const { return AttributeSet.Get()->GetMana(); }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE float GetMaxMana() const { return AttributeSet.Get()->GetMana(); }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE float GetManaRegenRate() const { return AttributeSet.Get()->GetManaRegenRate(); }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE float GetStamina() const { return AttributeSet.Get()->GetStamina(); }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE float GetMaxStamina() const { return AttributeSet.Get()->GetMaxStamina(); }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE float GetStaminaRegenRate() const { return AttributeSet.Get()->GetStaminaRegenRate(); }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE float GetArmor() const { return AttributeSet.Get()->GetArmor(); }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE float GetMoveSpeed() const { return AttributeSet.Get()->GetMoveSpeed(); }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE int32 GetCharacterLevel() const { return AttributeSet.Get()->GetCharacterLevel(); }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE int32 GetXP() const { return AttributeSet.Get()->GetXP(); }
-
-	UFUNCTION(BlueprintCallable, Category = "Player State | Attributes")
-		FORCEINLINE int32 GetGold() const { return AttributeSet.Get()->GetGold(); }
 #pragma endregion
 	
 };

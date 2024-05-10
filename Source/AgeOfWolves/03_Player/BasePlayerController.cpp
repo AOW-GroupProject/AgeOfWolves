@@ -15,9 +15,15 @@ void ABasePlayerController::PreInitializeComponents()
 	Super::PreInitializeComponents();
 }
 
+void ABasePlayerController::PostInitializeComponents()
+{
+	Super::PostInitializeComponents();
+}
+
 void ABasePlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+
 }
 
 void ABasePlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -28,6 +34,19 @@ void ABasePlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void ABasePlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
+
+	// OnPosess 이벤트 호출 
+	OnControllerPossessCharacter.ExecuteIfBound();
+
+	if (auto PS = GetPlayerState<APlayerStateBase>())
+	{
+		PS->InitializeGameplayAbilitySystem();
+	}
+}
+
+void ABasePlayerController::OnUnPossess()
+{
+	Super::OnUnPossess();
 }
 
 void ABasePlayerController::PreProcessInput(const float DeltaTime, const bool bGamePaused)

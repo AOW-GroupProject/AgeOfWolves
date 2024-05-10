@@ -16,8 +16,6 @@
 
 #include "Kismet/KismetMathLibrary.h"
 
-// @설명 : UI 구현을 위한 테스트 코드, 실제 UI구현시 아래 헤더 파일 삭제 후 진행
-#include "08_UI/TestWidget.h"
 
 DEFINE_LOG_CATEGORY(LogPlayer)
 // UE_LOGFMT(LogPlayer, LoG, "");
@@ -74,10 +72,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	if (animInstance.Class != NULL)
 		GetMesh()->SetAnimInstanceClass(animInstance.Class);
 
-	// @목적: UI관련 테스트 진행 코드, 실제 UI 구현 시 아래 코드 삭제후 진행
-	WidgetClass = nullptr;
-	HUD = nullptr;
-
 }
 
 void APlayerCharacter::PostInitializeComponents()
@@ -117,19 +111,6 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 			if (IsValid(PS->GetAbilitySystemComponent()) && PS->GetAbilitySystemComponent()->IsA<UBaseAbilitySystemComponent>())
 			{
 				AbilitySystemComponent = MakeWeakObjectPtr<UBaseAbilitySystemComponent>(Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()));
-			}
-		}
-	}
-
-	// @설명 : UI 관련 테스트 코드, 임시 코드, 삭제 예정
-	if (IsLocallyControlled() && WidgetClass->IsValidLowLevel())
-	{
-		if (ABasePlayerController* PC = Cast<ABasePlayerController>(GetController()))
-		{
-			HUD = CreateWidget<UTestWidget>(PC, WidgetClass);
-			if (IsValid(HUD))
-			{
-				HUD->AddToViewport();
 			}
 		}
 	}

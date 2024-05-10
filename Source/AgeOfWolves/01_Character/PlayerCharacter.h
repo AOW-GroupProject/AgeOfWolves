@@ -67,16 +67,4 @@ protected:
 		UCurveFloat* DirectionCurve;
 #pragma endregion
 
-/*
-* @목적 : UI 관련 테스트를 진행하기 위한 임시 코드
-* @설명 : 가이드라인을 확인하고, 실제 UI 구현을 위해 아래 코드를 삭제하고 진행해주시면 됩니다!
-* @참조 : -
-*/
-#pragma region UI
-	UPROPERTY(EditDefaultsOnly)
-		TSubclassOf<UTestWidget> WidgetClass;
-	UPROPERTY()
-		UTestWidget* HUD;
-#pragma endregion
-
 };
