@@ -11,8 +11,10 @@
 #include "EnhancedInputSubsystems.h"
 #include "06_Input/InputConfig.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
+#include "GameFramework/SpringArmComponent.h"
 
 #include "01_Character/PlayerCharacter.h"
+#include "05_Animation/BaseAnimInstance.h"
 
 #include "GameplayTagContainer.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -36,9 +38,10 @@ void UBaseInputComponent::OnRegister()
 void UBaseInputComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
 	InitializePlayersInputActionsSetup();
 
+	//SpringArmComponent = Cast<APlayerCharacter>(GetOwner())->GetComponentByClass<USpringArmComponent>();
+	//check(SpringArmComponent);
 }
 
 void UBaseInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -130,13 +133,13 @@ void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 {
 	// #1. Pawn
 	if (APawn* Pawn = Cast<APawn>(GetOwner()))
-	{
+	{	
+		// input is a Vector2D
+		FVector2D MovementVector = Value.Get<FVector2D>();
+		InputVector = MovementVector;
 		// #2. Controller
 		if (AController* Controller = Pawn->GetController())
 		{
-			// input is a Vector2D
-			FVector2D MovementVector = Value.Get<FVector2D>();
-
 			if (Controller != nullptr)
 			{
 				const FRotator Rotation = Controller->GetControlRotation();
@@ -152,13 +155,15 @@ void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 			}
 		}
 	}
-
 }
+
+
 
 void UBaseInputComponent::Input_Look(const FInputActionValue& InputActionValue)
 {
 	if (APawn* Pawn = Cast<APawn>(GetOwner()))
 	{
+		if (bLockOn) return;
 		const FVector2D Value = InputActionValue.Get<FVector2D>();
 
 		if (Value.X != 0.0f)
@@ -176,39 +181,89 @@ void UBaseInputComponent::Input_Look(const FInputActionValue& InputActionValue)
 
 void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 {
+	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
+	check (PlayerCharacter)
+	UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(PlayerCharacter->GetMesh()->GetAnimInstance());
+	check (BaseAnimInstance)
+
+	if (bLockOn == true) // LockOn 중일 때, 마우스 휠 입력시 LockOn 종료
+	{
+		CancelLockOn();
+	}
+	else // LockOn 중이 아닐 때, 마우스 휠 입력시 LockOn 시작
+	{
+		StartLockOn();
+	}
+}
+void UBaseInputComponent::StartLockOn()
+{
+	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
+	check(PlayerCharacter)
+	UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(PlayerCharacter->GetMesh()->GetAnimInstance());
+	check(BaseAnimInstance)
+
+	if (FindTargetEnemy())
+	{
+		bLockOn = true;
+		BaseAnimInstance->SetbLockOn(true);
+		SetControllerRotationTowardTarget();
+	}
+
+}
+
+void UBaseInputComponent::CancelLockOn()
+{
+	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
+	check(PlayerCharacter);
+	UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(PlayerCharacter->GetMesh()->GetAnimInstance());
+	check(BaseAnimInstance);
+
+	// 클래스 멤버 변수 초기화
+	BaseAnimInstance->SetbLockOn(false);
+	InputVector = FVector2D(0, 0);
 	NearByEnemies.Empty();
 	EnemyMap.Empty();
+	TargetEnemy = nullptr;
+	bLockOn = false;
+}
+
+
+void UBaseInputComponent::SetControllerRotationTowardTarget()
+{
+	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
+	check(PlayerCharacter)
+
+	FVector Start = PlayerCharacter->GetActorLocation();
+	FVector Target = TargetEnemy->GetActorLocation();
+	FRotator Rotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
+	PlayerCharacter->GetController()->SetControlRotation(FRotator(0.f, Rotation.Yaw, 0.f));
+	DrawDebugSphere(GetWorld(), TargetEnemy->GetActorLocation(), 30, 12, FColor::Red, false, 1.5f);
+}
+
+bool UBaseInputComponent::FindTargetEnemy()
+{
+	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
+	check(PlayerCharacter);
 
 	TArray<TEnumAsByte<EObjectTypeQuery>> NearByActors;
 	TEnumAsByte<EObjectTypeQuery> PawnObjectType = UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn);
 	NearByActors.Add(PawnObjectType);
 
 	TArray<AActor*> IgnoreActors;
-	AActor* Character = GetOwner();
-	check(Character);
-	IgnoreActors.Add(Character);
-	
-	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
-	if (PlayerCharacter)
-	{
-		IgnoreActors.Add(PlayerCharacter);
-	}
+	IgnoreActors.Add(PlayerCharacter);
 
 	TArray<FHitResult> HitResults;
-
 	bool TraceHitResult = UKismetSystemLibrary::SphereTraceMultiForObjects(
 		GetWorld(),
-		Character->GetActorLocation(),
-		Character->GetActorLocation() + 100.f,
-		DetectionMaxRadius,
-		NearByActors,
-		false,
-		IgnoreActors,
-		EDrawDebugTrace::None,
-		HitResults,
-		true
+		PlayerCharacter->GetActorLocation(),
+		PlayerCharacter->GetActorLocation() + 100.f,
+		MaxDetectRadius,
+		NearByActors, 
+		false, 
+		IgnoreActors, 
+		EDrawDebugTrace::None, 
+		HitResults, true
 	);
-
 	if (TraceHitResult == true)
 	{
 		for (const auto& Hit : HitResults)
@@ -218,32 +273,33 @@ void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 		float Min = 1000000.f;
 		for (int i = 0; i < NearByEnemies.Num(); i++)
 		{
-			FVector Vector = FVector::CrossProduct(Character->GetActorForwardVector(), NearByEnemies[i]->GetActorLocation() - Character->GetActorLocation());
-			float DotProduct = FVector::DotProduct(Character->GetActorUpVector(), Vector);
+			FVector Vector = FVector::CrossProduct(PlayerCharacter->GetActorForwardVector(), NearByEnemies[i]->GetActorLocation() - PlayerCharacter->GetActorLocation());
+			float DotProduct = FVector::DotProduct(PlayerCharacter->GetActorUpVector(), Vector);
 			EnemyMap.Add(DotProduct, NearByEnemies[i]);
-			DrawDebugSphere(GetWorld(), NearByEnemies[i]->GetActorLocation(), 25.f, 12, FColor::Blue, false, 3.f);
+			// DrawDebugSphere(GetWorld(), NearByEnemies[i]->GetActorLocation(), 25.f, 12, FColor::Blue, false, 3.f);
 			if (FMath::Abs(Min) > FMath::Abs(DotProduct))
 			{
 				Min = DotProduct;
 			}
 		}
-		UE_LOG(LogTemp, Warning, TEXT("Min  : %f"), Min);
+		// UE_LOG(LogTemp, Warning, TEXT("Min  : %f"), Min);
 		TArray<float> DotProducts;
 		EnemyMap.GenerateKeyArray(DotProducts);
 		DotProducts.Sort();
 		NearByEnemies.Empty();
-		for (int i = 0; i < DotProducts.Num(); i ++)
+		for (int i = 0; i < DotProducts.Num(); i++)
 		{
 			NearByEnemies.Add(*EnemyMap.Find(DotProducts[i]));
 		}
 		TargetEnemy = *EnemyMap.Find(Min);
-		if (TargetEnemy)
-		{
-			DrawDebugSphere(GetWorld(), TargetEnemy->GetActorLocation(), 50.f, 12, FColor::Red, false, 1.5f);
-		}
+		if (IsValid(TargetEnemy)) return true;
+		else return false;
+	}
+	else
+	{
+		return false;
 	}
 }
-
 void UBaseInputComponent::Input_ChangeLockOnTarget(const FInputActionValue& Value)
 {
 	if (NearByEnemies.Num() == 0) return;
@@ -253,21 +309,13 @@ void UBaseInputComponent::Input_ChangeLockOnTarget(const FInputActionValue& Valu
 	{
 		TargetIndex = FMath::Clamp(TargetIndex + 1, 0, NearByEnemies.Num() - 1);
 		TargetEnemy = NearByEnemies[TargetIndex];
-		DrawDebugSphere(GetWorld(), TargetEnemy->GetActorLocation(), 50.f, 12, FColor::Red, false, 1.5f);
 	}
 	else // 마우스 휠 축 아래
 	{
 		TargetIndex = FMath::Clamp(TargetIndex - 1, 0, NearByEnemies.Num() - 1);
 		TargetEnemy = NearByEnemies[TargetIndex];
-		DrawDebugSphere(GetWorld(), TargetEnemy->GetActorLocation(), 50.f, 12, FColor::Red, false, 1.5f);
 	}
-	APlayerCameraManager* CameraManager = GetWorld()->GetFirstPlayerController()->PlayerCameraManager;
-	FVector Start = CameraManager->GetCameraLocation();
-	FVector Target = TargetEnemy->GetActorLocation();
-
-	FRotator Rotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
-	APlayerCharacter* PlayerCharacter = CastChecked<APlayerCharacter>(GetOwner());
-	PlayerCharacter->GetController()->SetControlRotation(FRotator(0.f, Rotation.Yaw, 0.f));
+	SetControllerRotationTowardTarget();
 }
 
 

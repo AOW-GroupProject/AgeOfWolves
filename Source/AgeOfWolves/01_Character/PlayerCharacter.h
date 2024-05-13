@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -78,5 +78,16 @@ protected:
 	UPROPERTY()
 		UTestWidget* HUD;
 #pragma endregion
+
+#pragma region SpringArm & Camera
+	// @목적 : LockOn 동안 Spring Arm을 통해 카메라 위치를 조정하는 함수
+	void AdjustCameraTransform(float DeltaSeconds);
+
+
+
+	TObjectPtr<class UBaseInputComponent> BaseInputComponent;
+	TObjectPtr<class UBaseAnimInstance> BaseAnimInstance;
+
+public:
 
 };

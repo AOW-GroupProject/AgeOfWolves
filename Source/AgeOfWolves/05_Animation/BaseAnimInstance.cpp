@@ -1,4 +1,4 @@
-#include "BaseAnimInstance.h"
+ï»¿#include "BaseAnimInstance.h"
 #include "Logging/StructuredLog.h"
 
 #include "01_Character/CharacterBase.h"
@@ -32,25 +32,26 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 	if (OwnerCharacterBase.IsValid() && OwnerCharacterBase->GetController())
 	{
-		// ¶³¾îÁö´Â ÁßÀÎ°¡ ÀúÀåÇÕ´Ï´Ù.
+		// ë–¨ì–´ì§€ëŠ” ì¤‘ì¸ê°€ ì €ì¥í•©ë‹ˆë‹¤.
 		bFalling = OwnerCharacterBase->GetMovementComponent()->IsFalling();
-		// Ä³¸¯ÅÍÀÇ °¡¼Óµµ¸¦ °¡Á®¿É´Ï´Ù.
+		// ìºë¦­í„°ì˜ ê°€ì†ë„ë¥¼ ê°€ì ¸ì˜µë‹ˆë‹¤.
 		Velocity = OwnerCharacterBase->GetVelocity();
-		// Ä³¸¯ÅÍÀ¸ ÇöÀç ¼Óµµ¸¦ Á¤ÀÇÇÕ´Ï´Ù.
+		// ìºë¦­í„°ìœ¼ í˜„ì¬ ì†ë„ë¥¼ ì •ì˜í•©ë‹ˆë‹¤.
 		Speed = OwnerCharacterBase->GetVelocity().Length();
-		// Ä³¸¯ÅÍÀÇ ÀÌµ¿/ºñÀÌµ¿ »óÅÂ¸¦ È®ÀÎÇÕ´Ï´Ù.
+		// ìºë¦­í„°ì˜ ì´ë™/ë¹„ì´ë™ ìƒíƒœë¥¼ í™•ì¸í•©ë‹ˆë‹¤.
 		bShouldMove = Speed > 3.f && OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration() != FVector::ZeroVector;
-		// Ä³¸¯ÅÍÀÇ ÀÌµ¿ »óÅÂ¸¦ Á¤ÀÇÇÕ´Ï´Ù. EMovementState(¿­°ÅÇü) À¯ÇüÀÇ º¯¼ö·Î ³ªÅ¸³À´Ï´Ù.
+		// ìºë¦­í„°ì˜ ì´ë™ ìƒíƒœë¥¼ ì •ì˜í•©ë‹ˆë‹¤. EMovementState(ì—´ê±°í˜•) ìœ í˜•ì˜ ë³€ìˆ˜ë¡œ ë‚˜íƒ€ëƒ…ë‹ˆë‹¤.
 		FindMovementState();
-		// [TODO] : LockOn ±â´É ±¸Çö ÈÄ È°¿ëÇÒ ÇÔ¼ö, ÀÏ½ÃÀûÀ¸·Î ÁÖ¼® Ã³¸® 
-		// Ä³¸¯ÅÍÀÇ ÀÌµ¿ ¹æÇâÀ» Á¤ÀÇÇÕ´Ï´Ù.
-		//FindMovementDirection();
+		// [TODO] : LockOn ê¸°ëŠ¥ êµ¬í˜„ í›„ í™œìš©í•  í•¨ìˆ˜, ì¼ì‹œì ìœ¼ë¡œ ì£¼ì„ ì²˜ë¦¬ 
+		// ìºë¦­í„°ì˜ ì´ë™ ë°©í–¥ì„ ì •ì˜í•©ë‹ˆë‹¤.
+		FindMovementDirection();
 	}
 }
 
 void UBaseAnimInstance::FindMovementState()
 {
-	// Ä³¸¯ÅÍÀÇ ÀÌµ¿ »óÅÂ¸¦ Á¤ÀÇÇÕ´Ï´Ù.
+	
+	// ìºë¦­í„°ì˜ ì´ë™ ìƒíƒœë¥¼ ì •ì˜í•©ë‹ˆë‹¤.
 	FVector Vector1 = OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration();
 	FVector Vector2 = Velocity;
 
@@ -60,22 +61,22 @@ void UBaseAnimInstance::FindMovementState()
 	Vector1.Normalize();
 	Vector2.Normalize();
 
-	// #1. ¹æÇâ ÀüÈ¯
+	// #1. ë°©í–¥ ì „í™˜
 	if (FVector::DotProduct(Vector1, Vector2) < -0.75f)
 	{
 		MovementState = EMovementState::Pivoting;
 	}
-	// #2. ¶Ù±â
+	// #2. ë›°ê¸°
 	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 300.f && Length1 > 0.5f && Length2 > 1.0)
 	{
 		MovementState = EMovementState::Run;
 	}
-	// #3. °È±â
+	// #3. ê±·ê¸°
 	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 1.f && Length1 > 0.01f && Length2 > 0.f)
 	{
 		MovementState = EMovementState::Walk;
 	}
-	// #4. Á¤Áö
+	// #4. ì •ì§€
 	else
 	{
 		MovementState = EMovementState::Idle;
@@ -84,13 +85,20 @@ void UBaseAnimInstance::FindMovementState()
 
 void UBaseAnimInstance::FindMovementDirection()
 {
-	// Ä³¸¯ÅÍÀÇ ÇöÀç °¡¼Óµµ º¤ÅÍ¸¦ ±â¹İÀ¸·Î ÇÑ ·ÎÅ×ÀÌ¼ÇÀ» °è»ê
+	// ì¼€ë¦­í„°ê°€ LockOnì„ ì·¨ì†Œí•˜ê±°ë‚˜, Runë™ì•ˆì€ ì´ë™ ë°©í–¥ì„ Fwdë¡œ ì„¤ì •.
+	if (bLockOn == false || MovementState == EMovementState::Run)
+	{
+		MovementDirection = EMovementDirection::Fwd;
+		return;
+	}
+		
+	// ìºë¦­í„°ì˜ í˜„ì¬ ê°€ì†ë„ ë²¡í„°ë¥¼ ê¸°ë°˜ìœ¼ë¡œ í•œ ë¡œí…Œì´ì…˜ì„ ê³„ì‚°
 	FRotator Rotation1 = UKismetMathLibrary::MakeRotFromX(OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration());
 
-	// Ä³¸¯ÅÍ°¡ ¹Ù¶óº¸´Â ¹æÇâÀÇ º¤ÅÍ¸¦ ±â¹İÀ¸·Î ·ÎÅ×ÀÌ¼ÇÀ» °è»ê
+	// ìºë¦­í„°ê°€ ë°”ë¼ë³´ëŠ” ë°©í–¥ì˜ ë²¡í„°ë¥¼ ê¸°ë°˜ìœ¼ë¡œ ë¡œí…Œì´ì…˜ì„ ê³„ì‚°
 	FRotator Rotation2 = OwnerCharacterBase->GetControlRotation();
 
-	// µÎ ¹æÇâ »çÀÌÀÇ ÃÖ¼Ò °¢µµ Â÷ÀÌ¸¦ °è»ê, ¿À¸¥¼Õ ÁÂÇ¥°è ±âÁØ Ä³¸¯ÅÍÀÇ Yaw È¸Àü °ª ±âÁØ ½Ã°è ¹æÇâÀº À½¼ö, ¹İ ½Ã°è ¹æÇâÀº ¾ç¼ö
+	// ë‘ ë°©í–¥ ì‚¬ì´ì˜ ìµœì†Œ ê°ë„ ì°¨ì´ë¥¼ ê³„ì‚°, ì˜¤ë¥¸ì† ì¢Œí‘œê³„ ê¸°ì¤€ ìºë¦­í„°ì˜ Yaw íšŒì „ ê°’ ê¸°ì¤€ ì‹œê³„ ë°©í–¥ì€ ìŒìˆ˜, ë°˜ ì‹œê³„ ë°©í–¥ì€ ì–‘ìˆ˜
 	float Angle = FMath::FindDeltaAngleDegrees(Rotation1.Yaw, Rotation2.Yaw);
 
 	// #1. Fwd
