@@ -4,10 +4,6 @@
 #include "QuickSlot.h"
 #include "Logging/StructuredLog.h"
 
-#include "Components/Overlay.h"
-#include "Components/VerticalBox.h"
-#include "Components/EditableText.h"
-
 DEFINE_LOG_CATEGORY(LogQuickSlot)
 
 
@@ -17,7 +13,7 @@ UQuickSlot::UQuickSlot(const FObjectInitializer& ObjectInitializer)
 	SlotOverlay = nullptr;
 	SlotImage = nullptr;
 	SlotItemNum = nullptr;
-	bUnique = true;
+	bStackable = false;
 }
 
 void UQuickSlot::NativeOnInitialized()

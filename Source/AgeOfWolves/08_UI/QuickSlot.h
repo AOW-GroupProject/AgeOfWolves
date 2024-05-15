@@ -4,15 +4,15 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Components/Overlay.h"
+#include "Components/VerticalBox.h"
+#include "Components/Image.h"
+#include "Components/EditableText.h"
 #include "GameplayTagContainer.h"
 
 #include "QuickSlot.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogQuickSlot, Log, All)
-
-class UOverlay;
-class UImage;
-class UEditableText;
 
 /**
  * 
@@ -45,13 +45,17 @@ protected:
 		UOverlay* SlotOverlay;
 	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
 		UImage* SlotImage;
-	bool bUnique; // ItemNum 표시 여부를 결정합니다.
+	bool bStackable; // ItemNum 표시 여부를 결정합니다.
 	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
 		UEditableText* SlotItemNum;
 
 public:
-	UFUNCTION(BlueprintCallable, meta = (BindWidget))
-		FORCEINLINE void SetIsUnique(bool InBool) { bUnique = InBool; }
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE void SetSlotImage(UTexture2D* InTexture) { SlotImage->SetBrushFromTexture(InTexture); }
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE void SetIsStackable(bool InBool) { bStackable = InBool; }
+	UFUNCTION(BlueprintCallable, meta = (EditCondition = "bStackable == true"))
+		FORCEINLINE void SetSlotItemNum(float InFloat) { SlotItemNum->SetText(FText::AsNumber(InFloat)); }
 #pragma endregion
 
 // @TODO : 특정 키 입력 이벤트에 해당 Slot 활성화 콜백 함수를 등록해야 합니다.

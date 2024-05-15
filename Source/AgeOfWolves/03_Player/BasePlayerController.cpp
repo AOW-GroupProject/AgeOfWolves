@@ -35,8 +35,8 @@ void ABasePlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	// OnPosess 이벤트 호출 
-	OnControllerPossessCharacter.ExecuteIfBound();
+	// OnPosess 이벤트 호출
+	//OnControllerPossessCharacter.ExecuteIfBound();
 
 	if (auto PS = GetPlayerState<APlayerStateBase>())
 	{

@@ -52,7 +52,6 @@ protected:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	//~End Of APlayerState Interface
-
 #pragma endregion
 
 #pragma region Gameplay Ability System
@@ -94,7 +93,6 @@ protected:
 	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);
 
 public:
-
 	/*
 	* @목적 : ASC에 등록된 AttributeSet의 각 Attribute 값 초기화 이벤트를 전파하는 이벤트
 	* @설명 : Attribute 값 변화 이벤트 발생 시 이를 UI 등 다양한 곳에 알리기 위함
@@ -120,7 +118,7 @@ protected:
 #pragma region Getter&Setter
 public:
 	template<typename T>
-	T GetAttributeCurrentValue(FString FindingAttriubteName)
+	T GetAttributeValue(FString FindingAttriubteName)
 	{
 		check(AttributeSet.Get());
 
@@ -135,7 +133,6 @@ public:
 
 		return -1;
 	}
-
 #pragma endregion
 	
 };

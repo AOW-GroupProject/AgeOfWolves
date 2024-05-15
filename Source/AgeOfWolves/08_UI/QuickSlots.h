@@ -34,20 +34,21 @@ protected:
 #pragma endregion
 
 #pragma region SubWidgets
-	// #0. Quick Slot 유형
+protected:
+	// Quick Slot 유형
 	UPROPERTY(EditDefaultsOnly, Category = "Quick Slot")
 		TSubclassOf<UQuickSlot> QuickSlotClass;
-	// #1. Potion Slot List
+protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
 		UVerticalBox* PotionSlotList;
 	UPROPERTY(EditDefaultsOnly, Category = "Quick Slot")
 		int32 PotionSlotNum;
-	// #2. Tool  Slot List
+
+protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot | Tool", meta = (BindWidget))
 		UVerticalBox* ToolSlotList;
 	UPROPERTY(EditDefaultsOnly, Category = "Quick Slot")
 		int32 ToolSlotNum;
-
 #pragma endregion
 
 #pragma region Input Action

@@ -32,7 +32,8 @@ protected:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
-	virtual void Tick(float DeltaSeconds) override;
+	// @설명: 필요한 순간에만 활용합니다. 우선 주석 처리합니다.
+	//virtual void Tick(float DeltaSeconds) override;
 	//~End AActor interface
 
 	//~Begin APawn interface

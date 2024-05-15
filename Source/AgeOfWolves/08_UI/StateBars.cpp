@@ -30,8 +30,6 @@ void UStateBars::NativeOnInitialized()
 	MStateBars.Add({ "Mana", MP});
 	MStateBars.Add({ "Stamina", SP});
 
-	// BG Image와 Fill Image 설정
-
 	// Attribute 수치 변화 이벤트에 콜백 함수 등록
 	if (const auto PS = GetOwningPlayerState<APlayerStateBase>())
 	{
@@ -67,7 +65,7 @@ void UStateBars::OnAttributeValueChanged(FGameplayAttribute Attribute, float Old
 			if (auto StateBar = MStateBars.Find(Attribute.AttributeName))
 			{
 				FString AttributeLookingFor = "Max" + Attribute.AttributeName;
-				float MaxValue = PS->GetAttributeCurrentValue<float>(AttributeLookingFor);
+				float MaxValue = PS->GetAttributeValue<float>(AttributeLookingFor);
 
 				if (MaxValue != 0)
 				{

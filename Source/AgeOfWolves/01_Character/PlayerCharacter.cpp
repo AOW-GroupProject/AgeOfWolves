@@ -24,7 +24,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
 	)
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	// Replace Input Component to User defined Base Input Component
 	InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
@@ -90,11 +90,12 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void APlayerCharacter::Tick(float DeltaSeconds)
-{
-	Super::Tick(DeltaSeconds);
-
-}
+// @설명 : 필요한 순간에 활용합니다. 우선 주석 처리합니다.
+//void APlayerCharacter::Tick(float DeltaSeconds)
+//{
+//	Super::Tick(DeltaSeconds);
+//
+//}
 
 void APlayerCharacter::PossessedBy(AController* NewController)
 {

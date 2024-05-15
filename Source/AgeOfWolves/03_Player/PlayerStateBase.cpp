@@ -48,7 +48,9 @@ void APlayerStateBase::InitializeGameplayAbilitySystem()
 {
 	check(PawnData);
 
-	// #1. HUD 초기화
+	// @TODO: Inventory 초기화, 시작 아이템
+	
+	// #2. HUD 초기화
 	if (HUDClass->IsValidLowLevel())
 	{
 		if (auto PC = GetPlayerController())
@@ -88,6 +90,7 @@ void APlayerStateBase::InitializeGameplayAbilitySystem()
 								{
 									FDelegateHandle DelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddUObject(this, &APlayerStateBase::OnAttributeValueChanged);
 								}
+								break;
 							}
 						}
 					}
