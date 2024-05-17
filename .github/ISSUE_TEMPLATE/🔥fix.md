@@ -2,7 +2,7 @@
 name: "\U0001F525Fix"
 about: 버그 발생 혹은 코드 수정 관련 이슈 작성 시 해당 템플릿을 사용하세요
 title: ''
-labels: ''
+labels: bug, wontfix
 assignees: ''
 
 ---
