@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -41,43 +41,45 @@ class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 
 protected:
 	/*
-	* [¼³¸í] : OwnerÀÇ Beginplay() ÇÔ¼ö È£Ãâ ½Ã È£ÃâµÇ´Â ÇÔ¼ö
+	* [ì„¤ëª…] : Ownerì˜ Beginplay() í•¨ìˆ˜ í˜¸ì¶œ ì‹œ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
 	*/
 	virtual void NativeBeginPlay() override;
 	/*
-	* [¼³¸í] : ÃÊ±âÈ­ ÇÔ¼ö
+	* [ì„¤ëª…] : ì´ˆê¸°í™” í•¨ìˆ˜
 	*/
 	virtual void NativeInitializeAnimation() override;
 	/*
-	* [¼³¸í] : ¸Å Frame¸¶´Ù È£ÃâµÇ´Â Tick ÇÔ¼ö
+	* [ì„¤ëª…] : ë§¤ Frameë§ˆë‹¤ í˜¸ì¶œë˜ëŠ” Tick í•¨ìˆ˜
 	*/
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 
 	/*
-	* [¼³¸í] : Anim InstanceÀÇ ´ë»óÀÌ µÇ´Â Ä³¸¯ÅÍ ¿À³Ê¿¡ ´ëÇÑ ¾àÇÑ ÂüÁ¶
+	* [ì„¤ëª…] : Anim Instanceì˜ ëŒ€ìƒì´ ë˜ëŠ” ìºë¦­í„° ì˜¤ë„ˆì— ëŒ€í•œ ì•½í•œ ì°¸ì¡°
 	*/
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta=(AllowPrivateAccess ="true"))
 		TWeakObjectPtr<class ACharacterBase> OwnerCharacterBase;
 
 protected:
 	/* 
-	*  @¸ñÀû : ÇöÀç Ä³¸¯ÅÍÀÇ ÀÌµ¿ »óÅÂ(Á¤Áö, °È±â, ¶Ù±â...etc)¸¦ Ã£½À´Ï´Ù.
-	*  @¼³¸í : ÇöÀç Ä³¸¯ÅÍÀÇ Anim Instance¿¡¼­ °¢ ÀÌµ¿ »óÅÂ¿¡ ´ëÀÀµÇ´Â °¢°¢ÀÇ AnimationÀ» ÀûÀıÈ÷ Àç»ıÇÏ±â À§ÇÔÀÔ´Ï´Ù.
-	*  @ÂüÁ¶ : ABP_AkaOni_Base, ABP_AkaOni_BaseLayer
+	*  @ëª©ì  : í˜„ì¬ ìºë¦­í„°ì˜ ì´ë™ ìƒíƒœ(ì •ì§€, ê±·ê¸°, ë›°ê¸°...etc)ë¥¼ ì°¾ìŠµë‹ˆë‹¤.
+	*  @ì„¤ëª… : í˜„ì¬ ìºë¦­í„°ì˜ Anim Instanceì—ì„œ ê° ì´ë™ ìƒíƒœì— ëŒ€ì‘ë˜ëŠ” ê°ê°ì˜ Animationì„ ì ì ˆíˆ ì¬ìƒí•˜ê¸° ìœ„í•¨ì…ë‹ˆë‹¤.
+	*  @ì°¸ì¡° : ABP_AkaOni_Base, ABP_AkaOni_BaseLayer
 	*/
 	UFUNCTION(BlueprintCallable)
 		void FindMovementState();
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement State", meta = (AlloPrivateAccess = "true"))
 		EMovementState MovementState = EMovementState::Idle;
-
+public:
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE EMovementState GetMovementState() const { return MovementState; }
 
+protected:
+
 	/*
-	*  @¸ñÀû : ÇöÀç Ä³¸¯ÅÍÀÇ ÀÌµ¿ ¹æÇâÀ» Ã£½À´Ï´Ù.
-	*  @¼³¸í : ÀÌµ¿ ¹æÇâÀº ÃÑ 4°¡Áö·Î, EMovementDirection À¯ÇüÀÇ º¯¼ö·Î ³ªÅ¸³À´Ï´Ù.
-	*  @ÂüÁ¶ : ABP_AkaOni_Base, ABP_AkaOni_BaseLayer
+	*  @ëª©ì  : í˜„ì¬ ìºë¦­í„°ì˜ ì´ë™ ë°©í–¥ì„ ì°¾ìŠµë‹ˆë‹¤.
+	*  @ì„¤ëª… : ì´ë™ ë°©í–¥ì€ ì´ 4ê°€ì§€ë¡œ, EMovementDirection ìœ í˜•ì˜ ë³€ìˆ˜ë¡œ ë‚˜íƒ€ëƒ…ë‹ˆë‹¤.
+	*  @ì°¸ì¡° : ABP_AkaOni_Base, ABP_AkaOni_BaseLayer
 	*/
 	UFUNCTION(BlueprintCallable)
 		void FindMovementDirection();
@@ -100,6 +102,10 @@ protected:
 		FVector Velocity;
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		float Speed;
+
+	// @ëª©ì  : í˜„ì¬ í”Œë ˆì´ì–´ê°€ LockOn ì¤‘ì¸ì§€ ë‚˜íƒ€ë‚´ëŠ” bool ë³€ìˆ˜
+	bool bLockOn = false;
+
 #pragma endregion
 
 #pragma region IK
@@ -119,4 +125,6 @@ protected:
 	virtual void ClearBoneTransform_Implementation(float DeltaTime) { }
 #pragma endregion
 
+public:
+	FORCEINLINE void SetbLockOn(bool LockOn) { bLockOn = LockOn; }
 };
