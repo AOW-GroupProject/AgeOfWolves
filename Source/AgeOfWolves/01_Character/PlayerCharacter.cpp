@@ -95,14 +95,7 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-<<<<<<< HEAD
-// @설명 : 필요한 순간에 활용합니다. 우선 주석 처리합니다.
-//void APlayerCharacter::Tick(float DeltaSeconds)
-//{
-//	Super::Tick(DeltaSeconds);
-//
-//}
-=======
+
 void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -110,7 +103,7 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 	// AdjustControllerRotation(DeltaSeconds);
 
 }
->>>>>>> 10d048423306f9df17eee487e5bf80e0a29151d0
+
 
 void APlayerCharacter::PossessedBy(AController* NewController)
 {
