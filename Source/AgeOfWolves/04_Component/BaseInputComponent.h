@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+ï»¿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -17,10 +17,10 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInputComponent, Log, All)
 DECLARE_DYNAMIC_DELEGATE(FPlayerInputInit);
 
 /**
- * @¸ñÀû : Enhanced Input System È°¿ëÀ» À§ÇÑ »ç¿ëÀÚ Á¤ÀÇ Input Component¸¦ Á¤ÀÇÇÕ´Ï´Ù.
- * @¼³¸í : ÀÏ¹İÀûÀÎ Input Component ´ë½Å, Enhanced Input System È°¿ëÀÌ °¡´ÉÇÑ »ç¿ëÀÚ Á¤ÀÇ Input Component¸¦ Á¤ÀÇÇÏ°í,
- *		   ÇØ´ç ÄÄÆ÷³ÍÆ®¸¦ ACharacterBase(»ç¿ëÀÚ Ä³¸¯ÅÍ Å¬·¡½º)ÀÇ Default Input Component·Î ¼³Á¤ÇÕ´Ï´Ù.	
- * @ÂüÁ¶ : APlayerCharacter() »ı¼ºÀÚ
+ * @ëª©ì  : Enhanced Input System í™œìš©ì„ ìœ„í•œ ì‚¬ìš©ì ì •ì˜ Input Componentë¥¼ ì •ì˜í•©ë‹ˆë‹¤.
+ * @ì„¤ëª… : ì¼ë°˜ì ì¸ Input Component ëŒ€ì‹ , Enhanced Input System í™œìš©ì´ ê°€ëŠ¥í•œ ì‚¬ìš©ì ì •ì˜ Input Componentë¥¼ ì •ì˜í•˜ê³ ,
+ *		   í•´ë‹¹ ì»´í¬ë„ŒíŠ¸ë¥¼ ACharacterBase(ì‚¬ìš©ì ìºë¦­í„° í´ë˜ìŠ¤)ì˜ Default Input Componentë¡œ ì„¤ì •í•©ë‹ˆë‹¤.	
+ * @ì°¸ì¡° : APlayerCharacter() ìƒì„±ì
  */
 UCLASS()
 class AGEOFWOLVES_API UBaseInputComponent : public UEnhancedInputComponent
@@ -39,22 +39,22 @@ protected:
 	//~End Of UActorComponent interface
 
 	/*
-	* @¸ñÀû : »ç¿ëÀÚÀÇ ÀÔ·Â ½Ã½ºÅÛÀÇ ÃÊ±âÈ­ ÀÛ¾÷À» ¼öÇàÇÏ´Â ÇÔ¼öÀÔ´Ï´Ù.
-	* @¼³¸í : »ç¿ëÀÚ Ä³¸¯ÅÍÀÇ Pawn DataÀÇ InputConfing(Data Asset)À» ÅëÇØ Enhanced Input SystemÀÇ ÃÊ±âÈ­ ÀÛ¾÷À» ÁøÇàÇÕ´Ï´Ù.
+	* @ëª©ì  : ì‚¬ìš©ìì˜ ì…ë ¥ ì‹œìŠ¤í…œì˜ ì´ˆê¸°í™” ì‘ì—…ì„ ìˆ˜í–‰í•˜ëŠ” í•¨ìˆ˜ì…ë‹ˆë‹¤.
+	* @ì„¤ëª… : ì‚¬ìš©ì ìºë¦­í„°ì˜ Pawn Dataì˜ InputConfing(Data Asset)ì„ í†µí•´ Enhanced Input Systemì˜ ì´ˆê¸°í™” ì‘ì—…ì„ ì§„í–‰í•©ë‹ˆë‹¤.
 	*/
 	void InitializePlayersInputActionsSetup();
 
 public:
-	// @¸ñÀû : »ç¿ëÀÚ ÀÔ·Â ½Ã½ºÅÛ ÃÊ±âÈ­ ÀÛ¾÷ ¿Ï·á ÀÌº¥Æ®
+	// @ëª©ì  : ì‚¬ìš©ì ì…ë ¥ ì‹œìŠ¤í…œ ì´ˆê¸°í™” ì‘ì—… ì™„ë£Œ ì´ë²¤íŠ¸
 	FPlayerInputInit OnPlayerInputInitFinished;
 
 #pragma endregion 
 
 #pragma region Binding
 public:
-	// @¼³¸í : Enhanced Input System¿¡ »ç¿ëÀÚÀÇ IMC(Input Mapping Context)¸¦ µî·ÏÇÕ´Ï´Ù.
+	// @ì„¤ëª… : Enhanced Input Systemì— ì‚¬ìš©ìì˜ IMC(Input Mapping Context)ë¥¼ ë“±ë¡í•©ë‹ˆë‹¤.
 	void AddInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
-	// @¼³¸í : Enhanced Input System¿¡ µî·ÏµÈ »ç¿ëÀÚÀÇ Æ¯Á¤ IMC(Input Mapping Context)¸¦ Á¦°ÅÇÕ´Ï´Ù.
+	// @ì„¤ëª… : Enhanced Input Systemì— ë“±ë¡ëœ ì‚¬ìš©ìì˜ íŠ¹ì • IMC(Input Mapping Context)ë¥¼ ì œê±°í•©ë‹ˆë‹¤.
 	void RemoveInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
 	// @brief : Tempalte function in which Native Input Action matching to the Input Tag will bind to User's Callback Function
 	template<typename UserClass, typename FuncType>
@@ -92,25 +92,73 @@ public:
 
 	// @breif : Remove BindHandles Interacting with corressponding Ability Input Action
 	void RemoveBinds(TArray<uint32>& BindHandles);
+
+
 #pragma endregion
 
 #pragma region Callbacks bind to Native Input Action
 
 protected:
-	// @¸ñÀû : »ç¿ëÀÚÀÇ Move IA¿¡ ´ëÀÀµÇ´Â Ä³¸¯ÅÍ ÀÌµ¿ Á¶ÀÛÀ» Á¤ÀÇÇÏ´Â Äİ¹é ÇÔ¼ö
+	// @ëª©ì  : ì‚¬ìš©ìì˜ Move IAì— ëŒ€ì‘ë˜ëŠ” ìºë¦­í„° ì´ë™ ì¡°ì‘ì„ ì •ì˜í•˜ëŠ” ì½œë°± í•¨ìˆ˜
 	void Input_Move(const FInputActionValue& Value);
-	// @¸ñÀû : »ç¿ëÀÚÀÇ Looking IA¿¡ ´ëÀÀµÇ´Â Ä«¸Ş¶ó ½Ã¾ß ¹æÇâ Á¶ÀÛÀ» Á¤ÀÇÇÏ´Â Äİ¹é ÇÔ¼ö 
+	// @ëª©ì  : ì‚¬ìš©ìì˜ Looking IAì— ëŒ€ì‘ë˜ëŠ” ì¹´ë©”ë¼ ì‹œì•¼ ë°©í–¥ ì¡°ì‘ì„ ì •ì˜í•˜ëŠ” ì½œë°± í•¨ìˆ˜ 
 	void Input_Look(const FInputActionValue& Value);
+	// @ëª©ì  : ì‚¬ìš©ìì˜ LockOn IAì— ëŒ€ì‘ë˜ëŠ” Lock On ê¸°ëŠ¥ì„ ì •ì˜í•˜ëŠ” ì½œë°± í•¨ìˆ˜ 
+	void Input_LockOn(const FInputActionValue& Value);
+
+public:
+	// @ëª©ì  : LockOnì„ ì‹œì‘í•˜ëŠ” í•¨ìˆ˜
+	void StartLockOn();
+	// @ëª©ì  : LockOnì„ ì·¨ì†Œí•˜ëŠ” í•¨ìˆ˜
+	void CancelLockOn();
+
+protected:
+	// @ëª©ì  : ì‚¬ìš©ìì˜ ChageLockOnTarget IAì— ëŒ€ì‘ë˜ëŠ” Lock On Target ë³€ê²½ì„ ì •ì˜í•˜ëŠ” ì½œë°± í•¨ìˆ˜ (ì‚¬ìš©í•˜ì§€ ì•ŠìŒ)
+	void Input_ChangeLockOnTarget(const FInputActionValue& Value);
+
+
+	// @ëª©ì  : TargetEnemy ë°©í–¥ìœ¼ë¡œ Controller Rotationì„ ì„¤ì •í•˜ëŠ” í•¨ìˆ˜
+	void SetControllerRotationTowardTarget();
+	// @ëª©ì  : ì£¼ë³€ Enemyë¥¼ ì°¾ê³  TargetEnemyë¥¼ ì„¤ì •í•˜ëŠ” í•¨ìˆ˜
+	// @ì„¤ëª… : TargetEnemyë¥¼ ì°¾ì•˜ìœ¼ë©´ trueë¥¼ ë°˜í™˜í•œë‹¤.
+	bool FindTargetEnemy();
+
+	// @ì„¤ëª… : ì¼€ë¦­í„°ê°€ LockOnì‹œ ì ì„ ì°¾ëŠ” ê°ì§€ ë²”ìœ„
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input Action | Native Input Action")
+	float MaxDetectRadius = 1000.f;
+	// @ì„¤ëª… : ì¼€ë¦­í„°ê°€ LockOnì„ ìœ ì§€í•˜ëŠ” ìµœëŒ€ ê±°ë¦¬
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input Action | Native Input Action")
+	float  MaxLockOnDistance = 2000.f;
+
+	// @ì„¤ëª… : Input_LockOn í•¨ìˆ˜ ì‹¤í–‰ ì‹œ ì°¾ì€ ì  Actor ë‹´ëŠ” Array
+	UPROPERTY()
+	TArray<AActor*> NearByEnemies;
+	// @ì„¤ëª… : nput_LockOn í•¨ìˆ˜ ì‹¤í–‰ ì‹œ ê³„ì‚°í•œ ë‚´ì ê°’ê³¼ ì°¾ì€ ì  Actorë¥¼ ë‹´ëŠ” Map
+	UPROPERTY()
+	TMap<float, AActor*> EnemyMap;
+	// @ì„¤ëª… : í˜„ì¬ í”Œë ˆì´ì–´ê°€ LockOn ì¤‘ì¸ ì  Actor
+	UPROPERTY()
+	AActor* TargetEnemy;
+	// @ì„¤ëª… : í˜„ì¬ í”Œë ˆì´ì–´ê°€ LockOn ì¤‘ì¸ì§€ ë‚˜íƒ€ë‚´ëŠ” bool ë³€ìˆ˜
+	bool bLockOn = false;
+	// @ì„¤ëª… : í˜„ì¬ í”Œë ˆì´ì–´ì˜ ì…ë ¥ ë²¡í„°
+	FVector2D InputVector;
 
 #pragma endregion
 
 #pragma region Callbacks bind to Ability Input Action
 
 protected:
-	// @¸ñÀû : »ç¿ëÀÚÀÇ Ability IA°ü·Ã Å° ´­¸²¿¡ ´ëÀÀµÇ´Â Äİ¹é ÇÔ¼ö
+	// @ëª©ì  : ì‚¬ìš©ìì˜ Ability IAê´€ë ¨ í‚¤ ëˆŒë¦¼ì— ëŒ€ì‘ë˜ëŠ” ì½œë°± í•¨ìˆ˜
 	void Input_AbilityInputTagPressed(FGameplayTag InputTag);
-	// @¸ñÀû : »ç¿ëÀÚÀÇ Ability IA°ü·Ã Å° ÇØÁ¦¿¡ ´ëÀÀµÇ´Â Äİ¹é ÇÔ¼ö
+	// @ëª©ì  : ì‚¬ìš©ìì˜ Ability IAê´€ë ¨ í‚¤ í•´ì œì— ëŒ€ì‘ë˜ëŠ” ì½œë°± í•¨ìˆ˜
 	void Input_AbilityInputTagReleased(FGameplayTag InputTag);
 
 #pragma endregion
+
+public:
+	FORCEINLINE AActor* GetTargetEnemy() { return TargetEnemy; }
+	FORCEINLINE bool GetbLockOn() { return bLockOn; }
+	FORCEINLINE float GetMaxLockOnDistance() { return MaxLockOnDistance; }
+	FORCEINLINE FVector2D GetInputVector() { return InputVector; }
 };

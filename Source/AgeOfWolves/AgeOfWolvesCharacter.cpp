@@ -55,7 +55,7 @@ void AAgeOfWolvesCharacter::BeginPlay()
 {
 	// Call the base class  
 	Super::BeginPlay();
-
+	UE_LOG(LogTemp, Warning, TEXT("TestTest"));
 	//Add Input Mapping Context
 	if (APlayerController* PlayerController = Cast<APlayerController>(Controller))
 	{
