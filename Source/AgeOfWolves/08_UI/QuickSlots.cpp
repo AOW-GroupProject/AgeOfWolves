@@ -25,7 +25,7 @@ void UQuickSlots::NativeOnInitialized()
 
 	// #1. Potion Slot List 초기화
 	{
-		// @설명 : Potion Slot List에 ToolSlotNum 크기 만큼의 Quick Slot을 추가합니다.
+		// @설명 : Potion Slot List에 PotionSlotNum 크기 만큼의 Quick Slot을 추가합니다.
 		for (uint8 i = 0; i < PotionSlotNum; ++i)
 		{
 			UQuickSlot* QuickSlot = NewObject<UQuickSlot>(this, QuickSlotClass);

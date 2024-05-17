@@ -9,9 +9,9 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogHUD, Log, All)
 
+class UScaleBox;
 class UQuickSlots;
 class UStateBars;
-class UScaleBox;
 
 /**
  * 

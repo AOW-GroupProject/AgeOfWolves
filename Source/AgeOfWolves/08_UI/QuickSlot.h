@@ -15,7 +15,9 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogQuickSlot, Log, All)
 
 /**
+ * UQuickSlot
  * 
+ * @목적: HUD 구성 요소 중 QuickSlots의 구성 요소로 사용자가 활용 가능한 아이템을 표시하는 UI입니다.
  */
 UCLASS()
 class AGEOFWOLVES_API UQuickSlot : public UUserWidget

@@ -59,7 +59,7 @@ protected:
 	/*
 	* @목적: PawnData를 통해 캐릭터의 최초(게임 시작 시점) 기본 GA, GE, AttributeSet을 ASC에 등록하는 작업을 수행합니다.
 	* @설명: 등록 순서는 AttributeBase -> GE -> GA 순서를 유지합니다. AttributeBase의 각 Attribute의 초기 값을 GE를 통해 초기화하기 때문입니다!
-	* @참고: 
+	* @참고: Inventory -> HUD -> GAS(AS->GE->GA)
 	*/
 	UFUNCTION()
 		void InitializeGameplayAbilitySystem();
@@ -117,6 +117,10 @@ protected:
 
 #pragma region Getter&Setter
 public:
+	/*
+	* @목적: Attribute의 현재 수치 값을 제공하는 Getter입니다.
+	* @설명: Attribute 항목이 추가될 수록 Getter 함수 관련 코드도 증가하여, 중복을 방지하기 위해 템플릿 함수로 정의합니다.
+	*/
 	template<typename T>
 	T GetAttributeValue(FString FindingAttriubteName)
 	{
@@ -130,7 +134,6 @@ public:
 				return Attribute.GetNumericValue(AttributeSet.Get());
 			}
 		}
-
 		return -1;
 	}
 #pragma endregion

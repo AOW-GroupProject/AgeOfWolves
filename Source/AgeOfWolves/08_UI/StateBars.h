@@ -14,7 +14,9 @@ class UProgressBar;
 class UVerticalBox;
 
 /**
+ * UstateBars
  * 
+ * @목적: HUD의 구성 요소로 캐릭터의 Health, Mana, Stamina 수치를 화면에 나타내는 UI입니다.
  */
 UCLASS()
 class AGEOFWOLVES_API UStateBars : public UUserWidget

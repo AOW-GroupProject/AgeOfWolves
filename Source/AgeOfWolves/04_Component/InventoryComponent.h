@@ -41,7 +41,7 @@ enum class EItemRank : uint8
 * FItemInfo
 * 
 * @목적: Item과 관련된 정보를 한 데 묶어놓습니다.
-* @참고: AItem* 유형이 아니라, FGameplayTag 유형의 '태그'를 저장합니다.
+* @참고: AItem* 유형 뿐만 아니라, FGameplayTag 유형의 '태그'를 저장합니다.
 */
 USTRUCT(BlueprintType)
 struct FItemInformation
@@ -109,6 +109,8 @@ protected:
 
 	// Called when the game starts
 	virtual void BeginPlay() override;
+	// @설명: Tick 함수는 임시 주석 처리, 필요할 때 정의하여 사용합니다.
+	//virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 #pragma endregion
 
 #pragma region Inventory
