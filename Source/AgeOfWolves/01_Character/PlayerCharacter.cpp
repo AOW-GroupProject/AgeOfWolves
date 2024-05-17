@@ -199,7 +199,8 @@ void APlayerCharacter::AdjustCameraTransform(float DeltaSeconds)
 			// 달리지 않는 동안에만 ActorRotation을 LockOn방향으로 설정
 			if (!(BaseAnimInstance->GetMovementState() == EMovementState::Run))
 			{
-				SetActorRotation(LookAtRotation);
+				FRotator ActorRotation = FRotator(0.f, LookAtRotation.Yaw, 0.f);
+				SetActorRotation(ActorRotation);
 				SocketOffsetCoefficient = 1.5f;
 			}
 			// 오른쪽, 왼쪽으로 이동하는 경우 스프링암의 Y오프셋을 조절
