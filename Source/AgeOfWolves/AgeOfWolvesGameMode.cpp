@@ -14,4 +14,5 @@ AAgeOfWolvesGameMode::AAgeOfWolvesGameMode()
 	{
 		DefaultPawnClass = PlayerPawnBPClass.Class;
 	}
+
 }

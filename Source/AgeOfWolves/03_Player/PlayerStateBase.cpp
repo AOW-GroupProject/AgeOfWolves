@@ -2,6 +2,8 @@
 #include "PlayerStateBase.h"
 #include "Logging/StructuredLog.h"
 
+#include "GameFramework/PlayerController.h"
+
 #include "02_GameplayAbility/BaseAttributeSet.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 
@@ -9,6 +11,8 @@
 
 #include "01_Character/CharacterBase.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
+
+#include "08_UI/StateBars.h"
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 
@@ -19,6 +23,9 @@ APlayerStateBase::APlayerStateBase()
 {
 	PawnData = nullptr;
 	AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
+
+	HUDClass = nullptr;
+	HUD = nullptr;
 }
 
 void APlayerStateBase::PostInitializeComponents()
@@ -31,14 +38,32 @@ void APlayerStateBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InitializeGameplayAbilitySystem();
-
+	//if (auto PC = CastChecked<ABasePlayerController>(GetPlayerController()))
+	//{
+	//	PC->OnControllerPossessCharacter.BindUFunction(this, "InitializeGameplayAbilitySystem");
+	//}
 }
 
 void APlayerStateBase::InitializeGameplayAbilitySystem()
 {
 	check(PawnData);
 
+	// @TODO: Inventory 초기화, 시작 아이템
+	
+	// #2. HUD 초기화
+	if (HUDClass->IsValidLowLevel())
+	{
+		if (auto PC = GetPlayerController())
+		{
+			HUD = CreateWidget<UUserWidget>(PC, HUDClass);
+			if (IsValid(HUD))
+			{
+				HUD->AddToViewport();
+			}
+		}
+	}
+
+	// #2. GAS 초기화
 	if (const auto& Controller = Cast<AController>(GetOwner()))
 	{
 		if (const auto& Pawn = Controller->GetPawn())
@@ -50,7 +75,7 @@ void APlayerStateBase::InitializeGameplayAbilitySystem()
 				UBaseAbilitySet* SetToGrant = PawnData->AbilitySet;
 				if (IsValid(SetToGrant))
 				{
-					// @설명 : 캐릭터의 기본 AttributeSet을 ASC에 최초 등록합니다.
+					// 캐릭터의 기본 AttributeSet을 ASC에 최초 등록합니다.
 					{
 						SetToGrant->GiveStartupAttributeSetToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
 
@@ -65,19 +90,21 @@ void APlayerStateBase::InitializeGameplayAbilitySystem()
 								{
 									FDelegateHandle DelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddUObject(this, &APlayerStateBase::OnAttributeValueChanged);
 								}
+								break;
 							}
 						}
 					}
-					// @설명 : 캐릭터의 기본 Gameplay Effect를 ASC에 최초 등록/적용합니다.
+					// 캐릭터의 기본 Gameplay Effect를 ASC에 최초 등록/적용합니다.
 					{
 						SetToGrant->GiveStartupGameplayEffectToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
 					}
-					// @설명 : 캐릭터의 기본 Gameplay Ability를 ASC에 최초 등록/적용합니다.
+					// 캐릭터의 기본 Gameplay Ability를 ASC에 최초 등록/적용합니다.
 					{
 						SetToGrant->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
 					}
 
-					// @TODO : ASC에 Startup GA, GE, AttributeSet의 등록 완료 이벤트 호출
+					// ASC에 Startup GA, GE, AttributeSet의 등록 완료 이벤트 호출, 임시 주석 처리
+					//OnAttributeSetInitialized.Broadcast();
 				}
 			}
 		}

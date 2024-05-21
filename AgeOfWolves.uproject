@@ -12,7 +12,9 @@
 				"Engine",
 				"GameplayAbilities",
 				"EnhancedInput",
-				"UMG"
+				"UMG",
+				"Slate",
+				"SlateCore"
 			]
 		}
 	],
