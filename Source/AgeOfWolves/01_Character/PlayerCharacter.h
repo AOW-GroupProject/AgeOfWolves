@@ -1,4 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
 
@@ -32,6 +32,8 @@ protected:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+	// @TODO: LockOn 기능 Refactoring 시 수정할 곳입니다.
+	// @설명: 필요한 순간에만 활용합니다. 우선 주석 처리합니다.
 	virtual void Tick(float DeltaSeconds) override;
 	//~End AActor interface
 
@@ -67,16 +69,14 @@ protected:
 		UCurveFloat* DirectionCurve;
 #pragma endregion
 
-/*
-* @목적 : UI 관련 테스트를 진행하기 위한 임시 코드
-* @설명 : 가이드라인을 확인하고, 실제 UI 구현을 위해 아래 코드를 삭제하고 진행해주시면 됩니다!
-* @참조 : -
-*/
-#pragma region UI
-	UPROPERTY(EditDefaultsOnly)
-		TSubclassOf<UTestWidget> WidgetClass;
-	UPROPERTY()
-		UTestWidget* HUD;
-#pragma endregion
+#pragma region SpringArm & Camera
+	// @TODO: LockOn 기능 관련 Refactoring 진행 시, 수정할 곳
+	// @목적 : LockOn 동안 Spring Arm을 통해 카메라 위치를 조정하는 함수
+	void AdjustCameraTransform(float DeltaSeconds);
+
+	TObjectPtr<class UBaseInputComponent> BaseInputComponent;
+	TObjectPtr<class UBaseAnimInstance> BaseAnimInstance;
+
+public:
 
 };

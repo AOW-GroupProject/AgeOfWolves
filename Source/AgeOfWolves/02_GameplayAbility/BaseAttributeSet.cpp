@@ -6,6 +6,9 @@
 
 DEFINE_LOG_CATEGORY(LogAttributeSet)
 
+UBaseAttributeSet::UBaseAttributeSet()
+{}
+
 TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 {
 	TArray<FGameplayAttribute> AllAttributes;
@@ -31,10 +34,6 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 
 	return AllAttributes;
 }
-
-UBaseAttributeSet::UBaseAttributeSet()
-{}
-
 
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {

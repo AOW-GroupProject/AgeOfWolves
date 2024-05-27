@@ -1,3 +1,4 @@
+﻿
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
@@ -13,11 +14,10 @@
 #include "03_Player/BasePlayerController.h"
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
+#include "05_Animation/BaseAnimInstance.h"
 
 #include "Kismet/KismetMathLibrary.h"
 
-// @설명 : UI 구현을 위한 테스트 코드, 실제 UI구현시 아래 헤더 파일 삭제 후 진행
-#include "08_UI/TestWidget.h"
 
 DEFINE_LOG_CATEGORY(LogPlayer)
 // UE_LOGFMT(LogPlayer, LoG, "");
@@ -26,7 +26,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
 	)
 {
-	PrimaryActorTick.bCanEverTick = true;
+	PrimaryActorTick.bCanEverTick = false;
 
 	// Replace Input Component to User defined Base Input Component
 	InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
@@ -74,10 +74,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	if (animInstance.Class != NULL)
 		GetMesh()->SetAnimInstanceClass(animInstance.Class);
 
-	// @목적: UI관련 테스트 진행 코드, 실제 UI 구현 시 아래 코드 삭제후 진행
-	WidgetClass = nullptr;
-	HUD = nullptr;
-
 }
 
 void APlayerCharacter::PostInitializeComponents()
@@ -89,6 +85,9 @@ void APlayerCharacter::PostInitializeComponents()
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	BaseInputComponent = Cast<UBaseInputComponent>(InputComponent);
+	check(BaseInputComponent);
+	BaseAnimInstance = Cast<UBaseAnimInstance>(GetMesh()->GetAnimInstance());
 }
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -96,15 +95,18 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
+
 void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+	AdjustCameraTransform(DeltaSeconds);
+	// AdjustControllerRotation(DeltaSeconds);
 
 }
 
+
 void APlayerCharacter::PossessedBy(AController* NewController)
 {
-
 	check(NewController);
 
 	Super::PossessedBy(NewController);
@@ -117,19 +119,6 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 			if (IsValid(PS->GetAbilitySystemComponent()) && PS->GetAbilitySystemComponent()->IsA<UBaseAbilitySystemComponent>())
 			{
 				AbilitySystemComponent = MakeWeakObjectPtr<UBaseAbilitySystemComponent>(Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()));
-			}
-		}
-	}
-
-	// @설명 : UI 관련 테스트 코드, 임시 코드, 삭제 예정
-	if (IsLocallyControlled() && WidgetClass->IsValidLowLevel())
-	{
-		if (ABasePlayerController* PC = Cast<ABasePlayerController>(GetController()))
-		{
-			HUD = CreateWidget<UTestWidget>(PC, WidgetClass);
-			if (IsValid(HUD))
-			{
-				HUD->AddToViewport();
 			}
 		}
 	}
@@ -147,8 +136,8 @@ void APlayerCharacter::PawnClientRestart()
 
 void APlayerCharacter::AdjustControllerRotation(float DeltaSeconds)
 {
-
 	check(DirectionCurve);
+	if (BaseInputComponent->GetbLockOn() == false) return;
 
 	// 캐릭터의 현재 가속도 벡터를 기반으로 한 로테이션을 계산
 	FRotator Rotation1 = UKismetMathLibrary::MakeRotFromX(GetCharacterMovement()->GetCurrentAcceleration());
@@ -167,4 +156,83 @@ void APlayerCharacter::AdjustControllerRotation(float DeltaSeconds)
 	// 결과 값을 액터 객체의 회전 값으로 설정
 	SetActorRotation(TargetRotation);
 
+}
+
+void APlayerCharacter::AdjustCameraTransform(float DeltaSeconds)
+{
+	
+	if (BaseInputComponent->GetbLockOn() == true)
+	{
+		SpringArm->bUsePawnControlRotation = false;
+		AActor* TargetEnemy = BaseInputComponent->GetTargetEnemy();
+		// MaxLockOnDistance 보다 가까우면 true
+		bool bCloseToEnemy = (GetActorLocation() - TargetEnemy->GetActorLocation()).Length() < BaseInputComponent->GetMaxLockOnDistance();
+		// 거리가 가깝거나 TargetEnemy가 존재하는 경우 true
+		if (IsValid(TargetEnemy) && bCloseToEnemy)
+		{
+			APlayerCameraManager* CameraManager = GetWorld()->GetFirstPlayerController()->PlayerCameraManager;
+			FVector CameraStart = CameraManager->GetCameraLocation();
+			FVector CharacterStart = GetActorLocation();
+			FVector TargetPosition = TargetEnemy->GetActorLocation();
+			FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(CharacterStart, TargetPosition);
+				
+			float SocketOffsetCoefficient = 1.0f;
+
+			GetController()->SetControlRotation(LookAtRotation);
+			// 달리지 않는 동안에만 ActorRotation을 LockOn방향으로 설정
+			if (!(BaseAnimInstance->GetMovementState() == EMovementState::Run))
+			{
+				FRotator ActorRotation = FRotator(0.f, LookAtRotation.Yaw, 0.f);
+				SetActorRotation(ActorRotation);
+				SocketOffsetCoefficient = 1.5f;
+			}
+			// 오른쪽, 왼쪽으로 이동하는 경우 스프링암의 Y오프셋을 조절
+			if (BaseInputComponent->GetInputVector().Y > 0) // 오른쪽으로 이동
+			{
+				if (SpringArm->SocketOffset.Y > -50)
+				{
+					SpringArm->SocketOffset.Y -= (SocketOffsetCoefficient * BaseInputComponent->GetInputVector().Y);
+				}
+			}
+			else if (BaseInputComponent->GetInputVector().Y < 0) // 왼쪽으로 이동
+			{
+				if (SpringArm->SocketOffset.Y < 50)
+				{
+					SpringArm->SocketOffset.Y -= (SocketOffsetCoefficient * BaseInputComponent->GetInputVector().Y);
+				}
+			}
+			// TargetEnemy와 거리에 따라 카메라를 위로 이동 시킴
+			float DistanceFromTargetEnemy = (GetActorLocation() - TargetPosition).Length();
+			DistanceFromTargetEnemy = FMath::Clamp((6000 / DistanceFromTargetEnemy) + 20, 0, 70);
+			FRotator DistanceRotation = FRotator(-DistanceFromTargetEnemy, 0, 0);
+	
+			FRotator FinalRotation = DistanceRotation + LookAtRotation;
+			FRotator SpringArmRotator = UKismetMathLibrary::RInterpTo(LookAtRotation, FinalRotation, DeltaSeconds, 10.f);
+
+			SpringArm->SocketOffset.X = FMath::Lerp(0, -200, DistanceFromTargetEnemy / 70);
+			SpringArm->SetWorldRotation(FinalRotation);
+		}
+		else if (!bCloseToEnemy)// TargetEnemy와 너무 멀어진경우 LockOn을 취소한다.
+		{
+			TargetEnemy = nullptr;
+			SpringArm->bUsePawnControlRotation = true;
+			SpringArm->SocketOffset.Y = 0;
+			BaseInputComponent->CancelLockOn();
+		}
+		else if (!IsValid(TargetEnemy)) // Target이 죽어 유효하지 않는 경우 LockOn을 취소하고, 다음 Target을 찾는다.
+		{
+			TargetEnemy = nullptr;
+			SpringArm->bUsePawnControlRotation = true;
+			SpringArm->SocketOffset.Y = 0;
+			BaseInputComponent->CancelLockOn();
+			BaseInputComponent->StartLockOn();
+		}
+	}
+	else
+	{
+		SpringArm->bUsePawnControlRotation = true;
+		SpringArm->SocketOffset.Y = 0;
+		BaseInputComponent->CancelLockOn();
+	}
+	
 }

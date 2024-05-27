@@ -13,7 +13,8 @@
 				"GameplayAbilities",
 				"EnhancedInput",
 				"UMG",
-				"AIModule"
+				"Slate",
+				"SlateCore"
 			]
 		}
 	],

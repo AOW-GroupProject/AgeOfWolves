@@ -33,7 +33,6 @@ void UBaseCharacterMovementComponent::MoveSpeedChanged(FGameplayAttribute Attrib
 {
 	if (Attribute.IsValid() && Attribute.AttributeName == "MoveSpeed")
 	{
-		UE_LOG(LogTemp, Error, TEXT("Old : %f, New : %f"), OldValue, NewValue);
 		ChangeMoveSpeed(OldValue, NewValue);
 	}
 }

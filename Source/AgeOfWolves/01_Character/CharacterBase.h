@@ -13,8 +13,9 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogCharacter, Log, All)
 
 class UPawnData;
-class UBaseAbilitySystemComponent;
 class UBaseAttributeSet;
+class UBaseAbilitySystemComponent;
+class UInventoryComponent;
 
 UCLASS()
 class AGEOFWOLVES_API ACharacterBase : public ACharacter, public IAbilitySystemInterface
@@ -27,18 +28,19 @@ public:
 	ACharacterBase(const FObjectInitializer& ObjectInitializer);
 
 protected:
-	//~AActor interface
+	//~UObject interface
 	virtual void BeginPlay() override;
-	//~End Of AActor Interface
+	//~End Of UObject Interface
 
 	//~APawn interface
 	virtual void PossessedBy(AController* NewController) override;
 	//~End Of APawn interface
 
+protected:
+	UInventoryComponent* InventoryComponent;
 #pragma endregion
 
 #pragma region Gameplay Ability System
-
 protected:
 	/*
 	* @목적 : Player State로부터 가져온 ASC에 대한 약한 참조를 관리합니다.
@@ -54,7 +56,6 @@ public:
 	* @참조 : - 
 	*/
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-
 #pragma endregion
 
 };
