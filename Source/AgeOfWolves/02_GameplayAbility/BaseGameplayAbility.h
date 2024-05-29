@@ -43,6 +43,8 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gameplay Ability|Gameplay Effect")
 		TSubclassOf<UGameplayEffect> ApplyGameplayEffectClass;
 
+
+
 public:
 	FORCEINLINE EAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
 	FORCEINLINE UGameplayEffect* GetApplyGameplayEffect() { return ApplyGameplayEffectClass->IsValidLowLevel() ? ApplyGameplayEffectClass->GetDefaultObject<UGameplayEffect>() : nullptr; }

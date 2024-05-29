@@ -4,7 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "AttributeSet.h"
-#include "AbilitySystemComponent.h"
+
+#include "04_Component/BaseAbilitySystemComponent.h"
 
 #include "BaseAttributeSet.generated.h"
 
@@ -136,9 +137,18 @@ protected:
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 
 	/*
+	* @목적 : Attribute 수치 변화 이벤트 발생 후에 항상 호출되는 함수
+	* @설명 : Attribute 수치가 변화후에 호출된다. 
+	*/
+	// AttributeSet Overrides
+	virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
+
+
+	/*
 	* @목적 : Attribute의 변화 이후에 호출되는 Handling Logic
 	* @설명 : Current Health의 Clmap 작업 등 Attribute 값의 변화가 일어난 이후에 발생하는 핸들링 로직을 처리합니다.
 	*/
+	// AttributeSet Overrides
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
 	/*
@@ -147,5 +157,20 @@ protected:
 	*/
 	void AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);
 
+
+	/*
+	* @목적 : Attribute를 Clamp하는 함수
+	* @설명 : PreAttributeChange 함수에서 Clamp 작업을 담당한다.
+	*/
+	void ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const;
+
+
+
+
+	/*
+	* @목적 : AttributeSet 클래스 내에서 Base Ability System Component를 얻는 Getter함수
+	* @설명 : GetOwningAbilitySystemComponent 함수의 반환값을 UBaseAbilitysystemComponent로 캐스팅 후에 반환합니다.
+	*/
+	UBaseAbilitySystemComponent* GetBaseAbilitySystemComponent() const;
 
 };

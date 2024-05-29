@@ -19,6 +19,7 @@
 #include "GameplayTagContainer.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInputComponent)
 
@@ -83,6 +84,7 @@ void UBaseInputComponent::InitializePlayersInputActionsSetup()
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Look);
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LockOn);
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.ChangeLockOnTarget")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_ChangeLockOnTarget);
+				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.CountMouseInput")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_CountMouseLeftInput);
 
 				// #3. Ability Input Actions
 				TArray<uint32> BindHandles;
@@ -312,6 +314,12 @@ void UBaseInputComponent::Input_ChangeLockOnTarget(const FInputActionValue& Valu
 }
 
 
+
+void UBaseInputComponent::Input_CountMouseLeftInput()
+{
+	FGameplayEventData PayLoad;
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(GetOwner(), FGameplayTag::RequestGameplayTag(FName("Event.MouseLeftInput")), PayLoad);
+}
 
 void UBaseInputComponent::Input_AbilityInputTagPressed(FGameplayTag InputTag)
 {
