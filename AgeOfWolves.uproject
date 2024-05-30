@@ -14,7 +14,8 @@
 				"EnhancedInput",
 				"UMG",
 				"Slate",
-				"SlateCore"
+				"SlateCore",
+				"AIModule"
 			]
 		}
 	],
