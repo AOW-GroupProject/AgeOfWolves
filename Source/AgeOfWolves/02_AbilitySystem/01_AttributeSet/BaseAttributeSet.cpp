@@ -17,16 +17,26 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 	AllAttributes.Add(GetHealthAttribute());
 	AllAttributes.Add(GetMaxHealthAttribute());
 	AllAttributes.Add(GetHealthRegenRateAttribute());
+
 	AllAttributes.Add(GetManaAttribute());
 	AllAttributes.Add(GetMaxManaAttribute());
 	AllAttributes.Add(GetManaRegenRateAttribute());
+
 	AllAttributes.Add(GetStaminaAttribute());
 	AllAttributes.Add(GetMaxStaminaAttribute());
 	AllAttributes.Add(GetStaminaRegenRateAttribute());
-	AllAttributes.Add(GetArmorAttribute());
+
+	AllAttributes.Add(GetPoiseAttribute());
+	AllAttributes.Add(GetDefenseAttribute());
+	AllAttributes.Add(GetOffenseAttribute());
 	AllAttributes.Add(GetMoveSpeedAttribute());
 	AllAttributes.Add(GetCharacterLevelAttribute());
+
 	AllAttributes.Add(GetDamageAttribute());
+
+	AllAttributes.Add(GetSealPointAttribute());
+	AllAttributes.Add(GetGroggyAttribute());
+
 	AllAttributes.Add(GetXPAttribute());
 	AllAttributes.Add(GetGoldAttribute());
 	AllAttributes.Add(GetXPBountyAttribute());
@@ -39,18 +49,22 @@ void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 {
 	Super::PreAttributeChange(Attribute, NewValue);
 
+	// @HP
 	if (Attribute == GetMaxHealthAttribute())
 	{
 		AdjustAttributeForMaxChange(Health, MaxHealth, NewValue, GetHealthAttribute());
 	}
+	// @MP
 	else if (Attribute == GetMaxManaAttribute())
 	{
 		AdjustAttributeForMaxChange(Mana, MaxMana, NewValue, GetManaAttribute());
 	}
+	// @SP
 	else if (Attribute == GetMaxStaminaAttribute())
 	{
 		AdjustAttributeForMaxChange(Stamina, MaxStamina, NewValue, GetStaminaAttribute());
 	}
+	// @Move Speed
 	else if (Attribute == GetMoveSpeedAttribute())
 	{
 		NewValue = FMath::Clamp<float>(NewValue, 150, 1000);

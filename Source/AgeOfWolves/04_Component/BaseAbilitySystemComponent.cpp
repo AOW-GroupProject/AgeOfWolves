@@ -1,6 +1,9 @@
 #include "BaseAbilitySystemComponent.h"
+#include "Logging/StructuredLog.h"
 
-#include "02_GameplayAbility/BaseGameplayAbility.h"
+#include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
+
+DEFINE_LOG_CATEGORY(LogASC)
 
 UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -8,6 +11,29 @@ UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitialize
 	InputPressedSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
 	InputHeldSpecHandles.Reset();
+}
+
+void UBaseAbilitySystemComponent::ApplyAbilityBlockAndCancelTags(const FGameplayTagContainer& AbilityTags, UGameplayAbility* RequestingAbility, bool bEnableBlockTags, const FGameplayTagContainer& BlockTags, bool bExecuteCancelTags, const FGameplayTagContainer& CancelTags)
+{
+	FGameplayTagContainer AbilityTagsToBlock = BlockTags;
+	FGameplayTagContainer AbilityTagsToCancel = CancelTags;
+
+	if (AbilityTagRelationship)
+	{
+		AbilityTagRelationship->GetAbilityTagsToBlockAndCancel(AbilityTags, &AbilityTagsToBlock, &AbilityTagsToCancel);
+	}
+
+	Super::ApplyAbilityBlockAndCancelTags(AbilityTags, RequestingAbility, bEnableBlockTags, AbilityTagsToBlock, bExecuteCancelTags, AbilityTagsToCancel);
+}
+
+void UBaseAbilitySystemComponent::GetRelationshipActivationTagRequirements(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer& OutActivationRequired, FGameplayTagContainer& OutActivationBlocked) const
+{
+	//check(AbilityTagRelationship)
+
+	if (AbilityTagRelationship)
+	{
+		AbilityTagRelationship->GetRequiredAndBlockedActivationTags(AbilityTags, &OutActivationRequired, &OutActivationBlocked);
+	}
 }
 
 void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
@@ -93,14 +119,37 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 		}
 	}
 
-	//
-	// Try to activate all the abilities that are from presses and holds.
-	// We do it all at once so that held inputs don't activate the ability
-	// and then also send a input event to the ability because of the press.
-	//
+	/*
+	*/
 	for (const FGameplayAbilitySpecHandle& AbilitySpecHandle : AbilitiesToActivate)
 	{
-		TryActivateAbility(AbilitySpecHandle);
+		// @Block/Cancel 태그 적용
+		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(AbilitySpecHandle))
+		{
+			if (UGameplayAbility* Ability = AbilitySpec->Ability)
+			{
+				if (Ability->DoesAbilitySatisfyTagRequirements(*this))
+				{
+					const FGameplayTagContainer BlockTags;
+					const FGameplayTagContainer CancelTags;
+
+					ApplyAbilityBlockAndCancelTags(Ability->AbilityTags, Ability, true, BlockTags, true, CancelTags);
+
+					for (const auto BlockTag : BlockTags)
+					{
+						UE_LOGFMT(LogASC, Error, "{0}", BlockTag.GetTagName().ToString());
+					}
+					for (const auto CancelTag : CancelTags)
+					{
+						UE_LOGFMT(LogASC, Error, "{0}", CancelTag.GetTagName().ToString());
+					}
+					// @활성화 시도
+					TryActivateAbility(AbilitySpecHandle);
+				}
+
+			}
+
+		}
 	}
 
 	//
