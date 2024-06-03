@@ -63,33 +63,34 @@ public:
 	
 #pragma endregion
 
+	
 #pragma region Distance에 따른 Tangent(사용안함)
 
 
-
-	UFUNCTION(BlueprintCallable)
 	/*
 	* @목적 : (AI)MoveTo를 사용하여 이동방식을 구현할 때 사용할 함수.
 	* @설명 : SplineIndex + 1.
 	* @참조 : -
 	*/
-	void IncreaseSplineIndex();
+	//UFUNCTION(BlueprintCallable)
+	//void IncreaseSplineIndex();
 
 	/*
 	* @목적 : -
 	* @설명 : 현재 SplineIndex의 World Position 반환
 	* @참조 : -
 	*/
-	UFUNCTION()
-	FVector GetSplinePointWorldPosition();
+	//UFUNCTION()
+	//FVector GetSplinePointWorldPosition();
 
 	/*
 	* @목적 : 인덱스 a와 인덱스 b사이의 거리를 구하는 함수.
 	* @설명 : GetDistanceAlong~을 사용하여 차이를 반환.
 	* @참조 : -
 	*/
-	UFUNCTION()
-	int CalculateDistanceBetweenIndex(int a, int b);
+	//UFUNCTION()
+	//int CalculateDistanceBetweenIndex(int a, int b);
+	
 
 #pragma endregion
 

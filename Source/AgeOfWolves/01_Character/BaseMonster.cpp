@@ -20,6 +20,7 @@ void ABaseMonster::BeginPlay()
 
 void ABaseMonster::ControllRotation()
 {
+	
 }
 
 // Called every frame
@@ -29,10 +30,4 @@ void ABaseMonster::Tick(float DeltaTime)
 
 }
 
-// Called to bind functionality to input
-void ABaseMonster::SetupPlayerInputComponent(UInputComponent* PlayerInputComponent)
-{
-	Super::SetupPlayerInputComponent(PlayerInputComponent);
-
-}
 

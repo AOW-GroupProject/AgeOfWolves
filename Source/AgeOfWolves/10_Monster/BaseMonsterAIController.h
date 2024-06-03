@@ -29,7 +29,7 @@ public:
 
 #pragma endregion
 
-#pragma region SightConfig(지금 사용 안함)
+#pragma region SightConfig
 private:
 	AActor* Target;
 

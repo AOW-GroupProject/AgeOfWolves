@@ -11,7 +11,7 @@ enum class EMonsterState : uint8
 {
 	Patrol UMETA(DisplayName = "patrol"),
 	Attack UMETA(DisplayName = "attack"),
-	DetectingPlayer UMETA(DisplayName = "patrol") //플레이어 감지 중
+	DetectingPlayer UMETA(DisplayName = "detectingPlayer") //플레이어 감지 중
 };
 
 UCLASS()
@@ -36,7 +36,5 @@ public:
 	// Called every frame
 	virtual void Tick(float DeltaTime) override;
 
-	// Called to bind functionality to input
-	virtual void SetupPlayerInputComponent(class UInputComponent* PlayerInputComponent) override;
 
 };

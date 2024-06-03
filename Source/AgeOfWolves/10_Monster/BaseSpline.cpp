@@ -56,6 +56,7 @@ void ABaseSpline::SpawnMonster()
 	}
 }
 
+/*
 void ABaseSpline::IncreaseSplineIndex()
 {
 	
@@ -90,4 +91,5 @@ int ABaseSpline::CalculateDistanceBetweenIndex(int a, int b)
 		return B - A;
 	}
 }
+*/
 
