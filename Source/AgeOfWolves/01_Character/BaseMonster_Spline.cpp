@@ -28,7 +28,7 @@ void ABaseMonster_Spline::BeginPlay()
 	//시작지점이 0이 아닌경우일 수 있으므로 시작 Distance 초기화.
 	Distance = SplineActor->GetSplineComponent()->GetDistanceAlongSplineAtSplinePoint(SplineActor->SplineIndex);
 	//현재 인덱스와 다음 인덱스까지의 거리 차이를 저장하는 변수 초기화.
-	SplineIndexDistance = SplineActor->CalculateDistanceBetweenIndex(SplineActor->SplineIndex, SplineActor->SplineIndex + 1);
+	//SplineIndexDistance = SplineActor->CalculateDistanceBetweenIndex(SplineActor->SplineIndex, SplineActor->SplineIndex + 1);
 	
 }
 
@@ -45,6 +45,7 @@ void ABaseMonster_Spline::ControllRotation()
 	}
 }
 
+/*
 bool ABaseMonster_Spline::WhenMoveToSplinePointReturnTrue()
 {
 	if (!SplineActor) return false;
@@ -63,6 +64,7 @@ bool ABaseMonster_Spline::WhenMoveToSplinePointReturnTrue()
 	}
 	return false;
 }
+*/
 
 void ABaseMonster_Spline::MoveAlongSplinePoint(float delta)
 {
