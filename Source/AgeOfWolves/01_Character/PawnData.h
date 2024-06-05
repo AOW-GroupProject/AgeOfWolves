@@ -24,7 +24,6 @@ public:
 	UPawnData(const FObjectInitializer& ObjectInitializer);
 
 public:
-
 	// @설명 : 해당 DA와 관련된 Pawn의 BP 클래스입니다. (eg. BP_AkaOni)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pawn Data|Pawn")
 		TSubclassOf<APawn> PawnClass;
@@ -40,7 +39,6 @@ public:
 	*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pawn Data| Ability Tag Relationship Mapping")
 		TObjectPtr<UAbilityTagRelationshipMapping> TagRelationship;
-
 
 	// @설명 : 해당 Pawn과 관련된 Enhanced Input 시스템 정보를 담은 Data Asset입니다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pawn Data | Input Config")

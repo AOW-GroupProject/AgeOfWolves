@@ -2,18 +2,26 @@
 
 
 #include "AbilityTagRelationshipMapping.h"
+#include "Logging/StructuredLog.h"
+
+DEFINE_LOG_CATEGORY(LogATRM)
+
+// UE_LOGFMT(LogATRM, Warning, "");
 
 void UAbilityTagRelationshipMapping::GetAbilityTagsToBlockAndCancel(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer* OutTagsToBlock, FGameplayTagContainer* OutTagsToCancel) const
 {
+    OutTagsToBlock->Reset();
+    OutTagsToCancel->Reset();
+
     for (const auto& AbilityTagRelationship : AbilityTagRelationships)
     {
         if (AbilityTags.HasTagExact(AbilityTagRelationship.AbilityTag))
         {
-            if (OutTagsToBlock->IsValid())
+            if (OutTagsToBlock)
             {
                 OutTagsToBlock->AppendTags(AbilityTagRelationship.AbilityTagsToBlock);
             }
-            if (OutTagsToCancel->IsValid())
+            if (OutTagsToCancel)
             {
                 OutTagsToCancel->AppendTags(AbilityTagRelationship.AbilityTagsToCancel);
             }

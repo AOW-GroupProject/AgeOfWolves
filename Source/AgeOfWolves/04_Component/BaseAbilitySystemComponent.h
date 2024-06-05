@@ -10,6 +10,8 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 
+
+
 /**
  *
  */
@@ -18,17 +20,48 @@ class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemCompone
 {
 	GENERATED_BODY()
 
+#pragma region Friend Class
+
+#pragma endregion
+
 #pragma region Default Setting
+
 public:
 	UBaseAbilitySystemComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+
+protected:
+	virtual void InitializeComponent() override;
+
+protected:
+	//~UAbilitySystemComponent Interfaces
+	bool TryActivateAbility(FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey = FPredictionKey(), UGameplayAbility** OutInstancedAbility = nullptr, FOnGameplayAbilityEnded::FDelegate* OnGameplayAbilityEndedDelegate = nullptr, const FGameplayEventData* TriggerEventData = nullptr);
+	virtual void CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore) override;
+	//~End Of Interface
+	/*
+	* @목적: Ability의 활성화 이벤트에 등록할 콜백 함수
+	* @설명
+	*	1. Abilit Tag Realtionship Mapping을 통해 B, C, AR, AB 관련 내용 설정
+	*/
+	void OnAbilityActivated(UGameplayAbility* Ability);
+	/*
+	* @목적: Ability의 활성화 종료 이벤트에 등록할 콜백 함수
+	* @설명
+	*	1. Ability Tag Relationship Mapping을 통해 B, C, AR, AB 관련 내용들 초기화
+	*/
+	void OnAbilityEnded(UGameplayAbility* Ability);
+
 #pragma endregion
 
 #pragma region Gameplay Tag Relationship Mapping
 public:
 	/*
+	* @목적: 전달 받은 GA와 관련하여 "Ability Tags To Block"/"Ability Tags To Cancel" Ability Tag를 전달합니다.
+	*/
+	void GetAbilityBlockAndCancelTagsForAbilityTag(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutAbilityTagsToBlock, OUT FGameplayTagContainer& OutAbilityTagsToCancel);
+	/*
 	* @목적: 전달 받은 GA와 관련하여 "Activation Required"/"Activation Blocked" Ability Tag를 전달합니다.
 	*/
-	void GetRelationshipActivationTagRequirements(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer& OutActivationRequired, FGameplayTagContainer& OutActivationBlocked) const;
+	void GetAbilityRelationshipActivationTags(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutActivationRequired, OUT FGameplayTagContainer& OutActivationBlocked) const;
 
 	/*
 	* @목적: 전달 받은 GA와 관련하여 "Blocekd"/"Canceled" Ability Tag에 대응되는 GA들에 대한 각각의 조치
@@ -39,20 +72,26 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere)
-		UAbilityTagRelationshipMapping* AbilityTagRelationship;
+		TSoftObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
+
+	/*
+	* @목적: 현재 활성화 이벤트 처리 중인 GA들의 Gameplay Tag들을 담아둡니다.
+	* @설명: OnAbilityActivated 콜백 함수에서 Gameplay Tag를 추가하고, OnAbilityEnded 혹은 OnAbilityCanceled에서 특정 Gameplay Tag를 삭제해줍니다.
+	*/
+	FGameplayTagContainer ActivatingAbilityTags;
+
+public:
+	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM;}
+	FORCEINLINE void GetActivatingAbilityTags(OUT FGameplayTagContainer& OutGameplayTagContainer) const { OutGameplayTagContainer = ActivatingAbilityTags; }
 #pragma endregion
 
 #pragma region Active GA
 public:
-	void AbilityInputTagPressed(const FGameplayTag& InputTag);
-	void AbilityInputTagReleased(const FGameplayTag& InputTag);
-
 	void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
 	void ClearAbilityInput();
 
-protected:
-	virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
-	virtual void AbilitySpecInputReleased(FGameplayAbilitySpec& Spec) override;
+	void AbilityInputTagPressed(const FGameplayTag& InputTag);
+	void AbilityInputTagReleased(const FGameplayTag& InputTag);
 
 protected:
 	// Handles to abilities that had their input pressed this frame.

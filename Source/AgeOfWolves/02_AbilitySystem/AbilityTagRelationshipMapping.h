@@ -8,6 +8,8 @@
 
 #include "AbilityTagRelationshipMapping.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogATRM, Log, All);
+
 /*
 * FAbilityTagRelationship
 * 
@@ -77,7 +79,7 @@ public:
 	* @설명: Ability Tag 목록을 가져와서 "AbilityTagRelationships" 목록과 비교하여 "Block"혹은 "Cancel"할 Ability Tag를 찾아서 반환합니다.
 	* @참고: OutParameter 사용
 	*/
-	void GetAbilityTagsToBlockAndCancel(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer* OutTagsToBlock, FGameplayTagContainer* OutTagsToCancel) const;
+	void GetAbilityTagsToBlockAndCancel(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer* OutTagsToBlock, OUT FGameplayTagContainer* OutTagsToCancel) const;
 
 	/*
 	* @목적: AbilityTagRelationship 목록을 순회하며 Activation Required/Blocked GA들의 Gameplay Tag 목록을 반환합니다.

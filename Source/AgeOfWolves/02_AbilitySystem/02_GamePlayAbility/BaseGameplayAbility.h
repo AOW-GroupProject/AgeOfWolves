@@ -34,6 +34,8 @@ enum class EAbilityActivationPolicy : uint8
 	MAX
 };
 
+
+
 /**
  * 
  */
@@ -42,19 +44,35 @@ class AGEOFWOLVES_API UBaseGameplayAbility : public UGameplayAbility
 {
 	GENERATED_BODY()
 
+#pragma region Friend Class
+		friend class UBaseAbilitySystemComponent;
+#pragma endregion
+
 public:
 	UBaseGameplayAbility(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 #pragma region Default Setting
 protected:
 	//~UGameplayAbility interface, ASC와 상호작용
-	/** Called when the ability is given to an AbilitySystemComponent */
 	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
-	/** Called when the ability is removed from an AbilitySystemComponent */
 	virtual void OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
-	/** Called when the avatar actor is set/changes */
 	virtual void OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
-	//~End of UGameplay Ability Interface
+	//~End of Interface
+#pragma endregion
+
+#pragma region Gameplay Tag Relationship Mapping
+protected:
+	//~UGameplayAbility interface, Overloading
+	bool CanActivateAbility(
+		const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
+		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, 
+		OUT FGameplayTagContainer* ARTags= nullptr,
+		OUT FGameplayTagContainer* ABTags = nullptr) const;
+	bool DoesAbilitySatisfyTagRequirements(
+		const UAbilitySystemComponent& AbilitySystemComponent, 
+		const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, 
+		FGameplayTagContainer* ARTags = nullptr, FGameplayTagContainer* ABTags = nullptr) const;
+	//~End of Interface
 #pragma endregion
 
 #pragma region GA Info
@@ -71,10 +89,5 @@ public:
 	FORCEINLINE UGameplayEffect* GetApplyGameplayEffect() { return ApplyGameplayEffectClass->IsValidLowLevel() ? ApplyGameplayEffectClass->GetDefaultObject<UGameplayEffect>() : nullptr; }
 #pragma endregion
 
-#pragma region Gameplay Tag Relationship Mapping
-protected:
-	virtual bool DoesAbilitySatisfyTagRequirements(const UAbilitySystemComponent& AbilitySystemComponent, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const override;
-
-#pragma endregion
 
 };
