@@ -17,19 +17,26 @@ enum class EAbilityActivationPolicy : uint8
 {
 	/*
 	* @목적: Active GA 전용 활성화 정책
-	* @설명: Active GA는 사용자 입력이 Trigger 매개이며, 사용자 입력과 관련하여 활성화 정책을 선택합니다.
+	* @설명: Active GA는 사용자 입력이 Trigger 매개이며, 사용자 입력이 Pressed 상태일 때 활성화 됩니다.
 	*/
-	// Input이 Trigger 되면 활성화됩니다.
 	OnInputTriggered,
 
-	// Input이 Hold 상태 일때 지속적으로 활성화됩니다.
+	/*
+	* @목적: Acitve GA 전용 활성화 정책
+	* @설명: Active GA는 사용자 입력이 Trigger 매개이며, 사용자 입력이 Hold 상태일 때 활성화 됩니다.
+	*/
 	WhileInputActive,
+	/*
+	* @목적: Passive GA 전용 활성화 정책
+	* @설명: Passive GA라면, 해당 정책을 활용하여 등록 시 활성화 되도록 합니다.
+	*/
+	OnGranted_Instant,
 
 	/*
 	* @목적: Passive GA 전용 활성화 정책
 	* @설명: Passive GA라면, 해당 정책을 활용하여 등록 시 활성화 되도록 합니다.
 	*/
-	OnGranted,
+	OnGranted_Periodic,
 
 	MAX
 };

@@ -38,6 +38,15 @@ protected:
 	virtual void CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore) override;
 	//~End Of Interface
 	/*
+	* @목적: ATRM에 의하여 "Block"되었던 Passive GA의 Reacitvate를 수행합니다.
+	* @참조: UBaseAbilitySystemComponent::OnAbilityEnded
+	*/
+	void ReactivateUnblockedPassiveAbility(const FGameplayTagContainer& UnblockedAbilityTags);
+#pragma endregion
+
+#pragma region GA Life Span
+protected:
+	/*
 	* @목적: Ability의 활성화 이벤트에 등록할 콜백 함수
 	* @설명
 	*	1. Abilit Tag Realtionship Mapping을 통해 B, C, AR, AB 관련 내용 설정
@@ -49,7 +58,21 @@ protected:
 	*	1. Ability Tag Relationship Mapping을 통해 B, C, AR, AB 관련 내용들 초기화
 	*/
 	void OnAbilityEnded(UGameplayAbility* Ability);
+#pragma endregion
 
+
+#pragma region Active GA
+public:
+	void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
+	void ClearAbilityInput();
+
+	void AbilityInputTagPressed(const FGameplayTag& InputTag);
+	void AbilityInputTagReleased(const FGameplayTag& InputTag);
+
+protected:
+	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
+	TArray<FGameplayAbilitySpecHandle> InputHeldSpecHandles;
+	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
 #pragma endregion
 
 #pragma region Gameplay Tag Relationship Mapping
@@ -62,7 +85,6 @@ public:
 	* @목적: 전달 받은 GA와 관련하여 "Activation Required"/"Activation Blocked" Ability Tag를 전달합니다.
 	*/
 	void GetAbilityRelationshipActivationTags(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutActivationRequired, OUT FGameplayTagContainer& OutActivationBlocked) const;
-
 	/*
 	* @목적: 전달 받은 GA와 관련하여 "Blocekd"/"Canceled" Ability Tag에 대응되는 GA들에 대한 각각의 조치
 	*/
@@ -73,7 +95,6 @@ public:
 protected:
 	UPROPERTY(EditAnywhere)
 		TSoftObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
-
 	/*
 	* @목적: 현재 활성화 이벤트 처리 중인 GA들의 Gameplay Tag들을 담아둡니다.
 	* @설명: OnAbilityActivated 콜백 함수에서 Gameplay Tag를 추가하고, OnAbilityEnded 혹은 OnAbilityCanceled에서 특정 Gameplay Tag를 삭제해줍니다.
@@ -83,25 +104,6 @@ protected:
 public:
 	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM;}
 	FORCEINLINE void GetActivatingAbilityTags(OUT FGameplayTagContainer& OutGameplayTagContainer) const { OutGameplayTagContainer = ActivatingAbilityTags; }
-#pragma endregion
-
-#pragma region Active GA
-public:
-	void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
-	void ClearAbilityInput();
-
-	void AbilityInputTagPressed(const FGameplayTag& InputTag);
-	void AbilityInputTagReleased(const FGameplayTag& InputTag);
-
-protected:
-	// Handles to abilities that had their input pressed this frame.
-	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
-
-	// Handles to abilities that have their input held.
-	TArray<FGameplayAbilitySpecHandle> InputHeldSpecHandles;
-
-	// Handles to abilities that had their input released this frame.
-	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
 #pragma endregion
 
 };

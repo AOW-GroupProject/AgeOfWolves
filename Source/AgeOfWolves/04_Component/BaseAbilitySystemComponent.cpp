@@ -7,6 +7,7 @@
 DEFINE_LOG_CATEGORY(LogASC)
 // UE_LOGFMT(LogASC, Warning, "");
 
+#pragma region Default Setting
 UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
@@ -40,17 +41,14 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 		UE_LOGFMT(LogASC, Error, "TryActivateAbility는 유효하지 않은 Handle을 호출했습니다.");
 		return false;
 	}
-
 	// @설명: Ability List를 LocK하여, 활성화 도중 Ability Spec이 파괴되는 것을 방지합니다.
 	ABILITYLIST_SCOPE_LOCK();
-
 	// @Actor Info
 	const FGameplayAbilityActorInfo* ActorInfo = AbilityActorInfo.Get();
 	if (ActorInfo == nullptr || !ActorInfo->OwnerActor.IsValid() || !ActorInfo->AvatarActor.IsValid())
 	{
 		return false;
 	}
-
 	// @Ability
 	UBaseGameplayAbility* Ability = Cast<UBaseGameplayAbility>(Spec->Ability);
 	if (!Ability)
@@ -59,9 +57,8 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 		return false;
 	}
 
-	UBaseGameplayAbility* InstancedAbility = Cast<UBaseGameplayAbility>(Spec->GetPrimaryInstance());
-
 	// @ATMR: Ability Tag간 관계성: "Block", "AR", "AB"
+	UBaseGameplayAbility* InstancedAbility = Cast<UBaseGameplayAbility>(Spec->GetPrimaryInstance());
 	{
 		UBaseGameplayAbility* const CanActivateAbilitySource = InstancedAbility ? InstancedAbility : Ability;
 
@@ -81,7 +78,6 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 			}
 		}
 	}
-
 	 // @Instancing Policy
 	if (Ability->GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerActor)
 	{
@@ -100,16 +96,25 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 			}
 		}
 	}
-
 	// @Ability Spec
 	Spec->ActivationInfo = FGameplayAbilityActivationInfo(ActorInfo->OwnerActor.Get());
 	FGameplayAbilityActivationInfo& ActivationInfo = Spec->ActivationInfo;
 
-	// @Call Activate Ability
+	// @Instancing Policy -> InstancedPerExecution
 	if (Ability->GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerExecution)
 	{
 		InstancedAbility = Cast<UBaseGameplayAbility>(CreateNewInstanceOfAbility(*Spec, Ability));
 		InstancedAbility->CallActivateAbility(AbilityToActivate, ActorInfo, ActivationInfo, OnGameplayAbilityEndedDelegate, TriggerEventData);
+	}
+	// @Instancing Policy -> InstancedPerActor
+	else if (InstancedAbility)
+	{
+		InstancedAbility->CallActivateAbility(AbilityToActivate, ActorInfo, ActivationInfo, OnGameplayAbilityEndedDelegate, TriggerEventData);
+	}
+	// @Instancing Policy -> None
+	else
+	{
+		Ability->CallActivateAbility(AbilityToActivate, ActorInfo, ActivationInfo, OnGameplayAbilityEndedDelegate, TriggerEventData);
 	}
 
 	if (InstancedAbility)
@@ -121,7 +126,7 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 		InstancedAbility->SetCurrentActivationInfo(ActivationInfo);	
 	}
 
-	return false;
+	return true;
 }
 
 void UBaseAbilitySystemComponent::CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore)
@@ -132,17 +137,37 @@ void UBaseAbilitySystemComponent::CancelAbilitySpec(FGameplayAbilitySpec& Spec, 
 		UE_LOGFMT(LogASC, Error, "Ability Spec에 Ability 정보가 없습니다!");
 		return;
 	}
-
 	// @Activating Abilities: 활성화 목록에서 제거
-	if (ActivatingAbilityTags.HasAllExact(GA->AbilityTags))
 	{
-		ActivatingAbilityTags.RemoveTags(GA->AbilityTags);
-		UE_LOGFMT(LogASC, Warning, "{0}이 취소되었습니다.", GA->GetName());
+		if (ActivatingAbilityTags.HasAllExact(GA->AbilityTags))
+		{
+			ActivatingAbilityTags.RemoveTags(GA->AbilityTags);
+			UE_LOGFMT(LogASC, Warning, "{0}이 취소되었습니다.", GA->GetName());
+		}
 	}
-
 	Super::CancelAbilitySpec(Spec, Ignore);
+
 }
 
+void UBaseAbilitySystemComponent::ReactivateUnblockedPassiveAbility(const FGameplayTagContainer& UnblockedAbilityTags)
+{
+	for (const auto UnblockedAbilityTag : UnblockedAbilityTags)
+	{
+		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+		{
+			if (!AbilitySpec.IsActive() && IsValid(AbilitySpec.Ability)
+				&& AbilitySpec.Ability->AbilityTags.HasTagExact(UnblockedAbilityTag))
+			{
+				if(TryActivateAbility(AbilitySpec.Handle))
+					UE_LOGFMT(LogASC, Warning, "{0}이 재 활성화 되었습니다!", UnblockedAbilityTag.GetTagName());
+			}
+		}
+	}
+
+}
+#pragma endregion
+
+#pragma region GA Life Span
 void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 {
 	// @Ability
@@ -151,17 +176,18 @@ void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 		UE_LOGFMT(LogASC, Error, "{0}가 유효하지 않습니다", Ability->GetName());
 		return;
 	}
-
 	// @"Block" and "Cancel": "Ability Tags To Block"/ "Abilit Tags To Cancel" 적용
-	ApplyAbilityBlockAndCancelTags(Ability->AbilityTags, Ability, true, FGameplayTagContainer::EmptyContainer, true, FGameplayTagContainer::EmptyContainer);
-
-	// @Activating Abilities: 활성화 목록에 추가
-	if(ActivatingAbilityTags.IsEmpty() || !ActivatingAbilityTags.HasAllExact(Ability->AbilityTags))
 	{
-		ActivatingAbilityTags.AppendTags(Ability->AbilityTags);
-		UE_LOGFMT(LogASC, Warning, "{0}가 활성화 목록에 추가되었습니다.", Ability->GetName());
+		ApplyAbilityBlockAndCancelTags(Ability->AbilityTags, Ability, true, FGameplayTagContainer::EmptyContainer, true, FGameplayTagContainer::EmptyContainer);
 	}
-
+	// @Activating Abilities: 활성화 목록에 추가
+	{
+		if(ActivatingAbilityTags.IsEmpty() || !ActivatingAbilityTags.HasAllExact(Ability->AbilityTags))
+		{
+			ActivatingAbilityTags.AppendTags(Ability->AbilityTags);
+			UE_LOGFMT(LogASC, Warning, "{0}가 활성화 목록에 추가되었습니다.", Ability->GetName());
+		}
+	}
 	UE_LOGFMT(LogASC, Warning, "{0}가 활성화 되었습니다.", Ability->GetName());
 
 	// @TODO: Ability 활성화 시점에 ASC에서 할 일들...
@@ -170,15 +196,23 @@ void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 
 void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 {
+
+	UE_LOGFMT(LogASC, Warning, "{0}가 종료되었습니다.", Ability->GetName());
 	// @Ability
+	if (!Ability)
 	{
-		if (!Ability)
+		UE_LOGFMT(LogASC, Error, "{0}가 유효하지 않습니다", Ability->GetName());
+		return;
+	}
+	// @Activating Abilities
+	{
+		if (!ActivatingAbilityTags.IsEmpty() && ActivatingAbilityTags.HasAllExact(Ability->AbilityTags))
 		{
-			UE_LOGFMT(LogASC, Error, "{0}가 유효하지 않습니다", Ability->GetName());
-			return;
+			ActivatingAbilityTags.RemoveTags(Ability->AbilityTags);
+			UE_LOGFMT(LogASC, Warning, "{0}가 활성화 목록에서 제거되었습니다.", Ability->GetName());
 		}
 	}
-	// @UnBlock: "Block" 했던 태그들 삭제
+	// @UnBlock
 	{
 		if (AbilityTagRelationshipMapping)
 		{
@@ -190,57 +224,25 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 			if (!TagsToBlock.IsEmpty())
 			{
 				UnBlockAbilitiesWithTags(TagsToBlock);
+				UE_LOGFMT(LogASC, Warning, "Block 되었던 {0}가 해제되었습니다.", TagsToBlock.ToString());
+				// @Reactivate
+				FGameplayTagContainer TagsToReactivate;
+				for (const auto Tag : TagsToBlock)
+				{
+					if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag("Ability.Passive")))
+					{
+						TagsToReactivate.AddTag(Tag);
+					}
+				}
+				ReactivateUnblockedPassiveAbility(TagsToReactivate);
 			}
-			
-			UE_LOGFMT(LogASC, Warning, "Block 되었던 {0}가 해제되었습니다.", TagsToBlock.ToString());
 		}
 	}
-	// @Activating Abilities
-	{
-		if (!ActivatingAbilityTags.IsEmpty() && ActivatingAbilityTags.HasAllExact(Ability->AbilityTags))
-		{
-			ActivatingAbilityTags.RemoveTags(Ability->AbilityTags);
-			UE_LOGFMT(LogASC, Warning, "{0}가 활성화 목록에서 제거되었습니다.", Ability->GetName());
-		}
-	}
-
-	UE_LOGFMT(LogASC, Warning, "{0}가 종료되었습니다.", Ability->GetName());
-
 	// @TODO: Ability 활성화 종료 시점에 ASC에서 할 일들...
-
 }
+#pragma endregion
 
-void UBaseAbilitySystemComponent::GetAbilityBlockAndCancelTagsForAbilityTag(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutAbilityTagsToBlock, OUT FGameplayTagContainer& OutAbilityTagsToCancel)
-{
-	if (AbilityTagRelationshipMapping.Get())
-	{
-		AbilityTagRelationshipMapping.Get()->GetAbilityTagsToBlockAndCancel(AbilityTags, &OutAbilityTagsToBlock, &OutAbilityTagsToCancel);
-	}
-}
-
-void UBaseAbilitySystemComponent::GetAbilityRelationshipActivationTags(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutActivationRequired, OUT FGameplayTagContainer& OutActivationBlocked) const
-{
-	//check(AbilityTagRelationship)
-
-	if (AbilityTagRelationshipMapping.Get())
-	{
-		AbilityTagRelationshipMapping.Get()->GetRequiredAndBlockedActivationTags(AbilityTags, &OutActivationRequired, &OutActivationBlocked);
-	}
-}
-
-void UBaseAbilitySystemComponent::ApplyAbilityBlockAndCancelTags(const FGameplayTagContainer& AbilityTags, UGameplayAbility* RequestingAbility, bool bEnableBlockTags, const FGameplayTagContainer& BlockTags, bool bExecuteCancelTags, const FGameplayTagContainer& CancelTags)
-{
-	FGameplayTagContainer AbilityTagsToBlock;
-	FGameplayTagContainer AbilityTagsToCancel;
-
-	if (AbilityTagRelationshipMapping)
-	{
-		AbilityTagRelationshipMapping->GetAbilityTagsToBlockAndCancel(AbilityTags, &AbilityTagsToBlock, &AbilityTagsToCancel);
-	}
-
-	Super::ApplyAbilityBlockAndCancelTags(AbilityTags, RequestingAbility, bEnableBlockTags, AbilityTagsToBlock, bExecuteCancelTags, AbilityTagsToCancel);
-}
-
+#pragma region Active GA
 void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGamePaused)
 {
 	static TArray<FGameplayAbilitySpecHandle> AbilitiesToActivate;
@@ -294,8 +296,6 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 		}
 	}
 
-	/*
-	*/
 	for (const FGameplayAbilitySpecHandle& AbilitySpecHandle : AbilitiesToActivate)
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(AbilitySpecHandle))
@@ -371,4 +371,39 @@ void UBaseAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& In
 		}
 	}
 }
+#pragma endregion
+
+#pragma region Gameplay Tag Relationship Mapping
+void UBaseAbilitySystemComponent::GetAbilityBlockAndCancelTagsForAbilityTag(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutAbilityTagsToBlock, OUT FGameplayTagContainer& OutAbilityTagsToCancel)
+{
+	if (AbilityTagRelationshipMapping.Get())
+	{
+		AbilityTagRelationshipMapping.Get()->GetAbilityTagsToBlockAndCancel(AbilityTags, &OutAbilityTagsToBlock, &OutAbilityTagsToCancel);
+	}
+}
+
+void UBaseAbilitySystemComponent::GetAbilityRelationshipActivationTags(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutActivationRequired, OUT FGameplayTagContainer& OutActivationBlocked) const
+{
+	//check(AbilityTagRelationship)
+
+	if (AbilityTagRelationshipMapping.Get())
+	{
+		AbilityTagRelationshipMapping.Get()->GetRequiredAndBlockedActivationTags(AbilityTags, &OutActivationRequired, &OutActivationBlocked);
+	}
+}
+
+void UBaseAbilitySystemComponent::ApplyAbilityBlockAndCancelTags(const FGameplayTagContainer& AbilityTags, UGameplayAbility* RequestingAbility, bool bEnableBlockTags, const FGameplayTagContainer& BlockTags, bool bExecuteCancelTags, const FGameplayTagContainer& CancelTags)
+{
+	FGameplayTagContainer AbilityTagsToBlock;
+	FGameplayTagContainer AbilityTagsToCancel;
+
+	if (AbilityTagRelationshipMapping)
+	{
+		AbilityTagRelationshipMapping->GetAbilityTagsToBlockAndCancel(AbilityTags, &AbilityTagsToBlock, &AbilityTagsToCancel);
+	}
+
+	Super::ApplyAbilityBlockAndCancelTags(AbilityTags, RequestingAbility, bEnableBlockTags, AbilityTagsToBlock, bExecuteCancelTags, AbilityTagsToCancel);
+}
+#pragma endregion
+
 

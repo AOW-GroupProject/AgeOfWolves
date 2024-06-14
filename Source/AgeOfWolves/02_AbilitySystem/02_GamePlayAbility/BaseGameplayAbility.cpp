@@ -30,7 +30,8 @@ void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorI
 	/*
 	* @목적: Activation Policy가 OnGranted일 경우, Passive GA이므로 ASC에 등록되는 시점에 활성화해줍니다.
 	*/
-	if (ActivationPolicy == EAbilityActivationPolicy::OnGranted)
+	if (ActivationPolicy == EAbilityActivationPolicy::OnGranted_Instant
+        || ActivationPolicy == EAbilityActivationPolicy::OnGranted_Periodic)
 	{
 		if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
 		{
@@ -155,8 +156,6 @@ bool UBaseGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySyste
     // 2. "Activation Required"와 "Actiation Blocked"에 대한 처리.
     {
         const UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(&AbilitySystemComponent);
-
-         UE_LOGFMT(LogGA, Error, "Gameplay Tag: {0}", AbilityTags.ToString());
 
         FGameplayTagContainer DummyContainer1 = FGameplayTagContainer::EmptyContainer;
         FGameplayTagContainer DummyContainer2 = FGameplayTagContainer::EmptyContainer;
