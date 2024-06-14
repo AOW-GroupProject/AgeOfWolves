@@ -41,7 +41,7 @@ protected:
 	* @목적: ATRM에 의하여 "Block"되었던 Passive GA의 Reacitvate를 수행합니다.
 	* @참조: UBaseAbilitySystemComponent::OnAbilityEnded
 	*/
-	void ReactivateUnblockedPassiveAbility(const FGameplayTagContainer& UnblockedAbilityTags);
+	void ReactivateUnblockedPassiveAbility(const FGameplayTagContainer UnblockedAbilityTags);
 #pragma endregion
 
 #pragma region GA Life Span
@@ -84,7 +84,7 @@ public:
 	/*
 	* @목적: 전달 받은 GA와 관련하여 "Activation Required"/"Activation Blocked" Ability Tag를 전달합니다.
 	*/
-	void GetAbilityRelationshipActivationTags(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutActivationRequired, OUT FGameplayTagContainer& OutActivationBlocked) const;
+	void GetAbilityRelationshipActivationTags(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer* OutActivationRequired, OUT FGameplayTagContainer* OutActivationBlocked) const;
 	/*
 	* @목적: 전달 받은 GA와 관련하여 "Blocekd"/"Canceled" Ability Tag에 대응되는 GA들에 대한 각각의 조치
 	*/

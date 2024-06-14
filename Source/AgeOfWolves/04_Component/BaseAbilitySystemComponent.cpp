@@ -62,7 +62,7 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 	{
 		UBaseGameplayAbility* const CanActivateAbilitySource = InstancedAbility ? InstancedAbility : Ability;
 
-		if (AbilityTagRelationshipMapping.Get())
+		if (AbilityTagRelationshipMapping.IsValid())
 		{
 			const FGameplayTagContainer* SourceTags = nullptr;
 			const FGameplayTagContainer* TargetTags = nullptr;
@@ -100,7 +100,8 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 	Spec->ActivationInfo = FGameplayAbilityActivationInfo(ActorInfo->OwnerActor.Get());
 	FGameplayAbilityActivationInfo& ActivationInfo = Spec->ActivationInfo;
 
-	// @Instancing Policy -> InstancedPerExecution
+	// @Instancing Policy
+	// @Instancing Policy -> InstancePerExecution
 	if (Ability->GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerExecution)
 	{
 		InstancedAbility = Cast<UBaseGameplayAbility>(CreateNewInstanceOfAbility(*Spec, Ability));
@@ -149,17 +150,16 @@ void UBaseAbilitySystemComponent::CancelAbilitySpec(FGameplayAbilitySpec& Spec, 
 
 }
 
-void UBaseAbilitySystemComponent::ReactivateUnblockedPassiveAbility(const FGameplayTagContainer& UnblockedAbilityTags)
+void UBaseAbilitySystemComponent::ReactivateUnblockedPassiveAbility(const FGameplayTagContainer UnblockedAbilityTags)
 {
 	for (const auto UnblockedAbilityTag : UnblockedAbilityTags)
 	{
 		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 		{
-			if (!AbilitySpec.IsActive() && IsValid(AbilitySpec.Ability)
+			if (!AbilitySpec.IsActive() && IsValid(AbilitySpec.Ability) && AbilitySpec.Handle.IsValid()
 				&& AbilitySpec.Ability->AbilityTags.HasTagExact(UnblockedAbilityTag))
 			{
-				if(TryActivateAbility(AbilitySpec.Handle))
-					UE_LOGFMT(LogASC, Warning, "{0}이 재 활성화 되었습니다!", UnblockedAbilityTag.GetTagName());
+				if(TryActivateAbility(AbilitySpec.Handle)) UE_LOGFMT(LogASC, Warning, "{0}이 재 활성화 되었습니다!", UnblockedAbilityTag.GetTagName());
 			}
 		}
 	}
@@ -217,7 +217,7 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 		if (AbilityTagRelationshipMapping)
 		{
 			FGameplayTagContainer TagsToBlock;
-			FGameplayTagContainer DummyContainer = FGameplayTagContainer::EmptyContainer;
+			FGameplayTagContainer DummyContainer;
 
 			AbilityTagRelationshipMapping->GetAbilityTagsToBlockAndCancel(Ability->AbilityTags, &TagsToBlock, &DummyContainer);
 
@@ -234,10 +234,22 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 						TagsToReactivate.AddTag(Tag);
 					}
 				}
+				// @TODO: Error 해결, TArray Resize 하는 코드?
 				ReactivateUnblockedPassiveAbility(TagsToReactivate);
 			}
 		}
 	}
+	// @Activation Policy: Activation Policy가 OnGratned_Periodic일 경우, 자기 자신을 Block 해준다.
+	//{
+	//	if (UBaseGameplayAbility* GA = CastChecked<UBaseGameplayAbility>(Ability))
+	//	{
+	//		if (GA->GetActivationPolicy() == EAbilityActivationPolicy::OnGranted_ConditionalPeriodic)
+	//		{
+	//			BlockAbilitiesWithTags(Ability->AbilityTags);
+	//		}
+	//	}
+	//}
+
 	// @TODO: Ability 활성화 종료 시점에 ASC에서 할 일들...
 }
 #pragma endregion
@@ -382,13 +394,13 @@ void UBaseAbilitySystemComponent::GetAbilityBlockAndCancelTagsForAbilityTag(cons
 	}
 }
 
-void UBaseAbilitySystemComponent::GetAbilityRelationshipActivationTags(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutActivationRequired, OUT FGameplayTagContainer& OutActivationBlocked) const
+void UBaseAbilitySystemComponent::GetAbilityRelationshipActivationTags(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer* OutActivationRequired, FGameplayTagContainer* OutActivationBlocked) const
 {
 	//check(AbilityTagRelationship)
 
-	if (AbilityTagRelationshipMapping.Get())
+	if (AbilityTagRelationshipMapping->IsValidLowLevel())
 	{
-		AbilityTagRelationshipMapping.Get()->GetRequiredAndBlockedActivationTags(AbilityTags, &OutActivationRequired, &OutActivationBlocked);
+		AbilityTagRelationshipMapping->GetRequiredAndBlockedActivationTags(AbilityTags, OutActivationRequired, OutActivationBlocked);
 	}
 }
 

@@ -86,7 +86,7 @@ public:
 	* @설명: Ability Tag 목록을 가져와서 "AbilityTagRelationships" 목록과 비교하여 "Activation Required" 혹은 "Activation Blocked" Abiility Tag를 찾아서 반환합니다.
 	* @참고: OutParameter 사용
 	*/
-	void GetRequiredAndBlockedActivationTags(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer* OutActivationRequired, FGameplayTagContainer* OutActivationBlocked) const;
+	void GetRequiredAndBlockedActivationTags(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer* OutActivationRequired, OUT FGameplayTagContainer* OutActivationBlocked) const;
 
 	/*
 	* @목적: 현재 처리 중인 Ability 중 다른 Abilit Tag에 의하여 "Cancel" Ability Tag로 지정된 Ability의 처리 이벤트를 중단시킵니다.

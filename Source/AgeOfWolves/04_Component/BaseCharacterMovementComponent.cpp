@@ -39,7 +39,7 @@ void UBaseCharacterMovementComponent::MoveSpeedChanged(FGameplayAttribute Attrib
 
 void UBaseCharacterMovementComponent::ChangeMoveSpeed(float InOldVal, float InNewVal)
 {
-	if (InOldVal >= 0.f && InOldVal <= 750)
+	if (InOldVal > 0.f && InOldVal <= 550.f)
 	{
 		if (InNewVal > InOldVal)
 		{

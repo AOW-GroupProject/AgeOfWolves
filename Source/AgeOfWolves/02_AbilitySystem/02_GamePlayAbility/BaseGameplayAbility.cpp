@@ -31,7 +31,7 @@ void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorI
 	* @목적: Activation Policy가 OnGranted일 경우, Passive GA이므로 ASC에 등록되는 시점에 활성화해줍니다.
 	*/
 	if (ActivationPolicy == EAbilityActivationPolicy::OnGranted_Instant
-        || ActivationPolicy == EAbilityActivationPolicy::OnGranted_Periodic)
+        || ActivationPolicy == EAbilityActivationPolicy::OnGranted_ConditionalPeriodic)
 	{
 		if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
 		{
@@ -168,7 +168,7 @@ bool UBaseGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySyste
         // @설명: 해당 GA의 Ability Tag를 통해 ASC를 통해 ATRM에 정의된 해당 GA의 "Activation Required"와 "Activation Blocked" Ability Tag를 가져옵니다.
         if (BaseASC)
         {
-            BaseASC->GetAbilityRelationshipActivationTags(AbilityTags, ActivationRequiredAbilityTags, ActivationBlockedAbilityTags);
+            BaseASC->GetAbilityRelationshipActivationTags(AbilityTags, &ActivationRequiredAbilityTags, &ActivationBlockedAbilityTags);
         }
 
         // @설명: 해당 GA의 "Activation Required" 혹은 "Activation Blocked"를 통해 활성화 조건 충족여부 확인

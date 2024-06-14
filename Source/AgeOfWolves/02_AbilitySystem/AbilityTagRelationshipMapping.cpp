@@ -31,6 +31,10 @@ void UAbilityTagRelationshipMapping::GetAbilityTagsToBlockAndCancel(const FGamep
 
 void UAbilityTagRelationshipMapping::GetRequiredAndBlockedActivationTags(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer* OutActivationRequired, FGameplayTagContainer* OutActivationBlocked) const
 {
+
+    OutActivationRequired->Reset();
+    OutActivationBlocked->Reset();
+
     for (const auto& AbilityTagRelationship : AbilityTagRelationships)
     {
         if (AbilityTags.HasTagExact(AbilityTagRelationship.AbilityTag))

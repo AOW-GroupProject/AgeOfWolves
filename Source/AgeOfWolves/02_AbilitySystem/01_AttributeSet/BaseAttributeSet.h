@@ -164,5 +164,12 @@ protected:
 	*/
 	void AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);
 
+	/*
+	* @목적 : Attirbute 항목의 현재 값 변경에 따른 현재 값 조정
+	* @설명 : Attribute 항목의 현재 값 변경은 Current 값과 Max 값의 비율 변경에 영향을 끼치므로, 이 내용을 별도의 함수로 정의합니다.
+	*/
+	void AdjustAttributeForCurrentChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);
+
+
 
 };

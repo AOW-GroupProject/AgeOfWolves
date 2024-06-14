@@ -36,12 +36,10 @@ enum class EAbilityActivationPolicy : uint8
 	* @목적: Passive GA 전용 활성화 정책
 	* @설명: Passive GA라면, 해당 정책을 활용하여 등록 시 활성화 되도록 합니다.
 	*/
-	OnGranted_Periodic,
+	OnGranted_ConditionalPeriodic,
 
 	MAX
 };
-
-
 
 /**
  * 
