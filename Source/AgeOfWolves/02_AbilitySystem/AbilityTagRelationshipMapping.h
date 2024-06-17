@@ -57,7 +57,15 @@ public:
 };
 
 /**
+ * UAbilityTagRelationshipMapping
  * 
+ * @목적: 각 GA의 여타 다른 GA와의 관계성을 정의합니다.
+ * @설명
+ *		1. "AbilityTagsToBlock": 해당 GA 활성화 시 활성화 작업을 미연에 방지할 GA 목록
+ *		2. "AbilityTagsToCancel": 해당 GA 활성화 시 현재 활성화 중인 GA들 중 활성화 작업 중단할 GA 목록
+ *		3. "ActivationRequiredTags": 해당 GA 활성화에 필요한 현자 활성화 중인 GA 목록
+ *		4. "ActivationBlockedTags": 해당 GA 활성화를 Block 하는 현재 활성화 중인 GA 목록
+ * @참고: 관계성은 "양방향"으로 정의하며, 'A' Ability가 "AbilityTagsToBlock"에 'B' Ability를 추가했다면, 'B' Ability는 "ActivationBlockedTags"에 'A' Ability를 추가해야 합니다.
  */
 UCLASS()
 class AGEOFWOLVES_API UAbilityTagRelationshipMapping : public UDataAsset

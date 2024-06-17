@@ -28,13 +28,13 @@ enum class EAbilityActivationPolicy : uint8
 	WhileInputActive,
 	/*
 	* @목적: Passive GA 전용 활성화 정책
-	* @설명: Passive GA라면, 해당 정책을 활용하여 등록 시 활성화 되도록 합니다.
+	* @설명: Passive GA 중 특정 조건 없이 등록 시 한 번 활성화 될 경우 해당 활성화 정책을 선택하세요.
 	*/
 	OnGranted_Instant,
 
 	/*
 	* @목적: Passive GA 전용 활성화 정책
-	* @설명: Passive GA라면, 해당 정책을 활용하여 등록 시 활성화 되도록 합니다.
+	* @설명: Passive GA 중 특정 조건이 만족되면 주기적으로 "GE"적용 수행할 경우 해당 활성화 정책을 선택하세요.
 	*/
 	OnGranted_ConditionalPeriodic,
 
@@ -68,11 +68,28 @@ protected:
 #pragma region Gameplay Tag Relationship Mapping
 protected:
 	//~UGameplayAbility interface, Overloading
+	/*
+	* @목적:해당 GA의 활성화 조건(Cost, CoolDown, ATRM)을 확인하고, 해당 GA의 활성화 가능 여부를 반환합니다.
+	* @설명
+	*	1. ActorInfo 체크
+	*	2. Input Inhibition 체크(추후에 결정)
+	*	3. CoolDown, Cost 체크
+	*	4. AR(Activation Required), AB(Activation Blocked) 태그 관계성 만족 여부 확인
+	*	5. 그 외 Null 체크
+	* @참조:UBaseAbilitySystemComponent::TryActivateAbility
+	*/
 	bool CanActivateAbility(
 		const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
 		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, 
 		OUT FGameplayTagContainer* ARTags= nullptr,
 		OUT FGameplayTagContainer* ABTags = nullptr) const;
+	/*
+	* @목적: 해당 GA의 관계성을 통해 활성화 조건 만족 여부 확인
+	* @설명
+	*	1. BlockedAbilityTags에 해당 GA가 있다면, 활성화 할 수 없습니다.
+	*	2. AR(Activation Required), AB(Activation Blocked) 관계성 확인
+	* @참조: UBaseGameplayAbility::CanActivateAbility
+	*/	
 	bool DoesAbilitySatisfyTagRequirements(
 		const UAbilitySystemComponent& AbilitySystemComponent, 
 		const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, 

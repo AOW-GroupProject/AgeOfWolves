@@ -38,7 +38,7 @@ protected:
 	virtual void CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore) override;
 	//~End Of Interface
 	/*
-	* @목적: ATRM에 의하여 "Block"되었던 Passive GA의 Reacitvate를 수행합니다.
+	* @목적: Unblock된 Passive GA의 재 활성화 동작 수행.
 	* @참조: UBaseAbilitySystemComponent::OnAbilityEnded
 	*/
 	void ReactivateUnblockedPassiveAbility(const FGameplayTagContainer UnblockedAbilityTags);
@@ -47,17 +47,30 @@ protected:
 #pragma region GA Life Span
 protected:
 	/*
+	* @목적: 현재 활성화 이벤트 처리 중인 GA들의 Gameplay Tag들을 담아둡니다.
+	* @설명: OnAbilityActivated 콜백 함수에서 Gameplay Tag를 추가하고, OnAbilityEnded 혹은 OnAbilityCanceled에서 특정 Gameplay Tag를 삭제해줍니다.
+	*/
+	FGameplayTagContainer ActivatingAbilityTags;
+public:
+	FORCEINLINE void GetActivatingAbilityTags(OUT FGameplayTagContainer& OutGameplayTagContainer) const { OutGameplayTagContainer = ActivatingAbilityTags; }
+
+protected:
+	/*
 	* @목적: Ability의 활성화 이벤트에 등록할 콜백 함수
 	* @설명
-	*	1. Abilit Tag Realtionship Mapping을 통해 B, C, AR, AB 관련 내용 설정
+	*	1. "AbilityTagsToBlock"과 "AbilityTagsToCancel"목록에 해당되는 GA의 "Block"과 "Cancel"동작 수행
+	*	2. ActivatingAbilityTags 목록에 해당 GA를 추가합니다. 
 	*/
 	void OnAbilityActivated(UGameplayAbility* Ability);
 	/*
 	* @목적: Ability의 활성화 종료 이벤트에 등록할 콜백 함수
 	* @설명
-	*	1. Ability Tag Relationship Mapping을 통해 B, C, AR, AB 관련 내용들 초기화
+	*	1. ActivatingAbilityTags 목록에서 해당 GA를 제거합니다.
+	*	2. Unblock 수행
+	*	3. Unblock된 GA 중 선택적으로 Passive GA에 대하여 재 활성화 동작 수행
 	*/
 	void OnAbilityEnded(UGameplayAbility* Ability);
+
 #pragma endregion
 
 
@@ -95,15 +108,9 @@ public:
 protected:
 	UPROPERTY(EditAnywhere)
 		TSoftObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
-	/*
-	* @목적: 현재 활성화 이벤트 처리 중인 GA들의 Gameplay Tag들을 담아둡니다.
-	* @설명: OnAbilityActivated 콜백 함수에서 Gameplay Tag를 추가하고, OnAbilityEnded 혹은 OnAbilityCanceled에서 특정 Gameplay Tag를 삭제해줍니다.
-	*/
-	FGameplayTagContainer ActivatingAbilityTags;
 
 public:
 	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM;}
-	FORCEINLINE void GetActivatingAbilityTags(OUT FGameplayTagContainer& OutGameplayTagContainer) const { OutGameplayTagContainer = ActivatingAbilityTags; }
 #pragma endregion
 
 };

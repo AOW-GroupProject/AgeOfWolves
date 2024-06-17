@@ -91,6 +91,7 @@ bool UBaseGameplayAbility::CanActivateAbility(
         return false;
     }
 
+    // @TODO: Ability System Globals 계속 활용할 것인지??
     // @ASC Globals
     UAbilitySystemGlobals& AbilitySystemGlobals = UAbilitySystemGlobals::Get();
 
@@ -160,9 +161,8 @@ bool UBaseGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySyste
         FGameplayTagContainer DummyContainer1 = FGameplayTagContainer::EmptyContainer;
         FGameplayTagContainer DummyContainer2 = FGameplayTagContainer::EmptyContainer;
 
-        // 1. AR Tags(Activation Required)
+        // @AR Tags(Activation Required), AB Tags(Activation Blocked)
         FGameplayTagContainer& ActivationRequiredAbilityTags = ARTags ? *ARTags : DummyContainer1;
-        // 2. AB Tags(Activation Blocked)
         static FGameplayTagContainer& ActivationBlockedAbilityTags = ABTags ? *ABTags : DummyContainer2;
 
         // @설명: 해당 GA의 Ability Tag를 통해 ASC를 통해 ATRM에 정의된 해당 GA의 "Activation Required"와 "Activation Blocked" Ability Tag를 가져옵니다.
@@ -196,7 +196,7 @@ bool UBaseGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySyste
     // @TODO: GA 적용 대상(Target) 혹은 GA 적용(Source) 주체에 따라서, 달라지는 GA의 활성화 조건은 추후에 구현합니다.
 
 
-    // @"AR"/"AB" and "Blocked"
+    // @"Blocked" and "AR"/"AB"
     if (bBlocked)
     {
         return false;

@@ -20,9 +20,11 @@ void UBaseAbilitySystemComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
 
-	AbilityActivatedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityActivated);
-	AbilityEndedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityEnded);
-
+	// @Ability 생명 주기 이벤트에 커스텀 콜백 함수 등록
+	{
+		AbilityActivatedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityActivated);
+		AbilityEndedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityEnded);
+	}
 }
 
 bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility** OutInstancedAbility, FOnGameplayAbilityEnded::FDelegate* OnGameplayAbilityEndedDelegate, const FGameplayEventData* TriggerEventData)
@@ -161,6 +163,10 @@ void UBaseAbilitySystemComponent::ReactivateUnblockedPassiveAbility(const FGamep
 			{
 				if(TryActivateAbility(AbilitySpec.Handle)) UE_LOGFMT(LogASC, Warning, "{0}이 재 활성화 되었습니다!", UnblockedAbilityTag.GetTagName());
 			}
+			else
+			{
+				 UE_LOGFMT(LogASC, Error, "{0}이 재 활성화에 실패했습니다.", UnblockedAbilityTag.GetTagName());
+			}
 		}
 	}
 
@@ -234,21 +240,10 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 						TagsToReactivate.AddTag(Tag);
 					}
 				}
-				// @TODO: Error 해결, TArray Resize 하는 코드?
 				ReactivateUnblockedPassiveAbility(TagsToReactivate);
 			}
 		}
 	}
-	// @Activation Policy: Activation Policy가 OnGratned_Periodic일 경우, 자기 자신을 Block 해준다.
-	//{
-	//	if (UBaseGameplayAbility* GA = CastChecked<UBaseGameplayAbility>(Ability))
-	//	{
-	//		if (GA->GetActivationPolicy() == EAbilityActivationPolicy::OnGranted_ConditionalPeriodic)
-	//		{
-	//			BlockAbilitiesWithTags(Ability->AbilityTags);
-	//		}
-	//	}
-	//}
 
 	// @TODO: Ability 활성화 종료 시점에 ASC에서 할 일들...
 }
