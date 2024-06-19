@@ -7,6 +7,7 @@
 #include "AttackGameplayAbility.generated.h"
 
 class APlayerCharacter;
+class UCombatComponent;
 
 UENUM(BlueprintType)
 enum class EAkoniAttackType : uint8
@@ -45,7 +46,10 @@ public:
 	void CauseDamage(AActor* TargetActor);
 
 
-	UFUNCTION(BlueprintCallable, Category = "Ability|Akaoni")
+	UFUNCTION(BlueprintCallable, Category = "Ability | Getter")
 	APlayerCharacter* GetPlayerCharacterFromActorInfo() const;
+
+	UFUNCTION(BlueprintCallable, Category = "Ability | Getter")
+	UCombatComponent* GetCombatComponentFromPlayerCharacter() const;
 	
 };

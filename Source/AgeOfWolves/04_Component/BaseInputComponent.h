@@ -144,6 +144,8 @@ protected:
 	// @설명 : 현재 플레이어의 입력 벡터
 	FVector2D InputVector;
 
+	UPROPERTY(BlueprintReadWrite)
+	int32 InputCount;
 
 	void Input_CountMouseLeftInput();
 

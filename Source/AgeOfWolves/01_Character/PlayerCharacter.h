@@ -14,6 +14,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayer, Log, All)
 
 class UCurveFloat;
+class UCombatComponent;
 // @목적 : UI 관련 테스트 진행을 위해 작성한 임시 코드입니다. 실제 UI 구현을 위해선 아래 코드를 삭제하고 시작해주세요.
 class UTestWidget;
 
@@ -77,6 +78,10 @@ protected:
 	TObjectPtr<class UBaseInputComponent> BaseInputComponent;
 	TObjectPtr<class UBaseAnimInstance> BaseAnimInstance;
 
+
+	UCombatComponent* CombatComponent;
+
 public:
+	FORCEINLINE UCombatComponent* GetCombatComponent() const { return CombatComponent; } 
 
 };

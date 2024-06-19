@@ -23,10 +23,24 @@ void UAttackGameplayAbility::CauseDamage(AActor* TargetActor)
 		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(DamageSpecHandle, Pair.Key, ScaledDamage);
 	}
 	GetAbilitySystemComponentFromActorInfo()->ApplyGameplayEffectSpecToTarget(*DamageSpecHandle.Data.Get(), UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor));
-
 }
 
 APlayerCharacter* UAttackGameplayAbility::GetPlayerCharacterFromActorInfo() const
 {
 	return (CurrentActorInfo ? Cast<APlayerCharacter>(CurrentActorInfo->AvatarActor.Get()) : nullptr);
+}
+
+UCombatComponent* UAttackGameplayAbility::GetCombatComponentFromPlayerCharacter() const
+{
+	if (CurrentActorInfo)
+	{
+		APlayerCharacter* PlayerChracter = Cast<APlayerCharacter>(CurrentActorInfo->AvatarActor.Get());
+		if (PlayerChracter)
+		{
+			return PlayerChracter->GetCombatComponent();
+		}
+	}
+	return nullptr;
+
+
 }

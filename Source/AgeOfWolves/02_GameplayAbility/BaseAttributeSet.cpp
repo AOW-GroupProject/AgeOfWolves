@@ -59,13 +59,14 @@ void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 		NewValue = FMath::Clamp<float>(NewValue, 150, 1000);
 	}
 
-	ClampAttribute(Attribute, NewValue);
+	//ClampAttribute(Attribute, NewValue);
 }
 
 void UBaseAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
 {
 	Super::PostAttributeChange(Attribute, OldValue, NewValue);
-	if (Attribute == GetMaxHealthAttribute())
+	/*
+		if (Attribute == GetMaxHealthAttribute())
 	{
 		// 현재 체력이 새로운 최대 체력보다 크지 않도록 조정한다.
 		if (GetHealth() > NewValue)
@@ -76,6 +77,8 @@ void UBaseAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute,
 			BaseASC->ApplyModToAttribute(GetHealthAttribute(), EGameplayModOp::Override, NewValue);
 		}
 	}
+	*/
+
 
 
 }
@@ -85,7 +88,8 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 {
 	Super::PostGameplayEffectExecute(Data);
 
-	float MinimumHealth = 0.0f;
+	/*
+		float MinimumHealth = 0.0f;
 	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
 	{
 		if (Data.EvaluatedData.Magnitude > 0.0f)
@@ -99,6 +103,8 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 		// Clamp and fall into out of health handling below
 		SetHealth(FMath::Clamp(GetHealth(), MinimumHealth, GetMaxHealth()));
 	}
+	*/
+
 }
 
 void UBaseAttributeSet::AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty)

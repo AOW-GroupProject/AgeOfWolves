@@ -7,6 +7,7 @@
 
 #include "04_Component/BaseInputComponent.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
+#include "04_Component/CombatComponent.h" 
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Camera/CameraComponent.h"
@@ -73,6 +74,9 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	static ConstructorHelpers::FClassFinder<UAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/ABP_AkaOni_Base'"));
 	if (animInstance.Class != NULL)
 		GetMesh()->SetAnimInstanceClass(animInstance.Class);
+
+	// Create Combat Component on Player Character 
+	CombatComponent = CreateDefaultSubobject<UCombatComponent>(TEXT("Combat Component"));
 
 }
 

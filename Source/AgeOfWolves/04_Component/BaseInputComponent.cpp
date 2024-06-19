@@ -11,6 +11,7 @@
 #include "EnhancedInputSubsystems.h"
 #include "06_Input/InputConfig.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
+#include "04_Component/CombatComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
 #include "01_Character/PlayerCharacter.h"
@@ -317,8 +318,9 @@ void UBaseInputComponent::Input_ChangeLockOnTarget(const FInputActionValue& Valu
 
 void UBaseInputComponent::Input_CountMouseLeftInput()
 {
-	FGameplayEventData PayLoad;
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(GetOwner(), FGameplayTag::RequestGameplayTag(FName("Event.MouseLeftInput")), PayLoad);
+	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
+	check(PlayerCharacter);
+	PlayerCharacter->GetCombatComponent()->IncrementInputCount();
 }
 
 void UBaseInputComponent::Input_AbilityInputTagPressed(FGameplayTag InputTag)
