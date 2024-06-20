@@ -19,6 +19,7 @@ ABaseMonsterAIController::ABaseMonsterAIController()
 	SightConfig->SightRadius = 500.f; 
 	SightConfig->LoseSightRadius = 550.f; 
 	SightConfig->SetMaxAge(3.0f);
+	SightConfig->PeripheralVisionAngleDegrees = 180.f;
 	GetPerceptionComponent()->SetDominantSense(*SightConfig->GetSenseImplementation());
 	GetPerceptionComponent()->ConfigureSense(*SightConfig);
 	GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &ABaseMonsterAIController::OnTargetDetected);
@@ -36,6 +37,7 @@ void ABaseMonsterAIController::OnPossess(APawn* InPawn)
 void ABaseMonsterAIController::OnTargetDetected(AActor* InActor, FAIStimulus Stimulus)
 {
 	//태그?
+	//인식 시 캐릭터의 소환물 등 다른 객체도 인식할 수 있도록 수정
 	if (Cast<ACharacterBase>(InActor))
 	{
 		GetBlackboardComponent()->SetValueAsObject("Player", InActor);
