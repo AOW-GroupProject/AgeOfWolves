@@ -21,5 +21,5 @@ void UBTTask_MoveAlongSplinePoint::TickTask(UBehaviorTreeComponent& OwnerComp, u
 		return;
 
 	}
-	Cast<IMonsterInterface_Spline>(OwnerComp.GetAIOwner()->GetPawn())->MoveAlongSplinePoint(DeltaSeconds);
+	Cast<IMonsterInterface_Spline>(OwnerComp.GetAIOwner()->GetPawn())->WhenMoveToSplinePointReturnTrue();
 }

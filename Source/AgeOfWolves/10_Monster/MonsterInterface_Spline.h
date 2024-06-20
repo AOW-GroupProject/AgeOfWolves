@@ -28,7 +28,7 @@ public:
 	//인터페이스: 몬스터마다 움직이는 방식이 다른 경우 Task에서 캐스팅을 전부 다 하지 않기 위해
 	
 	// 점에서 점으로 움직임
-	//virtual bool WhenMoveToSplinePointReturnTrue() = 0;
+	virtual bool WhenMoveToSplinePointReturnTrue() = 0;
 
 	// 자연스러운 움직임
 	virtual void MoveAlongSplinePoint(float delta) = 0;
