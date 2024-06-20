@@ -26,8 +26,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
 	)
 {
-	PrimaryActorTick.bCanEverTick = false;
-
 	// Replace Input Component to User defined Base Input Component
 	InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
 
@@ -49,8 +47,10 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 230.f;
-	GetCharacterMovement()->MaxAcceleration = 150.f;
+	// @FIX: 230 -> 350 상향
+	GetCharacterMovement()->MaxWalkSpeed = 350.f;
+	// @FIX: 150 -> 300 상향
+	GetCharacterMovement()->MaxAcceleration = 300.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
 
@@ -100,7 +100,6 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	AdjustCameraTransform(DeltaSeconds);
-	// AdjustControllerRotation(DeltaSeconds);
 
 }
 

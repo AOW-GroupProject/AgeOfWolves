@@ -6,8 +6,8 @@
 #include "GameFramework/PlayerState.h"
 #include "AbilitySystemInterface.h"
 
-#include "02_GameplayAbility/BaseAttributeSet.h"
-#include "02_GameplayAbility/BaseAbilitySet.h"
+#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+#include "02_AbilitySystem/BaseAbilitySet.h"
 
 #include "PlayerStateBase.generated.h"
 
