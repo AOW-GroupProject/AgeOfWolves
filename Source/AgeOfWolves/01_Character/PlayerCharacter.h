@@ -48,6 +48,9 @@ protected:
 		class USpringArmComponent* SpringArm;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
+
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cpmbat", meta = (AllowPrivateAccess = "true"))
+	UCombatComponent* CombatComponent;
 	//~End Of Components
 #pragma endregion
 
@@ -79,7 +82,6 @@ protected:
 	TObjectPtr<class UBaseAnimInstance> BaseAnimInstance;
 
 
-	UCombatComponent* CombatComponent;
 
 public:
 	FORCEINLINE UCombatComponent* GetCombatComponent() const { return CombatComponent; } 

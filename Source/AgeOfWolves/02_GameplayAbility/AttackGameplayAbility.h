@@ -8,6 +8,7 @@
 
 class APlayerCharacter;
 class UCombatComponent;
+class UAnimMontage;
 
 UENUM(BlueprintType)
 enum class EAkoniAttackType : uint8
@@ -36,7 +37,7 @@ class AGEOFWOLVES_API UAttackGameplayAbility : public UBaseGameplayAbility
 public:
 	UAttackGameplayAbility();
 
-	UPROPERTY(EditDefaultsOnly, meta = (Category = "AttackInfo|Type"))
+	UPROPERTY(EditDefaultsOnly, meta = (Category = "AttackInfo | Type"))
 	EAkoniAttackType AkoniAttackType;
 
 	UPROPERTY(EditDefaultsOnly, Category = "AttackInfo | Damage")
@@ -45,9 +46,16 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void CauseDamage(AActor* TargetActor);
 
+	UPROPERTY(EditDefaultsOnly, meta = (Category = "Animation"))
+	TArray<UAnimMontage*> Montages;
+
+	UPROPERTY(EditDefaultsOnly, meta = (Category = "Animation"))
+	float PlayRate = 1.0f;
 
 	UFUNCTION(BlueprintCallable, Category = "Ability | Getter")
 	APlayerCharacter* GetPlayerCharacterFromActorInfo() const;
+
+
 
 	UFUNCTION(BlueprintCallable, Category = "Ability | Getter")
 	UCombatComponent* GetCombatComponentFromPlayerCharacter() const;

@@ -13,9 +13,9 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAttributeSet, Log, All);
 
 
 /*
-* @¸ñÀû : Gameplay Attribute °ªµéÀÇ Getter&Setter¸¦ À§ÇÑ ¸ÅÅ©·Î Á¤ÀÇ
-* @¼³¸í : Get(Attribute_Name)À» ÅëÇØ °£´ÜÈ÷ Attirbute ¼öÄ¡¸¦ °¡Á®¿Ã ¼ö ÀÖµµ·ÏÇÕ´Ï´Ù.
-* @ÁÖÀÇ : Á÷Á¢ÀûÀ¸·Î Getter¿Í Setter¸¦ È£ÃâÇÏ±â º¸´Ü, Gameplay Effect È°¿ëÀ» ÁöÇâÇÕ´Ï´Ù.
+* @ï¿½ï¿½ï¿½ï¿½ : Gameplay Attribute ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Getter&Setterï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Å©ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+* @ï¿½ï¿½ï¿½ï¿½ : Get(Attribute_Name)ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Attirbute ï¿½ï¿½Ä¡ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½Öµï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
+* @ï¿½ï¿½ï¿½ï¿½ : ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Getterï¿½ï¿½ Setterï¿½ï¿½ È£ï¿½ï¿½ï¿½Ï±ï¿½ ï¿½ï¿½ï¿½ï¿½, Gameplay Effect È°ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
 */
 // Uses macros from AttributeSet.h
 #define ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
@@ -107,7 +107,7 @@ public:
 		FGameplayAttributeData XP;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, XP)
 
-		// °ñµå´Â ¾ÆÁ÷...
+		// ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½...
 			UPROPERTY(BlueprintReadOnly, Category = "Attribute | Gold")
 		FGameplayAttributeData Gold;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Gold)
@@ -122,7 +122,7 @@ public:
 		FGameplayAttributeData GoldBounty;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, GoldBounty)
 
-	// @¸ñÀû : BaseAttributeSetÀÇ ¸ðµç Attribute Ç×¸ñÀ» ¹ÝÈ¯ÇÏ´Â ÇÔ¼ö
+	// @ï¿½ï¿½ï¿½ï¿½ : BaseAttributeSetï¿½ï¿½ ï¿½ï¿½ï¿½ Attribute ï¿½×¸ï¿½ï¿½ï¿½ ï¿½ï¿½È¯ï¿½Ï´ï¿½ ï¿½Ô¼ï¿½
 	TArray<FGameplayAttribute> GetAllAttributes() const;
 
 public:
@@ -130,37 +130,37 @@ public:
 
 protected:
 	/*
-	* @¸ñÀû : Attribute ¼öÄ¡ º¯È­ ÀÌº¥Æ® ¹ß»ý ½Ã Ç×»ó È£ÃâµÇ´Â ÇÔ¼ö
-	* @¼³¸í : Health, Mana, Stamina µî Max °ª º¯°æÀÌ °¡´ÉÇÑ Attribute ¼öÄ¡µé¿¡ ´ëÇÑ ÇöÀç °ª Á¶Á¤¿¡ »ç¿ë
+	* @ï¿½ï¿½ï¿½ï¿½ : Attribute ï¿½ï¿½Ä¡ ï¿½ï¿½È­ ï¿½Ìºï¿½Æ® ï¿½ß»ï¿½ ï¿½ï¿½ ï¿½×»ï¿½ È£ï¿½ï¿½Ç´ï¿½ ï¿½Ô¼ï¿½
+	* @ï¿½ï¿½ï¿½ï¿½ : Health, Mana, Stamina ï¿½ï¿½ Max ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Attribute ï¿½ï¿½Ä¡ï¿½é¿¡ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½
 	*/
 	// AttributeSet Overrides
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 
 	/*
-	* @¸ñÀû : Attribute ¼öÄ¡ º¯È­ ÀÌº¥Æ® ¹ß»ý ÈÄ¿¡ Ç×»ó È£ÃâµÇ´Â ÇÔ¼ö
-	* @¼³¸í : Attribute ¼öÄ¡°¡ º¯È­ÈÄ¿¡ È£ÃâµÈ´Ù. 
+	* @ï¿½ï¿½ï¿½ï¿½ : Attribute ï¿½ï¿½Ä¡ ï¿½ï¿½È­ ï¿½Ìºï¿½Æ® ï¿½ß»ï¿½ ï¿½Ä¿ï¿½ ï¿½×»ï¿½ È£ï¿½ï¿½Ç´ï¿½ ï¿½Ô¼ï¿½
+	* @ï¿½ï¿½ï¿½ï¿½ : Attribute ï¿½ï¿½Ä¡ï¿½ï¿½ ï¿½ï¿½È­ï¿½Ä¿ï¿½ È£ï¿½ï¿½È´ï¿½. 
 	*/
 	// AttributeSet Overrides
 	virtual void PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue) override;
 
 
 	/*
-	* @¸ñÀû : AttributeÀÇ º¯È­ ÀÌÈÄ¿¡ È£ÃâµÇ´Â Handling Logic
-	* @¼³¸í : Current HealthÀÇ Clmap ÀÛ¾÷ µî Attribute °ªÀÇ º¯È­°¡ ÀÏ¾î³­ ÀÌÈÄ¿¡ ¹ß»ýÇÏ´Â ÇÚµé¸µ ·ÎÁ÷À» Ã³¸®ÇÕ´Ï´Ù.
+	* @ï¿½ï¿½ï¿½ï¿½ : Attributeï¿½ï¿½ ï¿½ï¿½È­ ï¿½ï¿½ï¿½Ä¿ï¿½ È£ï¿½ï¿½Ç´ï¿½ Handling Logic
+	* @ï¿½ï¿½ï¿½ï¿½ : Current Healthï¿½ï¿½ Clmap ï¿½Û¾ï¿½ ï¿½ï¿½ Attribute ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È­ï¿½ï¿½ ï¿½Ï¾î³­ ï¿½ï¿½ï¿½Ä¿ï¿½ ï¿½ß»ï¿½ï¿½Ï´ï¿½ ï¿½Úµé¸µ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Ã³ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
 	*/
 	// AttributeSet Overrides
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
 	/*
-	* @¸ñÀû : Attirbute Ç×¸ñÀÇ Max °ª º¯°æ¿¡ µû¸¥ Current/Max ÆÛ¼¾Æ¼Áö °ª º¯°æ
-	* @¼³¸í : Attribute Ç×¸ñÀÇ Max °ª º¯°æÀº Current °ª°ú Max °ªÀÇ ºñÀ² º¯°æ¿¡ ¿µÇâÀ» ³¢Ä¡¹Ç·Î, ÀÌ ³»¿ëÀ» º°µµÀÇ ÇÔ¼ö·Î Á¤ÀÇÇÕ´Ï´Ù.
+	* @ï¿½ï¿½ï¿½ï¿½ : Attirbute ï¿½×¸ï¿½ï¿½ï¿½ Max ï¿½ï¿½ ï¿½ï¿½ï¿½æ¿¡ ï¿½ï¿½ï¿½ï¿½ Current/Max ï¿½Û¼ï¿½Æ¼ï¿½ï¿½ ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
+	* @ï¿½ï¿½ï¿½ï¿½ : Attribute ï¿½×¸ï¿½ï¿½ï¿½ Max ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Current ï¿½ï¿½ï¿½ï¿½ Max ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½æ¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½Ä¡ï¿½Ç·ï¿½, ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ô¼ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
 	*/
 	void AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);
 
 
 	/*
-	* @¸ñÀû : Attribute¸¦ ClampÇÏ´Â ÇÔ¼ö
-	* @¼³¸í : PreAttributeChange ÇÔ¼ö¿¡¼­ Clamp ÀÛ¾÷À» ´ã´çÇÑ´Ù.
+	* @ï¿½ï¿½ï¿½ï¿½ : Attributeï¿½ï¿½ Clampï¿½Ï´ï¿½ ï¿½Ô¼ï¿½
+	* @ï¿½ï¿½ï¿½ï¿½ : PreAttributeChange ï¿½Ô¼ï¿½ï¿½ï¿½ï¿½ï¿½ Clamp ï¿½Û¾ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ñ´ï¿½.
 	*/
 	void ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const;
 
@@ -168,8 +168,8 @@ protected:
 
 
 	/*
-	* @¸ñÀû : AttributeSet Å¬·¡½º ³»¿¡¼­ Base Ability System Component¸¦ ¾ò´Â GetterÇÔ¼ö
-	* @¼³¸í : GetOwningAbilitySystemComponent ÇÔ¼öÀÇ ¹ÝÈ¯°ªÀ» UBaseAbilitysystemComponent·Î Ä³½ºÆÃ ÈÄ¿¡ ¹ÝÈ¯ÇÕ´Ï´Ù.
+	* @ï¿½ï¿½ï¿½ï¿½ : AttributeSet Å¬ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ Base Ability System Componentï¿½ï¿½ ï¿½ï¿½ï¿½ Getterï¿½Ô¼ï¿½
+	* @ï¿½ï¿½ï¿½ï¿½ : GetOwningAbilitySystemComponent ï¿½Ô¼ï¿½ï¿½ï¿½ ï¿½ï¿½È¯ï¿½ï¿½ï¿½ï¿½ UBaseAbilitysystemComponentï¿½ï¿½ Ä³ï¿½ï¿½ï¿½ï¿½ ï¿½Ä¿ï¿½ ï¿½ï¿½È¯ï¿½Õ´Ï´ï¿½.
 	*/
 	UBaseAbilitySystemComponent* GetBaseAbilitySystemComponent() const;
 

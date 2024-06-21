@@ -1,7 +1,13 @@
 // Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "04_Component/CombatComponent.h"
+
+
+#include "01_Character/PlayerCharacter.h"
+#include "04_Component/CombatComponent.h"
+#include "03_Player/PlayerStateBase.h"
+#include "04_Component/BaseAbilitySystemComponent.h"
+#include "Abilities/GameplayAbility.h"
+#include "AbilitySystemComponent.h"
 
 // Sets default values for this component's properties
 UCombatComponent::UCombatComponent()
@@ -18,10 +24,11 @@ UCombatComponent::UCombatComponent()
 void UCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
-
+	// BaseAbilitySystemComponent = GetOwner()->GetComponentByClass<UBaseAbilitySystemComponent>();
 	// ...
 	
 }
+
 
 
 // Called every frame
@@ -37,29 +44,111 @@ int UCombatComponent::GetInputCount()
 	return InputCount;
 }
 
-void UCombatComponent::IncrementInputCount()
+void UCombatComponent::IncrementCombo()
 {
-	InputCount += 1;
+	if (bComboWindowOpen)
+	{
+		ComboIndex = 1;
+	}
+
 
 	
 }
 
-void UCombatComponent::DecrementInputCount()
+void UCombatComponent::ResetCombo()
 {
-	InputCount -= 1;
+	ComboIndex = 0;
+	InputCount = 0;
 }
 
-void UCombatComponent::ResetInputCount()
+void UCombatComponent::ActivateComboAbility(TSubclassOf<UGameplayAbility> AbilityClass)
 {
-	InputCount = 1;
+	UBaseAbilitySystemComponent* ASC = GetAbilitysystemComponent();
+	if (bComboWindowOpen && ComboIndex > 0) // Combo가 가능할때
+	{
+
+	}
+
+
+
+	ASC->TryActivateAbilityByClass(AbilityClass);
 }
 
 bool UCombatComponent::CanComboAttack()
 {
-	if (InputCount > 0)
+	if (ComboIndex > 0)
 	{
+		InputCount++;
 		return true;
 	}
 	return false;
 }
+
+UBaseAbilitySystemComponent* UCombatComponent::GetAbilitysystemComponent()
+{
+	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
+	check(PlayerCharacter);
+	APlayerStateBase* PlayerStateBase = Cast<APlayerStateBase>(PlayerCharacter->GetPlayerState());
+	check(PlayerStateBase);
+	UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(PlayerStateBase->GetAbilitySystemComponent());
+	check(BaseASC);
+	return BaseASC;
+}
+
+void UCombatComponent::OpenComboWindow()
+{
+	bComboWindowOpen = true;
+}
+
+void UCombatComponent::CloseComboWindow()
+{
+	bComboWindowOpen = false;
+}
+
+bool UCombatComponent::GetbComboWindowOpen()
+{
+	return bComboWindowOpen;
+}
+
+
+
+
+
+#pragma region Input Queue Management
+
+
+void UCombatComponent::InputQueueMasterEvent()
+{
+
+
+
+
+
+}
+
+void UCombatComponent::UpdateAllowedInputTags(TArray<FGameplayTag> InputTags)
+{
+	AllowedInputTags = InputTags;
+
+}
+
+void UCombatComponent::ResetAllowedInputTags()
+{
+	AllowedInputTags.Empty();
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+#pragma endregion
+
 

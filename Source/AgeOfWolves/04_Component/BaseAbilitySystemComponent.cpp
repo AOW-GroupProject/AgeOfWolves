@@ -101,6 +101,7 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 	for (const FGameplayAbilitySpecHandle& AbilitySpecHandle : AbilitiesToActivate)
 	{
 		TryActivateAbility(AbilitySpecHandle);
+		UE_LOG(LogTemp, Warning, TEXT("TryActivateAbility"));
 	}
 
 	//

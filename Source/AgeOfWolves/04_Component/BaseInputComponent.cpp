@@ -320,7 +320,7 @@ void UBaseInputComponent::Input_CountMouseLeftInput()
 {
 	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
 	check(PlayerCharacter);
-	PlayerCharacter->GetCombatComponent()->IncrementInputCount();
+	//PlayerCharacter->GetCombatComponent()->IncrementInputCount();
 }
 
 void UBaseInputComponent::Input_AbilityInputTagPressed(FGameplayTag InputTag)
