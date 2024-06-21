@@ -79,8 +79,10 @@ void UBaseAnimInstance::FindMovementState()
 	// #4. 정지
 	else
 	{
+		LastMovementState = MovementState;
 		MovementState = EMovementState::Idle;
 	}
+
 }
 
 void UBaseAnimInstance::FindMovementDirection()

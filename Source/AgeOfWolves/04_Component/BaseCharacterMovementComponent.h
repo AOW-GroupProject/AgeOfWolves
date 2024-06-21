@@ -37,6 +37,9 @@ public:
 
 private:
 	bool IsSprinting;
+private:
+	const float WalkAcceleration = 300.f;
+	const float SprintAcceleration = 500.f;
 #pragma endregion
 
 };
