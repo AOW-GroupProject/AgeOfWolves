@@ -53,6 +53,7 @@ void UBaseGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInf
 {
 	Super::OnAvatarSet(ActorInfo, Spec);
 }
+<<<<<<< HEAD
 
 void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
 {
@@ -114,6 +115,8 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
         }
     }
 }
+=======
+>>>>>>> develop
 #pragma endregion
 
 #pragma region Tag Requirements
