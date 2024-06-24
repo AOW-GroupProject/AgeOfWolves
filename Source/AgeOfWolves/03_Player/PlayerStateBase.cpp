@@ -1,10 +1,9 @@
-
 #include "PlayerStateBase.h"
 #include "Logging/StructuredLog.h"
 
 #include "GameFramework/PlayerController.h"
 
-#include "02_GameplayAbility/BaseAttributeSet.h"
+#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 
 #include "01_Character/PawnData.h"
@@ -13,6 +12,7 @@
 #include "04_Component/BaseCharacterMovementComponent.h"
 
 #include "08_UI/StateBars.h"
+
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 

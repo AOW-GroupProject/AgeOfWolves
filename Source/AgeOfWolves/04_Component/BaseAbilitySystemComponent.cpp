@@ -1,6 +1,6 @@
 #include "BaseAbilitySystemComponent.h"
 
-#include "02_GameplayAbility/BaseGameplayAbility.h"
+#include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
 
 UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)

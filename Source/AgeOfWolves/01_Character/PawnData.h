@@ -4,8 +4,8 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
-#include "02_GameplayAbility/BaseAbilitySet.h"
-#include "02_GameplayAbility/AbilityTagRelationshipMapping.h"
+#include "02_AbilitySystem/BaseAbilitySet.h"
+#include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "06_Input/InputConfig.h"
 
 #include "PawnData.generated.h"

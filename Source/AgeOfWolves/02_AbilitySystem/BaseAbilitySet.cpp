@@ -5,8 +5,7 @@
 #include "Logging/StructuredLog.h"
 
 #include "04_Component/BaseAbilitySystemComponent.h"
-#include "02_GameplayAbility/BaseAttributeSet.h"
-#include "02_GameplayAbility/BaseGameplayAbility.h"
+#include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
 
 DEFINE_LOG_CATEGORY(LogAbilitySet)
 

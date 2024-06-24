@@ -1,6 +1,6 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
-#include "02_GameplayAbility/AttackGameplayAbility.h"
+#include "02_AbilitySystem/AttackGameplayAbility.h"
 
 
 #include "01_Character/PlayerCharacter.h"

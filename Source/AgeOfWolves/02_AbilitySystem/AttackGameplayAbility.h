@@ -3,7 +3,7 @@
 #pragma once
 
 #include "CoreMinimal.h"
-#include "02_GameplayAbility/BaseGameplayAbility.h"
+#include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
 #include "AttackGameplayAbility.generated.h"
 
 class APlayerCharacter;

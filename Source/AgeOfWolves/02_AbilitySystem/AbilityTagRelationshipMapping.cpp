@@ -1,7 +1,7 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-#include "02_GameplayAbility/AbilityTagRelationshipMapping.h"
+#include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 
 void UAbilityTagRelationshipMapping::GetAbilityTagsToBlockAndCancel(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer* OutTagsToBlock, FGameplayTagContainer* OutTagsToCancel) const
 {
