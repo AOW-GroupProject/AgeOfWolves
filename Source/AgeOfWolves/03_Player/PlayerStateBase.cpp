@@ -68,6 +68,7 @@ void APlayerStateBase::InitializeGameplayAbilitySystem()
 	{
 		if (const auto& Pawn = Controller->GetPawn())
 		{
+			// Actor Info
 			AbilitySystemComponent->InitAbilityActorInfo(Pawn, Pawn);
 
 			if (PawnData->IsValidLowLevel())
@@ -92,6 +93,13 @@ void APlayerStateBase::InitializeGameplayAbilitySystem()
 								}
 								break;
 							}
+						}
+					}
+					// 캐릭터의 기본 GA에 대한 Ability Tag Relationpship을 등록합니다.
+					{
+						if (PawnData->TagRelationship)
+						{
+							AbilitySystemComponent->SetAbilityTagRelationshipMapping(PawnData->TagRelationship);
 						}
 					}
 					// 캐릭터의 기본 Gameplay Effect를 ASC에 최초 등록/적용합니다.

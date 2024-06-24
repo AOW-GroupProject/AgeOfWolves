@@ -1,11 +1,8 @@
 // Fill out your copyright notice in the Description page of Project Settings.
 
 
-
 #include "BaseAttributeSet.h"
 #include "Logging/StructuredLog.h"
-#include "GameplayEffectExtension.h"
-#include "04_Component/BaseAbilitySystemComponent.h"
 
 DEFINE_LOG_CATEGORY(LogAttributeSet)
 
@@ -20,16 +17,26 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 	AllAttributes.Add(GetHealthAttribute());
 	AllAttributes.Add(GetMaxHealthAttribute());
 	AllAttributes.Add(GetHealthRegenRateAttribute());
+
 	AllAttributes.Add(GetManaAttribute());
 	AllAttributes.Add(GetMaxManaAttribute());
 	AllAttributes.Add(GetManaRegenRateAttribute());
+
 	AllAttributes.Add(GetStaminaAttribute());
 	AllAttributes.Add(GetMaxStaminaAttribute());
 	AllAttributes.Add(GetStaminaRegenRateAttribute());
-	AllAttributes.Add(GetArmorAttribute());
+
+	AllAttributes.Add(GetPoiseAttribute());
+	AllAttributes.Add(GetDefenseAttribute());
+	AllAttributes.Add(GetOffenseAttribute());
 	AllAttributes.Add(GetMoveSpeedAttribute());
 	AllAttributes.Add(GetCharacterLevelAttribute());
+
 	AllAttributes.Add(GetDamageAttribute());
+
+	AllAttributes.Add(GetSealPointAttribute());
+	AllAttributes.Add(GetGroggyAttribute());
+
 	AllAttributes.Add(GetXPAttribute());
 	AllAttributes.Add(GetGoldAttribute());
 	AllAttributes.Add(GetXPBountyAttribute());
@@ -41,69 +48,37 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
 	Super::PreAttributeChange(Attribute, NewValue);
+<<<<<<< HEAD:Source/AgeOfWolves/02_AbilitySystem/01_AttributeSet/BaseAttributeSet.cpp
+
+	// @Max HP
+=======
 	
+>>>>>>> develop:Source/AgeOfWolves/02_GameplayAbility/BaseAttributeSet.cpp
 	if (Attribute == GetMaxHealthAttribute())
 	{
 		AdjustAttributeForMaxChange(Health, MaxHealth, NewValue, GetHealthAttribute());
 	}
+	// @Max MP
 	else if (Attribute == GetMaxManaAttribute())
 	{
 		AdjustAttributeForMaxChange(Mana, MaxMana, NewValue, GetManaAttribute());
 	}
+	// @Max SP
 	else if (Attribute == GetMaxStaminaAttribute())
 	{
 		AdjustAttributeForMaxChange(Stamina, MaxStamina, NewValue, GetStaminaAttribute());
 	}
+	// @Move Speed
 	else if (Attribute == GetMoveSpeedAttribute())
 	{
 		NewValue = FMath::Clamp<float>(NewValue, 150, 1000);
 	}
 
-	//ClampAttribute(Attribute, NewValue);
 }
-
-void UBaseAttributeSet::PostAttributeChange(const FGameplayAttribute& Attribute, float OldValue, float NewValue)
-{
-	Super::PostAttributeChange(Attribute, OldValue, NewValue);
-	/*
-		if (Attribute == GetMaxHealthAttribute())
-	{
-		// 현재 체력이 새로운 최대 체력보다 크지 않도록 조정한다.
-		if (GetHealth() > NewValue)
-		{
-			UBaseAbilitySystemComponent* BaseASC = GetBaseAbilitySystemComponent();
-			check(BaseASC);
-
-			BaseASC->ApplyModToAttribute(GetHealthAttribute(), EGameplayModOp::Override, NewValue);
-		}
-	}
-	*/
-
-
-
-}
-
 
 void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
-
-	/*
-		float MinimumHealth = 0.0f;
-	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
-	{
-		if (Data.EvaluatedData.Magnitude > 0.0f)
-		{
-			SetHealth(FMath::Clamp(GetHealth() - GetDamage(), MinimumHealth, GetMaxHealth()));
-			SetDamage(0.0f);
-		}
-	}
-	else if (Data.EvaluatedData.Attribute == GetHealthAttribute())
-	{
-		// Clamp and fall into out of health handling below
-		SetHealth(FMath::Clamp(GetHealth(), MinimumHealth, GetMaxHealth()));
-	}
-	*/
 
 }
 
@@ -121,22 +96,6 @@ void UBaseAttributeSet::AdjustAttributeForMaxChange(FGameplayAttributeData& Affe
 
 }
 
-void UBaseAttributeSet::ClampAttribute(const FGameplayAttribute& Attribute, float& NewValue) const
+void UBaseAttributeSet::AdjustAttributeForCurrentChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty)
 {
-	if (Attribute == GetHealthAttribute())
-	{
-		// Health가 MaxHealth, 0 사이에 있도록 Clamp 한다.
-		NewValue = FMath::Clamp(NewValue, 0.0f, GetMaxHealth());
-	}
-	else if (Attribute == GetMaxHealthAttribute())
-	{
-		// MaxHealth가 1보다 작아지는 것을 막는다.
-		NewValue = FMath::Max(NewValue, 1.0f);
-	}
-}
-
-
-UBaseAbilitySystemComponent* UBaseAttributeSet::GetBaseAbilitySystemComponent() const
-{
-	return Cast<UBaseAbilitySystemComponent>(GetOwningAbilitySystemComponent());
 }
