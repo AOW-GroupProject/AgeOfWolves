@@ -85,7 +85,7 @@ void UBaseInputComponent::InitializePlayersInputActionsSetup()
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Look);
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LockOn);
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.ChangeLockOnTarget")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_ChangeLockOnTarget);
-				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.CountMouseInput")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_CountMouseLeftInput);
+				//BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.CountMouseInput")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_CountMouseLeftInput);
 
 				// #3. Ability Input Actions
 				TArray<uint32> BindHandles;
