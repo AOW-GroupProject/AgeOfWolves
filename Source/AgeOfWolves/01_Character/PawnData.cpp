@@ -6,5 +6,7 @@
 UPawnData::UPawnData(const FObjectInitializer& ObjectInitializer)
 {
 	PawnClass = nullptr;
+	AbilitySet = nullptr;
+	TagRelationship = nullptr;
 	InputConfig = nullptr;
 }

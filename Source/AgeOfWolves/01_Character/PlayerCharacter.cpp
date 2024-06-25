@@ -100,7 +100,6 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	AdjustCameraTransform(DeltaSeconds);
-	// AdjustControllerRotation(DeltaSeconds);
 
 }
 

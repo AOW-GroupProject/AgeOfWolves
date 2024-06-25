@@ -17,16 +17,26 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 	AllAttributes.Add(GetHealthAttribute());
 	AllAttributes.Add(GetMaxHealthAttribute());
 	AllAttributes.Add(GetHealthRegenRateAttribute());
+
 	AllAttributes.Add(GetManaAttribute());
 	AllAttributes.Add(GetMaxManaAttribute());
 	AllAttributes.Add(GetManaRegenRateAttribute());
+
 	AllAttributes.Add(GetStaminaAttribute());
 	AllAttributes.Add(GetMaxStaminaAttribute());
 	AllAttributes.Add(GetStaminaRegenRateAttribute());
-	AllAttributes.Add(GetArmorAttribute());
+
+	AllAttributes.Add(GetPoiseAttribute());
+	AllAttributes.Add(GetDefenseAttribute());
+	AllAttributes.Add(GetOffenseAttribute());
 	AllAttributes.Add(GetMoveSpeedAttribute());
 	AllAttributes.Add(GetCharacterLevelAttribute());
+
 	AllAttributes.Add(GetDamageAttribute());
+
+	AllAttributes.Add(GetSealPointAttribute());
+	AllAttributes.Add(GetGroggyAttribute());
+
 	AllAttributes.Add(GetXPAttribute());
 	AllAttributes.Add(GetGoldAttribute());
 	AllAttributes.Add(GetXPBountyAttribute());
@@ -38,19 +48,27 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
 	Super::PreAttributeChange(Attribute, NewValue);
+<<<<<<< HEAD:Source/AgeOfWolves/02_AbilitySystem/01_AttributeSet/BaseAttributeSet.cpp
+
+	// @Max HP
+=======
 	
+>>>>>>> develop:Source/AgeOfWolves/02_GameplayAbility/BaseAttributeSet.cpp
 	if (Attribute == GetMaxHealthAttribute())
 	{
 		AdjustAttributeForMaxChange(Health, MaxHealth, NewValue, GetHealthAttribute());
 	}
+	// @Max MP
 	else if (Attribute == GetMaxManaAttribute())
 	{
 		AdjustAttributeForMaxChange(Mana, MaxMana, NewValue, GetManaAttribute());
 	}
+	// @Max SP
 	else if (Attribute == GetMaxStaminaAttribute())
 	{
 		AdjustAttributeForMaxChange(Stamina, MaxStamina, NewValue, GetStaminaAttribute());
 	}
+	// @Move Speed
 	else if (Attribute == GetMoveSpeedAttribute())
 	{
 		NewValue = FMath::Clamp<float>(NewValue, 150, 1000);
@@ -76,4 +94,8 @@ void UBaseAttributeSet::AdjustAttributeForMaxChange(FGameplayAttributeData& Affe
 		AbilityComp->ApplyModToAttributeUnsafe(AffectedAttributeProperty, EGameplayModOp::Additive, NewDelta);
 	}
 
+}
+
+void UBaseAttributeSet::AdjustAttributeForCurrentChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty)
+{
 }

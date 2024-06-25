@@ -22,7 +22,21 @@ class APlayerStateBase;
 /**
  * FAbilitySet_GameplayAbility
  *
- *	Data used by the ability set to grant gameplay abilities.
+ *	@목적: GA 관련 구조체입니다. 모든 GA는 고유의 Gameplay Tag를 갖습니다. 
+ *	
+ *	@설명: 해당 구조체는 그 특징에 따라서 두 개의 종류가 되며, 구분점은 IsAcive(bool형)입니다.
+ * 
+ *	1. Passive GA: 외부 환경 혹은 다른 GA를 통해 활성화되며, GE 구현에 중점을 두어 캐릭터의 Attribute 수치 변화 혹은 다른 GA의 '행동 제어'의 기반이 됩니다.
+ *	-> Trigger 매개가 다른 GA 혹은 외부 환경입니다.
+ *	-> Input Tag 관련 정보가 필요없습니다.
+ *	-> 별도의 활성화 함수를 블루프린트에서 정의하고, 캐릭터의 Attribute 수치 변화에 중점을 두어 다른 GA의 '행동 제어'를 목표합니다.
+ * 
+ *	2. Active GA: 사용자 입력에 의해 활성화되어, GA 구현에 중점을 두어 캐릭터의 특정 '행동 개시'를 정의합니다.
+ *	-> Trigger 매개가 사용자 입력입니다.
+ *	-> Input Tag 관련 정보가 필요합니다.
+ *	-> 별도의 활성화 함수를 블루프린트에서 정의하고, GA 구현에 중점을 두어 GE를 통한 캐릭터의 Attribute 수치 변화에 부가적인 영향을 끼쳐 캐릭터의 '행동 개시'의 기반이 됩니다. 
+ * 
+ *	@참고: Native Action으로 활성화 함수가 정의되는 GA들의 경우, 특정 GE에 의해 모두가 함께 영향을 받거나, 영향을 받지 않을 수 있습니다.
  */
 USTRUCT(BlueprintType)
 struct FBaseAbilitySet_GameplayAbility
@@ -39,11 +53,14 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 		int32 AbilityLevel = 1;
 
+	// Level of ability to grant.
+	UPROPERTY(EditDefaultsOnly)
+		bool IsActive = false;
+
 	// Tag used to process input for the ability.
-	UPROPERTY(EditDefaultsOnly, Meta = (Categories = "InputTag"))
+	UPROPERTY(EditDefaultsOnly, Meta = (Categories = "InputTag", EditCondition = "IsActive==true"))
 		FGameplayTag InputTag;
 };
-
 
 /**
  * FAbilitySet_GameplayEffect
@@ -141,13 +158,13 @@ protected:
 
 	// Gameplay abilities to grant when this ability set is granted.
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Abilities", meta = (TitleProperty = GameplayAbility))
-		TArray<FBaseAbilitySet_GameplayAbility> GrantedGameplayAbilities;
+		TArray<FBaseAbilitySet_GameplayAbility> GameplayAbilities;
 
 	// Gameplay effects to grant when this ability set is granted.
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Effects", meta = (TitleProperty = GameplayEffect))
-		TArray<FBaseAbilitySet_GameplayEffect> GrantedGameplayEffects;
+		TArray<FBaseAbilitySet_GameplayEffect> GameplayEffects;
 
 	// Attribute sets to grant when this ability set is granted.
 	UPROPERTY(EditDefaultsOnly, Category = "Attribute Sets", meta = (TitleProperty = AttributeSet))
-		TArray<FBaseAbilitySet_AttributeSet> GrantedAttributes;
+		TArray<FBaseAbilitySet_AttributeSet> AttributeSets;
 };
