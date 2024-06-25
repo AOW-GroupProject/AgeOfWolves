@@ -52,7 +52,7 @@ struct FPermanentStat : public FTableRowBase
 };
 
 USTRUCT(Atomic, BlueprintType)
-struct FSkillData
+struct FMonsterSkillData
 {
 	GENERATED_USTRUCT_BODY()
 public:
@@ -107,7 +107,7 @@ public:
 	EMonsterType MonsterType;
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SingleMonsterData")
-	TMap<int, FSkillData> SkillData; //FSkillData 수정하면 입력한 데이터 전부 사라짐
+	TMap<int, FMonsterSkillData> MonsterSkillData; //FSkillData 수정하면 입력한 데이터 전부 사라짐
 	
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SingleMonsterData")
