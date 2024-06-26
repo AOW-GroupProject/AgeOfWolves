@@ -38,8 +38,8 @@ public:
 private:
 	bool IsSprinting;
 private:
-	const float WalkAcceleration = 300.f;
-	const float SprintAcceleration = 500.f;
+	const float WalkAcceleration = 500.f;
+	const float SprintAcceleration = 700.f;
 #pragma endregion
 
 };

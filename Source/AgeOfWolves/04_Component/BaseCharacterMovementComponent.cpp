@@ -39,24 +39,18 @@ void UBaseCharacterMovementComponent::MoveSpeedChanged(FGameplayAttribute Attrib
 
 void UBaseCharacterMovementComponent::ChangeMoveSpeed(float InOldVal, float InNewVal)
 {
-<<<<<<< HEAD
-	//if (InOldVal > 0.f && InOldVal <= 800.f)
-	//{
-=======
-	if (InOldVal > 0.f && InOldVal <= 550.f)
+
+	if (InNewVal > InOldVal)
 	{
->>>>>>> develop
-		if (InNewVal > InOldVal)
-		{
-			IsSprinting = true;
-			MaxAcceleration = SprintAcceleration;
-			MaxWalkSpeed = InNewVal;
-		}
-		else
-		{
-			IsSprinting = false;
-			MaxAcceleration = WalkAcceleration;
-			MaxWalkSpeed = InNewVal;
-		}
-	//}
+		IsSprinting = true;
+		MaxAcceleration = SprintAcceleration;
+		MaxWalkSpeed = InNewVal;
+	}
+	else
+	{
+		IsSprinting = false;
+		MaxAcceleration = WalkAcceleration;
+		MaxWalkSpeed = InNewVal;
+	}
+
 }

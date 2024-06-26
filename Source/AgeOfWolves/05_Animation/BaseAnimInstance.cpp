@@ -67,19 +67,19 @@ void UBaseAnimInstance::FindMovementState()
 	}
 	// @FIX: 240 -> 350 상향
 	// #2. 뛰기
-	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 350.f&& Length1 > 0.5f && Length2 > 1.0)
+	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 400.f && Length1 > 0.05f && Length2 > 0.5f)
 	{
 		MovementState = EMovementState::Run;
 	}
 	// #3. 걷기
-	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 1.f && Length1 > 0.01f && Length2 > 0.f)
+	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 0.f && Length1 > 0.35f && Length2 > 0.5f)
 	{
 		MovementState = EMovementState::Walk;
 	}
 	// #4. 정지
 	else
 	{
-		LastMovementState = MovementState;
+		if(MovementState != EMovementState::Walk) LastMovementState = MovementState;
 		MovementState = EMovementState::Idle;
 	}
 

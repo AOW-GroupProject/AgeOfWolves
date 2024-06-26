@@ -53,7 +53,6 @@ protected:
 	FGameplayTagContainer ActivatingAbilityTags;
 public:
 	FORCEINLINE void GetActivatingAbilityTags(OUT FGameplayTagContainer& OutGameplayTagContainer) const { OutGameplayTagContainer = ActivatingAbilityTags; }
-<<<<<<< HEAD
 
 protected:
 	/*
@@ -74,35 +73,12 @@ protected:
 
 #pragma endregion
 
-=======
-
-protected:
-	/*
-	* @목적: Ability의 활성화 이벤트에 등록할 콜백 함수
-	* @설명
-	*	1. "AbilityTagsToBlock"과 "AbilityTagsToCancel"목록에 해당되는 GA의 "Block"과 "Cancel"동작 수행
-	*	2. ActivatingAbilityTags 목록에 해당 GA를 추가합니다. 
-	*/
-	void OnAbilityActivated(UGameplayAbility* Ability);
-	/*
-	* @목적: Ability의 활성화 종료 이벤트에 등록할 콜백 함수
-	* @설명
-	*	1. ActivatingAbilityTags 목록에서 해당 GA를 제거합니다.
-	*	2. Unblock 수행
-	*	3. Unblock된 GA 중 선택적으로 Passive GA에 대하여 재 활성화 동작 수행
-	*/
-	void OnAbilityEnded(UGameplayAbility* Ability);
-
-#pragma endregion
-
->>>>>>> develop
 
 #pragma region Active GA
 public:
 	void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
 	void ClearAbilityInput();
 
-<<<<<<< HEAD
 	void AbilityInputTagTriggered(const FGameplayTag& InputTag);
 	void AbilityInputTagReleased(const FGameplayTag& InputTag);
 
@@ -112,14 +88,9 @@ protected:
 
 protected:
 	TArray<FGameplayAbilitySpecHandle> InputTriggeredSpecHandles;
-=======
-	void AbilityInputTagPressed(const FGameplayTag& InputTag);
-	void AbilityInputTagReleased(const FGameplayTag& InputTag);
 
 protected:
 	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
-	TArray<FGameplayAbilitySpecHandle> InputHeldSpecHandles;
->>>>>>> develop
 	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
 #pragma endregion
 
@@ -139,19 +110,10 @@ public:
 	//~UAbilitySystemComponent Interface
 	virtual void ApplyAbilityBlockAndCancelTags(const FGameplayTagContainer& AbilityTags, UGameplayAbility* RequestingAbility, bool bEnableBlockTags, const FGameplayTagContainer& BlockTags, bool bExecuteCancelTags, const FGameplayTagContainer& CancelTags) override;
 	//~End of Interface
-<<<<<<< HEAD
 
 protected:
 	UPROPERTY(EditAnywhere)
 		TSoftObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
-
-=======
-
-protected:
-	UPROPERTY(EditAnywhere)
-		TSoftObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
-
->>>>>>> develop
 public:
 	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM;}
 #pragma endregion

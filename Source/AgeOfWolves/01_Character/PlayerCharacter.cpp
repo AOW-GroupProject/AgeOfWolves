@@ -41,16 +41,17 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	// Configure character movement
 	GetCharacterMovement()->bUseControllerDesiredRotation = false;
 	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 300.0f, 0.0f); // ...at this rotation rate
+	// @FIX: 300 -> 800 상향
+	GetCharacterMovement()->RotationRate = FRotator(0.0f, 1000.f, 0.0f); // ...at this rotation rate
 
 	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
 	// instead of recompiling to adjust them
 	GetCharacterMovement()->JumpZVelocity = 700.f;
 	GetCharacterMovement()->AirControl = 0.35f;
-	// @FIX: 230 -> 350 상향
-	GetCharacterMovement()->MaxWalkSpeed = 350.f;
-	// @FIX: 150 -> 300 상향
-	GetCharacterMovement()->MaxAcceleration = 300.f;
+	// @FIX: 230 -> 400 상향
+	GetCharacterMovement()->MaxWalkSpeed = 400.f;
+	// @FIX: 150 -> 500 상향
+	GetCharacterMovement()->MaxAcceleration = 500.f;
 	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 	GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
 	GetCharacterMovement()->GroundFriction = 8.0f;
