@@ -4,16 +4,20 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameplayAbilitySpecHandle.h"
+
 #include "CombatComponent.generated.h"
 
 
 class UBaseAbilitySystemComponent;
+class UGameplayAbility;
+struct FGameplayTagContainer;
 
 /**
  * @목적 : Player Character의 전투와 관련된 여러 기능을 담당하는 Component입니다.
  * @설명 : 1. Combo 시스템
-		   2. LockOn 시스템
-		   3. Input Queue 시스템
+		   2. Ability Queue 시스템
+		   3. Lock On 시스템
  * @참조 : 
  */
 
@@ -58,7 +62,7 @@ public:
 	bool GetbComboWindowOpen();
 
 
-
+	UFUNCTION(BlueprintCallable)
 	UBaseAbilitySystemComponent* GetAbilitysystemComponent();
 
 	UFUNCTION(BlueprintCallable)
@@ -84,17 +88,29 @@ private:
 
 #pragma endregion
 
-#pragma region Input Queue Management
+#pragma region Ability Queue Management
 
 public:
 
-	TSubclassOf<UGameplayAbility> QueuedInput;
+	// DECLARE_MULTICAST_DELEGATE_TwoParams(FAbilityFailedDelegate, const UGameplayAbility*, const FGameplayTagContainer&);
+	void QueueBlockedAbility(const UGameplayAbility* BlockedAbility, const FGameplayTagContainer& TagContainer);
 
-
+	
 	UFUNCTION(BlueprintCallable)
+	void CheckQueuedAbility(UGameplayAbility* CurrentActivatedAbility);
+
+	UPROPERTY(BlueprintReadOnly)
+	const UGameplayAbility* QueuedAbility;
+
+	FGameplayAbilitySpecHandle QueuedSpecHandles;
+
+
+
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void InputQueueMasterEvent();
 
-
+	UFUNCTION(BlueprintCallable)
+	void TryActivateQueuedAbility();
 
 	TArray<FGameplayTag> AllowedInputTags;
 

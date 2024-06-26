@@ -21,7 +21,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "AbilitySystemBlueprintLibrary.h"
-
+#include "Camera/CameraComponent.h"
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInputComponent)
 
 DEFINE_LOG_CATEGORY(LogInputComponent)
@@ -85,7 +85,7 @@ void UBaseInputComponent::InitializePlayersInputActionsSetup()
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Look);
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LockOn);
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.ChangeLockOnTarget")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_ChangeLockOnTarget);
-				//BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.CountMouseInput")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_CountMouseLeftInput);
+				// BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.CountMouseInput")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_CountMouseLeftInput);
 
 				// #3. Ability Input Actions
 				TArray<uint32> BindHandles;
@@ -182,6 +182,8 @@ void UBaseInputComponent::Input_Look(const FInputActionValue& InputActionValue)
 
 }
 
+
+
 void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 {
 	if (bLockOn == true) // LockOn 중일 때, 마우스 휠 입력시 LockOn 종료
@@ -228,6 +230,7 @@ void UBaseInputComponent::SetControllerRotationTowardTarget()
 	FVector Start = PlayerCharacter->GetActorLocation();
 	FVector Target = TargetEnemy->GetActorLocation();
 	FRotator Rotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
+	//PlayerCharacter->SetActorRotation(FRotator(0.f, Rotation.Yaw, 0.f));
 	PlayerCharacter->GetController()->SetControlRotation(FRotator(0.f, Rotation.Yaw, 0.f));
 	DrawDebugSphere(GetWorld(), TargetEnemy->GetActorLocation(), 30, 12, FColor::Red, false, 1.5f);
 }
@@ -236,6 +239,8 @@ bool UBaseInputComponent::FindTargetEnemy()
 {
 	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
 	check(PlayerCharacter);
+
+	UCameraComponent* FollowCamera = PlayerCharacter->GetCameraComponent();
 
 	TArray<TEnumAsByte<EObjectTypeQuery>> NearByActors;
 	TEnumAsByte<EObjectTypeQuery> PawnObjectType = UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn);
@@ -251,10 +256,10 @@ bool UBaseInputComponent::FindTargetEnemy()
 		PlayerCharacter->GetActorLocation(),
 		PlayerCharacter->GetActorLocation() + 100.f,
 		MaxDetectRadius,
-		NearByActors, 
-		false, 
-		IgnoreActors, 
-		EDrawDebugTrace::None, 
+		NearByActors,
+		false,
+		IgnoreActors,
+		EDrawDebugTrace::None,
 		HitResults, true
 	);
 	if (TraceHitResult == true)
@@ -267,16 +272,40 @@ bool UBaseInputComponent::FindTargetEnemy()
 		// 외적/내적을 통해 거리와 각도에 따른 값을 계산해 이를 key, Enemy를 Value로 Map을 설정함.
 		for (int i = 0; i < NearByEnemies.Num(); i++)
 		{
-			FVector Vector = FVector::CrossProduct(PlayerCharacter->GetActorForwardVector(), NearByEnemies[i]->GetActorLocation() - PlayerCharacter->GetActorLocation());
-			float DotProduct = FVector::DotProduct(PlayerCharacter->GetActorUpVector(), Vector);
-			EnemyMap.Add(DotProduct, NearByEnemies[i]);
-			// DrawDebugSphere(GetWorld(), NearByEnemies[i]->GetActorLocation(), 25.f, 12, FColor::Blue, false, 3.f);
-			// 가장 가까운 적을 찾기 위해 min을 계산.
-			if (FMath::Abs(Min) > FMath::Abs(DotProduct))
+
+			FVector PlayerForwardVector = PlayerCharacter->GetActorForwardVector();
+			FVector PlayerCameraLocation = FollowCamera->GetComponentTransform().GetTranslation();
+
+			FVector CameraToPlayer = PlayerCharacter->GetActorLocation() - PlayerCameraLocation;
+			FVector CameraToEnemy = NearByEnemies[i]->GetActorLocation() - PlayerCameraLocation;
+			FVector PlayerToEnemy = NearByEnemies[i]->GetActorLocation() - PlayerCharacter->GetActorLocation();
+
+			FVector CrossProduct = FVector::CrossProduct(PlayerForwardVector, PlayerToEnemy);
+			float UpDotProduct = FVector::DotProduct(PlayerForwardVector, CrossProduct);
+
+			// Option 1 : Player Character의 Forward Vector 기준으로 LockOn
+			// Option 2 : Camera에 보이는 Enemy를 LockOn <- 현재 선택됨
+
+			float TempDotProductResult = FVector::DotProduct(CameraToPlayer, CameraToEnemy);
+
+			float Cos = TempDotProductResult / (PlayerForwardVector.Length() * PlayerToEnemy.Length());
+			float HalfFOV = FMath::Cos(FMath::DegreesToRadians(FollowCamera->FieldOfView));
+			if (Cos > HalfFOV)
 			{
-				Min = DotProduct;
+				EnemyMap.Add(UpDotProduct, NearByEnemies[i]);
+				// DrawDebugSphere(GetWorld(), NearByEnemies[i]->GetActorLocation(), 25.f, 12, FColor::Blue, false, 3.f);
+				// 가장 가까운 적을 찾기 위해 min을 계산.
+				if (FMath::Abs(Min) > FMath::Abs(UpDotProduct))
+				{
+					Min = UpDotProduct;
+				}
 			}
 		}
+		if (EnemyMap.IsEmpty())
+		{
+			return false;
+		}
+
 		// Target Enemy 전환을 위해 EnemyMap을 정렬함.
 		TArray<float> DotProducts;
 		EnemyMap.GenerateKeyArray(DotProducts);
@@ -313,6 +342,7 @@ void UBaseInputComponent::Input_ChangeLockOnTarget(const FInputActionValue& Valu
 	}
 	SetControllerRotationTowardTarget();
 }
+
 
 
 

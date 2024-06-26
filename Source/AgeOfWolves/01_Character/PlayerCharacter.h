@@ -49,8 +49,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cpmbat", meta = (AllowPrivateAccess = "true"))
-	UCombatComponent* CombatComponent;
+	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cpmbat", meta = (AllowPrivateAccess = "true"))
+	// UCombatComponent* CombatComponent;
 	//~End Of Components
 #pragma endregion
 
@@ -74,16 +74,23 @@ protected:
 #pragma endregion
 
 #pragma region SpringArm & Camera
-	// @TODO: LockOn 기능 관련 Refactoring 진행 시, 수정할 곳
+
 	// @목적 : LockOn 동안 Spring Arm을 통해 카메라 위치를 조정하는 함수
 	void AdjustCameraTransform(float DeltaSeconds);
+
+public:
+
+	FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
+	
+
 
 	TObjectPtr<class UBaseInputComponent> BaseInputComponent;
 	TObjectPtr<class UBaseAnimInstance> BaseAnimInstance;
 
 
 
-public:
-	FORCEINLINE UCombatComponent* GetCombatComponent() const { return CombatComponent; } 
+
+
+	
 
 };

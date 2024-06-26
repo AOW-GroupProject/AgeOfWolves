@@ -61,7 +61,6 @@ bool UBaseGameplayAbility::CanActivateAbility(
     const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, 
     OUT FGameplayTagContainer* ARTags, OUT FGameplayTagContainer* ABTags) const
 {
-
     // @Actor Info 체크
     AActor* const AvatarActor = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
     if (AvatarActor == nullptr || !ShouldActivateAbility(AvatarActor->GetLocalRole()))

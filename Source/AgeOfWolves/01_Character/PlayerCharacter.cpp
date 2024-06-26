@@ -76,7 +76,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		GetMesh()->SetAnimInstanceClass(animInstance.Class);
 
 	// Create Combat Component on Player Character 
-	CombatComponent = CreateDefaultSubobject<UCombatComponent>(TEXT("Combat Component"));
+	// CombatComponent = CreateDefaultSubobject<UCombatComponent>(TEXT("Combat Component"));
 
 }
 
@@ -178,7 +178,7 @@ void APlayerCharacter::AdjustCameraTransform(float DeltaSeconds)
 			FVector CharacterStart = GetActorLocation();
 			FVector TargetPosition = TargetEnemy->GetActorLocation();
 			FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(CharacterStart, TargetPosition);
-				
+
 			float SocketOffsetCoefficient = 1.0f;
 
 			GetController()->SetControlRotation(LookAtRotation);
@@ -186,6 +186,7 @@ void APlayerCharacter::AdjustCameraTransform(float DeltaSeconds)
 			if (!(BaseAnimInstance->GetMovementState() == EMovementState::Run))
 			{
 				FRotator ActorRotation = FRotator(0.f, LookAtRotation.Yaw, 0.f);
+				UE_LOG(LogTemp, Warning, TEXT("SEt ACtor Rotation"));
 				SetActorRotation(ActorRotation);
 				SocketOffsetCoefficient = 1.5f;
 			}
@@ -208,7 +209,7 @@ void APlayerCharacter::AdjustCameraTransform(float DeltaSeconds)
 			float DistanceFromTargetEnemy = (GetActorLocation() - TargetPosition).Length();
 			DistanceFromTargetEnemy = FMath::Clamp((6000 / DistanceFromTargetEnemy) + 20, 0, 70);
 			FRotator DistanceRotation = FRotator(-DistanceFromTargetEnemy, 0, 0);
-	
+
 			FRotator FinalRotation = DistanceRotation + LookAtRotation;
 			FRotator SpringArmRotator = UKismetMathLibrary::RInterpTo(LookAtRotation, FinalRotation, DeltaSeconds, 10.f);
 

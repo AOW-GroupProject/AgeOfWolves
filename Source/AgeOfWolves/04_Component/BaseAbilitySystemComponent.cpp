@@ -29,6 +29,7 @@ void UBaseAbilitySystemComponent::InitializeComponent()
 
 bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey, UGameplayAbility** OutInstancedAbility, FOnGameplayAbilityEnded::FDelegate* OnGameplayAbilityEndedDelegate, const FGameplayEventData* TriggerEventData)
 {
+	UE_LOG(LogTemp, Warning, TEXT("베이스 컴포넌트의 TryACtivateAbility"));
 	// @Ability Spec Handle
 	if (AbilityToActivate.IsValid() == false)
 	{

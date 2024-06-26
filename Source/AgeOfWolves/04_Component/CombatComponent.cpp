@@ -6,6 +6,8 @@
 #include "04_Component/CombatComponent.h"
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
+
+
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystemComponent.h"
 
@@ -24,9 +26,9 @@ UCombatComponent::UCombatComponent()
 void UCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	// BaseAbilitySystemComponent = GetOwner()->GetComponentByClass<UBaseAbilitySystemComponent>();
-	// ...
-	
+	BaseAbilitySystemComponent = GetAbilitysystemComponent();
+	BaseAbilitySystemComponent->AbilityFailedCallbacks.AddUObject(this, &UCombatComponent::QueueBlockedAbility);
+	BaseAbilitySystemComponent->AbilityEndedCallbacks.AddUObject(this, &UCombatComponent::CheckQueuedAbility);
 }
 
 
@@ -117,20 +119,56 @@ bool UCombatComponent::GetbComboWindowOpen()
 #pragma region Input Queue Management
 
 
-void UCombatComponent::InputQueueMasterEvent()
+void UCombatComponent::QueueBlockedAbility(const UGameplayAbility* BlockedAbility, const FGameplayTagContainer& TagContainer)
+{
+	UE_LOG(LogTemp, Warning, TEXT("QueueBlockedAbility"));
+	UE_LOG(LogTemp, Warning, TEXT("BlockedAbility : %s"), *BlockedAbility->GetName());
+	// Handle을 통해 AbilitySpec을 검색하고 QueuedAbility에 설정합니다.
+	if (BaseAbilitySystemComponent)
+	{
+
+		QueuedAbility = BlockedAbility;
+	}
+}
+
+void UCombatComponent::CheckQueuedAbility(UGameplayAbility* CurrentActivatedAbility)
 {
 
+	if (BaseAbilitySystemComponent && QueuedAbility)
+	{
+		BaseAbilitySystemComponent->TryActivateAbilityByClass(QueuedAbility->GetClass());
+	}
+	/*
+		if (BaseAbilitySystemComponent)
+	{
+		if (QueuedAbility)
+		{
+			const FGameplayAbilitySpec* BlockedAbilitySpec = BaseAbilitySystemComponent->FindAbilitySpecFromClass(QueuedAbility->GetClass());
+			QueuedSpecHandles = BlockedAbilitySpec->Handle;
+			UE_LOG(LogTemp, Warning, TEXT("BlockedAbility : %s"), *QueuedAbility->GetName());
+			BaseAbilitySystemComponent->TryActivateAbility(QueuedSpecHandles);
+			QueuedAbility = nullptr;
+		}
 
-
-
+	}
+	
+	*/
 
 }
+
+
 
 void UCombatComponent::UpdateAllowedInputTags(TArray<FGameplayTag> InputTags)
 {
 	AllowedInputTags = InputTags;
 
 }
+
+void UCombatComponent::TryActivateQueuedAbility()
+{
+}
+
+
 
 void UCombatComponent::ResetAllowedInputTags()
 {
