@@ -175,18 +175,6 @@ void UCombatComponent::ResetAllowedInputTags()
 	AllowedInputTags.Empty();
 }
 
-
-
-
-
-
-
-
-
-
-
-
-
 #pragma endregion
 
 

@@ -22,6 +22,8 @@
 #include "Kismet/KismetMathLibrary.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Camera/CameraComponent.h"
+#include "GameFramework/SpringArmComponent.h"
+
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInputComponent)
 
 DEFINE_LOG_CATEGORY(LogInputComponent)
@@ -41,9 +43,6 @@ void UBaseInputComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	InitializePlayersInputActionsSetup();
-
-	//SpringArmComponent = Cast<APlayerCharacter>(GetOwner())->GetComponentByClass<USpringArmComponent>();
-	//check(SpringArmComponent);
 }
 
 void UBaseInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -197,12 +196,17 @@ void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 }
 void UBaseInputComponent::StartLockOn()
 {
+
 	UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(Cast<APlayerCharacter>(GetOwner())->GetMesh()->GetAnimInstance());
 	check(BaseAnimInstance)
 	// TargetEnemy를 찾고, 찾았다면 LockOn에 쓰이는 변수들을 설정함.
 	if (FindTargetEnemy() == true)
 	{
 		bLockOn = true;
+		USpringArmComponent* SpringArm = GetOwner()->FindComponentByClass<USpringArmComponent>();
+		// To do : 기존 값을 불러오게
+		SpringArm->CameraLagSpeed = 5;
+		SpringArm->CameraRotationLagSpeed = 17.5;
 		BaseAnimInstance->SetbLockOn(true);
 		SetControllerRotationTowardTarget();
 	}
@@ -211,11 +215,20 @@ void UBaseInputComponent::StartLockOn()
 
 void UBaseInputComponent::CancelLockOn()
 {
+	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
+	check(PlayerCharacter);
 	UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(Cast<APlayerCharacter>(GetOwner())->GetMesh()->GetAnimInstance());
 	check(BaseAnimInstance)
 
-	// 클래스 멤버 변수 초기화
+	// SpringArmComponent 멤버 변수 초기화
+	USpringArmComponent* SpringArm = GetOwner()->FindComponentByClass<USpringArmComponent>();
+	// To do : 기존 값을 불러오게
+	SpringArm->CameraLagSpeed = 10;
+	SpringArm->CameraRotationLagSpeed = 30;
+	// BaseAnimInstance  멤버 변수 초기화
 	BaseAnimInstance->SetbLockOn(false);
+
+	// BaseInputComponent 멤버 변수 초기화
 	InputVector = FVector2D(0, 0);
 	NearByEnemies.Empty();
 	EnemyMap.Empty();
@@ -227,12 +240,14 @@ void UBaseInputComponent::CancelLockOn()
 void UBaseInputComponent::SetControllerRotationTowardTarget()
 {
 	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
+	check(PlayerCharacter);
 	FVector Start = PlayerCharacter->GetActorLocation();
 	FVector Target = TargetEnemy->GetActorLocation();
 	FRotator Rotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
 	//PlayerCharacter->SetActorRotation(FRotator(0.f, Rotation.Yaw, 0.f));
 	PlayerCharacter->GetController()->SetControlRotation(FRotator(0.f, Rotation.Yaw, 0.f));
 	DrawDebugSphere(GetWorld(), TargetEnemy->GetActorLocation(), 30, 12, FColor::Red, false, 1.5f);
+	
 }
 
 bool UBaseInputComponent::FindTargetEnemy()
@@ -251,7 +266,7 @@ bool UBaseInputComponent::FindTargetEnemy()
 
 	// PlayerCharacter를 무시한 MaxDetectRadius을 반지름으로 하는 원형 트레이스를 실행함.
 	TArray<FHitResult> HitResults;
-	bool TraceHitResult = UKismetSystemLibrary::SphereTraceMultiForObjects(
+	bool SphereTraceHitResult = UKismetSystemLibrary::SphereTraceMultiForObjects(
 		GetWorld(),
 		PlayerCharacter->GetActorLocation(),
 		PlayerCharacter->GetActorLocation() + 100.f,
@@ -262,34 +277,53 @@ bool UBaseInputComponent::FindTargetEnemy()
 		EDrawDebugTrace::None,
 		HitResults, true
 	);
-	if (TraceHitResult == true)
+	if (SphereTraceHitResult == true)
 	{
+		// LineTraceSingle을 통해, LockOn이 가능한지 판단
+		FHitResult LineHitResults;
 		for (const auto& Hit : HitResults)
 		{
-			NearByEnemies.AddUnique(Hit.GetActor());
+			bool LineTraceHitResult = UKismetSystemLibrary::LineTraceSingleForObjects(
+				GetWorld(),
+				PlayerCharacter->GetActorLocation(),
+				Hit.GetActor()->GetActorLocation(),  // + 100 * (Hit.GetActor()->GetActorLocation() - PlayerCharacter->GetActorLocation()).Normalize(),
+				NearByActors,
+				false,
+				IgnoreActors,
+				EDrawDebugTrace::None,
+				LineHitResults, true
+			);
+			if (Hit.GetActor() == LineHitResults.GetActor())
+			{
+				NearByEnemies.AddUnique(Hit.GetActor());
+			}
 		}
 		float Min = 1000000.f;
 		// 외적/내적을 통해 거리와 각도에 따른 값을 계산해 이를 key, Enemy를 Value로 Map을 설정함.
 		for (int i = 0; i < NearByEnemies.Num(); i++)
 		{
+			// Option 1 : Player Character의 Forward Vector 기준으로 LockOn
+			// Option 2 : Camera에 보이는 Enemy를 (Camera의 Forward Vector 기준으로) LockOn <- 현재 선택됨
 
-			FVector PlayerForwardVector = PlayerCharacter->GetActorForwardVector();
+			// FVector PlayerForwardVector = PlayerCharacter->GetActorForwardVector();
+			// FVector CameraToPlayer = PlayerCharacter->GetActorLocation() - PlayerCameraLocation;
+
 			FVector PlayerCameraLocation = FollowCamera->GetComponentTransform().GetTranslation();
+			FVector CameraToPlayer = FollowCamera->GetForwardVector();
 
-			FVector CameraToPlayer = PlayerCharacter->GetActorLocation() - PlayerCameraLocation;
 			FVector CameraToEnemy = NearByEnemies[i]->GetActorLocation() - PlayerCameraLocation;
 			FVector PlayerToEnemy = NearByEnemies[i]->GetActorLocation() - PlayerCharacter->GetActorLocation();
 
-			FVector CrossProduct = FVector::CrossProduct(PlayerForwardVector, PlayerToEnemy);
-			float UpDotProduct = FVector::DotProduct(PlayerForwardVector, CrossProduct);
-
-			// Option 1 : Player Character의 Forward Vector 기준으로 LockOn
-			// Option 2 : Camera에 보이는 Enemy를 LockOn <- 현재 선택됨
-
+			FVector CrossProduct = FVector::CrossProduct(CameraToPlayer, CameraToEnemy);
+			// FVector CrossProduct = FVector::CrossProduct(PlayerForwardVector, PlayerToEnemy);
+			float UpDotProduct = FVector::DotProduct(CameraToPlayer, CrossProduct);
+			// float UpDotProduct = FVector::DotProduct(PlayerForwardVector, CrossProduct);
+		
 			float TempDotProductResult = FVector::DotProduct(CameraToPlayer, CameraToEnemy);
 
-			float Cos = TempDotProductResult / (PlayerForwardVector.Length() * PlayerToEnemy.Length());
-			float HalfFOV = FMath::Cos(FMath::DegreesToRadians(FollowCamera->FieldOfView));
+			// FOV 안에 있는지 계산한다.
+			float Cos = TempDotProductResult / (CameraToPlayer.Length() * CameraToEnemy.Length());
+			float HalfFOV = FMath::Cos(FMath::DegreesToRadians(FollowCamera->FieldOfView/1.5));
 			if (Cos > HalfFOV)
 			{
 				EnemyMap.Add(UpDotProduct, NearByEnemies[i]);

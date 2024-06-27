@@ -27,12 +27,6 @@ void UAttackGameplayAbility::CauseDamage(AActor* TargetActor)
 }
 
 
-
-
-
-
-
-
 APlayerCharacter* UAttackGameplayAbility::GetPlayerCharacterFromActorInfo() const
 {
 	return (CurrentActorInfo ? Cast<APlayerCharacter>(CurrentActorInfo->AvatarActor.Get()) : nullptr);
