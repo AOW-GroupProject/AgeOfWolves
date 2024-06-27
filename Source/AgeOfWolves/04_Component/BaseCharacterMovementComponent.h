@@ -22,7 +22,7 @@ public:
 protected:
 	//Begin UActorComponent Interface
 	virtual void OnRegister() override;
-	virtual void BeginPlay() override;
+	virtual void BeginPlay() override; 
 	//End UActorComponent Interface
 #pragma endregion
 

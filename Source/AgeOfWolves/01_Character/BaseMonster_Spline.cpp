@@ -9,6 +9,7 @@
 #include "Blueprint/AIBlueprintHelperLibrary.h"
 #include "Math/UnrealMathUtility.h"
 
+
 ABaseMonster_Spline::ABaseMonster_Spline()
 {
 	PrimaryActorTick.bCanEverTick = true;
@@ -24,11 +25,16 @@ void ABaseMonster_Spline::BeginPlay()
 	//SplineActor = Cast<ABaseSpline>(GetWorld()->SpawnActor<AActor>(SplineBP->GeneratedClass, GetActorLocation(), GetActorRotation()));
 	CurrentState = EMonsterState::Patrol;
 
-	SplineActor->GetSplineComponent()->Duration = MaxTime;
-	//시작지점이 0이 아닌경우일 수 있으므로 시작 Distance 초기화.
-	Distance = SplineActor->GetSplineComponent()->GetDistanceAlongSplineAtSplinePoint(SplineActor->SplineIndex);
-	//현재 인덱스와 다음 인덱스까지의 거리 차이를 저장하는 변수 초기화.
-	//SplineIndexDistance = SplineActor->CalculateDistanceBetweenIndex(SplineActor->SplineIndex, SplineActor->SplineIndex + 1);
+	if (SplineActor)
+	{
+		SplineActor->GetSplineComponent()->Duration = MaxTime;
+		//시작지점이 0이 아닌경우일 수 있으므로 시작 Distance 초기화.
+		Distance = SplineActor->GetSplineComponent()->GetDistanceAlongSplineAtSplinePoint(SplineActor->SplineIndex);
+		//현재 인덱스와 다음 인덱스까지의 거리 차이를 저장하는 변수 초기화.
+		//SplineIndexDistance = SplineActor->CalculateDistanceBetweenIndex(SplineActor->SplineIndex, SplineActor->SplineIndex + 1);
+	}
+
+	
 	
 }
 
@@ -41,11 +47,18 @@ void ABaseMonster_Spline::ControllRotation()
 {
 	if (CurrentState == EMonsterState::Patrol)
 	{
-		SetActorRotation(UKismetMathLibrary::MakeRotFromX(GetVelocity()));
+		if (GetVelocity().Size() > 0)
+		{
+			
+			Rotation = FMath::RInterpTo(Rotation, GetControlRotation(), GetWorld()->DeltaTimeSeconds, 0.1);
+			//GetController()->SetControlRotation(Rotation);
+			//SetActorRotation(UKismetMathLibrary::MakeRotFromX(GetVelocity())); //이거 변경해야됨
+		}
+		
 	}
 }
 
-/*
+
 bool ABaseMonster_Spline::WhenMoveToSplinePointReturnTrue()
 {
 	if (!SplineActor) return false;
@@ -64,7 +77,7 @@ bool ABaseMonster_Spline::WhenMoveToSplinePointReturnTrue()
 	}
 	return false;
 }
-*/
+
 
 void ABaseMonster_Spline::MoveAlongSplinePoint(float delta)
 {

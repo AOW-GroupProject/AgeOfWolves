@@ -48,6 +48,7 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
 	Super::PreAttributeChange(Attribute, NewValue);
+
 	// @Max HP
 	if (Attribute == GetMaxHealthAttribute())
 	{

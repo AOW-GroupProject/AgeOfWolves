@@ -71,8 +71,8 @@ protected:
 	/*
 	* @목적: 이전 MovementState
 	*/
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement State", meta = (AlloPrivateAccess = "true"))
-		EMovementState LastMovementState = EMovementState::MAX;
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement State", meta = (AlloPrivateAccess = "true"))
+		EMovementState LastMovementState = EMovementState::Idle;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement State", meta = (AlloPrivateAccess = "true"))
 		EMovementState MovementState = EMovementState::Idle;
