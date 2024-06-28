@@ -5,5 +5,6 @@
 
 bool FBaseGameplayEffectContext::NetSerialize(FArchive& Ar, UPackageMap* Map, bool& bOutSuccess)
 {
-	return false;
+	Super::NetSerialize(Ar, Map, bOutSuccess);
+	return true;
 }
