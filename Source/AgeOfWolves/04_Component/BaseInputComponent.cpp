@@ -23,7 +23,7 @@
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInputComponent)
 
 DEFINE_LOG_CATEGORY(LogInputComponent)
-
+// UE_LOGFMT(LogInputComponent, Log, "");
 
 UBaseInputComponent::UBaseInputComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -157,8 +157,6 @@ void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 	}
 }
 
-
-
 void UBaseInputComponent::Input_Look(const FInputActionValue& InputActionValue)
 {
 	if (APawn* Pawn = Cast<APawn>(GetOwner()))
@@ -190,6 +188,7 @@ void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 		StartLockOn();
 	}
 }
+
 void UBaseInputComponent::StartLockOn()
 {
 	UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(Cast<APlayerCharacter>(GetOwner())->GetMesh()->GetAnimInstance());
@@ -217,7 +216,6 @@ void UBaseInputComponent::CancelLockOn()
 	TargetEnemy = nullptr;
 	bLockOn = false;
 }
-
 
 void UBaseInputComponent::SetControllerRotationTowardTarget()
 {
@@ -293,6 +291,7 @@ bool UBaseInputComponent::FindTargetEnemy()
 		return false;
 	}
 }
+
 void UBaseInputComponent::Input_ChangeLockOnTarget(const FInputActionValue& Value)
 {
 	if (NearByEnemies.Num() == 0) return;
@@ -311,21 +310,15 @@ void UBaseInputComponent::Input_ChangeLockOnTarget(const FInputActionValue& Valu
 	SetControllerRotationTowardTarget();
 }
 
-
-
 void UBaseInputComponent::Input_AbilityInputTagPressed(FGameplayTag InputTag)
 {
-	//UE_LOGFMT(LogInputComponent, Log, "Pressed!");
-
-	//UE_LOGFMT(LogInputComponent, Log, "Input Tag : {0}", InputTag.ToString());
-
 	if (const APawn* Pawn = Cast<APawn>(GetOwner()))
 	{
 		if (const auto& PS = CastChecked<APlayerStateBase>(Pawn->GetPlayerState()))
 		{
 			if (const auto& ASC = CastChecked< UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
 			{
-				ASC->AbilityInputTagPressed(InputTag);
+				ASC->AbilityInputTagTriggered(InputTag);
 			}
 		}
 	}
@@ -334,9 +327,6 @@ void UBaseInputComponent::Input_AbilityInputTagPressed(FGameplayTag InputTag)
 
 void UBaseInputComponent::Input_AbilityInputTagReleased(FGameplayTag InputTag)
 {
-	//UE_LOGFMT(LogInputComponent, Log, "Released!");
-
-	//UE_LOGFMT(LogInputComponent, Log, "Input Tag : {0}", InputTag.ToString());
 
 	if (const APawn* Pawn = Cast<APawn>(GetOwner()))
 	{

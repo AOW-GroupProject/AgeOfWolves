@@ -138,6 +138,9 @@ void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Dat
 {
 	if (OnAnyAttributeValueChanged.IsBound())
 	{
+		if(Data.Attribute == AttributeSet->GetMoveSpeedAttribute())
+			 UE_LOGFMT(LogPlayerStateBase, Log, "{0}:", FString::SanitizeFloat(Data.NewValue));
+
 		OnAnyAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);	
 	}
 

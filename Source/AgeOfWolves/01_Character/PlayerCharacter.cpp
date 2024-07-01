@@ -26,53 +26,62 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
 	)
 {
-	PrimaryActorTick.bCanEverTick = false;
+	// @Input Component 
+	{
+		InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
+	}
 
-	// Replace Input Component to User defined Base Input Component
-	InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
+	// @Capsule
+	{
+		GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
+		GetMesh()->SetCollisionProfileName("PlayerMesh");
+	}
 
-	// Set size for collision capsule
-	GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
-	GetMesh()->SetCollisionProfileName("PlayerMesh");
+	// @Rotation
+	{
+		bUseControllerRotationPitch = false;
+		bUseControllerRotationYaw = false;
+		bUseControllerRotationRoll = false;
+	}
 
-	// Don't rotate when the controller rotates. Let that just affect the camera.
-	bUseControllerRotationPitch = false;
-	bUseControllerRotationYaw = false;
-	bUseControllerRotationRoll = false;
-	
-	// Configure character movement
-	GetCharacterMovement()->bUseControllerDesiredRotation = false;
-	GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
-	GetCharacterMovement()->RotationRate = FRotator(0.0f, 300.0f, 0.0f); // ...at this rotation rate
+	// @Character Movement
+	{
+		GetCharacterMovement()->bUseControllerDesiredRotation = false;
+		GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
+		// @FIX: 300 -> 800 상향
+		GetCharacterMovement()->RotationRate = FRotator(0.0f, 800.f, 0.0f); // ...at this rotation rate
+		GetCharacterMovement()->JumpZVelocity = 700.f;
+		GetCharacterMovement()->AirControl = 0.35f;
+		GetCharacterMovement()->MaxWalkSpeed = 400.f;
+		// @FIX: 150 -> 500 상향
+		GetCharacterMovement()->MaxAcceleration = 500.f;
+		GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
+		GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
+		GetCharacterMovement()->GroundFriction = 8.0f;
+	}
 
-	// Note: For faster iteration times these variables, and many more, can be tweaked in the Character Blueprint
-	// instead of recompiling to adjust them
-	GetCharacterMovement()->JumpZVelocity = 700.f;
-	GetCharacterMovement()->AirControl = 0.35f;
-	GetCharacterMovement()->MaxWalkSpeed = 230.f;
-	GetCharacterMovement()->MaxAcceleration = 150.f;
-	GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
-	GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
+	// @Camera
+	{
+		SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
+		SpringArm->SetupAttachment(RootComponent);
+		SpringArm->TargetArmLength = 400.0f; 
+		SpringArm->bUsePawnControlRotation = true; 
+		SpringArm->bEnableCameraLag = true;
+		SpringArm->bEnableCameraRotationLag = true;
+		SpringArm->CameraRotationLagSpeed = 30.f;
+		SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 10.f));
 
-	// Create a camera boom (pulls in towards the player if there is a collision)
-	SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-	SpringArm->SetupAttachment(RootComponent);
-	SpringArm->TargetArmLength = 400.0f; // The camera follows at this distance behind the character	
-	SpringArm->bUsePawnControlRotation = true; // Rotate the arm based on the controller
-	SpringArm->bEnableCameraLag = true;
-	SpringArm->bEnableCameraRotationLag = true;
-	SpringArm->CameraRotationLagSpeed = 30.f;
-	SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 10.f));
-	// Create a follow camera
-	FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-	FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
-	// Attach the camera to the end of the boom and let the boom adjust to match the controller orientation
-	FollowCamera->bUsePawnControlRotation = false; // Camera does not rotate relative to arm
+		FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
+		FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+		FollowCamera->bUsePawnControlRotation = false;
+	}
 
-	// [24-03-20] TEST : 임시 Anim Instance 적용
-	static ConstructorHelpers::FClassFinder<UAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/ABP_AkaOni_Base'"));
-	if (animInstance.Class != NULL)
-		GetMesh()->SetAnimInstanceClass(animInstance.Class);
+	// @Anim Instance
+	{
+		static ConstructorHelpers::FClassFinder<UAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/ABP_AkaOni_Base'"));
+		if (animInstance.Class != NULL)
+			GetMesh()->SetAnimInstanceClass(animInstance.Class);
+	}
 
 }
 
