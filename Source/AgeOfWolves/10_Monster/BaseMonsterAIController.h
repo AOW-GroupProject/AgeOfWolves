@@ -31,7 +31,6 @@ public:
 
 #pragma region SightConfig
 private:
-	UPROPERTY(BlueprintReadOnly, Category = "Perception", meta = (AllowPrivateAccess = true))
 	AActor* Target;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Perception", meta = (AllowPrivateAccess = true))
@@ -40,7 +39,6 @@ private:
 	// @설명: 타겟이 감지되었을 때 실행해줄 함수
 	UFUNCTION(BlueprintCallable, Category = "Perception")
 	void OnTargetDetected(AActor* InActor, FAIStimulus Stimulus);
-
 
 #pragma endregion
 	

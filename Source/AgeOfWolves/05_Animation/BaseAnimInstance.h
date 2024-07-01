@@ -68,12 +68,6 @@ protected:
 	UFUNCTION(BlueprintCallable)
 		void FindMovementState();
 
-	/*
-	* @목적: 이전 MovementState
-	*/
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement State", meta = (AlloPrivateAccess = "true"))
-		EMovementState LastMovementState = EMovementState::Idle;
-
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement State", meta = (AlloPrivateAccess = "true"))
 		EMovementState MovementState = EMovementState::Idle;
 public:
