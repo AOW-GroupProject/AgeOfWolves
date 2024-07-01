@@ -72,16 +72,16 @@ public:
 	* @설명 : SplineIndex + 1.
 	* @참조 : -
 	*/
-	//UFUNCTION(BlueprintCallable)
-	//void IncreaseSplineIndex();
+	UFUNCTION(BlueprintCallable)
+	void IncreaseSplineIndex();
 
 	/*
 	* @목적 : -
 	* @설명 : 현재 SplineIndex의 World Position 반환
 	* @참조 : -
 	*/
-	//UFUNCTION()
-	//FVector GetSplinePointWorldPosition();
+	UFUNCTION()
+	FVector GetSplinePointWorldPosition();
 
 	/*
 	* @목적 : 인덱스 a와 인덱스 b사이의 거리를 구하는 함수.

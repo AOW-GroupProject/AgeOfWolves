@@ -22,7 +22,7 @@ public:
 protected:
 	//Begin UActorComponent Interface
 	virtual void OnRegister() override;
-	virtual void BeginPlay() override;
+	virtual void BeginPlay() override; 
 	//End UActorComponent Interface
 #pragma endregion
 
@@ -37,6 +37,9 @@ public:
 
 private:
 	bool IsSprinting;
+private:
+	const float WalkAcceleration = 500.f;
+	const float SprintAcceleration = 700.f;
 #pragma endregion
 
 };

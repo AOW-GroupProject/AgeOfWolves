@@ -1,0 +1,34 @@
+********** Character Movement ********** 
+
+0. Default
+
+(Vector) Rotation Rate = (0, 300, 0)
+(float)BrakingDecelerationWalking = 2048
+
+1. EMovementState::Walk
+
+(float)Speed = 230 -> 350
+(float)Acceleration = 150 -> 300
+(float) Animation Play Rate = 1.0 -> 1.3
+
+2. EMovementState::Run
+
+(float)Speed = 550 -> 800
+(float)Acceleration = 300 -> 500
+(float) Animation Play Rate = 1.0 -> 1.3
+
+3. ABP, Idle -> Movement Start 
+
+(float) Duration = 0.02, 상태 간 전이 속도
+
+4. APB, Movement Start -> Movement Cycle
+
+(float) Duration = 0.02
+
+5. ABP, Movement Cycle -> Idle
+
+(float) Duration = 0.2
+
+
+
+

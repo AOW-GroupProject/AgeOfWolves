@@ -81,12 +81,18 @@ public:
 	void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
 	void ClearAbilityInput();
 
-	void AbilityInputTagPressed(const FGameplayTag& InputTag);
+	void AbilityInputTagTriggered(const FGameplayTag& InputTag);
 	void AbilityInputTagReleased(const FGameplayTag& InputTag);
 
 protected:
+	virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
+	virtual void AbilitySpecInputReleased(FGameplayAbilitySpec& Spec) override;
+
+protected:
+	TArray<FGameplayAbilitySpecHandle> InputTriggeredSpecHandles;
+
+protected:
 	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
-	TArray<FGameplayAbilitySpecHandle> InputHeldSpecHandles;
 	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
 
 #pragma endregion
@@ -111,7 +117,6 @@ public:
 protected:
 	UPROPERTY(EditAnywhere)
 		TSoftObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
-
 public:
 	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM;}
 #pragma endregion
