@@ -53,6 +53,67 @@ void UBaseGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInf
 {
 	Super::OnAvatarSet(ActorInfo, Spec);
 }
+
+void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
+{
+    Super::ActivateAbility(Handle, ActorInfo, ActivationInfo, TriggerEventData);
+}
+
+void UBaseGameplayAbility::PreActivate(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, FOnGameplayAbilityEnded::FDelegate* OnGameplayAbilityEndedDelegate, const FGameplayEventData* TriggerEventData)
+{
+    Super::PreActivate(Handle, ActorInfo, ActivationInfo, OnGameplayAbilityEndedDelegate, TriggerEventData);
+
+}
+
+void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+    check(ActorInfo);
+
+    // @GE 제거(Cost, CoolDown 제외 별도의 GE)
+    {
+        if (ActiveApplyGameplayEffectHandle.IsValid())
+        {
+            if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
+            {
+                ASC->RemoveActiveGameplayEffect(ActiveApplyGameplayEffectHandle);
+            }
+        }
+    }
+
+    Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+
+}
+
+void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+    check(ActorInfo);
+
+    Super::InputPressed(Handle, ActorInfo, ActivationInfo);
+}
+
+void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+    check(ActorInfo);
+
+    Super::InputReleased(Handle, ActorInfo, ActivationInfo);
+
+    // @Cancel: Activation Policy가 WhileInputActive 일 경우.
+    {
+        if (ActivationPolicy == EAbilityActivationPolicy::WhileInputActive && ActiveApplyGameplayEffectHandle.IsValid())
+        {
+            if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
+            {
+                if (FGameplayAbilitySpec* AbilitySpec = ASC->FindAbilitySpecFromHandle(Handle))
+                {
+                    if (AbilitySpec->IsActive() && IsValid(AbilitySpec->Ability))
+                    {
+                        CancelAbility(Handle, ActorInfo, ActivationInfo, false);
+                    }
+                }
+            }
+        }
+    }
+}
 #pragma endregion
 
 #pragma region Tag Requirements

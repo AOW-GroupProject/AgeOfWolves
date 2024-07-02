@@ -42,7 +42,6 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		bShouldMove = Speed > 3.f && OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration() != FVector::ZeroVector;
 		// 캐릭터의 이동 상태를 정의합니다. EMovementState(열거형) 유형의 변수로 나타냅니다.
 		FindMovementState();
-		// [TODO] : LockOn 기능 구현 후 활용할 함수, 일시적으로 주석 처리 
 		// 캐릭터의 이동 방향을 정의합니다.
 		FindMovementDirection();
 	}
@@ -50,33 +49,21 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 void UBaseAnimInstance::FindMovementState()
 {
-	
-	// 캐릭터의 이동 상태를 정의합니다.
-	FVector Vector1 = OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration();
-	FVector Vector2 = Velocity;
 
-	float Length1 = OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration().Length();
-	float Length2 = Speed;
 
-	Vector1.Normalize();
-	Vector2.Normalize();
-
-	// #1. 방향 전환
-	if (FVector::DotProduct(Vector1, Vector2) < -0.75f)
-	{
-		MovementState = EMovementState::Pivoting;
-	}
-	// #2. 뛰기
-	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 300.f && Length1 > 0.5f && Length2 > 1.0)
+	// @FIX: 240 -> 350 상향
+	// #1. 뛰기
+	if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 400.f && Speed > 0.05f)
 	{
 		MovementState = EMovementState::Run;
+		if(LastMovementState == EMovementState::Idle) LastMovementState = MovementState;
 	}
-	// #3. 걷기
-	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 1.f && Length1 > 0.01f && Length2 > 0.f)
+	// #2. 걷기
+	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 0.f && Speed > 10.f)
 	{
 		MovementState = EMovementState::Walk;
 	}
-	// #4. 정지
+	// #3. 정지
 	else
 	{
 		MovementState = EMovementState::Idle;
@@ -85,7 +72,7 @@ void UBaseAnimInstance::FindMovementState()
 
 void UBaseAnimInstance::FindMovementDirection()
 {
-	// 케릭터가 LockOn을 취소하거나, Run동안은 이동 방향을 Fwd로 설정.
+	//케릭터가 LockOn을 취소하거나, Run동안은 이동 방향을 Fwd로 설정.
 	if (bLockOn == false || MovementState == EMovementState::Run)
 	{
 		MovementDirection = EMovementDirection::Fwd;

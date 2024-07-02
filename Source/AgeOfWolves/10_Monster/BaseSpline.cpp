@@ -56,7 +56,7 @@ void ABaseSpline::SpawnMonster()
 	}
 }
 
-/*
+
 void ABaseSpline::IncreaseSplineIndex()
 {
 	
@@ -67,10 +67,12 @@ void ABaseSpline::IncreaseSplineIndex()
 	}
 }
 
+
 FVector ABaseSpline::GetSplinePointWorldPosition()
 {
 	return SplineComponent->GetLocationAtSplinePoint(SplineIndex, ESplineCoordinateSpace::World);
 }
+/*
 
 int ABaseSpline::CalculateDistanceBetweenIndex(int a, int b)
 { 

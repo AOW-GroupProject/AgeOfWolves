@@ -62,6 +62,11 @@ protected:
 	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 	virtual void OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
 	virtual void OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
+	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
+	virtual void PreActivate(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, FOnGameplayAbilityEnded::FDelegate* OnGameplayAbilityEndedDelegate, const FGameplayEventData* TriggerEventData = nullptr) override;
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
+	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
+	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 	//~End of Interface
 #pragma endregion
 
@@ -99,17 +104,18 @@ protected:
 
 #pragma region GA Info
 protected:
-	// @목적 : Gameplay Ability의 발동 조건입니다.
+	// @목적: Gameplay Ability의 발동 조건입니다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gameplay Ability | Ability Activation")
 		EAbilityActivationPolicy ActivationPolicy;
-	// @설명 : 해당 Gameplay Ability의 활성화 과정에서 Target(GA의 적용 대상)에게 전달하는 Gameplay Effect입니다.
+	// @설명: 해당 Gameplay Ability의 활성화 과정에서 Target(GA의 적용 대상)에게 전달하는 Gameplay Effect입니다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gameplay Ability | Gameplay Effect")
 		TSubclassOf<UGameplayEffect> ApplyGameplayEffectClass;
-
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Gameplay Ability | Gameplay Effect")
+		FActiveGameplayEffectHandle ActiveApplyGameplayEffectHandle;
 public:
 	FORCEINLINE EAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
-	FORCEINLINE UGameplayEffect* GetApplyGameplayEffect() { return ApplyGameplayEffectClass->IsValidLowLevel() ? ApplyGameplayEffectClass->GetDefaultObject<UGameplayEffect>() : nullptr; }
-#pragma endregion
+	FORCEINLINE TSubclassOf<UGameplayEffect> GetApplyGameplayEffectClass() { return ApplyGameplayEffectClass; }
 
+#pragma endregion
 
 };

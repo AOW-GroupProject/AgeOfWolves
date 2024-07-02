@@ -42,8 +42,10 @@ public:
 	* @설명 : SimpleMoveTo로 spline의 포인트로 움직였다면 true를 반환합니다.
 	* @참조 : -
 	*/
-	//UFUNCTION(BlueprintCallable)
-	//virtual bool WhenMoveToSplinePointReturnTrue() override;
+	UFUNCTION(BlueprintCallable)
+	virtual bool WhenMoveToSplinePointReturnTrue() override;
+
+	FRotator Rotation;
 
 	/*
 	* @목적 : Spline에 맞춰 액터를 움직이는 함수입니다.

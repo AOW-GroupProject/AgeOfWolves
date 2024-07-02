@@ -11,9 +11,8 @@ DEFINE_LOG_CATEGORY(LogASC)
 UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
-	InputPressedSpecHandles.Reset();
+	InputTriggeredSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
-	InputHeldSpecHandles.Reset();
 }
 
 void UBaseAbilitySystemComponent::InitializeComponent()
@@ -62,8 +61,8 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 
 	// @ATMR: Ability Tag간 관계성: "Block", "AR", "AB"
 	UBaseGameplayAbility* InstancedAbility = Cast<UBaseGameplayAbility>(Spec->GetPrimaryInstance());
+	UBaseGameplayAbility* const CanActivateAbilitySource = InstancedAbility ? InstancedAbility : Ability;
 	{
-		UBaseGameplayAbility* const CanActivateAbilitySource = InstancedAbility ? InstancedAbility : Ability;
 
 		if (AbilityTagRelationshipMapping.IsValid())
 		{
@@ -75,6 +74,24 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 			AbilityTagRelationshipMapping->GetRequiredAndBlockedActivationTags(CanActivateAbilitySource->AbilityTags, &OutActivationRequiredAbilityTags, &OutActivationBlockedAbilityTags);
 
 			if (!CanActivateAbilitySource->CanActivateAbility(AbilityToActivate, ActorInfo, SourceTags, TargetTags, &OutActivationRequiredAbilityTags, &OutActivationBlockedAbilityTags))
+			{
+				NotifyAbilityFailed(AbilityToActivate, CanActivateAbilitySource, InternalTryActivateAbilityFailureTags);
+				return false;
+			}
+		}
+	}
+	 // @Instancing Policy
+	if (Ability->GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerActor)
+	{
+		if (Spec->IsActive())
+		{
+			if (InstancedAbility)
+			{
+				bool bReplicateEndAbility = true;
+				bool bWasCancelled = false;
+				InstancedAbility->EndAbility(AbilityToActivate, ActorInfo, Spec->ActivationInfo, bReplicateEndAbility, bWasCancelled);
+			}
+			else
 			{
 				NotifyAbilityFailed(AbilityToActivate, CanActivateAbilitySource, InternalTryActivateAbilityFailureTags);
 				return false;
@@ -135,6 +152,39 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 
 void UBaseAbilitySystemComponent::CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore)
 {
+
+	//UGameplayAbility* GA = Spec.Ability; 
+	//if (!GA)
+	//{
+	//	UE_LOGFMT(LogASC, Error, "Ability Spec에 Ability 정보가 없습니다!");
+	//	return;
+	//}
+	//// @Activating Abilities: 활성화 목록에서 제거
+	//{
+	//	if (ActivatingAbilityTags.HasAllExact(GA->AbilityTags))
+	//	{
+	//		ActivatingAbilityTags.RemoveTags(GA->AbilityTags);
+	//		UE_LOGFMT(LogASC, Warning, "{0}이 취소되었습니다.", GA->GetName());
+	//	}
+	//}
+	//// @GE 제거(Cost, Cooldown 제외)
+	//{
+	//	if (const auto BaseGA = CastChecked<UBaseGameplayAbility>(GA))
+	//	{
+	//		if (Spec.Handle.IsValid())
+	//		{
+	//			FActiveGameplayEffectHandle ActiveGEHandle = FindActiveGameplayEffectHandle(Spec.Handle);
+	//			const FActiveGameplayEffect* ActiveGE = GetActiveGameplayEffect(ActiveGEHandle);
+
+	//			if (ActiveGE && ActiveGE->Spec.Def && ActiveGE->Spec.Def->GetClass() == BaseGA->ApplyGameplayEffectClass)
+	//			{
+	//				RemoveActiveGameplayEffect(ActiveGEHandle);
+	//				UE_LOGFMT(LogASC, Warning, "{0} 게임플레이 이펙트가 제거되었습니다.", *BaseGA->ApplyGameplayEffectClass->GetName());
+	//			}
+	//		}
+	//	}
+	//}
+
 	UGameplayAbility* GA = Spec.Ability; 
 	if (!GA)
 	{
@@ -149,6 +199,7 @@ void UBaseAbilitySystemComponent::CancelAbilitySpec(FGameplayAbilitySpec& Spec, 
 			UE_LOGFMT(LogASC, Warning, "{0}이 취소되었습니다.", GA->GetName());
 		}
 	}
+
 	Super::CancelAbilitySpec(Spec, Ignore);
 
 }
@@ -256,49 +307,23 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 	static TArray<FGameplayAbilitySpecHandle> AbilitiesToActivate;
 	AbilitiesToActivate.Reset();
 
-	//
-	// Process all abilities that activate when the input is held.
-	//
-	for (const FGameplayAbilitySpecHandle& SpecHandle : InputHeldSpecHandles)
-	{
-		if (const FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
-		{
-			if (AbilitySpec->Ability && !AbilitySpec->IsActive())
-			{
-				const UBaseGameplayAbility* LyraAbilityCDO = CastChecked<UBaseGameplayAbility>(AbilitySpec->Ability);
-
-				if (LyraAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::WhileInputActive)
-				{
-					AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
-				}
-			}
-		}
-	}
-
-	//
-	// Process all abilities that had their input pressed this frame.
-	//
-	for (const FGameplayAbilitySpecHandle& SpecHandle : InputPressedSpecHandles)
+	// @InputTriggered
+	for (const FGameplayAbilitySpecHandle& SpecHandle : InputTriggeredSpecHandles)
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
 			if (AbilitySpec->Ability)
 			{
 				AbilitySpec->InputPressed = true;
-
+				// @InputPressed + 다중 키 입력
 				if (AbilitySpec->IsActive())
 				{
-					// Ability is active so pass along the input event.
 					AbilitySpecInputPressed(*AbilitySpec);
 				}
+				// @InputPressed 활성화
 				else
 				{
-					const UBaseGameplayAbility* LyraAbilityCDO = CastChecked<UBaseGameplayAbility>(AbilitySpec->Ability);
-
-					if (LyraAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::OnInputTriggered)
-					{
-						AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
-					}
+					AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
 				}
 			}
 		}
@@ -310,56 +335,47 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 		{
 			if (UGameplayAbility* Ability = AbilitySpec->Ability)
 			{
-				// @설명: 활성화 시도
 				TryActivateAbility(AbilitySpecHandle);
 			}
 		}
 	}
 
-	//
-	// Process all abilities that had their input released this frame.
-	//
+	// @InputReleased
 	for (const FGameplayAbilitySpecHandle& SpecHandle : InputReleasedSpecHandles)
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
 			if (AbilitySpec->Ability)
 			{
-				AbilitySpec->InputPressed = false;
-
+				// @InputRelased 활성화
 				if (AbilitySpec->IsActive())
 				{
-					// Ability is active so pass along the input event.
 					AbilitySpecInputReleased(*AbilitySpec);
 				}
 			}
 		}
 	}
 
-	//
-	// Clear the cached ability handles.
-	//
-	InputPressedSpecHandles.Reset();
+	InputTriggeredSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
 }
 
 void UBaseAbilitySystemComponent::ClearAbilityInput()
 {
-	InputPressedSpecHandles.Reset();
+	InputTriggeredSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
-	InputHeldSpecHandles.Reset();
 }
 
-void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
+void UBaseAbilitySystemComponent::AbilityInputTagTriggered(const FGameplayTag& InputTag)
 {
+	// @InputPressed+InputHeld
 	if (InputTag.IsValid())
 	{
 		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 		{
 			if (AbilitySpec.Ability && (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag)))
 			{
-				InputPressedSpecHandles.AddUnique(AbilitySpec.Handle);
-				InputHeldSpecHandles.AddUnique(AbilitySpec.Handle);
+				InputTriggeredSpecHandles.AddUnique(AbilitySpec.Handle);
 			}
 		}
 	}
@@ -374,10 +390,21 @@ void UBaseAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& In
 			if (AbilitySpec.Ability && (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag)))
 			{
 				InputReleasedSpecHandles.AddUnique(AbilitySpec.Handle);
-				InputHeldSpecHandles.Remove(AbilitySpec.Handle);
 			}
 		}
 	}
+}
+
+void UBaseAbilitySystemComponent::AbilitySpecInputPressed(FGameplayAbilitySpec& Spec)
+{
+	// @Spec의 InputPressed 값 변경(참), GA의 InputPressed 호출
+	Super::AbilitySpecInputPressed(Spec);
+}
+
+void UBaseAbilitySystemComponent::AbilitySpecInputReleased(FGameplayAbilitySpec& Spec)
+{
+	// @Spec의 InputPressed 값 변경(거짓), GA의 InputReleased 호출
+	Super::AbilitySpecInputReleased(Spec);
 }
 #pragma endregion
 
