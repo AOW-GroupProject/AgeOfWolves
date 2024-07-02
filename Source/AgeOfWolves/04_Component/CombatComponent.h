@@ -34,10 +34,8 @@ public:
 #pragma region Combo Management
 
 public:	
-	// Sets default values for this component's properties
+
 	UCombatComponent();
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 
 	UFUNCTION(BlueprintCallable)

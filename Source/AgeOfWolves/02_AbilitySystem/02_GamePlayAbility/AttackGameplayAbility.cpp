@@ -29,18 +29,10 @@ void UAttackGameplayAbility::CauseDamage(AActor* TargetActor)
 
 APlayerCharacter* UAttackGameplayAbility::GetPlayerCharacterFromActorInfo() const
 {
-	return (CurrentActorInfo ? Cast<APlayerCharacter>(CurrentActorInfo->AvatarActor.Get()) : nullptr);
+	return Cast<APlayerCharacter>(GetAvatarActorFromActorInfo());
 }
 
 UCombatComponent* UAttackGameplayAbility::GetCombatComponentFromPlayerCharacter() const
 {
-	if (CurrentActorInfo)
-	{
-		APlayerCharacter* PlayerChracter = Cast<APlayerCharacter>(CurrentActorInfo->AvatarActor.Get());
-		if (PlayerChracter)
-		{
-			return PlayerChracter->FindComponentByClass<UCombatComponent>();
-		}
-	}
-	return nullptr;
+	return GetPlayerCharacterFromActorInfo()->FindComponentByClass<UCombatComponent>();
 }

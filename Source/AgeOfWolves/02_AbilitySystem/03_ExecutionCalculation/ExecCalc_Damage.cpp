@@ -10,17 +10,20 @@
 struct FDamageStatics
 {
 	// 참고 : 1, 2 방법의 매크로 대신 아래와 같은 방법으로도 선언 및 정의 가능
+
+
 	/*
 	FGameplayEffectAttributeCaptureDefinition DamageDef;
 	FDamageStatics()
 	{
-		DamageDef = FGameplayEffectAttributeCaptureDefinition(
-		UBaseAttributeSet::GetDamageAttribute(), 
+		DamageDef = FGameplayEffectAttributeCaptureDefinition(UBaseAttributeSet::GetDamageAttribute(), 
 		EGameplayEffectAttributeCaptureSource::Source, 
 		true
 		);
 	}
 	*/
+
+
 	// 1. 데미지 계산시 사용할 Attribute들을 매크로를 통해 선언한다.
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Damage);
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Poise);
@@ -50,6 +53,7 @@ static const FDamageStatics& DamageStatics()
 	static FDamageStatics DStatics;
 	return DStatics;
 }
+
 UExecCalc_Damage::UExecCalc_Damage()
 {
 	//FDamageStatics에서 정의된 Attribute들을 RelevantAttributesToCapture에 추가한다.
@@ -88,7 +92,7 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	float Damage = 0.f;
 	
 	float SourceOffense = 0.f;
-	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().DamageDef, EvaluationParameters, SourceOffense);
+	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().OffenseDef, EvaluationParameters, SourceOffense);
 	Damage += SourceOffense;
 	// ToDo : 스킬판정배율을 피해량(Damage)에 반영, 그로기 적용
 

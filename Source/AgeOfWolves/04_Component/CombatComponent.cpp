@@ -11,34 +11,19 @@
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystemComponent.h"
 
-// Sets default values for this component's properties
 UCombatComponent::UCombatComponent()
 {
-	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
-	// off to improve performance if you don't need them.
-	PrimaryComponentTick.bCanEverTick = true;
+	PrimaryComponentTick.bCanEverTick = false;
 
 	// ...
 }
 
-
-// Called when the game starts
 void UCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
 	BaseAbilitySystemComponent = GetAbilitysystemComponent();
-	BaseAbilitySystemComponent->AbilityFailedCallbacks.AddUObject(this, &UCombatComponent::QueueBlockedAbility);
-	BaseAbilitySystemComponent->AbilityEndedCallbacks.AddUObject(this, &UCombatComponent::CheckQueuedAbility);
-}
-
-
-
-// Called every frame
-void UCombatComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
-{
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
+	// BaseAbilitySystemComponent->AbilityFailedCallbacks.AddUObject(this, &UCombatComponent::QueueBlockedAbility);
+	// BaseAbilitySystemComponent->AbilityEndedCallbacks.AddUObject(this, &UCombatComponent::CheckQueuedAbility);
 }
 
 int UCombatComponent::GetInputCount()
@@ -52,9 +37,6 @@ void UCombatComponent::IncrementCombo()
 	{
 		ComboIndex = 1;
 	}
-
-
-	
 }
 
 void UCombatComponent::ResetCombo()
@@ -70,8 +52,6 @@ void UCombatComponent::ActivateComboAbility(TSubclassOf<UGameplayAbility> Abilit
 	{
 
 	}
-
-
 
 	ASC->TryActivateAbilityByClass(AbilityClass);
 }
@@ -126,7 +106,6 @@ void UCombatComponent::QueueBlockedAbility(const UGameplayAbility* BlockedAbilit
 	// Handle을 통해 AbilitySpec을 검색하고 QueuedAbility에 설정합니다.
 	if (BaseAbilitySystemComponent)
 	{
-
 		QueuedAbility = BlockedAbility;
 	}
 }
@@ -156,8 +135,6 @@ void UCombatComponent::CheckQueuedAbility(UGameplayAbility* CurrentActivatedAbil
 
 }
 
-
-
 void UCombatComponent::UpdateAllowedInputTags(TArray<FGameplayTag> InputTags)
 {
 	AllowedInputTags = InputTags;
@@ -166,10 +143,8 @@ void UCombatComponent::UpdateAllowedInputTags(TArray<FGameplayTag> InputTags)
 
 void UCombatComponent::TryActivateQueuedAbility()
 {
+
 }
-
-
-
 void UCombatComponent::ResetAllowedInputTags()
 {
 	AllowedInputTags.Empty();
