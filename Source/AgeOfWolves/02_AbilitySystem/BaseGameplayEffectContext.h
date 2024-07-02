@@ -45,14 +45,6 @@ public:
 	{
 		return FBaseGameplayEffectContext::StaticStruct();
 	}
-
-
-
-public:
-
-
-protected:
-
 };
 
 template<>
