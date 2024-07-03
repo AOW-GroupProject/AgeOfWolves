@@ -51,6 +51,7 @@ class AGEOFWOLVES_API UBaseGameplayAbility : public UGameplayAbility
 
 #pragma region Friend Class
 		friend class UBaseAbilitySystemComponent;
+		friend class UBaseMonsterASC;
 #pragma endregion
 
 public:
