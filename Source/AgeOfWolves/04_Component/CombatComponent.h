@@ -17,7 +17,6 @@ struct FGameplayTagContainer;
  * @목적 : Player Character의 전투와 관련된 여러 기능을 담당하는 Component입니다.
  * @설명 : 1. Combo 시스템
 		   2. Ability Queue 시스템
-		   3. Lock On 시스템
  * @참조 : 
  */
 
@@ -36,9 +35,6 @@ public:
 public:	
 	// Sets default values for this component's properties
 	UCombatComponent();
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
-
 
 	UFUNCTION(BlueprintCallable)
 	int GetInputCount();

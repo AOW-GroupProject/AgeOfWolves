@@ -3,26 +3,24 @@
 
 #include "BaseInputComponent.h"
 #include "Logging/StructuredLog.h"
-
 #include "GameFramework/Character.h"
 
-#include "03_Player/PlayerStateBase.h"
 #include "01_Character/PawnData.h"
-#include "EnhancedInputSubsystems.h"
-#include "06_Input/InputConfig.h"
+#include "01_Character/PlayerCharacter.h"
+#include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "04_Component/CombatComponent.h"
-#include "GameFramework/SpringArmComponent.h"
-
-#include "01_Character/PlayerCharacter.h"
 #include "05_Animation/BaseAnimInstance.h"
+#include "06_Input/InputConfig.h"
 
+#include "EnhancedInputSubsystems.h"
 #include "GameplayTagContainer.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInputComponent)
 
@@ -84,7 +82,7 @@ void UBaseInputComponent::InitializePlayersInputActionsSetup()
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Look);
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LockOn);
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.ChangeLockOnTarget")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_ChangeLockOnTarget);
-				// BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.CountMouseInput")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_CountMouseLeftInput);
+				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LeftMouse.Pressed")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LeftMousePressed);
 
 				// #3. Ability Input Actions
 				TArray<uint32> BindHandles;
@@ -379,11 +377,21 @@ void UBaseInputComponent::Input_ChangeLockOnTarget(const FInputActionValue& Valu
 
 
 
-void UBaseInputComponent::Input_CountMouseLeftInput()
+void UBaseInputComponent::Input_LeftMousePressed(const FInputActionValue& Value)
 {
 	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
-	check(PlayerCharacter);
-	//PlayerCharacter->GetCombatComponent()->IncrementInputCount();
+	if (PlayerCharacter)
+	{
+		APlayerStateBase* PlayerStateBase = Cast<APlayerStateBase>(PlayerCharacter->GetPlayerState());
+		if (PlayerStateBase)
+		{
+			if (PlayerStateBase->GetAbilitySystemComponent())
+			{
+				FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Active.Attack"));
+				PlayerStateBase->GetAbilitySystemComponent()->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag));
+			}
+		}
+	}
 }
 
 void UBaseInputComponent::Input_AbilityInputTagPressed(FGameplayTag InputTag)

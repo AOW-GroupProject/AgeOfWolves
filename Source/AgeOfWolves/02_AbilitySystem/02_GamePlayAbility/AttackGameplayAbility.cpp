@@ -15,7 +15,7 @@ UAttackGameplayAbility::UAttackGameplayAbility()
 
 }
 
-void UAttackGameplayAbility::CauseDamage(AActor* TargetActor)
+void UAttackGameplayAbility::CauseDamageToTarget(AActor* TargetActor)
 {
 	FGameplayEffectSpecHandle DamageSpecHandle = MakeOutgoingGameplayEffectSpec(ApplyGameplayEffectClass, GetAbilityLevel());
 	for (TTuple<FGameplayTag, FScalableFloat> Pair : DamageTypes)
@@ -39,6 +39,7 @@ UCombatComponent* UAttackGameplayAbility::GetCombatComponentFromPlayerCharacter(
 		APlayerCharacter* PlayerChracter = Cast<APlayerCharacter>(CurrentActorInfo->AvatarActor.Get());
 		if (PlayerChracter)
 		{
+			UE_LOG(LogTemp, Warning, TEXT("Size of UAttackGameplayAbility: %d bytes"), sizeof(UAttackGameplayAbility));
 			return PlayerChracter->FindComponentByClass<UCombatComponent>();
 		}
 	}

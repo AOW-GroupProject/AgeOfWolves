@@ -4,11 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
+
 #include "AttackGameplayAbility.generated.h"
 
 class APlayerCharacter;
 class UCombatComponent;
 class UAnimMontage;
+
 
 UENUM(BlueprintType)
 enum class EAkoniAttackType : uint8
@@ -42,24 +44,33 @@ class AGEOFWOLVES_API UAttackGameplayAbility : public UBaseGameplayAbility
 public:
 	UAttackGameplayAbility();
 
-	UPROPERTY(EditDefaultsOnly, meta = (Category = "AttackInfo | Type"))
+protected:
+
+	UPROPERTY(EditDefaultsOnly, meta = (Category = "AttackAbilityInfo"))
 	EAkoniAttackType AkoniAttackType;
 
-	UPROPERTY(EditDefaultsOnly, Category = "AttackInfo | Damage")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AttackAbilityInfo")
+	bool bFirstAttack = false;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AttackAbilityInfo")
+	int ComboIndex = 1;
+
+	UPROPERTY(EditDefaultsOnly, Category = "AttackAbilityInfo")
 	TMap<FGameplayTag, FScalableFloat> DamageTypes;
 
-	UFUNCTION(BlueprintCallable)
-	void CauseDamage(AActor* TargetActor);
-
-	UPROPERTY(EditDefaultsOnly, meta = (Category = "Animation"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (Category = "AttackAbilityInfo"))
 	TArray<UAnimMontage*> AttackMontages;
 
-	UPROPERTY(EditDefaultsOnly, meta = (Category = "Animation"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (Category = "AttackAbilityInfo"))
 	float MontagePlayRate = 1.0f;
 
+	UFUNCTION(BlueprintCallable)
+	void CauseDamageToTarget(AActor* TargetActor);
 
 
+private:
 
+public: 
 	UFUNCTION(BlueprintCallable, Category = "Ability | Getter")
 	APlayerCharacter* GetPlayerCharacterFromActorInfo() const;
 
