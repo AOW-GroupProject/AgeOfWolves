@@ -113,6 +113,11 @@ public:
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SingleMonsterData")
 	FString MonsterName = FString(TEXT(""));
 
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SingleMonsterData")
+	FPermanentStat PermanentStat;
+
+
+
 
 };
 

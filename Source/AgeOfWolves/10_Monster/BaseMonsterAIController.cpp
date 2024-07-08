@@ -8,6 +8,7 @@
 #include "BehaviorTree/BehaviorTree.h"
 
 #include "01_Character/CharacterBase.h"
+#include "01_Character/BaseMonster.h"
 
 ABaseMonsterAIController::ABaseMonsterAIController()
 {
@@ -32,6 +33,10 @@ void ABaseMonsterAIController::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 	//RunBehaviorTree(BTree);
 	Blackboard->InitializeBlackboard(*BTree->BlackboardAsset);
+	if (Cast<ABaseMonster>(InPawn))
+	{
+		//Cast<ABaseMonster>(InPawn)->InitializeGameplayAbilitySystem();
+	}
 }
 
 void ABaseMonsterAIController::OnTargetDetected(AActor* InActor, FAIStimulus Stimulus)
