@@ -17,7 +17,6 @@ struct FGameplayTagContainer;
  * @목적 : Player Character의 전투와 관련된 여러 기능을 담당하는 Component입니다.
  * @설명 : 1. Combo 시스템
 		   2. Ability Queue 시스템
-		   3. Lock On 시스템
  * @참조 : 
  */
 
@@ -118,17 +117,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ResetAllowedInputTags();
 
-
-	
-
-
-
 #pragma endregion
 
-#pragma region LockOn System
-
-#pragma endregion
-public :
 	
 
 };

@@ -14,7 +14,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayer, Log, All)
 
 class UCurveFloat;
-class UCombatComponent;
+
 // @목적 : UI 관련 테스트 진행을 위해 작성한 임시 코드입니다. 실제 UI 구현을 위해선 아래 코드를 삭제하고 시작해주세요.
 class UTestWidget;
 
@@ -48,9 +48,8 @@ protected:
 		class USpringArmComponent* SpringArm;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
-
-	// UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Cpmbat", meta = (AllowPrivateAccess = "true"))
-	// UCombatComponent* CombatComponent;
+	UPROPERTY(VisibleDefaultsOnly)
+		class ULockOnComponent* LockOnComponent;
 	//~End Of Components
 #pragma endregion
 
@@ -75,22 +74,10 @@ protected:
 
 #pragma region SpringArm & Camera
 
-	// @목적 : LockOn 동안 Spring Arm을 통해 카메라 위치를 조정하는 함수
-	void AdjustCameraTransform(float DeltaSeconds);
-
 public:
 
 	FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
-	
-
-
-	TObjectPtr<class UBaseInputComponent> BaseInputComponent;
-	TObjectPtr<class UBaseAnimInstance> BaseAnimInstance;
-
-
-
-
-
-	
+	FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }
+	FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockOnComponent; }
 
 };
