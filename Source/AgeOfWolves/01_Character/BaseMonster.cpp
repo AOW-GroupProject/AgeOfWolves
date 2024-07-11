@@ -3,7 +3,11 @@
 
 #include "01_Character/BaseMonster.h"
 
-#include "10_Monster/BaseMonsterASC.h"
+#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+#include "04_Component/BaseAbilitySystemComponent.h"
+#include "02_AbilitySystem/BaseAbilitySet.h"
+#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+
 
 // Sets default values
 ABaseMonster::ABaseMonster()
@@ -29,7 +33,7 @@ ABaseMonster::ABaseMonster()
 		//일단 주석처리
 		//Destroy();
 	}
-	AbilitySystemComponent = CreateDefaultSubobject<UBaseMonsterASC>(TEXT("MonsterAbilitySystemComponent"));
+	AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("MonsterAbilitySystemComponent"));
 	//AbilitySystemComponent->
 
 	//싱글이 아닌 서버를 할 때 해줘야 할 것
@@ -46,10 +50,6 @@ ABaseMonster::ABaseMonster()
 void ABaseMonster::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
-	if (AbilitySystemComponent)
-	{
-		
-	}
 	
 }
 
@@ -70,7 +70,7 @@ void ABaseMonster::Tick(float DeltaTime)
 void ABaseMonster::PossessedBy(AController* NewController)
 {
 	Super::PossessedBy(NewController);
-	//InitializeGameplayAbilitySystem();
+	InitializeGameplayAbilitySystem();
 	
 
 }
@@ -103,7 +103,7 @@ void ABaseMonster::InitializeGameplayAbilitySystem()
 		{
 			// 캐릭터의 기본 AttributeSet을 ASC에 최초 등록합니다.
 			{
-				AbilitySet->GiveStartupAttributeSetToAbilitySystem(AbilitySystemComponent, this);
+				AbilitySet->GiveStartupAttributeSetToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
 
 				// 각 Attribute 항목 수치 변화 이벤트에 콜백함수를 등록합니다.
 				for (auto& AS : AbilitySystemComponent->GetSpawnedAttributes())
@@ -122,24 +122,27 @@ void ABaseMonster::InitializeGameplayAbilitySystem()
 			}
 			// 캐릭터의 기본 GA에 대한 Ability Tag Relationpship을 등록합니다.
 			{
-				if (AbilitySystemComponent->GetTagRelationship())
+				if (TagRelationship)
 				{
-					AbilitySystemComponent->SetAbilityTagRelationshipMapping(AbilitySystemComponent->GetTagRelationship());
+					AbilitySystemComponent->SetAbilityTagRelationshipMapping(TagRelationship);
 				}
 			}
 			// 캐릭터의 기본 Gameplay Effect를 ASC에 최초 등록/적용합니다.
 			{
-				AbilitySet->GiveStartupGameplayEffectToAbilitySystem(AbilitySystemComponent, this);
+				AbilitySet->GiveStartupGameplayEffectToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
 			}
 			// 캐릭터의 기본 Gameplay Ability를 ASC에 최초 등록/적용합니다.
 			{
-				AbilitySet->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, this);
+				AbilitySet->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
 			}
 
-			// ASC에 Startup GA, GE, AttributeSet의 등록 완료 이벤트 호출, 임시 주석 처리
-			//OnAttributeSetInitialized.Broadcast();
 		}
 	}
+}
+
+FSingleMonsterData ABaseMonster::GetSingleMonsterData()
+{
+	return SingleMonsterData;
 }
 
 void ABaseMonster::OnAttributeValueChanged(FOnAttributeChangeData& Data)

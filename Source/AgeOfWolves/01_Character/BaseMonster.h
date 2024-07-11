@@ -4,16 +4,18 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
-#include "Engine/DataTable.h"
 #include "AbilitySystemInterface.h"
 
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
-#include "10_Monster/BaseMonsterAbilitySet.h"
-#include "10_Monster/BaseMonsterAttributeSet.h"
+
 #include "10_Monster/MonsterData.h"
-#include "10_Monster/MonsterInterface_GAS.h"
+#include <AbilitySystemBlueprintLibrary.h>
+
+#include "02_AbilitySystem/BaseAbilitySet.h"
 
 #include "BaseMonster.generated.h" 
+
+
 
 /*
 * @목적 : ASC에 등록된 AttributeSet의 각 Attribute 값의 초기화 이벤트
@@ -29,6 +31,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FMonsterAttributeSetInitialized);
 */
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyMonsterAttributeValueChanged, FGameplayAttribute, Attribute, float, OldValue, float, NewValue);
 
+class UBaseAbilitySet;
+class UBaseAttributeSet;
+class UBaseAbilitySystemComponent;
+class UBaseGameplayAbility;
 
 UENUM(BlueprintType)
 enum class EMonsterState : uint8
@@ -40,19 +46,6 @@ enum class EMonsterState : uint8
 };
 
 
-
-USTRUCT(Atomic, BlueprintType)
-struct FMonsterData_Struct : public FTableRowBase
-{
-	GENERATED_USTRUCT_BODY()
-public:
-	
-
-
-};
-
-class UBaseMonsterASC;
-class UBaseGameplayAbility;
 
 UCLASS()
 class AGEOFWOLVES_API ABaseMonster : public ACharacter, public IAbilitySystemInterface
@@ -104,15 +97,20 @@ protected:
 #pragma region Gameplay Ability System
 public:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Ability")
-	TObjectPtr<UBaseMonsterASC> AbilitySystemComponent;
+	TObjectPtr<UBaseAbilitySystemComponent> AbilitySystemComponent;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
+	TObjectPtr<UAbilityTagRelationshipMapping> TagRelationship;
 
 protected:
 
+	FBaseAbilitySet_GrantedHandles* SetGrantedHandles;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-	TObjectPtr<UBaseMonsterAbilitySet> AbilitySet;
+	TObjectPtr<UBaseAbilitySet> AbilitySet;
 
 	UPROPERTY(VisibleAnywhere, Category = "Ability")
-	TSoftObjectPtr<UBaseMonsterAttributeSet> AttributeSet;
+	TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
 
 	
 
@@ -160,6 +158,10 @@ public:
 	UPROPERTY(VisibleAnywhere)
 	FSingleMonsterData SingleMonsterData;
 
+	UFUNCTION(BlueprintCallable)
+	FSingleMonsterData GetSingleMonsterData();
+
+
 #pragma endregion
 
 
@@ -185,7 +187,7 @@ public:
 	* @설명 : Attribute 값 변화 이벤트 발생 시 이를 UI 등 다양한 곳에 알리기 위함
 	* @참조 : -
 	*/
-	FAnyMonsterAttributeValueChanged OnAnyMonsterAttributeValueChanged;
+	FAnyMonsterAttributeValueChanged OnAnyMonsterAttributeValueChanged; //기믹과 같이 값이 바뀔 때마다 체크해줘야 하는 것이 있다면 함수를 AddDynamic으로 추가하기
 #pragma endregion
 
 
