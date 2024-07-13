@@ -28,7 +28,9 @@ public:
 };
 
 /**
+ * @UInputConfig
  * 
+ * Enhanced Input 활용을 위해 필요한 정보들을 정의합니다.
  */
 UCLASS()
 class AGEOFWOLVES_API UInputConfig : public UDataAsset
@@ -36,7 +38,6 @@ class AGEOFWOLVES_API UInputConfig : public UDataAsset
 	GENERATED_BODY()
 	
 public:
-
 	UInputConfig(const FObjectInitializer& ObjectInitializer);
 
 	UFUNCTION(BlueprintCallable, Category = "Input | Input Action")
@@ -45,20 +46,24 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Input | Input Action")
 		const UInputAction* FindAbilityInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
 
+	UFUNCTION(BlueprintCallable, Category = "Input | Input Action")
+		const UInputAction* FindUIInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
+
 public:
-	// IMC
+	//@IMC
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input | Input Mapping Context")
 		TObjectPtr<UInputMappingContext> InputMappingContext;
-
+	//@Pirority
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input | Input Mapping Context")
 		int32 MappingPriority;
-
-	// List of input actions used by the owner.  These input actions are mapped to a gameplay tag and must be manually bound.
+	//@Native IA
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input | Native Input Action")
 		TArray<FInputActionInfo> NativeInputActions;
-
-	// List of input actions used by the owner.  These input actions are mapped to a gameplay tag and are automatically bound to abilities with matching input tags.
+	//@Ability IA
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input | Ability Input Action")
 		TArray<FInputActionInfo> AbilityInputActions;
+	//@UI IA
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input | UI Input Action")
+		TArray<FInputActionInfo> UIInputActions;
 
 };

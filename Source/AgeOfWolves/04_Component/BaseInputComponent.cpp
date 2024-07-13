@@ -25,6 +25,8 @@
 DEFINE_LOG_CATEGORY(LogInputComponent)
 // UE_LOGFMT(LogInputComponent, Log, "");
 
+
+#pragma region Default Setting
 UBaseInputComponent::UBaseInputComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {}
@@ -35,13 +37,29 @@ void UBaseInputComponent::OnRegister()
 
 }
 
+void UBaseInputComponent::OnUnregister()
+{
+	Super::OnUnregister();
+
+}
+
+void UBaseInputComponent::InitializeComponent()
+{
+	Super::InitializeComponent();
+
+}
+
+void UBaseInputComponent::DestroyComponent(bool bPromoteChildren)
+{
+	Super::DestroyComponent(bPromoteChildren);
+
+}
+
 void UBaseInputComponent::BeginPlay()
 {
 	Super::BeginPlay();
-	InitializePlayersInputActionsSetup();
 
-	//SpringArmComponent = Cast<APlayerCharacter>(GetOwner())->GetComponentByClass<USpringArmComponent>();
-	//check(SpringArmComponent);
+	InitializePlayersInputActionsSetup();
 }
 
 void UBaseInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -74,28 +92,38 @@ void UBaseInputComponent::InitializePlayersInputActionsSetup()
 		{
 			if (const UInputConfig* InputConfig = PawnData->InputConfig)
 			{
-				// #1. IMC to Subsystem
-				AddInputMappings(InputConfig, Subsystem);
-			
+				//@IMC
+				{
+					AddInputMappings(InputConfig, Subsystem);
+				}
+				//@Native Input Action
+				{
+					BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Move")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Move);
+					BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Look);
+					BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LockOn);
+					BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.ChangeLockOnTarget")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_ChangeLockOnTarget);
+				}
+				//@Ability Input Action
+				{
+					if(!InputConfig->AbilityInputActions.IsEmpty()) 
+						BindInputActions(InputConfig->AbilityInputActions, this, &ThisClass::Input_AbilityInputTagPressed, &ThisClass::Input_AbilityInputTagReleased);
+				}
+				//@UI Input Action
+				{
+					if (!InputConfig->UIInputActions.IsEmpty())
+						BindInputActions(InputConfig->UIInputActions, this, &ThisClass::Input_UIInputTagPressed, &ThisClass::Input_UIInputTagReleased);
+				}
 
-				// #2. Native Input Actions
-				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Move")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Move);
-				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Look);
-				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LockOn);
-				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.ChangeLockOnTarget")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_ChangeLockOnTarget);
-
-				// #3. Ability Input Actions
-				TArray<uint32> BindHandles;
-				BindAbilityInputActions(InputConfig, this, &ThisClass::Input_AbilityInputTagPressed, &ThisClass::Input_AbilityInputTagReleased, /*out*/ BindHandles);
-
-				// #4. Delegate Executed
+				//@Delegate
 				OnPlayerInputInitFinished.ExecuteIfBound();
 			}
 		}
 	}
 
 }
+#pragma endregion 
 
+#pragma region IMC(Input Mapping Context)
 void UBaseInputComponent::AddInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const
 {
 	check(InputConfig);
@@ -119,7 +147,9 @@ void UBaseInputComponent::RemoveInputMappings(const UInputConfig* InputConfig, U
 	InputSubsystem->RemoveMappingContext(InputConfig->InputMappingContext);
 
 }
+#pragma endregion
 
+#pragma region Binding
 void UBaseInputComponent::RemoveBinds(TArray<uint32>& BindHandles)
 {
 	for (uint32 Handle : BindHandles)
@@ -128,7 +158,9 @@ void UBaseInputComponent::RemoveBinds(TArray<uint32>& BindHandles)
 	}
 	BindHandles.Reset();
 }
+#pragma endregion
 
+#pragma region Callbacks bind to Native Input Action
 void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 {
 	// #1. Pawn
@@ -309,7 +341,9 @@ void UBaseInputComponent::Input_ChangeLockOnTarget(const FInputActionValue& Valu
 	}
 	SetControllerRotationTowardTarget();
 }
+#pragma endregion
 
+#pragma region Callbacks bind to Ability Input Action
 void UBaseInputComponent::Input_AbilityInputTagPressed(FGameplayTag InputTag)
 {
 	if (const APawn* Pawn = Cast<APawn>(GetOwner()))
@@ -338,5 +372,18 @@ void UBaseInputComponent::Input_AbilityInputTagReleased(FGameplayTag InputTag)
 			}
 		}
 	}
+
+}
+#pragma endregion
+
+#pragma region Callbacks bind to UI Input Action
+void UBaseInputComponent::Input_UIInputTagPressed(FGameplayTag InputTag)
+{
+	 //UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
+
+}
+void UBaseInputComponent::Input_UIInputTagReleased(FGameplayTag InputTag)
+{
+	//UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
 
 }

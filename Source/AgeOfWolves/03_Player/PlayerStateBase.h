@@ -55,14 +55,14 @@ protected:
 #pragma endregion
 
 #pragma region Gameplay Ability System
-protected:
+public:
 	/*
 	* @목적: PawnData를 통해 캐릭터의 최초(게임 시작 시점) 기본 GA, GE, AttributeSet을 ASC에 등록하는 작업을 수행합니다.
 	* @설명: 등록 순서는 AttributeBase -> GE -> GA 순서를 유지합니다. AttributeBase의 각 Attribute의 초기 값을 GE를 통해 초기화하기 때문입니다!
 	* @참고: Inventory -> HUD -> GAS(AS->GE->GA)
 	*/
 	UFUNCTION()
-		void InitializeGameplayAbilitySystem();
+		void InitializePlayerSystem();
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Ability System|Pawn Data")
@@ -105,14 +105,6 @@ public:
 	* @참조 : -
 	*/
 	FAnyAttributeValueChanged OnAnyAttributeValueChanged;
-#pragma endregion
-
-#pragma region UI
-protected:
-	UPROPERTY(EditDefaultsOnly)
-		TSubclassOf<UUserWidget> HUDClass;
-	UPROPERTY()
-		UUserWidget* HUD;
 #pragma endregion
 
 #pragma region Getter&Setter

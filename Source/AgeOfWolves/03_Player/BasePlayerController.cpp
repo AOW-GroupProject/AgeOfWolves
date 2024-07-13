@@ -24,6 +24,10 @@ void ABasePlayerController::BeginPlay()
 {
 	Super::BeginPlay();
 
+	if (auto PS = GetPlayerState<APlayerStateBase>())
+	{
+		PS->InitializePlayerSystem();
+	}
 }
 
 void ABasePlayerController::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -35,13 +39,6 @@ void ABasePlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	// OnPosess 이벤트 호출
-	//OnControllerPossessCharacter.ExecuteIfBound();
-
-	if (auto PS = GetPlayerState<APlayerStateBase>())
-	{
-		PS->InitializeGameplayAbilitySystem();
-	}
 }
 
 void ABasePlayerController::OnUnPossess()

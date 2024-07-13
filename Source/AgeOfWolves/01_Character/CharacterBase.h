@@ -15,7 +15,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCharacter, Log, All)
 class UPawnData;
 class UBaseAttributeSet;
 class UBaseAbilitySystemComponent;
-class UInventoryComponent;
 
 UCLASS()
 class AGEOFWOLVES_API ACharacterBase : public ACharacter, public IAbilitySystemInterface
@@ -35,9 +34,6 @@ protected:
 	//~APawn interface
 	virtual void PossessedBy(AController* NewController) override;
 	//~End Of APawn interface
-
-protected:
-	UInventoryComponent* InventoryComponent;
 #pragma endregion
 
 #pragma region Gameplay Ability System

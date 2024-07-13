@@ -7,6 +7,8 @@
 
 #include "04_Component/BaseInputComponent.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
+#include "04_Component/InventoryComponent.h"
+#include "04_Component/UIComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Camera/CameraComponent.h"
@@ -15,35 +17,35 @@
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "05_Animation/BaseAnimInstance.h"
+#include "00_GameInstance/AOWGameInstance.h"
 
 #include "Kismet/KismetMathLibrary.h"
-
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogPlayer)
-// UE_LOGFMT(LogPlayer, LoG, "");
+// UE_LOGFMT(LogPlayer, Log, "");
 
 APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
 	)
 {
-	// @Input Component 
+	// @Component 
 	{
 		InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
+		InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
+		UIComponent = CreateDefaultSubobject<UUIComponent>(TEXT("UI Component"));
 	}
-
 	// @Capsule
 	{
 		GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		GetMesh()->SetCollisionProfileName("PlayerMesh");
 	}
-
 	// @Rotation
 	{
 		bUseControllerRotationPitch = false;
 		bUseControllerRotationYaw = false;
 		bUseControllerRotationRoll = false;
 	}
-
 	// @Character Movement
 	{
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
@@ -59,7 +61,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
 		GetCharacterMovement()->GroundFriction = 8.0f;
 	}
-
 	// @Camera
 	{
 		SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
@@ -75,7 +76,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 		FollowCamera->bUsePawnControlRotation = false;
 	}
-
 	// @Anim Instance
 	{
 		static ConstructorHelpers::FClassFinder<UAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/ABP_AkaOni_Base'"));
@@ -89,11 +89,35 @@ void APlayerCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
+	//@의존 관계는 '->' 통해 명시하며, 좌항의 Component가 우항의 Component에 의존적이며 좌항의 Comp는 우항 Comp에서 제공하는 Delegate에 Callback 함수 등록
+	//@UI -> Inventory
+
+	//@TODO: Inventory의 아이템 추가/제거 작업 이벤트에 콜백 함수 바인딩
+	if(UIComponent)
+	{
+		//@->InventoryComp
+		if(InventoryComponent)
+		{
+			//@TODO: Binding Callbacks to Inven Comp Delegates
+		}
+		//@Load
+		UIComponent->LoadUI();
+	}
+
+	//@Inventory
+	if (InventoryComponent)
+	{
+
+		//@Load
+		InventoryComponent->LoadInventory();
+	}
+
 }
 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+	//@TODO: Refactoring
 	BaseInputComponent = Cast<UBaseInputComponent>(InputComponent);
 	check(BaseInputComponent);
 	BaseAnimInstance = Cast<UBaseAnimInstance>(GetMesh()->GetAnimInstance());
@@ -108,10 +132,9 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
+
 	AdjustCameraTransform(DeltaSeconds);
-
 }
-
 
 void APlayerCharacter::PossessedBy(AController* NewController)
 {
@@ -119,13 +142,15 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 
 	Super::PossessedBy(NewController);
 
-	// @설명 : Player State로부터 ASC에 대한 참조를 가져옵니다.
+	// @Player State Base 초기화
 	if (const auto& PlayerController = CastChecked<ABasePlayerController>(NewController))
 	{
 		if (const auto& PS = PlayerController->GetPlayerState<APlayerStateBase>())
 		{
 			if (IsValid(PS->GetAbilitySystemComponent()) && PS->GetAbilitySystemComponent()->IsA<UBaseAbilitySystemComponent>())
 			{
+				PS->InitializePlayerSystem();
+
 				AbilitySystemComponent = MakeWeakObjectPtr<UBaseAbilitySystemComponent>(Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()));
 			}
 		}

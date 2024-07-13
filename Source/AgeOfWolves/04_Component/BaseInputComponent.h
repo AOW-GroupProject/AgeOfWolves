@@ -34,6 +34,9 @@ public:
 protected:
 	//~UActorComponent interface
 	virtual void OnRegister() override;
+	virtual void OnUnregister() override;
+	virtual void InitializeComponent() override;
+	virtual void DestroyComponent(bool bPromoteChildren = false) override;
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	//~End Of UActorComponent interface
@@ -47,16 +50,17 @@ protected:
 public:
 	// @목적 : 사용자 입력 시스템 초기화 작업 완료 이벤트
 	FPlayerInputInit OnPlayerInputInitFinished;
-
 #pragma endregion 
 
-#pragma region Binding
+#pragma region IMC(Input Mapping Context)
 public:
 	// @설명 : Enhanced Input System에 사용자의 IMC(Input Mapping Context)를 등록합니다.
 	void AddInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
 	// @설명 : Enhanced Input System에 등록된 사용자의 특정 IMC(Input Mapping Context)를 제거합니다.
 	void RemoveInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
-	// @brief : Tempalte function in which Native Input Action matching to the Input Tag will bind to User's Callback Function
+#pragma endregion
+
+#pragma region Binding
 	template<typename UserClass, typename FuncType>
 	void BindNativeInputAction(const UInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func)
 	{
@@ -67,37 +71,32 @@ public:
 			BindAction(InputAction, TriggerEvent, Object, Func);
 		}
 	}
-	// @breif : Template function in which Ability Input Action matching to the Input Tag will bind to User's Callback Function
 	template<typename UserClass, typename PressedFuncType, typename ReleasedFuncType>
-	void BindAbilityInputActions(const UInputConfig* InputConfig, UserClass* Object, PressedFuncType PressedFunc, ReleasedFuncType ReleasedFunc, TArray<uint32>& BindHandles)
+	void BindInputActions(const TArray<FInputActionInfo>& InputActionInfos, UserClass* Object, PressedFuncType PressedFunc, ReleasedFuncType ReleasedFunc)
 	{
-		check(InputConfig);
+		if (InputActionInfos.IsEmpty()) return;
 
-		for (const auto& AbilityInputActionInfo : InputConfig->AbilityInputActions)
+		for (const auto& InputActionInfo : InputActionInfos)
 		{
-			if (AbilityInputActionInfo.InputAction && AbilityInputActionInfo.InputTag.IsValid())
+			if (InputActionInfo.InputAction && InputActionInfo.InputTag.IsValid())
 			{
 				if (PressedFunc)
 				{
-					BindHandles.Add(BindAction(AbilityInputActionInfo.InputAction, ETriggerEvent::Triggered, Object, PressedFunc, AbilityInputActionInfo.InputTag).GetHandle());
+					BindAction(InputActionInfo.InputAction, ETriggerEvent::Triggered, Object, PressedFunc, InputActionInfo.InputTag);
 				}
 
 				if (ReleasedFunc)
 				{
-					BindHandles.Add(BindAction(AbilityInputActionInfo.InputAction, ETriggerEvent::Completed, Object, ReleasedFunc, AbilityInputActionInfo.InputTag).GetHandle());
+					BindAction(InputActionInfo.InputAction, ETriggerEvent::Completed, Object, ReleasedFunc, InputActionInfo.InputTag);
 				}
 			}
 		}
 	}
-
 	// @breif : Remove BindHandles Interacting with corressponding Ability Input Action
 	void RemoveBinds(TArray<uint32>& BindHandles);
-
-
 #pragma endregion
 
 #pragma region Callbacks bind to Native Input Action
-
 protected:
 	// @목적 : 사용자의 Move IA에 대응되는 캐릭터 이동 조작을 정의하는 콜백 함수
 	void Input_Move(const FInputActionValue& Value);
@@ -144,21 +143,26 @@ protected:
 	// @설명 : 현재 플레이어의 입력 벡터
 	FVector2D InputVector;
 
-#pragma endregion
-
-#pragma region Callbacks bind to Ability Input Action
-
-protected:
-	// @목적 : 사용자의 Ability IA관련 키 눌림에 대응되는 콜백 함수
-	void Input_AbilityInputTagPressed(FGameplayTag InputTag);
-	// @목적 : 사용자의 Ability IA관련 키 해제에 대응되는 콜백 함수
-	void Input_AbilityInputTagReleased(FGameplayTag InputTag);
-
-#pragma endregion
-
 public:
 	FORCEINLINE AActor* GetTargetEnemy() { return TargetEnemy; }
 	FORCEINLINE bool GetbLockOn() { return bLockOn; }
 	FORCEINLINE float GetMaxLockOnDistance() { return MaxLockOnDistance; }
 	FORCEINLINE FVector2D GetInputVector() { return InputVector; }
+#pragma endregion
+
+#pragma region Callbacks bind to Ability Input Action
+protected:
+	// @목적 : 사용자의 Ability IA관련 키 눌림에 대응되는 콜백 함수
+	void Input_AbilityInputTagPressed(FGameplayTag InputTag);
+	// @목적 : 사용자의 Ability IA관련 키 해제에 대응되는 콜백 함수
+	void Input_AbilityInputTagReleased(FGameplayTag InputTag);
+#pragma endregion
+
+#pragma region Callbacks bind to Ability Input Action
+protected: 
+	void Input_UIInputTagPressed(FGameplayTag InputTag);
+	void Input_UIInputTagReleased(FGameplayTag InputTag);
+
+#pragma endregion
+
 };

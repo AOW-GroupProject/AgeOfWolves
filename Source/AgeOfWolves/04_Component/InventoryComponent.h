@@ -5,88 +5,79 @@
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "GameplayTagContainer.h"
+#include "09_Item/Item.h"
 
 #include "InventoryComponent.generated.h"
 
-class AItem;
+DECLARE_LOG_CATEGORY_EXTERN(LogInventory, Log, All);
 
-/*
-* EItemType
-*
-* @목적: Item 유형 목록을 정의합니다.
-*/
-UENUM(BlueprintType)
-enum class EItemType : uint8
-{
-	Consumable = 0		UMETA(DisplayName = "Consumable"),
-	NonConsumable		UMETA(DisplayName = "NonConsumable"),
-	MAX,
-};
+//@인벤토리 아이템 추가 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemAddedToInventory, const FGuid&, UniqueId);
+//@인벤토리 아이템 제거
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnItemRemovedFromInventory, const FGuid&, UniqueItemID, const FGameplayTag&, ItemTag);
 
-/*
-* EItemRank
-*
-* @목적: Item 랭크 목록을 정의합니다.
-*/
-UENUM(BlueprintType)
-enum class EItemRank : uint8
-{
-	Normal = 0		UMETA(DisplayName = "Normal"),
-	Epic			UMETA(DisplayName = "Epic"),
-	Logendary		UMETA(DisplayName = "Legendary"),
-	MAX,
-};
+class UAOWSaveGame;
+class UItemManagerSubsystem;
 
+#pragma region Inventory Item
 /*
-* FItemInfo
+* FInventoryItem
 * 
-* @목적: Item과 관련된 정보를 한 데 묶어놓습니다.
-* @참고: AItem* 유형 뿐만 아니라, FGameplayTag 유형의 '태그'를 저장합니다.
+* @목적: Inventory에서 관리하는 각 Item의 관련 정보들을 한데 묶어줍니다.
 */
 USTRUCT(BlueprintType)
-struct FItemInformation
+struct FInventoryItem
 {
 	GENERATED_BODY()
 
+#pragma region Default Setting
 public:
-	// AItem 유형의 객체
-	UPROPERTY(EditAnywhere)
-		AItem* Item;
-	// Gameplay Tag
-	UPROPERTY(EditAnywhere)
-		FGameplayTag ItemTag;
-	// Item 이름
-	UPROPERTY(EditAnywhere)
-		FText ItemName;
-	// Item 유형
-	UPROPERTY(EditAnywhere)
-		EItemType ItemType = EItemType::MAX;
-	// Item 등급
-	UPROPERTY(EditAnywhere)
-		EItemRank ItemRank = EItemRank::MAX;
-	// Item 설명
-	UPROPERTY(EditAnywhere)
-		FText ItemDescription;
-	// Item 가격
-	UPROPERTY(EditAnywhere)
-		int32 Item_Price = 0;
-	// 되팔 수 있는가?
-	UPROPERTY(EditAnywhere)
-		bool bSellable = true;
-	// 고유 아이템 여부
-	UPROPERTY(EditAnywhere)
-		bool bStackable = true;
-	// 최대 가질 수 있는 갯수
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bStackable == true"))
-		int32 MaxStack = -1;
-	// 제거 가능한가?
-	UPROPERTY(EditAnywhere)
-		bool bRemovable = true;
-	// 갯수가 0이되면 Inventory에서 바로 제거할 것인지
-	UPROPERTY(EditAnywhere, meta = (EditCondition = "bStackable == bRemovable"))
-		bool bRemoveWhenCountZero = false;
-};
+	FInventoryItem(){}
+	FInventoryItem(AActor* Actor, AItem* Item, int32 Num, FGuid ItemID);
+	FInventoryItem(AActor* Actor, TSubclassOf<AItem> ItemBlueprintClass, int32 Num, FGuid ItemID);
+	//@사용자 정의 대입 연산자
+	const bool operator=(const FInventoryItem& OtherInventoryItem) const
+	{
+		if (!ItemInstance || !OtherInventoryItem.ItemInstance)
+		{
+			UE_LOG(LogInventory, Error, TEXT("두 FIvnetoryItem 구조체 중 하나의 Instance가 유효하지 않습니다"));
+			return false;
+		}
+		return ItemInstance->GetItemTag() == OtherInventoryItem.ItemInstance->GetItemTag();
+	}
+public:
+	const FGameplayTag GetItemTag() const;
+	TSubclassOf<AItem> GetItemClass() const;
+#pragma endregion
 
+#pragma region Info
+protected:
+	UPROPERTY(VisibleAnywhere)
+		TSubclassOf<AItem> ItemClass = nullptr;
+	UPROPERTY(VisibleAnywhere)
+		TObjectPtr<AItem> ItemInstance = nullptr;
+	UPROPERTY(VisibleAnywhere)
+		TWeakObjectPtr<AActor> OwnerActorPtr = nullptr;
+#pragma endregion
+
+#pragma region Item
+protected:
+	AItem* SpawnAndDisableItem(AActor* OwnerActor, TSubclassOf<AItem> ItemBlueprintClass);
+	//@TODO: Item StartUse/EndUse
+
+public:
+	//@Item 갯수
+	UPROPERTY(VisibleAnywhere)
+		int32 ItemCount = -1;
+#pragma endregion
+
+};
+#pragma endregion
+/*
+* UInventoryComponent
+* 
+* Inventory Component는 Item객체 정보 FInventoryItem 형태로 저장하는 컴포넌트입니다.
+*/
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class AGEOFWOLVES_API UInventoryComponent : public UActorComponent
 {
@@ -94,27 +85,82 @@ class AGEOFWOLVES_API UInventoryComponent : public UActorComponent
 
 #pragma region Default Setting
 public:	
-	// Sets default values for this component's properties
-	UInventoryComponent();
+	UInventoryComponent(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	//~UActorComponent Interface
-	// @설명: 구성 요소가 액터에 등록될 때 호출됩니다. 구성 요소 초기화 로직을 여기에 배치할 수 있습니다.
 	virtual void OnRegister() override;
 	virtual void OnUnregister() override;
-	// @설명: OnRegister 후에 호출되어 구성 요소의 초기화를 완료합니다. 이 단계에서는 모든 초기 설정이 완료되어야 합니다.
 	virtual void InitializeComponent() override;
 	virtual void DestroyComponent(bool bPromoteChildren = false) override;
-	//~ End of UActorComponent Interface
-
-	// Called when the game starts
 	virtual void BeginPlay() override;
+	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	// @설명: Tick 함수는 임시 주석 처리, 필요할 때 정의하여 사용합니다.
 	//virtual void TickComponent(float DeltaTime, enum ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+	//~ End of UActorComponent Interface
+public:
+	/*
+	* @목적: Inventory의 현재 Item 정보를 초기화합니다.
+	* @설명: Save File이 있을 경우 LoadItemsFromSaveGame를 호출하며, 없을 경우 LoadDefaultItems를 호출합니다.
+	* @참조: LoadItemsFromSaveGame(), LoadDefaultItems()
+	*/
+	void LoadInventory();
+private:
+	//@TODO: Save Game 기능 구현 시 추가 구현
+	//@Inventory의 Item 정보를 Save File로부터 Load합니다.
+	void LoadItemsFromSaveGame(UAOWSaveGame* SaveGame);
+	//@Inventory의 Item 정보를 Item Manager로부터 Load합니다.
+	void LoadDefaultItems(UItemManagerSubsystem* ItemManager);
 #pragma endregion
 
 #pragma region Inventory
+private:
+	//@저장할 수 있는 최대 아이템 갯수, 수정 절대 하지 마세요
+	const int32 InventoryMaxSize = 30;
+
+public:
+	UPROPERTY(BlueprintAssignable)
+		FOnItemAddedToInventory OnItemAddedToInventory;
+	UPROPERTY(BlueprintAssignable)
+		FOnItemRemovedFromInventory OnItemRemovedFromInventory;
+public:
+	/*
+	* @목적: Item Actor를 Inventory에 추가합니다.
+	* @설명: 두 가지 AddItem 함수를 활용해, Inventory에 아이템 정보를 추가합니다.
+	* @참고: AddItem(AItem* Item, int32 Num = 1), AddItem(TSubclassOf<AItem> BlueprintItemClass, int32 Num = 1)
+	*/
+	void AddItem(AItem* Item, int32 Num = 1);
+	void AddItem(UItemManagerSubsystem* ItemManager, TSubclassOf<AItem> BlueprintItemClass, int32 Num = 1);
+	/*
+	* @목적: Item Actor가 현재 Inventory에 저장되어 있는지 확인합니다.
+	* @설명: Item Tag와 Item Class를 통해 확인할 수 있습니다.
+	*/
+	bool FindExistingItem(const FGameplayTag& ItemTag, /*OUT*/FGuid& OutItemID);
+	bool FindExistingItemByClass(TSubclassOf<AItem> ItemClass, /*OUT*/FGuid& OutItemID);
 protected:
-	TMap<FGuid, FItemInformation> Inventory;
+	//@Inventory에 새로운 아이템 추가
+	FGuid AddNewItem(AItem* Item, int32 Num);
+	//@아이템 제거
+	void RemoveExistingItem();
+	//@아이템 사용
+	void StartUseItem();
+	//@아이템 스폰
+	void SpawnItem();
+	//@아이템 교체
+	void SwapItem();
+	//@아이템 사용 종료
+	void EndUseItem();
+protected:
+	//@인벤토리에 저장된 Item Unique Id와 Item 정보 매핑
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+		TMap<FGuid, FInventoryItem> Inventory;
+#pragma endregion
+
+#pragma region Item
+protected:
+	//@추가된 아이템의 재활성화
+	void EnableItem(AItem* Item);
+	//@추가된 아이템의 비활성화
+	void DisableItem(AItem* Item);
 #pragma endregion
 };
