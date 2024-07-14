@@ -33,17 +33,17 @@ struct FInventoryItem
 #pragma region Default Setting
 public:
 	FInventoryItem(){}
-	FInventoryItem(AActor* Actor, AItem* Item, int32 Num, FGuid ItemID);
+	/*FInventoryItem(AActor* Actor, AItem* Item, int32 Num, FGuid ItemID);*/
 	FInventoryItem(AActor* Actor, TSubclassOf<AItem> ItemBlueprintClass, int32 Num, FGuid ItemID);
 	//@사용자 정의 대입 연산자
 	const bool operator=(const FInventoryItem& OtherInventoryItem) const
 	{
-		if (!ItemInstance || !OtherInventoryItem.ItemInstance)
+		if (!ItemCDO || !OtherInventoryItem.ItemCDO)
 		{
 			UE_LOG(LogInventory, Error, TEXT("두 FIvnetoryItem 구조체 중 하나의 Instance가 유효하지 않습니다"));
 			return false;
 		}
-		return ItemInstance->GetItemTag() == OtherInventoryItem.ItemInstance->GetItemTag();
+		return ItemCDO->GetItemTag() == OtherInventoryItem.ItemCDO->GetItemTag();
 	}
 public:
 	const FGameplayTag GetItemTag() const;
@@ -55,14 +55,15 @@ protected:
 	UPROPERTY(VisibleAnywhere)
 		TSubclassOf<AItem> ItemClass = nullptr;
 	UPROPERTY(VisibleAnywhere)
-		TObjectPtr<AItem> ItemInstance = nullptr;
+		TObjectPtr<AItem> ItemCDO = nullptr;
 	UPROPERTY(VisibleAnywhere)
 		TWeakObjectPtr<AActor> OwnerActorPtr = nullptr;
 #pragma endregion
 
 #pragma region Item
 protected:
-	AItem* SpawnAndDisableItem(AActor* OwnerActor, TSubclassOf<AItem> ItemBlueprintClass);
+	//@수정, 이제 사용하지 않음
+	//AItem* SpawnAndDisableItem(AActor* OwnerActor, TSubclassOf<AItem> ItemBlueprintClass);
 	//@TODO: Item StartUse/EndUse
 
 public:
@@ -129,7 +130,7 @@ public:
 	* @설명: 두 가지 AddItem 함수를 활용해, Inventory에 아이템 정보를 추가합니다.
 	* @참고: AddItem(AItem* Item, int32 Num = 1), AddItem(TSubclassOf<AItem> BlueprintItemClass, int32 Num = 1)
 	*/
-	void AddItem(AItem* Item, int32 Num = 1);
+	void AddItem(AItem* AlreadySpawnedItem, int32 Num = 1);
 	void AddItem(UItemManagerSubsystem* ItemManager, TSubclassOf<AItem> BlueprintItemClass, int32 Num = 1);
 	/*
 	* @목적: Item Actor가 현재 Inventory에 저장되어 있는지 확인합니다.
@@ -139,7 +140,9 @@ public:
 	bool FindExistingItemByClass(TSubclassOf<AItem> ItemClass, /*OUT*/FGuid& OutItemID);
 protected:
 	//@Inventory에 새로운 아이템 추가
-	FGuid AddNewItem(AItem* Item, int32 Num);
+	FGuid AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int32 Num, AItem* AlreadySpawnedItem = nullptr);
+	//@Inventory에 기존 아이템 추가
+	void AddExistingItem(const FGuid& ItemId, const FItemInformation& ItemInfo, int32 Num);
 	//@아이템 제거
 	void RemoveExistingItem();
 	//@아이템 사용

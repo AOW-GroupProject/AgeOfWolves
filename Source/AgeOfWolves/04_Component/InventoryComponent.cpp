@@ -13,32 +13,18 @@ DEFINE_LOG_CATEGORY(LogInventory)
 #pragma region Inventory Item
 
 #pragma region Default Setting
-FInventoryItem::FInventoryItem(AActor* Actor, AItem* Item, int32 Num, FGuid ItemID)
-{
-	check(Actor);
-	check(Item);
-
-	//@Owner Actor
-	OwnerActorPtr = Actor;
-	//@Item Class
-	ItemClass = Item->GetClass();
-	//@Item Instance
-	ItemInstance = Item;
-	//@Item Count
-	ItemCount = Num;
-}
-
 FInventoryItem::FInventoryItem(AActor* Actor, TSubclassOf<AItem> ItemBlueprintClass, int32 Num, FGuid ItemID)
 {
 	check(Actor);
+    check(ItemBlueprintClass);
 
 	//@Owner Actor
 	OwnerActorPtr = Actor;
 	//@Item Class
 	ItemClass = ItemBlueprintClass;
     //@Item Instance
-    ItemInstance = SpawnAndDisableItem(Actor, ItemBlueprintClass);
-    if (!ItemInstance)
+    ItemCDO = ItemBlueprintClass.GetDefaultObject();
+    if (!ItemCDO)
     {
         UE_LOGFMT(LogInventory, Error, "Item을 Inventory에 추가하는 과정에서, Item Instance 생성에 실패했습니다.");
     }
@@ -49,75 +35,80 @@ FInventoryItem::FInventoryItem(AActor* Actor, TSubclassOf<AItem> ItemBlueprintCl
 const FGameplayTag FInventoryItem::GetItemTag() const
 {
     //@Item Instance
-    if (!ItemInstance.Get())
+    if (!ItemCDO.Get())
     {
         UE_LOGFMT(LogInventory, Error, "Item Instance가 유효하지 않습니다. FInventoryItem::GetItemTag에서 오류 발생.");
         static const FGameplayTag EmptyTag;
         return EmptyTag;
     }
 
-    return ItemInstance->GetItemTag();
+    return ItemCDO->GetItemTag();
 }
 
 TSubclassOf<AItem> FInventoryItem::GetItemClass() const
 {
-    if (!ItemInstance.Get())
+    if (!ItemCDO.Get())
     {
         UE_LOGFMT(LogInventory, Error, "Item Instance가 유효하지 않습니다. FInventoryItem::GetItemClass에서 오류 발생.");
         return nullptr;
     }
 
-    return ItemInstance->GetClass();
-}
-
-#pragma endregion
-
-#pragma region Item
-AItem* FInventoryItem::SpawnAndDisableItem(AActor* OwnerActor, TSubclassOf<AItem> ItemBlueprintClass)
-{
-    //@Owner Actor
-    if (!IsValid(OwnerActor))
-    {
-        UE_LOG(LogInventory, Error, TEXT("Invalid Owner Actor"));
-        return nullptr;
-    }
-    //@World
-    UWorld* World = OwnerActor->GetWorld();
-    if (!World)
-    {
-        UE_LOG(LogInventory, Error, TEXT("Invalid World reference"));
-        return nullptr;
-    }
-    //@Transform
-    FTransform SpawnTransform = FTransform::Identity;
-    //@Begin Deferred Spawn
-    AItem* NewItem = Cast<AItem>(UGameplayStatics::BeginDeferredActorSpawnFromClass(World, ItemBlueprintClass, SpawnTransform));
-    if (NewItem)
-    {
-        //@충돌 Geometry 계산 생략
-        NewItem->SetActorEnableCollision(false);
-        //@가시성
-        NewItem->SetActorHiddenInGame(true);
-        //@Tick함수 비활성화
-        NewItem->SetActorTickEnabled(false);
-        //@컴포넌트 비활성화
-        TArray<UPrimitiveComponent*> PrimitiveComponents;
-        NewItem->GetComponents<UPrimitiveComponent>(PrimitiveComponents);
-        for (auto* Comp : PrimitiveComponents)
-        {
-            Comp->SetVisibility(false);
-        }
-        //@Finish Deferred Spawn
-        UGameplayStatics::FinishSpawningActor(NewItem, SpawnTransform);
-        return NewItem;
-    }
-    else
-    {
-        UE_LOGFMT(LogInventory, Error, "{0} 유형의 객체의 Deferred Spawn에 실패했습니다.", ItemBlueprintClass->GetName());
-        return nullptr;
-    }
+    return ItemCDO->GetClass();
 }
 #pragma endregion
+
+//@TODO: 수정, 사용하지 않음
+//AItem* FInventoryItem::SpawnAndDisableItem(AActor* OwnerActor, TSubclassOf<AItem> ItemBlueprintClass)
+//{
+//    // Owner Actor 확인
+//    if (!IsValid(OwnerActor))
+//    {
+//        UE_LOG(LogInventory, Error, TEXT("Invalid Owner Actor"));
+//        return nullptr;
+//    }
+//
+//    // World 가져오기
+//    UWorld* World = OwnerActor->GetWorld();
+//    if (!World)
+//    {
+//        UE_LOG(LogInventory, Error, TEXT("Invalid World reference"));
+//        return nullptr;
+//    }
+//
+//    // Transform 설정
+//    FTransform SpawnTransform = FTransform::Identity;
+//
+//    // Begin Deferred Spawn
+//    AItem* NewItem = Cast<AItem>(UGameplayStatics::BeginDeferredActorSpawnFromClass(World, ItemBlueprintClass, SpawnTransform));
+//    if (NewItem)
+//    {
+//        // 충돌 Geometry 계산 생략
+//        NewItem->SetActorEnableCollision(false);
+//
+//        // 가시성 설정
+//        NewItem->SetActorHiddenInGame(true);
+//
+//        // Tick 함수 비활성화
+//        NewItem->SetActorTickEnabled(false);
+//
+//        // 컴포넌트 비활성화
+//        TArray<UPrimitiveComponent*> PrimitiveComponents;
+//        NewItem->GetComponents<UPrimitiveComponent>(PrimitiveComponents);
+//        for (auto* Comp : PrimitiveComponents)
+//        {
+//            Comp->SetVisibility(false);
+//        }
+//
+//        // Finish Deferred Spawn
+//        UGameplayStatics::FinishSpawningActor(NewItem, SpawnTransform);
+//        return NewItem;
+//    }
+//    else
+//    {
+//        UE_LOGFMT(LogInventory, Error, "{0} 유형의 객체의 Deferred Spawn에 실패했습니다.", ItemBlueprintClass->GetName());
+//        return nullptr;
+//    }
+//}
 
 #pragma endregion
 
@@ -224,47 +215,47 @@ void UInventoryComponent::LoadDefaultItems(UItemManagerSubsystem* ItemManager)
 
 }
 
-void UInventoryComponent::AddItem(AItem* Item, int32 Num)
+void UInventoryComponent::AddItem(AItem* AlreadySpawnedItem, int32 Num)
 {
     //@Item
-    if (!IsValid(Item))
+    if (!IsValid(AlreadySpawnedItem))
     {
-        UE_LOGFMT(LogInventory, Error, "추가하고자 하는 Item이 유효하지 않습니다.");
+        UE_LOGFMT(LogInventory, Error, "추가하고자 하는 AlreadySpawnedItem이 유효하지 않습니다.");
         return;
     }
-    //@Item TAG
-    const FGameplayTag& ItemTag = Item->GetItemTag();
-    //@Item 비활성화
-    DisableItem(Item);
-    //@기존 아이템 검색 및 개수 증가
+    //@Item Tag
+    const FGameplayTag& ItemTag = AlreadySpawnedItem->GetItemTag();
+    //@Item Manager Subsystem
+    UItemManagerSubsystem* ItemManager = GetWorld()->GetGameInstance()->GetSubsystem<UItemManagerSubsystem>();
+    if (!ItemManager)
+    {
+        UE_LOGFMT(LogInventory, Error, "ItemManagerSubsystem을 가져올 수 없습니다.");
+        return;
+    }
+    //@FItemInformation
+    const FItemInformation* ItemInfo = ItemManager->GetItemInformation<FItemInformation>(AlreadySpawnedItem->GetItemType(), ItemTag);
+    if (!ItemInfo)
+    {
+        UE_LOGFMT(LogInventory, Error, "ItemInformation을 가져올 수 없습니다.");
+        return;
+    }
+    //@Add Existing Item
     FGuid ExistingItemID;
     if (FindExistingItem(ItemTag, ExistingItemID))
     {
-        //TODO: Max Stack에 Clamping
-        Inventory[ExistingItemID].ItemCount += Num;
-        //@Add Item Event
+        AddExistingItem(ExistingItemID, *ItemInfo, Num);
         OnItemAddedToInventory.Broadcast(ExistingItemID);
-        UE_LOGFMT(LogInventory, Log, "{0}: 인벤토리의 기존 아이템 개수가 증가했습니다.", ItemTag.ToString());
-        UE_LOGFMT(LogInventory, Warning, "ItemTag : {0}, Item Count : {1}",
-            Inventory[ExistingItemID].GetItemTag().ToString(),
-            FString::SanitizeFloat(Inventory[ExistingItemID].ItemCount));
     }
-    //@새 아이템 추가
+    //@Add New Item
     else
     {
-        //@Add New Item
-        FGuid NewID = AddNewItem(Item, Num);
+        FGuid NewID = AddNewItem(AlreadySpawnedItem->GetClass(), Num, AlreadySpawnedItem);
         if (!NewID.IsValid())
         {
             UE_LOGFMT(LogInventory, Error, "{0}: 인벤토리에 해당 아이템을 추가하는데 실패했습니다.", ItemTag.ToString());
             return;
         }
-        //@Add Item Delegate
         OnItemAddedToInventory.Broadcast(NewID);
-        UE_LOGFMT(LogInventory, Log, "{0}: 인벤토리에 새로운 아이템이 추가되었습니다.", ItemTag.ToString());
-        UE_LOGFMT(LogInventory, Warning, "ItemTag : {0}, Item Count : {1}",
-            Inventory[NewID].GetItemTag().ToString(),
-            FString::SanitizeFloat(Inventory[NewID].ItemCount));
     }
 }
 
@@ -276,7 +267,7 @@ void UInventoryComponent::AddItem(UItemManagerSubsystem* ItemManager, TSubclassO
         UE_LOGFMT(LogInventory, Error, "유효하지 않은 Item Class입니다.");
         return;
     }
-    //@Item CDO 
+    //@Item CDO
     AItem* DefaultItem = BlueprintItemClass.GetDefaultObject();
     if (!DefaultItem)
     {
@@ -305,39 +296,27 @@ void UInventoryComponent::AddItem(UItemManagerSubsystem* ItemManager, TSubclassO
         UE_LOGFMT(LogInventory, Error, "ItemInformation을 가져올 수 없습니다.");
         return;
     }
-    //@기존 아이템 검색 및 개수 증가
+    //@Add Existing Item
     FGuid ExistingItemID;
     if (FindExistingItemByClass(BlueprintItemClass, ExistingItemID))
     {
-        //@Add Existing Item
-        //@TODO: Max Stack 에 Clamp
-        Inventory[ExistingItemID].ItemCount += Num;
+        AddExistingItem(ExistingItemID, *ItemInfo, Num);
         OnItemAddedToInventory.Broadcast(ExistingItemID);
-        UE_LOGFMT(LogInventory, Log, "{0}: 인벤토리의 기존 아이템 개수가 증가했습니다.", ItemTag.ToString());
-        UE_LOGFMT(LogInventory, Warning, "ItemTag : {0}, Item Count : {1}",
-            Inventory[ExistingItemID].GetItemTag().ToString(),
-            FString::SanitizeFloat(Inventory[ExistingItemID].ItemCount));
     }
-    //@새 아이템 추가
+    //@Add New Item
     else
     {
-        //@Add New Item
-        FGuid NewID = AddNewItem(DefaultItem, Num);
+        FGuid NewID = AddNewItem(BlueprintItemClass, Num);
         if (!NewID.IsValid())
         {
             UE_LOGFMT(LogInventory, Error, "{0}: 인벤토리에 해당 아이템을 추가하는데 실패했습니다.", ItemTag.ToString());
             return;
         }
-        //@Add Item Event
         OnItemAddedToInventory.Broadcast(NewID);
-        UE_LOGFMT(LogInventory, Log, "{0}: 인벤토리에 새로운 아이템이 추가되었습니다.", ItemTag.ToString());
-        UE_LOGFMT(LogInventory, Warning, "ItemTag : {0}, Item Count : {1}",
-            Inventory[NewID].GetItemTag().ToString(),
-            FString::SanitizeFloat(Inventory[NewID].ItemCount));
     }
 }
 
-FGuid UInventoryComponent::AddNewItem(AItem* Item, int32 Num)
+FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int32 Num, AItem* AlreadySpawnedItem)
 {
     //@Owner Actor
     AActor* OwnerActor = GetOwner();
@@ -346,7 +325,7 @@ FGuid UInventoryComponent::AddNewItem(AItem* Item, int32 Num)
         UE_LOGFMT(LogInventory, Error, "Inventory 소유자가 유효하지 않습니다!");
         return FGuid();
     }
-    // @Game Instance
+    //@Game Insatnce
     UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(this);
     if (!GameInstance)
     {
@@ -356,35 +335,92 @@ FGuid UInventoryComponent::AddNewItem(AItem* Item, int32 Num)
     //@Inventory Max Size
     if (Inventory.Num() >= InventoryMaxSize)
     {
-        UE_LOGFMT(LogInventory, Warning,"Inventory가 꽉차서 더 이상 아이템을 추가할 수 없습니다.");
+        UE_LOGFMT(LogInventory, Warning, "Inventory가 꽉차서 더 이상 아이템을 추가할 수 없습니다.");
         return FGuid();
     }
-    //@Item Manager Subsystem
+    //Item Manager Subsystem
     UItemManagerSubsystem* ItemManager = GameInstance->GetSubsystem<UItemManagerSubsystem>();
     if (!ItemManager)
     {
         UE_LOGFMT(LogInventory, Error, "ItemManagerSubsystem을 가져올 수 없습니다.");
         return FGuid();
     }
-    //@Item Max Stack
-    if (const auto ItemInfo = ItemManager->GetItemInformation<FItemInformation>(Item->GetItemType(), Item->GetItemTag()))
+    //@Item-1
+    AItem* ItemToUse = AlreadySpawnedItem;
+    if (!ItemToUse)
     {
-        if (Num > ItemInfo->MaxStack)
-        {
-            UE_LOGFMT(LogInventory, Warning, "아이템 최대 스택 수치를 초과할 수 없습니다. 요청: {0}, 최대 스택: {1}",
-                Num, ItemInfo->MaxStack);
-            return FGuid();
-        }
+        ItemToUse = BlueprintItemClass.GetDefaultObject();
     }
-    //@CallBack 바인딩, Item
-    OnItemAddedToInventory.AddDynamic(Item, &AItem::OnItemAddedToInventory);
-    //@FInventoryItem 생성 및 추가
+    //@Item-2
+    if (!ItemToUse)
+    {
+        UE_LOGFMT(LogInventory, Error, "유효한 아이템 객체를 얻는데 실패했습니다.");
+        return FGuid();
+    }
+    //@FItemInformation
+    const FItemInformation* ItemInfo = ItemManager->GetItemInformation<FItemInformation>(ItemToUse->GetItemType(), ItemToUse->GetItemTag());
+    if (!ItemInfo)
+    {
+        UE_LOGFMT(LogInventory, Error, "ItemInformation을 가져올 수 없습니다.");
+        return FGuid();
+    }
+    //@Max Stack
+    if (Num > ItemInfo->MaxStack)
+    {
+        UE_LOGFMT(LogInventory, Warning, "아이템 최대 스택 수치를 초과할 수 없습니다. 요청: {0}, 최대 스택: {1}",
+            Num, ItemInfo->MaxStack);
+        return FGuid();
+    }
+    //@Callbacks
+    if (AlreadySpawnedItem)
+    {
+        OnItemAddedToInventory.AddDynamic(AlreadySpawnedItem, &AItem::OnItemAddedToInventory);
+    }
+    //@FInventoryItem
     FGuid NewID = FGuid::NewGuid();
-    FInventoryItem NewInvenItem(OwnerActor, Item, Num, NewID);
+    FInventoryItem NewInvenItem(OwnerActor, BlueprintItemClass, Num, NewID);
     Inventory.Add(NewID, NewInvenItem);
+    //@Disable Item
+    if (AlreadySpawnedItem)
+    {
+        DisableItem(AlreadySpawnedItem);
+    }
+
+    UE_LOGFMT(LogInventory, Log, "{0}: 인벤토리에 새로운 아이템이 추가되었습니다. 개수: {1}",
+        ItemToUse->GetItemTag().ToString(), Num);
 
     return NewID;
+}
 
+void UInventoryComponent::AddExistingItem(const FGuid& ItemId, const FItemInformation& ItemInfo, int32 Num)
+{
+    //@Existing FInventory Item
+    if (!Inventory.Contains(ItemId))
+    {
+        UE_LOGFMT(LogInventory, Error, "인벤토리에 해당 ItemId를 가진 아이템이 없습니다.");
+        return;
+    }
+    //@Existing Item
+    FInventoryItem& ExistingItem = Inventory[ItemId];
+    //@Count
+    int32 CurrentCount = ExistingItem.ItemCount;
+    int32 MaxStack = ItemInfo.MaxStack;
+    //@Available Space
+    int32 AvailableSpace = FMath::Max(0, MaxStack - CurrentCount);
+    int32 ActuallyAdded = FMath::Min(Num, AvailableSpace);
+    //@Add Existing Item
+    ExistingItem.ItemCount += ActuallyAdded;
+
+    if (ActuallyAdded < Num)
+    {
+        UE_LOGFMT(LogInventory, Warning, "{0}: 최대 저장 갯수({1})를 초과하여 일부만 추가되었습니다. 추가된 갯수: {2}, 초과된 갯수: {3}",
+            ExistingItem.GetItemTag().ToString(), MaxStack, ActuallyAdded, Num - ActuallyAdded);
+    }
+    else
+    {
+        UE_LOGFMT(LogInventory, Log, "{0}: 아이템 {1}개가 성공적으로 추가되었습니다. 현재 갯수: {2}/{3}",
+            ExistingItem.GetItemTag().ToString(), ActuallyAdded, ExistingItem.ItemCount, MaxStack);
+    }
 }
 
 void UInventoryComponent::RemoveExistingItem()
