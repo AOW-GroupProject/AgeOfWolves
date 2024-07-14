@@ -7,6 +7,7 @@
 
 #include "04_Component/BaseInputComponent.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
+#include "04_Component/CombatComponent.h" 
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Camera/CameraComponent.h"
@@ -26,6 +27,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
 	)
 {
+	PrimaryActorTick.bCanEverTick = true;
 	// @Input Component 
 	{
 		InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
@@ -83,6 +85,9 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 			GetMesh()->SetAnimInstanceClass(animInstance.Class);
 	}
 
+	// Create Combat Component on Player Character 
+	// CombatComponent = CreateDefaultSubobject<UCombatComponent>(TEXT("Combat Component"));
+
 }
 
 void APlayerCharacter::PostInitializeComponents()
@@ -109,7 +114,6 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 	AdjustCameraTransform(DeltaSeconds);
-
 }
 
 
@@ -168,10 +172,10 @@ void APlayerCharacter::AdjustControllerRotation(float DeltaSeconds)
 
 void APlayerCharacter::AdjustCameraTransform(float DeltaSeconds)
 {
-	
 	if (BaseInputComponent->GetbLockOn() == true)
 	{
 		SpringArm->bUsePawnControlRotation = false;
+		
 		AActor* TargetEnemy = BaseInputComponent->GetTargetEnemy();
 		// MaxLockOnDistance 보다 가까우면 true
 		bool bCloseToEnemy = (GetActorLocation() - TargetEnemy->GetActorLocation()).Length() < BaseInputComponent->GetMaxLockOnDistance();
@@ -183,17 +187,27 @@ void APlayerCharacter::AdjustCameraTransform(float DeltaSeconds)
 			FVector CharacterStart = GetActorLocation();
 			FVector TargetPosition = TargetEnemy->GetActorLocation();
 			FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(CharacterStart, TargetPosition);
-				
+
 			float SocketOffsetCoefficient = 1.0f;
 
-			GetController()->SetControlRotation(LookAtRotation);
-			// 달리지 않는 동안에만 ActorRotation을 LockOn방향으로 설정
+			// 컨트롤러 회전에 대한 선형 보간
+			FRotator TargetRotation = UKismetMathLibrary::RInterpTo(GetController()->GetControlRotation(), LookAtRotation, DeltaSeconds, 10.f);
+			// 결과 값을 액터 객체의 회전 값으로 설정
+			GetController()->SetControlRotation(TargetRotation);
+
+			// GetController()->SetControlRotation(LookAtRotation);
+
+			// 달리지 않는 동안에만 Character의 Rotation을 LockOn방향으로 설정한다.
+			// 달리는 동안은 방향키 방향으로 설정된다.
 			if (!(BaseAnimInstance->GetMovementState() == EMovementState::Run))
 			{
-				FRotator ActorRotation = FRotator(0.f, LookAtRotation.Yaw, 0.f);
-				SetActorRotation(ActorRotation);
+				FRotator LooAtRotatoionYaw = FRotator(0.f, LookAtRotation.Yaw, 0.f);
+				// 선형 보간
+				FRotator TargetActorRotation = UKismetMathLibrary::RInterpTo(GetActorRotation(), LooAtRotatoionYaw, DeltaSeconds, 40.f);
+				SetActorRotation(TargetActorRotation);
 				SocketOffsetCoefficient = 1.5f;
 			}
+
 			// 오른쪽, 왼쪽으로 이동하는 경우 스프링암의 Y오프셋을 조절
 			if (BaseInputComponent->GetInputVector().Y > 0) // 오른쪽으로 이동
 			{
@@ -211,11 +225,11 @@ void APlayerCharacter::AdjustCameraTransform(float DeltaSeconds)
 			}
 			// TargetEnemy와 거리에 따라 카메라를 위로 이동 시킴
 			float DistanceFromTargetEnemy = (GetActorLocation() - TargetPosition).Length();
-			DistanceFromTargetEnemy = FMath::Clamp((6000 / DistanceFromTargetEnemy) + 20, 0, 70);
+			DistanceFromTargetEnemy = FMath::Clamp((6000 / DistanceFromTargetEnemy) + 20, 0, 30);
 			FRotator DistanceRotation = FRotator(-DistanceFromTargetEnemy, 0, 0);
-	
+
 			FRotator FinalRotation = DistanceRotation + LookAtRotation;
-			FRotator SpringArmRotator = UKismetMathLibrary::RInterpTo(LookAtRotation, FinalRotation, DeltaSeconds, 10.f);
+			FRotator SpringArmRotator = UKismetMathLibrary::RInterpTo(LookAtRotation, FinalRotation, DeltaSeconds, 5.f);
 
 			SpringArm->SocketOffset.X = FMath::Lerp(0, -200, DistanceFromTargetEnemy / 70);
 			SpringArm->SetWorldRotation(FinalRotation);
@@ -242,5 +256,4 @@ void APlayerCharacter::AdjustCameraTransform(float DeltaSeconds)
 		SpringArm->SocketOffset.Y = 0;
 		BaseInputComponent->CancelLockOn();
 	}
-	
 }
