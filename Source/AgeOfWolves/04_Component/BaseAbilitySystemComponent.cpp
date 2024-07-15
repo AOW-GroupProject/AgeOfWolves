@@ -70,8 +70,6 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 			FGameplayTagContainer OutActivationRequiredAbilityTags;
 			FGameplayTagContainer OutActivationBlockedAbilityTags;
 
-			AbilityTagRelationshipMapping->GetRequiredAndBlockedActivationTags(CanActivateAbilitySource->AbilityTags, &OutActivationRequiredAbilityTags, &OutActivationBlockedAbilityTags);
-
 			if (!CanActivateAbilitySource->CanActivateAbility(AbilityToActivate, ActorInfo, SourceTags, TargetTags, &OutActivationRequiredAbilityTags, &OutActivationBlockedAbilityTags))
 			{
 				NotifyAbilityFailed(AbilityToActivate, CanActivateAbilitySource, InternalTryActivateAbilityFailureTags);
@@ -428,8 +426,8 @@ void UBaseAbilitySystemComponent::GetAbilityRelationshipActivationTags(const FGa
 
 void UBaseAbilitySystemComponent::ApplyAbilityBlockAndCancelTags(const FGameplayTagContainer& AbilityTags, UGameplayAbility* RequestingAbility, bool bEnableBlockTags, const FGameplayTagContainer& BlockTags, bool bExecuteCancelTags, const FGameplayTagContainer& CancelTags)
 {
-	FGameplayTagContainer AbilityTagsToBlock;
-	FGameplayTagContainer AbilityTagsToCancel;
+	FGameplayTagContainer AbilityTagsToBlock = BlockTags;
+	FGameplayTagContainer AbilityTagsToCancel = CancelTags;
 
 	if (AbilityTagRelationshipMapping)
 	{

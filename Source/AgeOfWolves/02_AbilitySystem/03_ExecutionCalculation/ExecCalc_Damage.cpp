@@ -53,7 +53,6 @@ static const FDamageStatics& DamageStatics()
 	static FDamageStatics DStatics;
 	return DStatics;
 }
-
 UExecCalc_Damage::UExecCalc_Damage()
 {
 	//FDamageStatics에서 정의된 Attribute들을 RelevantAttributesToCapture에 추가한다.

@@ -15,7 +15,7 @@ UAttackGameplayAbility::UAttackGameplayAbility()
 
 }
 
-void UAttackGameplayAbility::CauseDamage(AActor* TargetActor)
+void UAttackGameplayAbility::CauseDamageToTarget(AActor* TargetActor)
 {
 	FGameplayEffectSpecHandle DamageSpecHandle = MakeOutgoingGameplayEffectSpec(ApplyGameplayEffectClass, GetAbilityLevel());
 	for (TTuple<FGameplayTag, FScalableFloat> Pair : DamageTypes)

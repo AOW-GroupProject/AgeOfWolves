@@ -11,13 +11,17 @@
 #include "Abilities/GameplayAbility.h"
 #include "AbilitySystemComponent.h"
 
+// Sets default values for this component's properties
 UCombatComponent::UCombatComponent()
 {
+	// Set this component to be initialized when the game starts, and to be ticked every frame.  You can turn these features
+	// off to improve performance if you don't need them.
 	PrimaryComponentTick.bCanEverTick = false;
-
 	// ...
 }
 
+
+// Called when the game starts
 void UCombatComponent::BeginPlay()
 {
 	Super::BeginPlay();
@@ -48,7 +52,7 @@ void UCombatComponent::ResetCombo()
 void UCombatComponent::ActivateComboAbility(TSubclassOf<UGameplayAbility> AbilityClass)
 {
 	UBaseAbilitySystemComponent* ASC = GetAbilitysystemComponent();
-	if (bComboWindowOpen && ComboIndex > 0) // Combo°¡ °¡´ÉÇÒ¶§
+	if (bComboWindowOpen && ComboIndex > 0) // Comboï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Ò¶ï¿½
 	{
 
 	}
@@ -103,7 +107,7 @@ void UCombatComponent::QueueBlockedAbility(const UGameplayAbility* BlockedAbilit
 {
 	UE_LOG(LogTemp, Warning, TEXT("QueueBlockedAbility"));
 	UE_LOG(LogTemp, Warning, TEXT("BlockedAbility : %s"), *BlockedAbility->GetName());
-	// HandleÀ» ÅëÇØ AbilitySpecÀ» °Ë»öÇÏ°í QueuedAbility¿¡ ¼³Á¤ÇÕ´Ï´Ù.
+	// Handleï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ AbilitySpecï¿½ï¿½ ï¿½Ë»ï¿½ï¿½Ï°ï¿½ QueuedAbilityï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½Õ´Ï´ï¿½.
 	if (BaseAbilitySystemComponent)
 	{
 		QueuedAbility = BlockedAbility;

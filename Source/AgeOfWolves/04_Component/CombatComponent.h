@@ -14,11 +14,10 @@ class UGameplayAbility;
 struct FGameplayTagContainer;
 
 /**
- * @¸ñÀû : Player CharacterÀÇ ÀüÅõ¿Í °ü·ÃµÈ ¿©·¯ ±â´ÉÀ» ´ã´çÇÏ´Â ComponentÀÔ´Ï´Ù.
- * @¼³¸í : 1. Combo ½Ã½ºÅÛ
-		   2. Ability Queue ½Ã½ºÅÛ
-		   3. Lock On ½Ã½ºÅÛ
- * @ÂüÁ¶ : 
+ * @ï¿½ï¿½ï¿½ï¿½ : Player Characterï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½Ãµï¿½ ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½Ï´ï¿½ Componentï¿½Ô´Ï´ï¿½.
+ * @ï¿½ï¿½ï¿½ï¿½ : 1. Combo ï¿½Ã½ï¿½ï¿½ï¿½
+		   2. Ability Queue ï¿½Ã½ï¿½ï¿½ï¿½
+ * @ï¿½ï¿½ï¿½ï¿½ : 
  */
 
 
