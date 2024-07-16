@@ -138,6 +138,7 @@ void UInventoryComponent::InitializeComponent()
 	Super::InitializeComponent();
 
     Inventory.Empty();
+    QuickSlots.SetNum(MaxQuicKSlotSize);
 }
 
 void UInventoryComponent::DestroyComponent(bool bPromoteChildren)
@@ -333,7 +334,7 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
         return FGuid();
     }
     //@Inventory Max Size
-    if (Inventory.Num() >= InventoryMaxSize)
+    if (Inventory.Num() >= MaxInventorySize)
     {
         UE_LOGFMT(LogInventory, Warning, "Inventory가 꽉차서 더 이상 아이템을 추가할 수 없습니다.");
         return FGuid();
@@ -456,9 +457,8 @@ bool UInventoryComponent::FindExistingItem(const FGameplayTag& ItemTag, FGuid& O
     return false;
 }
 
-void UInventoryComponent::StartUseItem()
+void UInventoryComponent::StartUseItem(const FGuid& UniqueItemId)
 {
-	//@Item Instancing
 	//@Item 활성화
 }
 
@@ -529,6 +529,76 @@ void UInventoryComponent::DisableItem(AItem* Item)
         Comp->SetVisibility(false);
     }
 }
+#pragma endregion
+
+#pragma region Inventory UI
+
+#pragma region Inventory UI - Callbacks
+void UInventoryComponent::OnUIItemRemovalRequested(const FGuid& UniqueItemID)
+{
+    if (Inventory.Contains(UniqueItemID))
+    {
+        FInventoryItem& ItemToRemove = Inventory[UniqueItemID];
+        FGameplayTag ItemTag = ItemToRemove.GetItemTag();
+
+        // 아이템 제거 로직
+        Inventory.Remove(UniqueItemID);
+
+        // 아이템 제거 이벤트 발생
+        OnItemRemovedFromInventory.Broadcast(UniqueItemID, ItemTag);
+
+        UE_LOGFMT(LogInventory, Log, "아이템 {0} ({1})이(가) 인벤토리에서 제거되었습니다.",
+            UniqueItemID.ToString(), ItemTag.ToString());
+    }
+    else
+    {
+        UE_LOGFMT(LogInventory, Warning, "제거하려는 아이템 ID {0}을(를) 인벤토리에서 찾을 수 없습니다.", UniqueItemID.ToString());
+    }
+
+}
+
+void UInventoryComponent::OnUIQuickSlotAssigned(int32 SlotIndex, const FGuid& UniqueItemID)
+{
+    //@MaxSize
+    if (SlotIndex >= 0 && SlotIndex < MaxQuicKSlotSize)
+    {
+        //@Inventory
+        if (Inventory.Contains(UniqueItemID))
+        {
+            //@QuickSlots
+            QuickSlots[SlotIndex] = UniqueItemID;
+            UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 퀵슬롯 {1}에 할당되었습니다.",
+                Inventory[UniqueItemID].GetItemTag().ToString(), SlotIndex);
+        }
+        else
+        {
+            UE_LOGFMT(LogInventory, Warning, "퀵슬롯에 할당하려는 아이템 ID {0}을(를) 찾을 수 없습니다.", UniqueItemID.ToString());
+        }
+    }
+    else
+    {
+        UE_LOGFMT(LogInventory, Error, "유효하지 않은 퀵슬롯 인덱스: {0}", SlotIndex);
+    }
+}
+
+void UInventoryComponent::OnUIItemActivated(const FGuid& UniqueItemID)
+{
+    //@Inventory
+    if (Inventory.Contains(UniqueItemID))
+    {
+        //@FInventoryItem
+        FInventoryItem& Item = Inventory[UniqueItemID];
+        UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 활성화를 시도합니다.", Item.GetItemTag().ToString());
+        //Start Use Item
+        StartUseItem(UniqueItemID);
+    }
+    else
+    {
+        UE_LOGFMT(LogInventory, Warning, "활성화하려는 아이템 ID {0}을(를) 찾을 수 없습니다.", UniqueItemID.ToString());
+    }
+}
+#pragma endregion
+
 #pragma endregion
 
 //void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)

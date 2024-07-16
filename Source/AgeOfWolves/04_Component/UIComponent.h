@@ -13,6 +13,14 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUI, Log, All)
 class UUserWidget;
 class UUIManagerSubsystem;
 
+//@Item Removed
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemRemovalRequested, const FGuid&, UniqueItemID);
+//@Item Activated
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemActivated, const FGuid&, UniqueItemID);
+//@Item QuickSlot Assigned
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnQuickSlotAssigned, int32, SlotIndex, const FGuid&, UniqueItemID);
+
+
 /*
 * UUIComponent
 * 
@@ -51,6 +59,8 @@ protected:
 	//@Widget을 화면에서 숨깁니다.
     UFUNCTION(BlueprintCallable, Category = "UI")
         void HideUI(EUICategory Category, const FGameplayTag& UITag);
+public:
+
 protected:
     UPROPERTY()
         TMap<FGameplayTag,UUserWidget*> MHUDUIs;
@@ -64,6 +74,40 @@ public:
         UUserWidget* GetUI(EUICategory UICategory, const FGameplayTag& UITag) const;
 	UFUNCTION(BlueprintCallable, Category = "UI")
 		TArray<UUserWidget*> GetCategoryUIs(EUICategory UICategory) const;
+#pragma endregion
+
+#pragma region Inventory UI
+
+#pragma region Inventory UI - Delegates
+public:
+	//@Delegate: Item 제거 요청
+	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
+		FOnItemRemovalRequested OnItemRemovalRequested;
+	//@Delegate: Item 활성화 요청
+	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
+		FOnItemActivated OnItemActivated;
+	//@Delegate: Item을 Quick Slot 추가 요청
+	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
+		FOnQuickSlotAssigned OnQuickSlotAssigned;
+private:
+	//@Item Removal
+	void RequestItemRemoval(const FGuid& UniqueItemID);
+	//@Item Activation
+	void RequestItemActivation(const FGuid& UniqueItemID);
+	//@Item QuickSlot Assigned
+	void RequestQuickSlotAssignment(int32 SlotIndex, const FGuid& UniqueItemID);
+#pragma endregion
+
+#pragma region Inventory UI - Callbacks
+public:
+	//@Callbacks: Inventory에 새로운 아이템 추가 시 호출되는 콜백
+	UFUNCTION()
+		void OnInventoryItemAdded(const FGuid& UniqueItemID);
+	//@Callbacks: Inventory에서 기존 아이템 제거 시 호출되는 콜백
+	UFUNCTION()
+		void OnInventoryItemRemoved(const FGuid& UniqueItemID, const FGameplayTag& ItemTag);
+#pragma endregion
+
 #pragma endregion
 
 };

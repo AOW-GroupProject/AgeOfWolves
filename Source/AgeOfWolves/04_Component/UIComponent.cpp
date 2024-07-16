@@ -36,8 +36,10 @@ void UUIComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
 
+	//@GameInstance
 	if (UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(this))
 	{
+		//UIs: HUD, System, Interaction
 		if (UUIManagerSubsystem* UIManagerSubsystem = GameInstance->GetSubsystem<UUIManagerSubsystem>())
 		{
 			//@HUD
@@ -205,4 +207,54 @@ TArray<UUserWidget*> UUIComponent::GetCategoryUIs(EUICategory UICategory) const
 	CategoryMap->GenerateValueArray(Result);
 	return Result;
 }
+#pragma endregion
+
+#pragma region Inventory UI
+
+#pragma region Inventory UI - Delegates
+void UUIComponent::RequestItemRemoval(const FGuid& UniqueItemID)
+{
+	UE_LOGFMT(LogUI, Log, "UI에서 아이템 {0} 제거를 요청했습니다.", UniqueItemID.ToString());
+	OnItemRemovalRequested.Broadcast(UniqueItemID);
+}
+void UUIComponent::RequestItemActivation(const FGuid& UniqueItemID)
+{
+	UE_LOGFMT(LogUI, Log, "UI에서 아이템 {0} 활성화를 요청했습니다.", UniqueItemID.ToString());
+
+	OnItemActivated.Broadcast(UniqueItemID);
+}
+
+void UUIComponent::RequestQuickSlotAssignment(int32 SlotIndex, const FGuid& UniqueItemID)
+{
+	UE_LOGFMT(LogUI, Log, "UI에서 아이템 {0}의 퀵슬롯 추가를 요청했습니다.", UniqueItemID.ToString());
+
+	OnQuickSlotAssigned.Broadcast(SlotIndex, UniqueItemID);
+}
+#pragma endregion
+
+#pragma region Inventory UI - Callbacks
+void UUIComponent::OnInventoryItemAdded(const FGuid& UniqueItemID)
+{
+	// 인벤토리 UI 업데이트 로직
+	UE_LOGFMT(LogUI, Log, "인벤토리에 아이템 {0}이(가) 추가되었습니다. UI를 업데이트합니다.", UniqueItemID.ToString());
+	//@Inventory UI
+	if (UUserWidget* InventoryWidget = GetUI(EUICategory::HUD, FGameplayTag::RequestGameplayTag(FName("UI.HUD.Inventory"))))
+	{
+		//@TODO: Inventory UI 업데이트
+	}
+}
+
+void UUIComponent::OnInventoryItemRemoved(const FGuid& UniqueItemID, const FGameplayTag& ItemTag)
+{
+	UE_LOGFMT(LogUI, Log, "인벤토리에서 아이템 {0} ({1})이(가) 제거되었습니다. UI를 업데이트합니다.",
+		UniqueItemID.ToString(), ItemTag.ToString());
+	
+	//@Inventory UI
+	if (UUserWidget* InventoryWidget = GetUI(EUICategory::HUD, FGameplayTag::RequestGameplayTag(FName("UI.HUD.Inventory"))))
+	{
+		//@TODO: Inventory UI 업데이튼
+	}
+}
+#pragma endregion
+
 #pragma endregion

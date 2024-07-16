@@ -89,16 +89,16 @@ void APlayerCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	//@의존 관계는 '->' 통해 명시하며, 좌항의 Component가 우항의 Component에 의존적이며 좌항의 Comp는 우항 Comp에서 제공하는 Delegate에 Callback 함수 등록
-	//@UI -> Inventory
-
-	//@TODO: Inventory의 아이템 추가/제거 작업 이벤트에 콜백 함수 바인딩
-	if(UIComponent)
+	//@UI
+	if (UIComponent)
 	{
-		//@->InventoryComp
-		if(InventoryComponent)
+		//Inventory Comp - UI Comp
+		if (InventoryComponent)
 		{
-			//@TODO: Binding Callbacks to Inven Comp Delegates
+			//@Item Added
+			InventoryComponent->OnItemAddedToInventory.AddDynamic(UIComponent, &UUIComponent::OnInventoryItemAdded);
+			//@Item Removed
+			InventoryComponent->OnItemRemovedFromInventory.AddDynamic(UIComponent, &UUIComponent::OnInventoryItemRemoved);
 		}
 		//@Load
 		UIComponent->LoadUI();
@@ -107,11 +107,19 @@ void APlayerCharacter::PostInitializeComponents()
 	//@Inventory
 	if (InventoryComponent)
 	{
-
+		//@UI Comp -> Inventory Comp
+		if (UIComponent)
+		{
+			//@Item Removed
+			UIComponent->OnItemRemovalRequested.AddDynamic(InventoryComponent, &UInventoryComponent::OnUIItemRemovalRequested);
+			//@Item Quickslot Assgined
+			UIComponent->OnQuickSlotAssigned.AddDynamic(InventoryComponent, &UInventoryComponent::OnUIQuickSlotAssigned);
+			//@Item Used
+			UIComponent->OnItemActivated.AddDynamic(InventoryComponent, &UInventoryComponent::OnUIItemActivated);
+		}
 		//@Load
 		InventoryComponent->LoadInventory();
 	}
-
 }
 
 void APlayerCharacter::BeginPlay()

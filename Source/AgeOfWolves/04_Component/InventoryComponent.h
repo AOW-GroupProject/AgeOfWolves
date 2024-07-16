@@ -117,13 +117,14 @@ private:
 #pragma region Inventory
 private:
 	//@저장할 수 있는 최대 아이템 갯수, 수정 절대 하지 마세요
-	const int32 InventoryMaxSize = 30;
-
+	const int MaxInventorySize = 30;
 public:
-	UPROPERTY(BlueprintAssignable)
-		FOnItemAddedToInventory OnItemAddedToInventory;
-	UPROPERTY(BlueprintAssignable)
-		FOnItemRemovedFromInventory OnItemRemovedFromInventory;
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE int GetMaxInventorySize() { return MaxInventorySize; }
+protected:
+	//@인벤토리에 저장된 Item Unique Id와 Item 정보 매핑
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+		TMap<FGuid, FInventoryItem> Inventory;
 public:
 	/*
 	* @목적: Item Actor를 Inventory에 추가합니다.
@@ -146,17 +147,26 @@ protected:
 	//@아이템 제거
 	void RemoveExistingItem();
 	//@아이템 사용
-	void StartUseItem();
+	void StartUseItem(const FGuid& Item);
 	//@아이템 스폰
 	void SpawnItem();
 	//@아이템 교체
 	void SwapItem();
 	//@아이템 사용 종료
 	void EndUseItem();
+#pragma endregion
+
+#pragma region Quick Slots
+private:
+	//@설정 가능한 최대 퀵 슬롯 아이템 갯수, 절대 수정하지 마세요.
+	const int MaxQuicKSlotSize = 3;
+public:
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE int GetMaxQuicKSlotSize() { return MaxQuicKSlotSize; }
 protected:
-	//@인벤토리에 저장된 Item Unique Id와 Item 정보 매핑
+	//@퀵 슬롯에 추가된 고유의 아이템 아이디 목록, 크기는 3 이하로 고정
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TMap<FGuid, FInventoryItem> Inventory;
+		TArray<FGuid> QuickSlots;
 #pragma endregion
 
 #pragma region Item
@@ -166,4 +176,32 @@ protected:
 	//@추가된 아이템의 비활성화
 	void DisableItem(AItem* Item);
 #pragma endregion
+
+#pragma region Inventory UI
+
+#pragma region Inventory UI - Delegates
+public:
+	//@Delegate, Inventory에 아이템 추가 시 실행
+	UPROPERTY(BlueprintAssignable)
+		FOnItemAddedToInventory OnItemAddedToInventory;
+	//@Delegate: Inventory에서 기존 아이템 제거 시 실행
+	UPROPERTY(BlueprintAssignable)
+		FOnItemRemovedFromInventory OnItemRemovedFromInventory;
+#pragma endregion
+
+#pragma region Inventory UI - Callbacks
+public:
+	//@Callbacks: 기존 아이템 제거 시 호출되는 콜백
+	UFUNCTION()
+		void OnUIItemRemovalRequested(const FGuid& UniqueItemID);
+	//@Callbacks: QuickSlot에 새로운 아이템 추가 시 호출되는 콜백
+	UFUNCTION()
+		void OnUIQuickSlotAssigned(int32 SlotIndex, const FGuid& UniqueItemID);
+	//@Callbaks: QuickSlot의 아이템 활성화 시 호출되는 콜백
+	UFUNCTION()
+		void OnUIItemActivated(const FGuid& UniqueItemID);
+#pragma endregion
+
+#pragma endregion
+
 };
