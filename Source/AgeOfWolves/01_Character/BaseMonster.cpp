@@ -13,10 +13,12 @@
 ABaseMonster::ABaseMonster()
 {
 	
+
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	bAbilitiesInitialized = false;
+
 
 	static ConstructorHelpers::FObjectFinder<UMonsterData> dataAsset(TEXT("/Script/AgeOfWolves.MonsterData'/Game/Blueprints/09_Monster/MonsterData.MonsterData'"));
 	if (dataAsset.Object)
@@ -33,14 +35,15 @@ ABaseMonster::ABaseMonster()
 		//일단 주석처리
 		//Destroy();
 	}
-	AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("MonsterAbilitySystemComponent"));
-	//AbilitySystemComponent->
+
+	AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
+	
 
 	//싱글이 아닌 서버를 할 때 해줘야 할 것
 	//AbilitySystemComponent->SetIsReplicated(true);
 	//AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 
-	//AttributeSet = CreateDefaultSubobject<UBaseMonsterAttributeSet>(TEXT("AttributSet"));
+	AttributeSet = CreateDefaultSubobject<UBaseAttributeSet>(TEXT("AttributSet"));
 	
 	
 	
@@ -65,6 +68,8 @@ void ABaseMonster::Tick(float DeltaTime)
 {
 	Super::Tick(DeltaTime);
 
+
+
 }
 
 void ABaseMonster::PossessedBy(AController* NewController)
@@ -74,6 +79,41 @@ void ABaseMonster::PossessedBy(AController* NewController)
 	
 
 }
+
+EMonsterState ABaseMonster::GetCurrentState()
+{
+	return CurrentState;
+}
+
+void ABaseMonster::ChangeState(EMonsterState inValue)
+{
+	
+	WhenEndState();
+	CurrentState = inValue;
+}
+
+void ABaseMonster::WhenEndState()
+{
+	switch (CurrentState)
+	{
+	case EMonsterState::Patrol:
+
+		break;
+	case EMonsterState::Attacking:
+		CurrentState = EMonsterState::DetectingPlayer;
+		GetMesh()->GetAnimInstance()->Montage_Stop(0.5);
+		break;
+	
+	case EMonsterState::DetectingPlayer:
+
+		break;
+	case EMonsterState::Stunned:
+
+		break;
+	
+	}
+}
+
 
 void ABaseMonster::ControllRotation()
 {
@@ -85,7 +125,7 @@ void ABaseMonster::ControllRotation()
 
 UAbilitySystemComponent* ABaseMonster::GetAbilitySystemComponent() const
 {
-	return AbilitySystemComponent;
+	return AbilitySystemComponent.Get();
 }
 
 void ABaseMonster::InitializeGameplayAbilitySystem()
@@ -134,6 +174,7 @@ void ABaseMonster::InitializeGameplayAbilitySystem()
 			// 캐릭터의 기본 Gameplay Ability를 ASC에 최초 등록/적용합니다.
 			{
 				AbilitySet->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+				//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("DoneStartupGameplayAbility"));
 			}
 
 		}

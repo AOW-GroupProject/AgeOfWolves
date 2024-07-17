@@ -2,6 +2,7 @@
 
 
 #include "01_Character/BaseMonster_Spline.h"
+#include "10_Monster/BaseMonsterAIController.h"
 #include "Components/SplineComponent.h"
 #include "10_Monster/BaseSpline.h"
 #include "GameFramework/CharacterMovementComponent.h"
@@ -40,6 +41,7 @@ void ABaseMonster_Spline::BeginPlay()
 
 void ABaseMonster_Spline::Tick(float DeltaTime)
 {
+	Super::Tick(DeltaTime);
 	ControllRotation();
 }
 
@@ -55,6 +57,27 @@ void ABaseMonster_Spline::ControllRotation()
 			//SetActorRotation(UKismetMathLibrary::MakeRotFromX(GetVelocity())); //이거 변경해야됨
 		}
 		
+	}
+}
+
+void ABaseMonster_Spline::WhenEndState()
+{
+	switch (CurrentState)
+	{
+	case EMonsterState::Patrol:
+		SplineVectorBeforeDetectingPlayer = GetActorLocation();
+		break;
+	case EMonsterState::Attacking:
+		
+		break;
+
+	case EMonsterState::DetectingPlayer:
+
+		break;
+	case EMonsterState::Stunned:
+
+		break;
+
 	}
 }
 
@@ -86,6 +109,7 @@ void ABaseMonster_Spline::MoveAlongSplinePoint(float delta)
 	{
 		FVector tang = SplineActor->GetSplineComponent()->FindTangentClosestToWorldLocation(GetActorLocation(), ESplineCoordinateSpace::World);
 		GetCharacterMovement()->Velocity = tang.GetSafeNormal() * GetCharacterMovement()->MaxWalkSpeed;
+
 #pragma region Distance에 따른 Tangent 활용해보기(나중에)
 
 		//수정하고 싶은 점: 만약 거리가 굉장히 가까운 두 점이 있다면 경로를 건너뛰는 오류를 막기 위해 Distance를 사용하기
@@ -123,5 +147,30 @@ void ABaseMonster_Spline::MoveAlongSplinePoint(float delta)
 void ABaseMonster_Spline::SetSplineActor(ABaseSpline* spline)
 {
 	SplineActor = spline;
+}
+
+FVector ABaseMonster_Spline::GetSplineVectorToPatrol()
+{
+	return SplineVectorBeforeDetectingPlayer;
+}
+
+void ABaseMonster_Spline::WaitToReactivateDetecting()
+{
+	ABaseMonsterAIController* MonsterController = Cast<ABaseMonsterAIController>(GetController());
+	
+	if (MonsterController) MonsterController->SetIsPossibleDetecting(false);
+
+	FTimerHandle GravityTimerHandle;
+	float GravityTime = 3;
+
+	GetWorld()->GetTimerManager().SetTimer(GravityTimerHandle, FTimerDelegate::CreateLambda([&]()
+		{
+			// 여기서 위에서 선언했던 MonsterController 변수 그대로 쓰면 null참조 오류남
+			ABaseMonsterAIController* MonsterController = Cast<ABaseMonsterAIController>(GetController());
+			if(MonsterController) MonsterController->SetIsPossibleDetecting(true);
+
+			// TimerHandle 초기화
+			GetWorld()->GetTimerManager().ClearTimer(GravityTimerHandle);
+		}), GravityTime, false);
 }
 

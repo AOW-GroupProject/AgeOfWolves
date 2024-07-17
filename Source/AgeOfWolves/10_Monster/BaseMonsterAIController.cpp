@@ -24,8 +24,9 @@ ABaseMonsterAIController::ABaseMonsterAIController()
 	GetPerceptionComponent()->SetDominantSense(*SightConfig->GetSenseImplementation());
 	GetPerceptionComponent()->ConfigureSense(*SightConfig);
 	GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &ABaseMonsterAIController::OnTargetDetected);
+	GetPerceptionComponent()->OnTargetPerceptionForgotten.AddDynamic(this, &ABaseMonsterAIController::OnTargetForgotten);
 	SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
-
+	
 }
 
 void ABaseMonsterAIController::OnPossess(APawn* InPawn)
@@ -45,6 +46,31 @@ void ABaseMonsterAIController::OnTargetDetected(AActor* InActor, FAIStimulus Sti
 	//인식 시 캐릭터의 소환물 등 다른 객체도 인식할 수 있도록 수정
 	if (Cast<ACharacterBase>(InActor))
 	{
-		GetBlackboardComponent()->SetValueAsObject("Player", InActor);
+		if (IsPossibleDetecting)
+		{
+			GetBlackboardComponent()->SetValueAsObject("Player", InActor);
+			GetBlackboardComponent()->SetValueAsBool("DetectingPlayer", true);
+			Cast<ABaseMonster>(GetPawn())->ChangeState(EMonsterState::DetectingPlayer);
+		}
 	}
+}
+
+void ABaseMonsterAIController::OnTargetForgotten(AActor* InActor)
+{
+	if (Cast<ACharacterBase>(InActor))
+	{
+		GetBlackboardComponent()->SetValueAsObject("Player", nullptr);
+		GetBlackboardComponent()->SetValueAsBool("DetectingPlayer", false);
+	}
+}
+
+void ABaseMonsterAIController::SetIsPossibleDetecting(bool InBool)
+{
+	IsPossibleDetecting = InBool;
+	if (!InBool)
+	{
+		Cast<ABaseMonster>(GetPawn())->ChangeState(EMonsterState::Patrol);
+		GetBlackboardComponent()->SetValueAsBool("DetectingPlayer", false);
+	}
+	
 }

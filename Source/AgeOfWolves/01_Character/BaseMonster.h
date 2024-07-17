@@ -40,8 +40,9 @@ UENUM(BlueprintType)
 enum class EMonsterState : uint8
 {
 	Patrol UMETA(DisplayName = "patrol"),
-	Attack UMETA(DisplayName = "attack"),
-	DetectingPlayer UMETA(DisplayName = "detectingPlayer") //플레이어 감지 중
+	Attacking UMETA(DisplayName = "attacking"), //공격 애니메이션 재생 중
+	DetectingPlayer UMETA(DisplayName = "detectingPlayer"), //플레이어 감지 중
+	Stunned UMETA(DisplayName = "stunned")
 
 };
 
@@ -74,6 +75,26 @@ protected:
 	//현재 상태 저장
 	EMonsterState CurrentState;
 
+public:
+	UFUNCTION(BlueprintCallable)
+	EMonsterState GetCurrentState();
+	/*
+	* @목적 : State를 변경하고 WhenEndState를 실행해야 하는데 하나의 함수로 하기 위해서 제작.
+	* @설명 : State를 바꾸고 스테이트가 끝날 때 각 스테이트마다 실행해줘야 하는 내용을 담은 함수인 WhenEndState를 호출한다.
+	* @예시 : AttackMontage 마지막에 State를 Patrol중이었을 때 DetectingPlayer로 바꾸게 되는 상황이라면 
+	*/
+	UFUNCTION(BlueprintCallable)
+	void ChangeState(EMonsterState inValue);
+
+	UFUNCTION(BlueprintCallable)
+	virtual void WhenEndState();
+
+
+#pragma endregion
+
+
+#pragma region CombatSystem
+public:
 
 #pragma endregion
 
