@@ -177,7 +177,7 @@ void UInventoryComponent::LoadInventory()
         else
         {
             UItemManagerSubsystem* ItemManager = GameInstance->GetSubsystem<UItemManagerSubsystem>();
-            LoadDefaultItems(ItemManager);
+            LoadDefaultItemsFromItemManager(ItemManager);
         }
     }
 }
@@ -193,7 +193,7 @@ void UInventoryComponent::LoadItemsFromSaveGame(UAOWSaveGame* SaveGame)
     //@TODO: SaveGame으로부터 Save된 Inventory 정보 가져와서 초기화
 }
 
-void UInventoryComponent::LoadDefaultItems(UItemManagerSubsystem* ItemManager)
+void UInventoryComponent::LoadDefaultItemsFromItemManager(UItemManagerSubsystem* ItemManager)
 {
     //@Item Manager
     if (!ItemManager)

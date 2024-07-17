@@ -27,6 +27,8 @@ public:
 	const TArray<FUIInformation>* GetUICategoryInformations(const EUICategory& UICategory) const;
 	//@특정 UI의 정보를 제공하는 함수
 	const FUIInformation* GetUIInformation(const EUICategory& UICategory, const FGameplayTag& UITag) const;
+	//@특정 Input Tag를 갖는 UI를 제공하는 함수
+	const FUIInformation* GetUIInformaitonByInputTag(const FGameplayTag& InputTag) const;
 protected:
 	UPROPERTY()
 		UUICollection* UICollection;

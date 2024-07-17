@@ -92,6 +92,13 @@ void APlayerCharacter::PostInitializeComponents()
 	//@UI
 	if (UIComponent)
 	{
+		//Input Comp - UI Comp
+		if (auto BaseInputComp = Cast<UBaseInputComponent>(InputComponent))
+		{
+			// UI 입력 콜백 바인딩
+			BaseInputComp->OnUIInputTriggered.BindDynamic(UIComponent, &UUIComponent::OnUIInputTagTriggered);
+			BaseInputComp->OnUIInputReleased.BindDynamic(UIComponent, &UUIComponent::OffUIInputTagReleased);
+		}
 		//Inventory Comp - UI Comp
 		if (InventoryComponent)
 		{

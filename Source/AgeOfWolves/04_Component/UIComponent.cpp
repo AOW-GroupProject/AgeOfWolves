@@ -80,8 +80,10 @@ void UUIComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 #pragma endregion
 
 #pragma region UI
-void UUIComponent::CreateUI(const UUIManagerSubsystem& UIManagerSubsystem, EUICategory Category)
+void UUIComponent::CreateUI(const UUIManagerSubsystem& UIManagerSubsystem, EUICategory UICategory)
 {
+	UEnum* EnumPtr = StaticEnum<EUICategory>();
+
 	//@PC
 	APlayerController* PC = GetOwner()->GetWorld()->GetFirstPlayerController();
 	if (!PC)
@@ -90,20 +92,20 @@ void UUIComponent::CreateUI(const UUIManagerSubsystem& UIManagerSubsystem, EUICa
 		return;
 	}
 	//@UI Information
-	const TArray<FUIInformation>* UIInfos = UIManagerSubsystem.GetUICategoryInformations(Category);
+	const TArray<FUIInformation>* UIInfos = UIManagerSubsystem.GetUICategoryInformations(UICategory);
 	if (!UIInfos || UIInfos->IsEmpty())
 	{
-		UE_LOGFMT(LogUI, Warning, "{0} UI Information이 비어있습니다.", static_cast<int32>(Category));
+		UE_LOGFMT(LogUI, Warning, "UI Information 정보 중 {0}이 비어있습니다.", EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)));
 		return;
 	}
-
+	//@UI Info
 	for (const auto& UIInfo : *UIInfos)
 	{
 		UUserWidget* NewWidget = CreateWidget<UUserWidget>(PC, UIInfo.UIClass);
 		if (NewWidget)
 		{
-			// 카테고리에 따라 적절한 맵에 추가
-			switch (Category)
+			//@UI Category
+			switch (UICategory)
 			{
 			case EUICategory::HUD:
 				MHUDUIs.Add(UIInfo.UITag, NewWidget);
@@ -116,17 +118,17 @@ void UUIComponent::CreateUI(const UUIManagerSubsystem& UIManagerSubsystem, EUICa
 				break;
 			}
 			//@bShownOnBeginPlay
-			UIInfo.bShownOnBeginPlay ? ShowUI(Category, UIInfo.UITag) : HideUI(Category, UIInfo.UITag);
+			UIInfo.bShownOnBeginPlay ? ShowUI(UICategory, UIInfo.UITag) : HideUI(UICategory, UIInfo.UITag);
 			//@Add To Viewport
 			NewWidget->AddToViewport();
 
 			UE_LOGFMT(LogUI, Log, "{0} 카테고리의 {1} UI가 생성되었습니다.",
-				static_cast<int32>(Category), *UIInfo.UITag.ToString());
+				EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)), *UIInfo.UITag.ToString());
 		}
 		else
 		{
 			UE_LOGFMT(LogUI, Error, "{0} 카테고리의 {1} UI 생성에 실패했습니다.",
-				static_cast<int32>(Category), *UIInfo.UITag.ToString());
+				EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)), *UIInfo.UITag.ToString());
 		}
 	}
 }
@@ -137,24 +139,28 @@ void UUIComponent::LoadUI()
 
 }
 
-void UUIComponent::ShowUI(EUICategory Category, const FGameplayTag& UITag)
+void UUIComponent::ShowUI(EUICategory UICategory, const FGameplayTag& UITag)
 {
-	if (UUserWidget* UI = GetUI(Category, UITag))
+	if (UUserWidget* UI = GetUI(UICategory, UITag))
 	{
 		UI->SetVisibility(ESlateVisibility::Visible);
 	}
 }
-void UUIComponent::HideUI(EUICategory Category, const FGameplayTag& UITag)
+
+void UUIComponent::HideUI(EUICategory UICategory, const FGameplayTag& UITag)
 {
-	if (UUserWidget* UI = GetUI(Category, UITag))
+	if (UUserWidget* UI = GetUI(UICategory, UITag))
 	{
 		UI->SetVisibility(ESlateVisibility::Collapsed);
 	}
 }
 
+
+
 UUserWidget* UUIComponent::GetUI(EUICategory UICategory, const FGameplayTag& UITag) const
 {
 	const TMap<FGameplayTag, UUserWidget*>* CategoryMap = nullptr;
+	UEnum* EnumPtr = StaticEnum<EUICategory>();
 
 	switch (UICategory)
 	{
@@ -168,7 +174,7 @@ UUserWidget* UUIComponent::GetUI(EUICategory UICategory, const FGameplayTag& UIT
 		CategoryMap = &MInteractionUIs;
 		break;
 	default:
-		UE_LOGFMT(LogUI, Warning, "유효하지 않은 UI Category: {0}", static_cast<int32>(UICategory));
+		UE_LOGFMT(LogUI, Warning, "유효하지 않은 UI Category입니다.");
 		return nullptr;
 	}
 
@@ -177,14 +183,15 @@ UUserWidget* UUIComponent::GetUI(EUICategory UICategory, const FGameplayTag& UIT
 		return *FoundWidget;
 	}
 
-	UE_LOGFMT(LogUI, Warning, "{0} UI Category의 {1} UI를 찾지 못했습니다.",
-		static_cast<int32>(UICategory), *UITag.ToString());
+	UE_LOGFMT(LogUI, Warning, "{0} Category의 {1} UI를 찾지 못했습니다.",
+		EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)), *UITag.ToString());
 	return nullptr;
 }
 
 TArray<UUserWidget*> UUIComponent::GetCategoryUIs(EUICategory UICategory) const
 {
 	TArray<UUserWidget*> Result;
+	UEnum* EnumPtr = StaticEnum<EUICategory>();
 
 	const TMap<FGameplayTag, UUserWidget*>* CategoryMap = nullptr;
 
@@ -200,12 +207,126 @@ TArray<UUserWidget*> UUIComponent::GetCategoryUIs(EUICategory UICategory) const
 		CategoryMap = &MInteractionUIs;
 		break;
 	default:
-		UE_LOGFMT(LogUI, Warning, "유효하지 않은 UI Category: {0}", static_cast<int32>(UICategory));
+		UE_LOGFMT(LogUI, Warning, "유효하지 않은 UI Category입니다.");
 		return Result;
 	}
 
 	CategoryMap->GenerateValueArray(Result);
 	return Result;
+}
+#pragma endregion
+
+#pragma region UI Input
+void UUIComponent::OnUIInputTagTriggered(const FGameplayTag& InputTag)
+{
+	//@Input Tag
+	if (!InputTag.IsValid())
+	{
+		UE_LOGFMT(LogUI, Error, "OnUIInputTagTriggered: 유효하지 않은 InputTag입니다.");
+		return;
+	}
+
+	UE_LOGFMT(LogUI, Log, "UI 입력이 트리거되었습니다. InputTag: {0}", InputTag.ToString());
+
+	//@UI Manager
+	UUIManagerSubsystem* UIManager = GetWorld()->GetGameInstance()->GetSubsystem<UUIManagerSubsystem>();
+	if (!UIManager)
+	{
+		UE_LOGFMT(LogUI, Error, "OnUIInputTagTriggered: UIManagerSubsystem을 찾을 수 없습니다.");
+		return;
+	}
+
+	//@UI Information
+	const FUIInformation* UIInfo = UIManager->GetUIInformaitonByInputTag(InputTag);
+	if (!UIInfo)
+	{
+		UE_LOGFMT(LogUI, Warning, "OnUIInputTagTriggered: 해당 InputTag에 대응하는 UI 정보를 찾을 수 없습니다. InputTag: {0}", InputTag.ToString());
+		return;
+	}
+
+	//@UI Widget
+	UUserWidget* UIWidget = nullptr;
+	switch (UIInfo->UICategory)
+	{
+	case EUICategory::HUD:
+		UIWidget = *MHUDUIs.Find(UIInfo->UITag);
+		break;
+	case EUICategory::System:
+		UIWidget = *MSystemUIs.Find(UIInfo->UITag);
+		break;
+	case EUICategory::Interaction:
+		UIWidget = *MInteractionUIs.Find(UIInfo->UITag);
+		break;
+	default:
+		UE_LOGFMT(LogUI, Error, "OnUIInputTagTriggered: 알 수 없는 UI 카테고리입니다. Category: {0}", static_cast<uint8>(UIInfo->UICategory));
+		return;
+	}
+
+	if (UIWidget)
+	{
+		
+		UE_LOGFMT(LogUI, Log, "OnUIInputTagTriggered: UI 위젯을 찾았습니다. UITag: {0}", UIInfo->UITag.ToString());
+	}
+	else
+	{
+		UE_LOGFMT(LogUI, Warning, "OnUIInputTagTriggered: UI 위젯을 찾을 수 없습니다. UITag: {0}", UIInfo->UITag.ToString());
+	}
+}
+
+void UUIComponent::OffUIInputTagReleased(const FGameplayTag& InputTag)
+{
+	if (!InputTag.IsValid())
+	{
+		UE_LOGFMT(LogUI, Error, "OffUIInputTagReleased: 유효하지 않은 InputTag입니다.");
+		return;
+	}
+
+	UE_LOGFMT(LogUI, Log, "UI 입력이 해제되었습니다. InputTag: {0}", InputTag.ToString());
+
+	//@UI Manager
+	UUIManagerSubsystem* UIManager = GetWorld()->GetGameInstance()->GetSubsystem<UUIManagerSubsystem>();
+	if (!UIManager)
+	{
+		UE_LOGFMT(LogUI, Error, "OffUIInputTagReleased: UIManagerSubsystem을 찾을 수 없습니다.");
+		return;
+	}
+
+	//@UI Information
+	const FUIInformation* UIInfo = UIManager->GetUIInformaitonByInputTag(InputTag);
+	if (!UIInfo)
+	{
+		UE_LOGFMT(LogUI, Warning, "OffUIInputTagReleased: 해당 InputTag에 대응하는 UI 정보를 찾을 수 없습니다. InputTag: {0}", InputTag.ToString());
+		return;
+	}
+
+	//@UI Widget
+	UUserWidget* UIWidget = nullptr;
+	switch (UIInfo->UICategory)
+	{
+	case EUICategory::HUD:
+		UIWidget = *MHUDUIs.Find(UIInfo->UITag);
+		break;
+	case EUICategory::System:
+		UIWidget = *MSystemUIs.Find(UIInfo->UITag);
+		break;
+	case EUICategory::Interaction:
+		UIWidget = *MInteractionUIs.Find(UIInfo->UITag);
+		break;
+	default:
+		UE_LOGFMT(LogUI, Error, "OffUIInputTagReleased: 알 수 없는 UI 카테고리입니다. Category: {0}", static_cast<uint8>(UIInfo->UICategory));
+		return;
+	}
+
+	if (UIWidget)
+	{
+		// UI 위젯을 찾았을 때의 처리
+		// 예: UIWidget->SetVisibility(ESlateVisibility::Hidden);
+		UE_LOGFMT(LogUI, Log, "OffUIInputTagReleased: UI 위젯을 찾았습니다. UITag: {0}", UIInfo->UITag.ToString());
+	}
+	else
+	{
+		UE_LOGFMT(LogUI, Warning, "OffUIInputTagReleased: UI 위젯을 찾을 수 없습니다. UITag: {0}", UIInfo->UITag.ToString());
+	}
 }
 #pragma endregion
 
@@ -217,6 +338,7 @@ void UUIComponent::RequestItemRemoval(const FGuid& UniqueItemID)
 	UE_LOGFMT(LogUI, Log, "UI에서 아이템 {0} 제거를 요청했습니다.", UniqueItemID.ToString());
 	OnItemRemovalRequested.Broadcast(UniqueItemID);
 }
+
 void UUIComponent::RequestItemActivation(const FGuid& UniqueItemID)
 {
 	UE_LOGFMT(LogUI, Log, "UI에서 아이템 {0} 활성화를 요청했습니다.", UniqueItemID.ToString());

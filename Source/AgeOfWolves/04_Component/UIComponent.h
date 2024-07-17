@@ -55,17 +55,19 @@ public:
 protected:
 	//@Widget을 화면에 나타냅니다.
     UFUNCTION(BlueprintCallable, Category = "UI")
-        void ShowUI(EUICategory Category, const FGameplayTag& UITag);
+        void ShowUI(EUICategory UICategory, const FGameplayTag& UITag);
 	//@Widget을 화면에서 숨깁니다.
     UFUNCTION(BlueprintCallable, Category = "UI")
-        void HideUI(EUICategory Category, const FGameplayTag& UITag);
-public:
+        void HideUI(EUICategory UICategory, const FGameplayTag& UITag);
 
 protected:
+	//@HUD
     UPROPERTY()
         TMap<FGameplayTag,UUserWidget*> MHUDUIs;
+	//@System
 	UPROPERTY()
 		TMap<FGameplayTag, UUserWidget*> MSystemUIs;
+	//@Interaction
 	UPROPERTY()
 		TMap<FGameplayTag, UUserWidget*> MInteractionUIs;
 
@@ -74,6 +76,14 @@ public:
         UUserWidget* GetUI(EUICategory UICategory, const FGameplayTag& UITag) const;
 	UFUNCTION(BlueprintCallable, Category = "UI")
 		TArray<UUserWidget*> GetCategoryUIs(EUICategory UICategory) const;
+#pragma endregion
+
+#pragma region UI Input
+public:
+	UFUNCTION()
+		void OnUIInputTagTriggered(const FGameplayTag& InputTag);
+	UFUNCTION()
+		void OffUIInputTagReleased(const FGameplayTag& InputTag);
 #pragma endregion
 
 #pragma region Inventory UI

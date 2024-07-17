@@ -16,6 +16,9 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInputComponent, Log, All)
 
 DECLARE_DYNAMIC_DELEGATE(FPlayerInputInit);
 
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnUIInputTriggered, const FGameplayTag&, UIInputTag);
+DECLARE_DYNAMIC_DELEGATE_OneParam(FOnUIInputReleased, const FGameplayTag&, UIInputTag);
+
 /**
  * @목적 : Enhanced Input System 활용을 위한 사용자 정의 Input Component를 정의합니다.
  * @설명 : 일반적인 Input Component 대신, Enhanced Input System 활용이 가능한 사용자 정의 Input Component를 정의하고,
@@ -96,7 +99,7 @@ public:
 	void RemoveBinds(TArray<uint32>& BindHandles);
 #pragma endregion
 
-#pragma region Callbacks bind to Native Input Action
+#pragma region Native Input Action
 protected:
 	// @목적 : 사용자의 Move IA에 대응되는 캐릭터 이동 조작을 정의하는 콜백 함수
 	void Input_Move(const FInputActionValue& Value);
@@ -150,7 +153,7 @@ public:
 	FORCEINLINE FVector2D GetInputVector() { return InputVector; }
 #pragma endregion
 
-#pragma region Callbacks bind to Ability Input Action
+#pragma region Ability Input Action
 protected:
 	// @목적 : 사용자의 Ability IA관련 키 눌림에 대응되는 콜백 함수
 	void Input_AbilityInputTagPressed(FGameplayTag InputTag);
@@ -158,11 +161,14 @@ protected:
 	void Input_AbilityInputTagReleased(FGameplayTag InputTag);
 #pragma endregion
 
-#pragma region Callbacks bind to Ability Input Action
-protected: 
+#pragma region UI Input Action
+public:
+	FOnUIInputTriggered OnUIInputTriggered;
+	FOnUIInputReleased OnUIInputReleased;
+
+private: 
 	void Input_UIInputTagPressed(FGameplayTag InputTag);
 	void Input_UIInputTagReleased(FGameplayTag InputTag);
-
 #pragma endregion
 
 };

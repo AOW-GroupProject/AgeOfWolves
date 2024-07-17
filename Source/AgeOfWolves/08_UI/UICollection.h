@@ -48,6 +48,12 @@ public:
 	//@UI를 초기화 시점에 바로 Screen에 나타낼지 여부
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (Categories = "UI Information | UI Shown On BeginPlay"))
 		bool bShownOnBeginPlay = false;
+	//@Input에 바인딩 되어있는지 여부
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (Categories = "UI Information | Key Binding"))
+		bool bInputBinded = false;
+	//@Input Tags
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (Categories = "UI Information | Key Binding", EditCondition = "bInputBinded == true"))
+		TArray<FGameplayTag> InputTags;
 };
 
 /**

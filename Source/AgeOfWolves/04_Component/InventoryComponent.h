@@ -111,7 +111,7 @@ private:
 	//@Inventory의 Item 정보를 Save File로부터 Load합니다.
 	void LoadItemsFromSaveGame(UAOWSaveGame* SaveGame);
 	//@Inventory의 Item 정보를 Item Manager로부터 Load합니다.
-	void LoadDefaultItems(UItemManagerSubsystem* ItemManager);
+	void LoadDefaultItemsFromItemManager(UItemManagerSubsystem* ItemManager);
 #pragma endregion
 
 #pragma region Inventory

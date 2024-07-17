@@ -346,6 +346,7 @@ void UBaseInputComponent::Input_ChangeLockOnTarget(const FInputActionValue& Valu
 #pragma region Callbacks bind to Ability Input Action
 void UBaseInputComponent::Input_AbilityInputTagPressed(FGameplayTag InputTag)
 {
+	//@TODO: Callback을 등록하는 방식으로 변경 예정
 	if (const APawn* Pawn = Cast<APawn>(GetOwner()))
 	{
 		if (const auto& PS = CastChecked<APlayerStateBase>(Pawn->GetPlayerState()))
@@ -361,7 +362,7 @@ void UBaseInputComponent::Input_AbilityInputTagPressed(FGameplayTag InputTag)
 
 void UBaseInputComponent::Input_AbilityInputTagReleased(FGameplayTag InputTag)
 {
-
+	//@TODO: Callback을 등록하는 방식으로 변경 예정
 	if (const APawn* Pawn = Cast<APawn>(GetOwner()))
 	{
 		if (const auto& PS = CastChecked<APlayerStateBase>(Pawn->GetPlayerState()))
@@ -379,11 +380,15 @@ void UBaseInputComponent::Input_AbilityInputTagReleased(FGameplayTag InputTag)
 #pragma region Callbacks bind to UI Input Action
 void UBaseInputComponent::Input_UIInputTagPressed(FGameplayTag InputTag)
 {
-	 //UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
+	//UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
+	OnUIInputTriggered.ExecuteIfBound(InputTag);
 
 }
+
 void UBaseInputComponent::Input_UIInputTagReleased(FGameplayTag InputTag)
 {
 	//UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
+	OnUIInputReleased.ExecuteIfBound(InputTag);
 
 }
+#pragma endregion

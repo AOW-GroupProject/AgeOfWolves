@@ -41,7 +41,6 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Tick(float DeltaSeconds) override;
 	//~End AActor interface
-
 	//~Begin APawn interface
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void PawnClientRestart() override;
