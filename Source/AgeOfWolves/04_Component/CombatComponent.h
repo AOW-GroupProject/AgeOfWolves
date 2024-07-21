@@ -117,17 +117,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ResetAllowedInputTags();
 
-
-	
-
-
-
 #pragma endregion
 
-#pragma region LockOn System
-
-#pragma endregion
-public :
 	
 
 };
