@@ -1,4 +1,3 @@
-
 #include "PlayerStateBase.h"
 #include "Logging/StructuredLog.h"
 
@@ -10,6 +9,7 @@
 
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
+
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 

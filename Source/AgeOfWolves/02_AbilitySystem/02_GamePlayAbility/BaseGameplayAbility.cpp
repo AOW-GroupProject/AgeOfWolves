@@ -122,7 +122,6 @@ bool UBaseGameplayAbility::CanActivateAbility(
     const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, 
     OUT FGameplayTagContainer* ARTags, OUT FGameplayTagContainer* ABTags) const
 {
-
     // @Actor Info 체크
     AActor* const AvatarActor = ActorInfo ? ActorInfo->AvatarActor.Get() : nullptr;
     if (AvatarActor == nullptr || !ShouldActivateAbility(AvatarActor->GetLocalRole()))
@@ -208,7 +207,14 @@ bool UBaseGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySyste
     bool bBlocked = false;
     bool bMissing = false;
 
-    // 1. "Blocked" 체크
+    // ToDo : BlockedTag, MissingTag 사용 로직 추가
+    // 로직 추가시, Ability 활성화가 실패할 때마다 해당 GameplayTag가 출력 로그 메시지에 포함되거나, showdebug AbilitySystem HUD에서 표시된다."
+    UAbilitySystemGlobals& AbilitySystemGlobals = UAbilitySystemGlobals::Get();
+    const FGameplayTag& BlockedTag = AbilitySystemGlobals.ActivateFailTagsBlockedTag;
+    const FGameplayTag& MissingTag = AbilitySystemGlobals.ActivateFailTagsMissingTag;
+
+
+    // 1. 이 Ability의 태그들 중 하나라도 "Blocked" 되는지 확인한다.
     if (AbilitySystemComponent.AreAbilityTagsBlocked(AbilityTags))
     {
         UE_LOGFMT(LogGA, Error, "Ability is Blocked : {0}", GetName());
@@ -218,13 +224,18 @@ bool UBaseGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySyste
     // 2. "Activation Required"와 "Actiation Blocked"에 대한 처리.
     {
         const UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(&AbilitySystemComponent);
+        static FGameplayTagContainer ActivationRequiredAbilityTags;
+        static FGameplayTagContainer ActivationBlockedAbilityTags;
 
-        FGameplayTagContainer DummyContainer1 = FGameplayTagContainer::EmptyContainer;
-        FGameplayTagContainer DummyContainer2 = FGameplayTagContainer::EmptyContainer;
+        ActivationRequiredAbilityTags = ActivationRequiredTags;
+        ActivationBlockedAbilityTags = ActivationBlockedTags;
+
+        // FGameplayTagContainer DummyContainer1 = FGameplayTagContainer::EmptyContainer;
+        // FGameplayTagContainer DummyContainer2 = FGameplayTagContainer::EmptyContainer;
 
         // @AR Tags(Activation Required), AB Tags(Activation Blocked)
-        FGameplayTagContainer& ActivationRequiredAbilityTags = ARTags ? *ARTags : DummyContainer1;
-        static FGameplayTagContainer& ActivationBlockedAbilityTags = ABTags ? *ABTags : DummyContainer2;
+        // FGameplayTagContainer& ActivationRequiredAbilityTags = ARTags ? *ARTags : DummyContainer1;
+        // static FGameplayTagContainer& ActivationBlockedAbilityTags = ABTags ? *ABTags : DummyContainer2;
 
         // @설명: 해당 GA의 Ability Tag를 통해 ASC를 통해 ATRM에 정의된 해당 GA의 "Activation Required"와 "Activation Blocked" Ability Tag를 가져옵니다.
         if (BaseASC)
@@ -236,18 +247,26 @@ bool UBaseGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySyste
         if (ActivationRequiredAbilityTags.Num() || ActivationBlockedAbilityTags.Num())
         {
             static FGameplayTagContainer AbilitySystemComponentTags;
-            AbilitySystemComponentTags.Reset();
 
+            AbilitySystemComponentTags.Reset();
             BaseASC->GetActivatingAbilityTags(AbilitySystemComponentTags);
 
             if (!AbilitySystemComponentTags.HasAll(ActivationRequiredAbilityTags))
             {
+
                 bMissing = true;
                 UE_LOGFMT(LogGA, Error, "{0} AR 때메 활성화 불가", GetName());
 
             }
             if (AbilitySystemComponentTags.HasAny(ActivationBlockedAbilityTags))
             {
+                /*
+                if (OptionalRelevantTags && AbilitySystemComponentTags.HasTag(LyraGameplayTags::Status_Death))
+                {
+                    // If player is dead and was rejected due to blocking tags, give that feedback
+                    OptionalRelevantTags->AddTag(LyraGameplayTags::Ability_ActivateFail_IsDead);
+                }
+                */
                 bBlocked = true;
                 UE_LOGFMT(LogGA, Error, "{0} AB 때메 활성화 불가", GetName());
             }

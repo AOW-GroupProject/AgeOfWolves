@@ -10,20 +10,21 @@ DEFINE_LOG_CATEGORY(LogATRM)
 
 void UAbilityTagRelationshipMapping::GetAbilityTagsToBlockAndCancel(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer* OutTagsToBlock, FGameplayTagContainer* OutTagsToCancel) const
 {
-    OutTagsToBlock->Reset();
-    OutTagsToCancel->Reset();
+    // OutTagsToBlock->Reset();
+    // OutTagsToCancel->Reset();
 
-    for (const auto& AbilityTagRelationship : AbilityTagRelationships)
+    for (int32 i = 0; i < AbilityTagRelationships.Num(); i++)
     {
-        if (AbilityTags.HasTagExact(AbilityTagRelationship.AbilityTag))
+        const FAbilityTagRelationship& Tags = AbilityTagRelationships[i];
+        if (AbilityTags.HasTag(Tags.AbilityTag))
         {
             if (OutTagsToBlock)
             {
-                OutTagsToBlock->AppendTags(AbilityTagRelationship.AbilityTagsToBlock);
+                OutTagsToBlock->AppendTags(Tags.AbilityTagsToBlock);
             }
             if (OutTagsToCancel)
             {
-                OutTagsToCancel->AppendTags(AbilityTagRelationship.AbilityTagsToCancel);
+                OutTagsToCancel->AppendTags(Tags.AbilityTagsToCancel);
             }
         }
     }
@@ -31,24 +32,24 @@ void UAbilityTagRelationshipMapping::GetAbilityTagsToBlockAndCancel(const FGamep
 
 void UAbilityTagRelationshipMapping::GetRequiredAndBlockedActivationTags(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer* OutActivationRequired, FGameplayTagContainer* OutActivationBlocked) const
 {
+   // OutActivationRequired->Reset();
+   // OutActivationBlocked->Reset();
 
-    OutActivationRequired->Reset();
-    OutActivationBlocked->Reset();
-
-    for (const auto& AbilityTagRelationship : AbilityTagRelationships)
-    {
-        if (AbilityTags.HasTagExact(AbilityTagRelationship.AbilityTag))
-        {
-            if (OutActivationRequired->IsValid())
-            {
-                OutActivationRequired->AppendTags(AbilityTagRelationship.ActivationRequiredTags);
-            }
-            if (OutActivationBlocked->IsValid())
-            {
-                OutActivationBlocked->AppendTags(AbilityTagRelationship.ActivationBlockedTags);
-            }
-        }
-    }
+   for (int32 i = 0; i < AbilityTagRelationships.Num(); i++)
+   {
+       const FAbilityTagRelationship& Tags = AbilityTagRelationships[i];
+       if (AbilityTags.HasTag(Tags.AbilityTag))
+       {
+           if (OutActivationRequired)
+           {
+               OutActivationRequired->AppendTags(Tags.ActivationRequiredTags);
+           }
+           if (OutActivationBlocked)
+           {
+               OutActivationBlocked->AppendTags(Tags.ActivationBlockedTags);
+           }
+       }
+   }
 }
 
 bool UAbilityTagRelationshipMapping::IsAbilityCancelledByTag(const FGameplayTagContainer& AbilityTags, const FGameplayTag& ActionTag) const

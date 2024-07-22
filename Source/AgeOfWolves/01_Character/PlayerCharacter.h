@@ -11,8 +11,14 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayer, Log, All)
 
 class UCurveFloat;
+<<<<<<< HEAD
 class UInventoryComponent;
 class UUIComponent;
+=======
+
+// @목적 : UI 관련 테스트 진행을 위해 작성한 임시 코드입니다. 실제 UI 구현을 위해선 아래 코드를 삭제하고 시작해주세요.
+class UTestWidget;
+>>>>>>> develop
 
 /**
  * @APlayerCharacter
@@ -53,8 +59,14 @@ protected:
 		class USpringArmComponent* SpringArm;
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
+<<<<<<< HEAD
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UInventoryComponent* InventoryComponent;
+=======
+	UPROPERTY(VisibleDefaultsOnly)
+		class ULockOnComponent* LockOnComponent;
+	//~End Of Components
+>>>>>>> develop
 #pragma endregion
 
 #pragma region Controller Rotaion
@@ -77,6 +89,7 @@ protected:
 #pragma endregion
 
 #pragma region SpringArm & Camera
+<<<<<<< HEAD
 	// @TODO: LockOn 기능 관련 Refactoring 진행 시, 수정할 곳
 	// @목적 : LockOn 동안 Spring Arm을 통해 카메라 위치를 조정하는 함수
 	void AdjustCameraTransform(float DeltaSeconds);
@@ -84,5 +97,13 @@ protected:
 	TObjectPtr<class UBaseInputComponent> BaseInputComponent;
 	TObjectPtr<class UBaseAnimInstance> BaseAnimInstance;
 #pragma endregion
+=======
+
+public:
+>>>>>>> develop
+
+	FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
+	FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }
+	FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockOnComponent; }
 
 };

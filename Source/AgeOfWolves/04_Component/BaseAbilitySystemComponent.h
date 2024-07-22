@@ -20,6 +20,8 @@ class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemCompone
 
 #pragma region Friend Class
 
+	friend class UCombatComponent;
+
 #pragma endregion
 
 #pragma region Default Setting
@@ -87,6 +89,7 @@ protected:
 protected:
 	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
 	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
+
 #pragma endregion
 
 #pragma region Gameplay Tag Relationship Mapping
