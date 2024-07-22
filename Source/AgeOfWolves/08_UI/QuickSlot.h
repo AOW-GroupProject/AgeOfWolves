@@ -45,13 +45,16 @@ protected:
 	*/
 	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
 		UOverlay* SlotOverlay;
+	FGuid UniqueItemID;
 	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
 		UImage* SlotImage;
-	bool bStackable; // ItemNum 표시 여부를 결정합니다.
+	bool bStackable;
 	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
 		UEditableText* SlotItemNum;
 
 public:
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE void SetUniqueItemID(const FGuid& ItemID) { UniqueItemID = ItemID; }
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE void SetSlotImage(UTexture2D* InTexture) { SlotImage->SetBrushFromTexture(InTexture); }
 	UFUNCTION(BlueprintCallable)

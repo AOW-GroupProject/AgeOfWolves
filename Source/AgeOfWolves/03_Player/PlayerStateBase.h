@@ -62,7 +62,7 @@ public:
 	* @Âü°í: Inventory -> HUD -> GAS(AS->GE->GA)
 	*/
 	UFUNCTION()
-		void InitializePlayerSystem();
+		void LoadAbilitySystem();
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Ability System|Pawn Data")

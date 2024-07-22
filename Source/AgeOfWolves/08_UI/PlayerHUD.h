@@ -35,6 +35,10 @@ protected:
 #pragma endregion
 
 #pragma region Subwidgets
+private:
+	void InitializeStateBars();
+	void InitializeQuickSlots();
+
 protected:
 	UPROPERTY(BlueprintReadWrite, Category = "HUD | State Bars", meta = (BindWidget))
 		UScaleBox* StateBarsBox;
@@ -46,5 +50,8 @@ protected:
 		UScaleBox* QuickSlotsBox;
 	UPROPERTY(EditDefaultsOnly, category = "HUD | Quick Slots")
 		TSubclassOf<UQuickSlots> QuickSlotsClass;
+public:
+	UFUNCTION(BlueprintCallable, Category = "HUD | Quick Slots")
+		UQuickSlots* GetQuickSlotsWidget() const;
 #pragma endregion
 };

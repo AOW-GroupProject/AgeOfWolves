@@ -35,7 +35,7 @@ void APlayerStateBase::BeginPlay()
 
 }
 
-void APlayerStateBase::InitializePlayerSystem()
+void APlayerStateBase::LoadAbilitySystem()
 {
 	check(PawnData);
 

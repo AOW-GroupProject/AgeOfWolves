@@ -15,46 +15,57 @@ DECLARE_LOG_CATEGORY_EXTERN(LogQuickSlots, Log, All)
 /**
  * UQuickSlots
  * 
- * @¸ñÀû: HUD ±¸¼º ¿ä¼Ò Áß ÇÏ³ª·Î »ç¿ëÀÚ°¡ È°¿ë °¡´ÉÇÑ Quick SlotÀ» ³ªÅ¸³»´Â UIÀÔ´Ï´Ù.
+ * @ëª©ì : HUD êµ¬ì„± ìš”ì†Œ ì¤‘ í•˜ë‚˜ë¡œ ì‚¬ìš©ìê°€ í™œìš© ê°€ëŠ¥í•œ Quick Slotì„ ë‚˜íƒ€ë‚´ëŠ” UIì…ë‹ˆë‹¤.
  */
 UCLASS()
 class AGEOFWOLVES_API UQuickSlots : public UUserWidget
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 #pragma region Default Setting
 public:
-	UQuickSlots(const FObjectInitializer& ObjectInitializer);
+    UQuickSlots(const FObjectInitializer& ObjectInitializer);
 
 protected:
-	//~ Begin UUserWidget Interfaces
-	virtual void NativeOnInitialized(); // ¸Ş¸ğ¸® ÇÒ´ç ¿Ï·á, È­¸é¿¡ ·»´õµÇ±â Àü¿¡ È£ÃâµÊ
-	virtual void NativePreConstruct();
-	virtual void NativeConstruct(); // È­¸é¿¡ ·»´õµÇ±â Á÷Àü¿¡ È£ÃâµÊ
-	virtual void NativeDestruct();
-	//~ End UUserWidget Interface
+    virtual void NativeOnInitialized() override;
+    virtual void NativePreConstruct() override;
+    virtual void NativeConstruct() override;
+    virtual void NativeDestruct() override;
 #pragma endregion
 
-#pragma region SubWidgets
+#pragma  region Quick Slot
+private:
+    void CreateQuickSlots();
 protected:
-	// Quick Slot À¯Çü
-	UPROPERTY(EditDefaultsOnly, Category = "Quick Slot")
-		TSubclassOf<UQuickSlot> QuickSlotClass;
-protected:
-	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
-		UVerticalBox* PotionSlotList;
-	UPROPERTY(EditDefaultsOnly, Category = "Quick Slot")
-		int32 PotionSlotNum;
-
-protected:
-	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot | Tool", meta = (BindWidget))
-		UVerticalBox* ToolSlotList;
-	UPROPERTY(EditDefaultsOnly, Category = "Quick Slot")
-		int32 ToolSlotNum;
+    UPROPERTY(EditDefaultsOnly, Category = "Quick Slot")
+        TSubclassOf<UQuickSlot> QuickSlotClass;
+    //@3ê°œì˜ Quick Slot
+    UPROPERTY()
+        TArray<UQuickSlot*> QuickSlots;
+    //@ì™¼ìª½ Quick Slot List
+    UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
+        UVerticalBox* QuickSlotList1;
+    const int QuickSlotList1MaxSize = 1;
+    //@ì˜¤ë¥¸ìª½ Quick Slot List
+    UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
+        UVerticalBox* QuickSlotList2;
+    const int QuickSlotList2MaxSize = 2;
 #pragma endregion
 
-#pragma region Input Action
-	// @TODO : Key ÀÔ·Â ÀÌº¥Æ®¿¡ µî·ÏÇÒ Äİ¹é ÇÔ¼ö ÇÊ¿ä
-#pragma endregion 
+#pragma region Callbacks
+public:
+    UFUNCTION()
+        void OnRequestItemAssignment(
+            int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
+        );
+    UFUNCTION()
+        void OnRequestItemUpdate(
+            int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
+        );
+    UFUNCTION()
+        void OnRequestItemRemoval(
+            int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
+        );
+#pragma endregion
 
 };

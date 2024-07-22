@@ -55,8 +55,6 @@ protected:
 		class UCameraComponent* FollowCamera;
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UInventoryComponent* InventoryComponent;
-	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		UUIComponent* UIComponent;
 #pragma endregion
 
 #pragma region Controller Rotaion

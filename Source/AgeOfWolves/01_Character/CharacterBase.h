@@ -43,7 +43,7 @@ protected:
 	* @설명 : 이후 ASC관련 내용을 정의할 것을 대비하여, 일단 약한 참조만 들고 있습니다.
 	* @참조 : -
 	*/
-	TWeakObjectPtr<UBaseAbilitySystemComponent> AbilitySystemComponent;
+	TWeakObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
 public:
 	/*
@@ -52,6 +52,7 @@ public:
 	* @참조 : - 
 	*/
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	void SetAbilitySystemComponent(UAbilitySystemComponent* ASC);
 #pragma endregion
 
 };

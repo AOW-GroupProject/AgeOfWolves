@@ -69,11 +69,11 @@ public:
 private:
     //@Tool Item 정보를 담은 Data Table
     UPROPERTY()
-        UDataTable* ToolItemTable = nullptr;
+        TObjectPtr<UDataTable> ToolItemTable = nullptr;
     //@Equipment Item 정보를 담은 Data Table
     UPROPERTY()
-        UDataTable* EquipmentItemTable = nullptr;
+        TObjectPtr<UDataTable> EquipmentItemTable = nullptr;
     //@Material Item 정보를 담은 Data Table
     UPROPERTY()
-        UDataTable* MaterialItemTable = nullptr;
+        TObjectPtr<UDataTable> MaterialItemTable = nullptr;
 };

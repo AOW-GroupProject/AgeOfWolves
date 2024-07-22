@@ -8,7 +8,6 @@
 #include "04_Component/BaseInputComponent.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
 #include "04_Component/InventoryComponent.h"
-#include "04_Component/UIComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Camera/CameraComponent.h"
@@ -33,7 +32,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	{
 		InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
 		InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
-		UIComponent = CreateDefaultSubobject<UUIComponent>(TEXT("UI Component"));
 	}
 	// @Capsule
 	{
@@ -89,44 +87,6 @@ void APlayerCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	//@UI
-	if (UIComponent)
-	{
-		//Input Comp - UI Comp
-		if (auto BaseInputComp = Cast<UBaseInputComponent>(InputComponent))
-		{
-			// UI 입력 콜백 바인딩
-			BaseInputComp->OnUIInputTriggered.BindDynamic(UIComponent, &UUIComponent::OnUIInputTagTriggered);
-			BaseInputComp->OnUIInputReleased.BindDynamic(UIComponent, &UUIComponent::OffUIInputTagReleased);
-		}
-		//Inventory Comp - UI Comp
-		if (InventoryComponent)
-		{
-			//@Item Added
-			InventoryComponent->OnItemAddedToInventory.AddDynamic(UIComponent, &UUIComponent::OnInventoryItemAdded);
-			//@Item Removed
-			InventoryComponent->OnItemRemovedFromInventory.AddDynamic(UIComponent, &UUIComponent::OnInventoryItemRemoved);
-		}
-		//@Load
-		UIComponent->LoadUI();
-	}
-
-	//@Inventory
-	if (InventoryComponent)
-	{
-		//@UI Comp -> Inventory Comp
-		if (UIComponent)
-		{
-			//@Item Removed
-			UIComponent->OnItemRemovalRequested.AddDynamic(InventoryComponent, &UInventoryComponent::OnUIItemRemovalRequested);
-			//@Item Quickslot Assgined
-			UIComponent->OnQuickSlotAssigned.AddDynamic(InventoryComponent, &UInventoryComponent::OnUIQuickSlotAssigned);
-			//@Item Used
-			UIComponent->OnItemActivated.AddDynamic(InventoryComponent, &UInventoryComponent::OnUIItemActivated);
-		}
-		//@Load
-		InventoryComponent->LoadInventory();
-	}
 }
 
 void APlayerCharacter::BeginPlay()
@@ -157,28 +117,22 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 
 	Super::PossessedBy(NewController);
 
-	// @Player State Base 초기화
-	if (const auto& PlayerController = CastChecked<ABasePlayerController>(NewController))
+	//@Input Component
+	if (auto BaseInputComp = Cast<UBaseInputComponent>(InputComponent))
 	{
-		if (const auto& PS = PlayerController->GetPlayerState<APlayerStateBase>())
-		{
-			if (IsValid(PS->GetAbilitySystemComponent()) && PS->GetAbilitySystemComponent()->IsA<UBaseAbilitySystemComponent>())
-			{
-				PS->InitializePlayerSystem();
-
-				AbilitySystemComponent = MakeWeakObjectPtr<UBaseAbilitySystemComponent>(Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()));
-			}
-		}
+		BaseInputComp->LoadPlayerInputSetup();
+	}
+	//@Inventory Comp
+	if (InventoryComponent && InventoryComponent->LoadInventory())
+	{
+		InventoryComponent->BindToUIComponent(NewController);
 	}
 
 }
 
 void APlayerCharacter::PawnClientRestart()
 {
-
 	Super::PawnClientRestart();
-
-	// @TODO : Event Client Restart
 
 }
 

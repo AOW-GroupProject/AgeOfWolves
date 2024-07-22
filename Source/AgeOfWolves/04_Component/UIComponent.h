@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameplayTagContainer.h"
 #include "08_UI/UICollection.h"
 
 #include "UIComponent.generated.h"
@@ -12,14 +13,25 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUI, Log, All)
 
 class UUserWidget;
 class UUIManagerSubsystem;
+class UBaseInputComponent;
 
+//@HUD UI Event
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUIHUDInputEvent, const FGameplayTag&, InputTag);
+//@System UI Event
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUISystemInputEvent, const FGameplayTag&, InputTag);
+//@Interaction UI Event
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUIInteractionInputEvent, const FGameplayTag&, InputTag);
 //@Item Removed
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemRemovalRequested, const FGuid&, UniqueItemID);
 //@Item Activated
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemActivated, const FGuid&, UniqueItemID);
-//@Item QuickSlot Assigned
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FOnQuickSlotAssigned, int32, SlotIndex, const FGuid&, UniqueItemID);
 
+//@Item QuickSlot Assigned
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FRequestItemAssignmentToQuickSlot, int32, SlotNum, const FGuid&, UniqueItemID, EItemType, ItemType, const FGameplayTag&, ItemTag, int32, ItemCount);
+//@Quick Slot Item Removal
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FRequestQuickSlotItemRemoval, int32, SlotNum, const FGuid&, UniqueItemID, EItemType, ItemType, const FGameplayTag&, ItemTag, int32, ItemCount);
+//@QuickSlot Itme Updated 
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FRequestQuickSlotItemUpdate, int32, SlotNum, const FGuid&, UniqueItemID, EItemType, ItemType, const FGameplayTag&, ItemTag, int32, ItemCount);
 
 /*
 * UUIComponent
@@ -51,7 +63,10 @@ public:
 	//@Widget 생성
     void CreateUI(const UUIManagerSubsystem& UIManagerSubsystem, EUICategory Category);
 	//@Widget 정보 Load
-    void LoadUI();
+    bool LoadUI();
+	//@Binding 작업
+	void BindUIToUIComponent();
+	void BindToInventoryComponent(const APawn* OwningPawn);
 protected:
 	//@Widget을 화면에 나타냅니다.
     UFUNCTION(BlueprintCallable, Category = "UI")
@@ -63,10 +78,10 @@ protected:
 protected:
 	//@HUD
     UPROPERTY()
-        TMap<FGameplayTag,UUserWidget*> MHUDUIs;
+        TObjectPtr<UUserWidget> HUDUI;
 	//@System
 	UPROPERTY()
-		TMap<FGameplayTag, UUserWidget*> MSystemUIs;
+		TObjectPtr<UUserWidget> SystemUI;
 	//@Interaction
 	UPROPERTY()
 		TMap<FGameplayTag, UUserWidget*> MInteractionUIs;
@@ -78,46 +93,89 @@ public:
 		TArray<UUserWidget*> GetCategoryUIs(EUICategory UICategory) const;
 #pragma endregion
 
-#pragma region UI Input
+#pragma region Input Component
+private:
+	UPROPERTY()
+		UBaseInputComponent* BaseInputComponent;
 public:
-	UFUNCTION()
-		void OnUIInputTagTriggered(const FGameplayTag& InputTag);
-	UFUNCTION()
-		void OffUIInputTagReleased(const FGameplayTag& InputTag);
+	bool LoadUIInputComponent();
+	void BindInputComponentToInputActions();
+private:
+	void DestroyUIInputComponent();
+	void EnterSystemUIMode();
+	void ExitSystemUIMode();
+
+public:
+	void SetUIInputPriority(int32 NewPriority);
+	void SetUIInputBlocking(bool bShouldBlock);
+
+private:
+	FString FindUICategoryFromInputTag(const FGameplayTag& InputTag);
 #pragma endregion
 
-#pragma region Inventory UI
+#pragma region Delegates
+	//@Delegate: HUD
+	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
+		FOnUIHUDInputEvent OnUIHUDInputTriggered;
+	//@Delegate: HUD
+	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
+		FOnUIHUDInputEvent OnUIHUDInputReleased;
+	//@Delegate: System
+	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
+		FOnUISystemInputEvent OnUISystemInputTriggered;
+	//@Delegate: System
+	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
+		FOnUISystemInputEvent OnUISystemInputReleased;
+	//@Delegate: Interaction
+	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
+		FOnUIInteractionInputEvent OnUIInteractionInputTriggered;
+	//@Delegate: Interaction
+	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
+		FOnUIInteractionInputEvent OnUIInteractionInputReleased;
 
-#pragma region Inventory UI - Delegates
 public:
+	//@Delegate: Item을 Quick Slot 추가 요청
+	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
+		FRequestItemAssignmentToQuickSlot RequestItemAssignmentToQuickSlots;
+	//@Delegate: Quick Slot Item의 제거 요청
+	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
+		FRequestQuickSlotItemRemoval RequestQuickSlotItemRemoval;
+	//@Delegate: Quick Slot Item의 업데이트 요청 
+	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
+		FRequestQuickSlotItemUpdate RequestQuickSlotItemUpdate;
 	//@Delegate: Item 제거 요청
 	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
 		FOnItemRemovalRequested OnItemRemovalRequested;
 	//@Delegate: Item 활성화 요청
 	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
 		FOnItemActivated OnItemActivated;
-	//@Delegate: Item을 Quick Slot 추가 요청
-	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
-		FOnQuickSlotAssigned OnQuickSlotAssigned;
-private:
-	//@Item Removal
-	void RequestItemRemoval(const FGuid& UniqueItemID);
-	//@Item Activation
-	void RequestItemActivation(const FGuid& UniqueItemID);
-	//@Item QuickSlot Assigned
-	void RequestQuickSlotAssignment(int32 SlotIndex, const FGuid& UniqueItemID);
 #pragma endregion
 
-#pragma region Inventory UI - Callbacks
+#pragma region Callbacks
 public:
-	//@Callbacks: Inventory에 새로운 아이템 추가 시 호출되는 콜백
+	//@Callback: Input Comp
 	UFUNCTION()
-		void OnInventoryItemAdded(const FGuid& UniqueItemID);
-	//@Callbacks: Inventory에서 기존 아이템 제거 시 호출되는 콜백
+		void OnUIInputTagTriggered(const FGameplayTag& InputTag);
+	//@Callback: Input Comp
 	UFUNCTION()
-		void OnInventoryItemRemoved(const FGuid& UniqueItemID, const FGameplayTag& ItemTag);
-#pragma endregion
+		void OffUIInputTagReleased(const FGameplayTag& InputTag);
+	//@Callback: Inventory UI
+	UFUNCTION()
+		void QuickSlotAssignmentRequested(
+			int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
+		);
+	//@Callback: Inventory UI
+		//@Callback: Inventory Comp
+	UFUNCTION()
+		void QuickSlotItemRemovalRequested(
+			int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
+		);
 
+	//@Callback: Inventory Comp
+	UFUNCTION()
+		void QuickSlotItemUpdateRequested(
+			int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
+		);
 #pragma endregion
 
 };

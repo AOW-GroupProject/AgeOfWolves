@@ -29,5 +29,12 @@ void ACharacterBase::PossessedBy(AController* NewController)
 
 UAbilitySystemComponent* ACharacterBase::GetAbilitySystemComponent() const
 {
-	return AbilitySystemComponent.Get();
+	return AbilitySystemComponent.IsValid() ? AbilitySystemComponent.Get() : nullptr;
+}
+
+void ACharacterBase::SetAbilitySystemComponent(UAbilitySystemComponent* ASC)
+{
+	check(ASC)
+
+	AbilitySystemComponent = ASC;
 }

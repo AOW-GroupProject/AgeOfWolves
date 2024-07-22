@@ -59,7 +59,6 @@ void UBaseInputComponent::BeginPlay()
 {
 	Super::BeginPlay();
 
-	InitializePlayersInputActionsSetup();
 }
 
 void UBaseInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -67,59 +66,42 @@ void UBaseInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-void UBaseInputComponent::InitializePlayersInputActionsSetup()
+bool UBaseInputComponent::LoadPlayerInputSetup()
 {
 	const APawn* Pawn = Cast<APawn>(GetOwner());
-	if (!Pawn)
+	const APlayerController* PC = Pawn ? Pawn->GetController<APlayerController>() : nullptr;
+	const ULocalPlayer* LP = PC ? PC->GetLocalPlayer() : nullptr;
+	UEnhancedInputLocalPlayerSubsystem* Subsystem = LP ? LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>() : nullptr;
+
+	if (!Subsystem)
 	{
-		return;
+		UE_LOGFMT(LogInputComponent, Error, "입력 설정 로드 실패: 필수 컴포넌트를 찾을 수 없습니다.");
+		return false;
 	}
-
-	const APlayerController* PC = Pawn->GetController<APlayerController>();
-	check(PC);
-
-	const ULocalPlayer* LP = PC->GetLocalPlayer();
-	check(LP);
-
-	UEnhancedInputLocalPlayerSubsystem* Subsystem = LP->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
-	check(Subsystem);
 
 	Subsystem->ClearAllMappings();
+	UE_LOGFMT(LogInputComponent, Log, "기존 입력 매핑을 모두 제거했습니다.");
 
-	if (const APlayerStateBase* PS = PC->GetPlayerState<APlayerStateBase>())
+	const APlayerStateBase* PS = PC->GetPlayerState<APlayerStateBase>();
+	const UPawnData* PawnData = PS ? PS->GetPawnData() : nullptr;
+	const UInputConfig* InputConfig = PawnData ? PawnData->InputConfig : nullptr;
+
+	if (!InputConfig)
 	{
-		if (const UPawnData* PawnData = PS->GetPawnData())
-		{
-			if (const UInputConfig* InputConfig = PawnData->InputConfig)
-			{
-				//@IMC
-				{
-					AddInputMappings(InputConfig, Subsystem);
-				}
-				//@Native Input Action
-				{
-					BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Move")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Move);
-					BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Look);
-					BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LockOn);
-					BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.ChangeLockOnTarget")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_ChangeLockOnTarget);
-				}
-				//@Ability Input Action
-				{
-					if(!InputConfig->AbilityInputActions.IsEmpty()) 
-						BindInputActions(InputConfig->AbilityInputActions, this, &ThisClass::Input_AbilityInputTagPressed, &ThisClass::Input_AbilityInputTagReleased);
-				}
-				//@UI Input Action
-				{
-					if (!InputConfig->UIInputActions.IsEmpty())
-						BindInputActions(InputConfig->UIInputActions, this, &ThisClass::Input_UIInputTagPressed, &ThisClass::Input_UIInputTagReleased);
-				}
-
-				//@Delegate
-				OnPlayerInputInitFinished.ExecuteIfBound();
-			}
-		}
+		UE_LOGFMT(LogInputComponent, Error, "입력 설정 로드 실패: InputConfig를 찾을 수 없습니다.");
+		return false;
 	}
 
+	AddInputMappings(InputConfig, Subsystem);
+	UE_LOGFMT(LogInputComponent, Log, "입력 매핑을 추가했습니다.");
+
+	BindNativeInputActions(InputConfig);
+	BindAbilityInputActions(InputConfig);
+
+	UE_LOGFMT(LogInputComponent, Log, "플레이어 입력 초기화가 완료되었습니다.");
+	OnPlayerInputInitFinished.ExecuteIfBound();
+
+	return true;
 }
 #pragma endregion 
 
@@ -150,6 +132,36 @@ void UBaseInputComponent::RemoveInputMappings(const UInputConfig* InputConfig, U
 #pragma endregion
 
 #pragma region Binding
+void UBaseInputComponent::BindNativeInputActions(const UInputConfig* InputConfig)
+{
+	UE_LOGFMT(LogInputComponent, Log, "기본 입력 액션을 바인딩합니다.");
+	BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Move")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Move);
+	BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Look);
+	BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LockOn);
+	BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.ChangeLockOnTarget")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_ChangeLockOnTarget);
+}
+
+void UBaseInputComponent::BindAbilityInputActions(const UInputConfig* InputConfig)
+{
+	if (!InputConfig->AbilityInputActions.IsEmpty())
+	{
+		UE_LOGFMT(LogInputComponent, Log, "어빌리티 입력 액션을 바인딩합니다.");
+		BindInputActions(InputConfig->AbilityInputActions, this, &ThisClass::Input_AbilityInputTagPressed, &ThisClass::Input_AbilityInputTagReleased);
+	}
+	else
+	{
+		UE_LOGFMT(LogInputComponent, Warning, "바인딩할 어빌리티 입력 액션이 없습니다.");
+	}
+}
+
+void UBaseInputComponent::BindUIInputActions(const UInputConfig* InputConfig)
+{
+	if (!InputConfig->UIInputActions.IsEmpty())
+	{
+		BindInputActions(InputConfig->UIInputActions, this, &ThisClass::Input_UIInputTagTriggered, &ThisClass::Input_UIInputTagReleased);
+	}
+}
+
 void UBaseInputComponent::RemoveBinds(TArray<uint32>& BindHandles)
 {
 	for (uint32 Handle : BindHandles)
@@ -378,7 +390,7 @@ void UBaseInputComponent::Input_AbilityInputTagReleased(FGameplayTag InputTag)
 #pragma endregion
 
 #pragma region Callbacks bind to UI Input Action
-void UBaseInputComponent::Input_UIInputTagPressed(FGameplayTag InputTag)
+void UBaseInputComponent::Input_UIInputTagTriggered(FGameplayTag InputTag)
 {
 	//UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
 	OnUIInputTriggered.ExecuteIfBound(InputTag);

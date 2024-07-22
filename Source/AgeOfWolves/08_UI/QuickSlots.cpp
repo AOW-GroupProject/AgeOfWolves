@@ -8,13 +8,20 @@
 #include "Components/VerticalBoxSlot.h"
 #include "08_UI/QuickSlot.h"
 
-DEFINE_LOG_CATEGORY(LogQuickSlots)
+#include "Kismet/GameplayStatics.h"
+#include "04_Component/UIComponent.h"
+#include "14_Subsystem/ItemManagerSubsystem.h"
 
+DEFINE_LOG_CATEGORY(LogQuickSlots)
+// UE_LOGFMT(LogQuickSlots, Log, "");
+
+#pragma region Default Setting
 UQuickSlots::UQuickSlots(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
-	PotionSlotList = nullptr;
-	ToolSlotList = nullptr;
+	QuickSlotList1 = nullptr;
+	QuickSlotList2 = nullptr;
+	QuickSlots.Reset();
 }
 
 void UQuickSlots::NativeOnInitialized()
@@ -23,61 +30,8 @@ void UQuickSlots::NativeOnInitialized()
 
 	check(QuickSlotClass);
 
-	// #1. Potion Slot List √ ±‚»≠
-	{
-		// @º≥∏Ì : Potion Slot Listø° PotionSlotNum ≈©±‚ ∏∏≈≠¿« Quick Slot¿ª √ﬂ∞°«’¥œ¥Ÿ.
-		for (uint8 i = 0; i < PotionSlotNum; ++i)
-		{
-			UQuickSlot* QuickSlot = NewObject<UQuickSlot>(this, QuickSlotClass);
-
-			if (IsValid(QuickSlot))
-			{
-				// @TODO: ∞¢ Quick Slot¿« ±∏º∫ ø‰º“µÈø° ¥Î«— √ ±‚»≠ ¿€æ˜¿Ã « ø‰«’¥œ¥Ÿ.
-				// @TODO: Inventory Component∑Œ ∫Œ≈Õ æ∆¿Ã≈€ ¡§∫∏∏¶ ∞°¡ÆøÕæﬂ «’¥œ¥Ÿ.
-				// #1. Quick Slot √ ±‚»≠
-				QuickSlot->SetIsStackable(true);
-
-				// #2. Quick Slot List √ ±‚»≠
-				if (UVerticalBoxSlot* VerticalBoxSlot = Cast<UVerticalBoxSlot>(PotionSlotList->AddChildToVerticalBox(QuickSlot)))
-				{
-					// Size º≥¡§
-					VerticalBoxSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-					if (i < PotionSlotNum - 1)
-					{
-						// Padding º≥¡§
-						VerticalBoxSlot->SetPadding(FMargin(0, 0, 0, 20.f));
-					}
-				}
-			}
-		}
-	}
-
-	// #2. Tool Slot List √ ±‚»≠
-	{
-		// @º≥∏Ì : Tool Slot Listø° ToolSlotNum ≈©±‚ ∏∏≈≠¿« Quick Slot¿ª √ﬂ∞°«’¥œ¥Ÿ.
-		for (uint8 i = 0; i < ToolSlotNum; ++i)
-		{
-			UQuickSlot* QuickSlot = NewObject<UQuickSlot>(this, QuickSlotClass);
-			if (IsValid(QuickSlot))
-			{
-				// @TODO : ∞¢ Quick Slot¿« ±∏º∫ ø‰º“µÈø° ¥Î«— √ ±‚»≠ ¿€æ˜¿Ã « ø‰«’¥œ¥Ÿ.
-				// @TODO: Inventory Component∑Œ ∫Œ≈Õ æ∆¿Ã≈€ ¡§∫∏∏¶ ∞°¡ÆøÕæﬂ «’¥œ¥Ÿ.
-				// #1. Quick Slot √ ±‚»≠
-
-				// #2. Tool Slot List √ ±‚»≠
-				if (UVerticalBoxSlot* VerticalBoxSlot = Cast<UVerticalBoxSlot>(ToolSlotList->AddChildToVerticalBox(QuickSlot)))
-				{
-					// #2. Size º≥¡§
-					VerticalBoxSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-					if (i < ToolSlotNum - 1)
-					{
-						// #3. Padding º≥¡§
-						VerticalBoxSlot->SetPadding(FMargin(0, 0, 0, 40.f));
-					}
-				}
-			}
-		}
-	}
+	//@Init
+	CreateQuickSlots();
 
 }
 
@@ -89,9 +43,156 @@ void UQuickSlots::NativePreConstruct()
 void UQuickSlots::NativeConstruct()
 {
 	Super::NativeConstruct();
+
 }
 
 void UQuickSlots::NativeDestruct()
 {
 	Super::NativeDestruct();
 }
+#pragma endregion
+
+#pragma  region Quick Slot
+void UQuickSlots::CreateQuickSlots()
+{
+    check(QuickSlotClass);
+
+    //@QuickSlotList1 (1Î≤à Ïä¨Î°Ø)
+    for (int32 i = 0; i < QuickSlotList1MaxSize; ++i)
+    {
+        UQuickSlot* QuickSlot = CreateWidget<UQuickSlot>(this, QuickSlotClass);
+        if (IsValid(QuickSlot))
+        {
+            //@bStackable
+            QuickSlot->SetIsStackable(true);
+            if (UVerticalBoxSlot* VerticalBoxSlot = Cast<UVerticalBoxSlot>(QuickSlotList1->AddChildToVerticalBox(QuickSlot)))
+            {
+                //@Size
+                VerticalBoxSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                //@Padding
+                VerticalBoxSlot->SetPadding(FMargin(0, 0, 0, 20.f));
+            }
+            //@QuickSlots
+            QuickSlots.Add(QuickSlot);
+        }
+    }
+    //@QuickSlotList2 (2Î≤à, 3Î≤à Ïä¨Î°Ø)
+    for (int32 i = 0; i < QuickSlotList2MaxSize; ++i)
+    {
+        UQuickSlot* QuickSlot = CreateWidget<UQuickSlot>(this, QuickSlotClass);
+        if (IsValid(QuickSlot))
+        {
+            //@bStackable
+            QuickSlot->SetIsStackable(false);
+            if (UVerticalBoxSlot* VerticalBoxSlot = Cast<UVerticalBoxSlot>(QuickSlotList2->AddChild(QuickSlot)))
+            {
+                //@Size
+                VerticalBoxSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+                //@Padding
+                if (i < QuickSlotList2MaxSize - 1)
+                {
+                    VerticalBoxSlot->SetPadding(FMargin(0, 0, 0, 20.f));
+                }
+            }
+            //@Quick Slots
+            QuickSlots.Add(QuickSlot);
+        }
+    }
+}
+#pragma endregion
+
+#pragma region Callbacks
+void UQuickSlots::OnRequestItemAssignment(int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)
+{
+    UE_LOGFMT(LogQuickSlots, Log, "OnRequestItemAssignment Ìò∏Ï∂úÎê®: SlotNum={0}, UniqueItemID={1}, ItemType={2}, ItemTag={3}, ItemCount={4}",
+        SlotNum, UniqueItemID.ToString(), StaticEnum<EItemType>()->GetNameStringByValue(static_cast<int64>(ItemType)), ItemTag.ToString(), ItemCount);
+
+    // Ïó¨Í∏∞Ïóê Ïã§Ï†ú ÏïÑÏù¥ÌÖú Ìï†Îãπ Î°úÏßÅÏùÑ Íµ¨ÌòÑÌï©ÎãàÎã§.
+    if (QuickSlots.IsValidIndex(SlotNum - 1))  // SlotNumÏùÄ 1Î∂ÄÌÑ∞ ÏãúÏûëÌïòÎØÄÎ°ú -1 Ìï¥Ï§çÎãàÎã§.
+    {
+        UQuickSlot* QuickSlot = QuickSlots[SlotNum - 1];
+        if (QuickSlot)
+        {
+            // ÏïÑÏù¥ÌÖú Ï†ïÎ≥¥ ÏóÖÎç∞Ïù¥Ìä∏
+            // Ïòà: Slot->UpdateSlot(UniqueItemID, ItemTag, ItemCount);
+            UE_LOGFMT(LogQuickSlots, Log, "QuickSlot {0}Ïóê ÏïÑÏù¥ÌÖúÏù¥ Ìï†ÎãπÎêòÏóàÏäµÎãàÎã§.", SlotNum);
+        }
+        else
+        {
+            UE_LOGFMT(LogQuickSlots, Error, "SlotNum {0}Ïóê Ìï¥ÎãπÌïòÎäî QuickSlotÏù¥ nullÏûÖÎãàÎã§.", SlotNum);
+        }
+    }
+    else
+    {
+        UE_LOGFMT(LogQuickSlots, Error, "Ïú†Ìö®ÌïòÏßÄ ÏïäÏùÄ SlotNum: {0}", SlotNum);
+    }
+}
+
+void UQuickSlots::OnRequestItemUpdate(int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)
+{
+
+    if (QuickSlots.IsValidIndex(SlotNum - 1))  // SlotNumÏùÄ 1Î∂ÄÌÑ∞ ÏãúÏûëÌïòÎØÄÎ°ú -1 Ìï¥Ï§çÎãàÎã§.
+    {
+        UQuickSlot* QuickSlot = QuickSlots[SlotNum - 1];
+        UEnum* EnumPtr = StaticEnum<EItemType>();
+        //@Quick Slot
+        if (QuickSlot)
+        {
+            //@Game Instance
+            UGameInstance* GameInstance = GetGameInstance();
+            if (!GameInstance)
+            {
+                UE_LOGFMT(LogQuickSlots, Error, "OnQuickSlotItemUpdated: GameInstanceÍ∞Ä nullÏûÖÎãàÎã§");
+                return;
+            }
+            //@Item Manager Subsystem
+            UItemManagerSubsystem* ItemManager = GameInstance->GetSubsystem<UItemManagerSubsystem>();
+            if (!ItemManager)
+            {
+                UE_LOGFMT(LogQuickSlots, Error, "OnQuickSlotItemUpdated: ItemManagerSubsystemÏù¥ nullÏûÖÎãàÎã§");
+                return;
+            }
+            //@FItemInformation
+            const FItemInformation* ItemInfo = ItemManager->GetItemInformation<FItemInformation>(ItemType, ItemTag);
+            if (ItemInfo)
+            {
+                //@Slot Image
+                if (ItemInfo->ItemSlotImage.IsValid())
+                {
+                    UTexture2D* SlotImage = ItemInfo->ItemSlotImage.LoadSynchronous();
+                    QuickSlot->SetSlotImage(SlotImage);
+                }
+                else
+                {
+                    UE_LOGFMT(LogQuickSlots, Warning, "OnQuickSlotItemUpdated: ÏïÑÏù¥ÌÖú Ïä¨Î°Ø Ïù¥ÎØ∏ÏßÄÍ∞Ä ÏóÜÏäµÎãàÎã§. ItemTag: {0}", ItemTag.ToString());
+                }
+                //@Item Num - bStackable?
+                bool IsStackable = ItemInfo->bStackable && ItemCount > 1;
+                QuickSlot->SetIsStackable(IsStackable);
+
+                if (IsStackable)
+                {
+                    QuickSlot->SetSlotItemNum(static_cast<float>(ItemCount));
+                }
+
+                UE_LOGFMT(LogQuickSlots, Log, "ÌÄµÏä¨Î°Ø {0} ÏóÖÎç∞Ïù¥Ìä∏: ÏïÑÏù¥ÌÖú ÌÉÄÏûÖ: {1}, ÏïÑÏù¥ÌÖú ÌÉúÍ∑∏: {2}, ÏïÑÏù¥ÌÖú Í∞úÏàò: {3}",
+                    SlotNum, EnumPtr->GetNameStringByValue(static_cast<int64>(ItemType)), ItemTag.ToString(), ItemCount);
+            }
+            else
+            {
+                UE_LOGFMT(LogQuickSlots, Error, "OnQuickSlotItemUpdated: ÏïÑÏù¥ÌÖú Ï†ïÎ≥¥Î•º Ï∞æÏùÑ Ïàò ÏóÜÏäµÎãàÎã§. ItemType: {0}, ItemTag: {1}",
+                    EnumPtr->GetNameStringByValue(static_cast<int64>(ItemType)), ItemTag.ToString());
+            }
+        }
+    }
+    else
+    {
+        UE_LOGFMT(LogQuickSlots, Warning, "OnQuickSlotItemUpdated: Ïú†Ìö®ÌïòÏßÄ ÏïäÏùÄ Ïä¨Î°Ø Î≤àÌò∏ {0}", SlotNum);
+    }
+
+}
+
+void UQuickSlots::OnRequestItemRemoval(int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)
+{
+}
+#pragma endregion

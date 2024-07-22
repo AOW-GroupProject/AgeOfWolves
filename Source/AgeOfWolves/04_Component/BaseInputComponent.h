@@ -43,14 +43,13 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	//~End Of UActorComponent interface
-
+public:
 	/*
 	* @목적 : 사용자의 입력 시스템의 초기화 작업을 수행하는 함수입니다.
 	* @설명 : 사용자 캐릭터의 Pawn Data의 InputConfing(Data Asset)을 통해 Enhanced Input System의 초기화 작업을 진행합니다.
 	*/
-	void InitializePlayersInputActionsSetup();
+	bool LoadPlayerInputSetup();
 
-public:
 	// @목적 : 사용자 입력 시스템 초기화 작업 완료 이벤트
 	FPlayerInputInit OnPlayerInputInitFinished;
 #pragma endregion 
@@ -64,6 +63,9 @@ public:
 #pragma endregion
 
 #pragma region Binding
+	void BindNativeInputActions(const UInputConfig* InputConfig);
+	void BindAbilityInputActions(const UInputConfig* InputConfig);
+	void BindUIInputActions(const UInputConfig* InputConfig);
 	template<typename UserClass, typename FuncType>
 	void BindNativeInputAction(const UInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func)
 	{
@@ -167,7 +169,7 @@ public:
 	FOnUIInputReleased OnUIInputReleased;
 
 private: 
-	void Input_UIInputTagPressed(FGameplayTag InputTag);
+	void Input_UIInputTagTriggered(FGameplayTag InputTag);
 	void Input_UIInputTagReleased(FGameplayTag InputTag);
 #pragma endregion
 
