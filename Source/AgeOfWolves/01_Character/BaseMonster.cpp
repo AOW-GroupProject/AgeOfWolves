@@ -3,6 +3,8 @@
 
 #include "01_Character/BaseMonster.h"
 
+#include "Kismet/GameplayStatics.h"
+#include "10_Monster/MonsterDataSubsystem.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "02_AbilitySystem/BaseAbilitySet.h"
@@ -12,29 +14,13 @@
 // Sets default values
 ABaseMonster::ABaseMonster()
 {
-	
-
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
 	bAbilitiesInitialized = false;
 
-
-	static ConstructorHelpers::FObjectFinder<UMonsterData> dataAsset(TEXT("/Script/AgeOfWolves.MonsterData'/Game/Blueprints/09_Monster/MonsterData.MonsterData'"));
-	if (dataAsset.Object)
-	{
-		MonsterDataFile = dataAsset.Object;
-	}
-	if (MonsterDataFile->MonsterData.Find(MonsterName))
-	{
-		SingleMonsterData = *(MonsterDataFile->MonsterData.Find(MonsterName));
-		MonsterDataFile = nullptr;
-	}
-	else
-	{
-		//일단 주석처리
-		//Destroy();
-	}
+	
+	
 
 	AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
 	
@@ -53,6 +39,12 @@ ABaseMonster::ABaseMonster()
 void ABaseMonster::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+
+	//여기서 서브시스템 호출하면 BP_Wolf 켜기만 하면 에디터 꺼져서 BeginPlay로 옮김
+
+
+	
+
 	
 }
 
@@ -60,6 +52,12 @@ void ABaseMonster::PostInitializeComponents()
 void ABaseMonster::BeginPlay()
 {
 	Super::BeginPlay();
+	UMonsterDataSubsystem* MonsterDataSubSystem = UGameplayStatics::GetGameInstance(GetWorld())->GetSubsystem<UMonsterDataSubsystem>();
+
+	if (MonsterDataSubSystem)
+	{
+		MonsterDataSubSystem->CustomFunction(MonsterName, SingleMonsterData, AbilitySystemComponent, SetGrantedHandles);
+	}
 	
 }
 
@@ -154,7 +152,7 @@ void ABaseMonster::InitializeGameplayAbilitySystem()
 						TArray<FGameplayAttribute> Attributes = AttributeSet->GetAllAttributes();
 						for (const FGameplayAttribute& Attribute : Attributes)
 						{
-							//FDelegateHandle DelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddUObject(this, &ABaseMonster::OnAttributeValueChanged);
+							AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddUObject(this, &ABaseMonster::OnAttributeValueChanged);
 						}
 						break;
 					}
@@ -169,11 +167,11 @@ void ABaseMonster::InitializeGameplayAbilitySystem()
 			}
 			// 캐릭터의 기본 Gameplay Effect를 ASC에 최초 등록/적용합니다.
 			{
-				AbilitySet->GiveStartupGameplayEffectToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+				//AbilitySet->GiveStartupGameplayEffectToAbilitySystem(AbilitySystemComponent, th);
 			}
 			// 캐릭터의 기본 Gameplay Ability를 ASC에 최초 등록/적용합니다.
 			{
-				AbilitySet->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+				//AbilitySet->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, this);
 				//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("DoneStartupGameplayAbility"));
 			}
 
@@ -186,13 +184,14 @@ FSingleMonsterData ABaseMonster::GetSingleMonsterData()
 	return SingleMonsterData;
 }
 
-void ABaseMonster::OnAttributeValueChanged(FOnAttributeChangeData& Data)
+void ABaseMonster::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
 {
 	if (OnAnyMonsterAttributeValueChanged.IsBound())
 	{
 		OnAnyMonsterAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);
 	}
 }
+
 
 
 

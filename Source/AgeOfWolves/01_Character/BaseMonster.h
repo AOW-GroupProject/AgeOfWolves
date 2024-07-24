@@ -59,6 +59,7 @@ public:
 
 protected:
 
+
 	virtual void PostInitializeComponents() override;
 	// Called when the game starts or when spawned
 	virtual void BeginPlay() override;
@@ -125,7 +126,6 @@ public:
 
 protected:
 
-	FBaseAbilitySet_GrantedHandles* SetGrantedHandles;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
 	TObjectPtr<UBaseAbilitySet> AbilitySet;
@@ -133,7 +133,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Ability")
 	TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
 
-	
+	//UPROPERTY(VisibleAnywhere, Category = "Ability")
+	FBaseAbilitySet_GrantedHandles* SetGrantedHandles;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
 	TArray<TSubclassOf<UGameplayEffect>> PassiveGameplayEffects;
@@ -170,13 +171,11 @@ public:
 
 public:
 
-	UPROPERTY(VisibleAnywhere)
-	TObjectPtr<UMonsterData> MonsterDataFile;
 
 	UPROPERTY(EditAnywhere)
 	EMonsterName MonsterName;
 
-	UPROPERTY(VisibleAnywhere)
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite)
 	FSingleMonsterData SingleMonsterData;
 
 	UFUNCTION(BlueprintCallable)
@@ -194,7 +193,7 @@ public:
 	*		  HUD 구현을 위해 PS에서 제공하는 AttributeBase 관련 인터페이스로 활용 가능합니다(C++환경).
 	* @참조 : APlayerStateBase::InitializeGameplayAbilitySystem()
 	*/
-	void OnAttributeValueChanged(FOnAttributeChangeData& Data);
+	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);
 
 public:
 	/*

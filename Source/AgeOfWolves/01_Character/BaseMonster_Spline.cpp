@@ -23,6 +23,7 @@ ABaseMonster_Spline::ABaseMonster_Spline()
 void ABaseMonster_Spline::BeginPlay()
 {
 	Super::BeginPlay();
+
 	//SplineActor = Cast<ABaseSpline>(GetWorld()->SpawnActor<AActor>(SplineBP->GeneratedClass, GetActorLocation(), GetActorRotation()));
 	CurrentState = EMonsterState::Patrol;
 
