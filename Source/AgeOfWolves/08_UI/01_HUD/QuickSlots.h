@@ -9,8 +9,13 @@
 
 class UVerticalBox;
 class UQuickSlot;
+class ABasePlayerController;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogQuickSlots, Log, All)
+
+DECLARE_DELEGATE(FQuickSlotsInitFinished);
+
+DECLARE_DELEGATE_RetVal_TwoParams(bool, FQuickSlotItemActivated, const FGuid&, int32);
 
 /**
  * UQuickSlots
@@ -31,11 +36,17 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+private:
+    //@외부 바인딩
+    void ExternalBindToInventoryComponent();
+    void ExternalBindToInputComponent();
+public:
+    //@초기화
+    UFUNCTION()
+        void InitializeQuickSlots();
 #pragma endregion
 
 #pragma  region Quick Slot
-private:
-    void CreateQuickSlots();
 protected:
     UPROPERTY(EditDefaultsOnly, Category = "Quick Slot")
         TSubclassOf<UQuickSlot> QuickSlotClass;
@@ -52,20 +63,31 @@ protected:
     const int QuickSlotList2MaxSize = 2;
 #pragma endregion
 
-#pragma region Callbacks
+#pragma region Delegate
 public:
+    //@초기화 완료 이벤트
+    FQuickSlotsInitFinished QuickSlotsInitFinished;
+public:
+    //@퀵슬롯 아이템 활성화 이벤트
+    FQuickSlotItemActivated QuickSlotItemActivated;
+#pragma endregion
+
+#pragma region Callbacks
+protected:
+    //@새로운 아이템 추가 이벤트 구독
     UFUNCTION()
-        void OnRequestItemAssignment(
+        void OnQuickSlotItemsLoaded(
             int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
         );
+    //@기존 아이템 업데이트 이벤트 구독
     UFUNCTION()
-        void OnRequestItemUpdate(
-            int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
-        );
+        void OnQuickSlotItemUpdated(int32 SlotNum, const FGuid& UniqueItemID, int32 Num);
+    //@HUD 관련 사용자 입력의 Trigger 이벤트 구독
     UFUNCTION()
-        void OnRequestItemRemoval(
-            int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
-        );
+        void StartActivation(const FGameplayTag& InputTag);
+    //@HUD 관련 사용자 입력의 Released 이벤트 구독
+    UFUNCTION()
+        void EndActivation(const FGameplayTag& InputTag);
 #pragma endregion
 
 };

@@ -6,7 +6,7 @@
 #include "01_Character/PlayerCharacter.h"
 #include "04_Component/BaseInputComponent.h"
 #include "05_Animation/BaseAnimInstance.h"
-
+#include "03_Player/BasePlayerController.h"
 
 #include "InputActionValue.h"
 #include "Kismet/KismetSystemLibrary.h"
@@ -30,7 +30,10 @@ void ULockOnComponent::BeginPlay()
 	check(FollowCameraComponent);
 	BaseAnimInstance = Cast<UBaseAnimInstance>(PlayerCharacter->GetMesh()->GetAnimInstance());
 	check(BaseAnimInstance);
-	BaseInputComponent = Cast<UBaseInputComponent>(GetOwner()->InputComponent);
+	ABasePlayerController* PlayerController = Cast<ABasePlayerController>(PlayerCharacter->GetController());
+	check(PlayerController);
+
+	BaseInputComponent = PlayerController->GetBaseInputComponent();
 	check(BaseInputComponent);
 }
 

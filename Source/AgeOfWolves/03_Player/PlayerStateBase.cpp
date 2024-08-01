@@ -35,7 +35,7 @@ void APlayerStateBase::BeginPlay()
 
 }
 
-void APlayerStateBase::LoadAbilitySystem()
+void APlayerStateBase::InitializePlayerState()
 {
 	check(PawnData);
 
@@ -93,6 +93,18 @@ void APlayerStateBase::LoadAbilitySystem()
 			}
 		}
 	}
+}
+
+void APlayerStateBase::LoadGameAbilitySystem()
+{
+}
+
+void APlayerStateBase::LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame)
+{
+}
+
+void APlayerStateBase::LoadDefaultAbilitySystemFromAbilityManager(UAbilityManagerSubsystem* AbilityManager)
+{
 }
 
 UAbilitySystemComponent* APlayerStateBase::GetAbilitySystemComponent() const

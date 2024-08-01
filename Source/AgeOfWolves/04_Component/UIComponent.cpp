@@ -7,10 +7,12 @@
 #include "GameFramework/PlayerController.h"
 
 #include "14_Subsystem/UIManagerSubsystem.h"
-#include "08_UI/PlayerHUD.h"
-#include "08_UI/QuickSlots.h"
+#include "08_UI/01_HUD/PlayerHUD.h"
+#include "08_UI/02_System/SystemUI.h"
 
+#include "03_Player/BasePlayerController.h"
 #include "04_Component/BaseInputComponent.h"
+#include "04_Component/InventoryComponent.h"
 
 #include "Kismet/GameplayStatics.h"
 
@@ -59,139 +61,156 @@ void UUIComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
 
-	if (UIInputComponent) DestroyUIInputComponent();
+}
+
+void UUIComponent::InternalBindToHUDUI()
+{
+	UPlayerHUD* PlayerHUD = Cast<UPlayerHUD>(HUDUI);
+	if (!PlayerHUD)
+	{
+		UE_LOGFMT(LogUI, Error, "HUDUI를 UPlayerHUD로 캐스팅할 수 없습니다.");
+		return;
+	}
+
+	PlayerHUD->NotifyQuickSlotsInitFinished.BindUFunction(this, "QuickSlotsInitFinishedNotified");
+	PlayerHUD->NotifyStateBarsInitFinished.BindUFunction(this, "StateBarsInitFinishedNotified");
+}
+
+void UUIComponent::InternalBindToSystemUI()
+{
+	USystemUI* SystemUIRef = Cast<USystemUI>(SystemUI);
+	if (!SystemUIRef)
+	{
+		UE_LOGFMT(LogUI, Error, "HUDUI를 UPlayerHUD로 캐스팅할 수 없습니다.");
+		return;
+	}
+
+	SystemUIRef->NotifyInventoryUIInitFinished.BindUFunction(this, "InventoryUIInitFinishedNotified");
+}
+
+void UUIComponent::InitializeUIComponent()
+{
+	//@PlayerController 가져오기
+	APlayerController* PC = Cast<APlayerController>(GetOwner());
+	if (!PC)
+	{
+		UE_LOGFMT(LogUI, Error, "Owner가 PlayerController가 아닙니다.");
+		return;
+	}
+	//@GameInstance 가져오기
+	UGameInstance* GameInstance = PC->GetGameInstance();
+	if (!GameInstance)
+	{
+		UE_LOGFMT(LogUI, Error, "GameInstance가 null입니다.");
+		return;
+	}
+	//@UIManagerSubsystem 가져오기
+	UUIManagerSubsystem* UIManagerSubsystem = GameInstance->GetSubsystem<UUIManagerSubsystem>();
+	if (!UIManagerSubsystem)
+	{
+		UE_LOGFMT(LogUI, Error, "UI Manager Subsystem이 유효하지 않습니다!");
+		return;
+	}
+	//@EUICategory 열거형 정보 가져오기
+	UEnum* EnumPtr = StaticEnum<EUICategory>();
+	int32 EnumCount = EnumPtr->GetMaxEnumValue();
+	//@각 UI 카테고리에 대한 처리
+	for (int32 i = 0; i < EnumCount; ++i)
+	{
+		EUICategory UICategory = static_cast<EUICategory>(i);
+		const TArray<FUIInformation>* UIInfos = UIManagerSubsystem->GetUICategoryInformations(UICategory);
+
+		if (!UIInfos || UIInfos->Num() == 0)
+		{
+			UE_LOGFMT(LogUI, Warning, "UI Information 정보 중 {0}이 비어있습니다.",
+				EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)));
+			continue;
+		}
+
+		//@각 UI 정보에 대한 위젯 생성 및 설정
+		for (const auto& UIInfo : *UIInfos)
+		{
+			CreateAndSetupWidget(PC, UICategory, UIInfo, EnumPtr);
+		}
+	}
+
+	//@초기화 요청 이벤트
+	RequestInitializationByUIComp.Broadcast();
 }
 #pragma endregion
 
 #pragma region UI
-void UUIComponent::CreateUI(const UUIManagerSubsystem& UIManagerSubsystem, EUICategory UICategory)
+void UUIComponent::CreateAndSetupWidget(APlayerController* PC, EUICategory UICategory, const FUIInformation& UIInfo, UEnum* EnumPtr)
 {
-	UEnum* EnumPtr = StaticEnum<EUICategory>();
-	//@Player Controller
-	APlayerController* PC = Cast<APlayerController>(GetOwner());
-	if (!PC)
+	//@위젯 생성
+	UUserWidget* NewWidget = CreateWidget<UUserWidget>(PC, UIInfo.UIClass);
+	if (!NewWidget)
 	{
-		UE_LOGFMT(LogUI, Error, "PlayerController가 유효하지 않습니다.");
+		UE_LOGFMT(LogUI, Error, "{0} 카테고리의 {1} UI 생성에 실패했습니다.",
+			EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)), *UIInfo.UITag.ToString());
 		return;
 	}
-	//@UI Info
-	const TArray<FUIInformation>* UIInfos = UIManagerSubsystem.GetUICategoryInformations(UICategory);
-	if (!UIInfos || UIInfos->IsEmpty())
+	//@카테고리별 위젯 설정
+	switch (UICategory)
 	{
-		UE_LOGFMT(LogUI, Warning, "UI Information 정보 중 {0}이 비어있습니다.", EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)));
+	case EUICategory::HUD:
+		SetupHUDUI(NewWidget);
+		break;
+	case EUICategory::System:
+		SetupSystemUI(NewWidget);
+		break;
+	case EUICategory::Interaction:
+		SetupInteractionUI(UIInfo.UITag, NewWidget);
+		break;
+	}
+	//@UI 표시 여부 설정
+	UIInfo.bShownOnBeginPlay ? ShowUI(UICategory, UIInfo.UITag) : HideUI(UICategory, UIInfo.UITag);
+	NewWidget->AddToViewport();
+	//@UI 생성 로그
+	UE_LOGFMT(LogUI, Log, "{0} 카테고리의 {1} UI가 생성되었습니다.",
+		EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)), *UIInfo.UITag.ToString());
+}
+
+void UUIComponent::SetupHUDUI(UUserWidget* NewWidget)
+{
+	//@HUD UI 설정
+	HUDUI = NewWidget;
+	UPlayerHUD* PlayerHUD = Cast<UPlayerHUD>(HUDUI);
+	if (!PlayerHUD)
+	{
+		UE_LOGFMT(LogUI, Error, "HUDUI를 UPlayerHUD로 캐스팅할 수 없습니다.");
 		return;
 	}
-	//@Widget
-	for (const auto& UIInfo : *UIInfos)
-	{
-		UUserWidget* NewWidget = CreateWidget<UUserWidget>(PC, UIInfo.UIClass);
-		if (NewWidget)
-		{
-			switch (UICategory)
-			{
-			case EUICategory::HUD:
-				HUDUI = NewWidget;
-				//@Binding?
+	//@HUD 지연 초기화 함수 바인딩
+	RequestInitializationByUIComp.AddUFunction(PlayerHUD, "InitializePlayerHUD");
+	//@HUD 내부 바인딩
+	InternalBindToHUDUI();
 
-				break;
-			case EUICategory::System:
-				SystemUI = NewWidget;
-				//@Binding?
-
-				break;
-			case EUICategory::Interaction:
-				MInteractionUIs.Add(UIInfo.UITag, NewWidget);
-				//@BInding?
-
-				break;
-			}
-
-			UIInfo.bShownOnBeginPlay ? ShowUI(UICategory, UIInfo.UITag) : HideUI(UICategory, UIInfo.UITag);
-			NewWidget->AddToViewport();
-
-			UE_LOGFMT(LogUI, Log, "{0} 카테고리의 {1} UI가 생성되었습니다.",
-				EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)), *UIInfo.UITag.ToString());
-		}
-		else
-		{
-			UE_LOGFMT(LogUI, Error, "{0} 카테고리의 {1} UI 생성에 실패했습니다.",
-				EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)), *UIInfo.UITag.ToString());
-		}
-	}
+	UE_LOGFMT(LogUI, Log, "HUD가 성공적으로 설정되었습니다.");
 }
 
-bool UUIComponent::LoadUI()
+void UUIComponent::SetupSystemUI(UUserWidget* NewWidget)
 {
-	APlayerController* PC = Cast<APlayerController>(GetOwner());
-	if (!PC)
+	// SystemUI 설정
+	SystemUI = NewWidget;
+	USystemUI* System = Cast<USystemUI>(SystemUI);
+	if (!System)
 	{
-		UE_LOGFMT(LogUI, Error, "Owner is not a PlayerController in UIComponent::InitializeComponent");
-		return false;
+		UE_LOGFMT(LogUI, Error, "SystemUI를 USystemUI로 캐스팅할 수 없습니다.");
+		return;
 	}
+	//@SystemUI 지연 초기화 함수 바인딩
+	RequestInitializationByUIComp.AddUFunction(System, "InitializeSystemUI");
+	//@SystemUI 내부 바인딩
+	InternalBindToSystemUI();
 
-	UGameInstance* GameInstance = PC->GetGameInstance();
-	if (!GameInstance)
-	{
-		UE_LOGFMT(LogUI, Error, "GameInstance is null in UIComponent::InitializeComponent");
-		return false;
-	}
-
-	UUIManagerSubsystem* UIManagerSubsystem = GameInstance->GetSubsystem<UUIManagerSubsystem>();
-	if (UIManagerSubsystem)
-	{
-		CreateUI(*UIManagerSubsystem, EUICategory::HUD);
-		CreateUI(*UIManagerSubsystem, EUICategory::System);
-		CreateUI(*UIManagerSubsystem, EUICategory::Interaction);
-		return true;
-	}
-	else
-	{
-		UE_LOGFMT(LogUI, Error, "UI Manager Subsystem이 유효하지 않습니다!");
-		return false;
-	}
-
-	return false;
+	UE_LOGFMT(LogUI, Log, "SystemUI가 성공적으로 설정되었습니다.");
 }
 
-void UUIComponent::BindUIToUIComponent()
+void UUIComponent::SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* NewWidget)
 {
-	//@HUD
-	if (HUDUI)
-	{
-		UPlayerHUD* PlayerHUD = Cast<UPlayerHUD>(HUDUI);
-		if (PlayerHUD)
-		{
-			UQuickSlots* QuickSlotsWidget = PlayerHUD->GetQuickSlotsWidget();
-			if (QuickSlotsWidget)
-			{
-				RequestItemAssignmentToQuickSlots.AddDynamic(QuickSlotsWidget, &UQuickSlots::OnRequestItemAssignment);
-				RequestQuickSlotItemRemoval.AddDynamic(QuickSlotsWidget, &UQuickSlots::OnRequestItemRemoval);
-				RequestQuickSlotItemUpdate.AddDynamic(QuickSlotsWidget, &UQuickSlots::OnRequestItemUpdate);
-				UE_LOGFMT(LogUI, Log, "QuickSlots 위젯이 성공적으로 바인딩되었습니다.");
-			}
-			else
-			{
-				UE_LOGFMT(LogUI, Warning, "QuickSlots 위젯을 찾을 수 없습니다.");
-			}
-		}
-		else
-		{
-			UE_LOGFMT(LogUI, Warning, "PlayerHUD로 캐스팅할 수 없습니다.");
-		}
-	}
-	else
-	{
-		UE_LOGFMT(LogUI, Warning, "HUDUI가 유효하지 않습니다.");
-	}
-	//@System
-	//@Interaction
-
-}
-
-void UUIComponent::BindToInventoryComponent(const APawn* OwningPawn)
-{
-
-
+	//@MInteractionUIs
+	MInteractionUIs.Add(UITag, NewWidget);
 }
 
 void UUIComponent::ShowUI(EUICategory UICategory, const FGameplayTag& UITag)
@@ -208,6 +227,24 @@ void UUIComponent::HideUI(EUICategory UICategory, const FGameplayTag& UITag)
 	{
 		UI->SetVisibility(ESlateVisibility::Collapsed);
 	}
+}
+
+FString UUIComponent::FindUICategoryFromInputTag(const FGameplayTag& InputTag)
+{
+	FString TagString = InputTag.ToString();
+
+	if (TagString.StartsWith("Input.UI."))
+	{
+		TArray<FString> Parts;
+		TagString.ParseIntoArray(Parts, TEXT("."), true);
+
+		if (Parts.Num() >= 3)
+		{
+			return Parts[2]; // "HUD", "System", "Interaction" 등을 반환
+		}
+	}
+
+	return FString(); // 빈 문자열 반환 (카테고리를 찾지 못한 경우)
 }
 
 UUserWidget* UUIComponent::GetUI(EUICategory UICategory, const FGameplayTag& UITag) const
@@ -252,176 +289,48 @@ TArray<UUserWidget*> UUIComponent::GetCategoryUIs(EUICategory UICategory) const
 }
 #pragma endregion
 
-#pragma region Input Component
-bool UUIComponent::LoadUIInputComponent()
-{
-	APlayerController* PC = Cast<APlayerController>(GetOwner());
-	if (!PC) return false;
-
-	BaseInputComponent = PC->FindComponentByClass<UBaseInputComponent>();
-	if (!BaseInputComponent) return false;
-
-	BaseInputComponent->OnUIInputTriggered.AddDynamic(this, &UUIComponent::OnUIInputTagTriggered);
-	BaseInputComponent->OnUIInputReleased.AddDynamic(this, &UUIComponent::OffUIInputTagReleased);
-
-	return true;
-}
-
-void UUIComponent::BindInputComponentToInputActions()
-{
-}
-
-void UUIComponent::DestroyUIInputComponent()
-{
-
-}
-
-void UUIComponent::EnterSystemUIMode()
-{
-	SetUIInputPriority(10);
-	SetUIInputBlocking(true);
-}
-
-void UUIComponent::ExitSystemUIMode()
-{
-	SetUIInputPriority(0);
-	SetUIInputBlocking(false);
-}
-
-void UUIComponent::SetUIInputPriority(int32 NewPriority)
-{
-	//if (BaseInputComponent)
-	//{
-	//	BaseInputComponent->SetPriority(NewPriority);
-	//}
-}
-
-void UUIComponent::SetUIInputBlocking(bool bShouldBlock)
-{
-	//if (BaseInputComponent)
-	//{
-	//	BaseInputComponent->SetBlockingInput(bShouldBlock);
-	//}
-}
-
-FString UUIComponent::FindUICategoryFromInputTag(const FGameplayTag& InputTag)
-{
-	FString TagString = InputTag.ToString();
-
-	if (TagString.StartsWith("Input.UI."))
-	{
-		TArray<FString> Parts;
-		TagString.ParseIntoArray(Parts, TEXT("."), true);
-
-		if (Parts.Num() >= 3)
-		{
-			return Parts[2]; // "HUD", "System", "Interaction" 등을 반환
-		}
-	}
-
-	return FString(); // 빈 문자열 반환 (카테고리를 찾지 못한 경우)
-}
-#pragma endregion
-
 #pragma region Callbacks
-void UUIComponent::OnUIInputTagTriggered(const FGameplayTag& InputTag)
+void UUIComponent::StateBarsInitFinishedNotified()
 {
-	//@Input Tag
-	if (!InputTag.IsValid())
-	{
-		UE_LOGFMT(LogUI, Error, "{0}: 유효하지 않은 InputTag입니다.", __FUNCTION__);
-		return;
-	}
+	bStateBarsReadyForLoading = true;
 
-	UE_LOGFMT(LogUI, Log, "UI 입력이 트리거되었습니다. InputTag: {0}", InputTag.ToString());
+	CheckAllUIsForAttributeSetReady();
+}
+void UUIComponent::QuickSlotsInitFinishedNotified()
+{
+	bQuickSlotsReadyForLoading = true;
 
-	//@UI Category, Input Tag를 Parsing하여 관련 UI Category 찾기
-	FString UICategoryString = FindUICategoryFromInputTag(InputTag);
-	//@Delegate
-	if (!UICategoryString.IsEmpty())
-	{
-		//@HUD
-		if (UICategoryString == "HUD")
-		{
-			OnUIHUDInputTriggered.Broadcast(InputTag);
-		}
-		//@System
-		else if (UICategoryString == "System")
-		{
-			OnUISystemInputTriggered.Broadcast(InputTag);
-		}
-		//@Interaction
-		else if (UICategoryString == "Interaction")
-		{
-			OnUIInteractionInputTriggered.Broadcast(InputTag);
-		}
-		else
-		{
-			UE_LOGFMT(LogUI, Error, "{0}에 대응되는 UI Category가 존재하지 않습니다. {1}", 
-				UICategoryString, __FUNCTION__);
-			return;
-		}
-	}
-
+	//@Inventory Loading 시작을 위한 준비가 완료되었는지 체크합니다.
+	CheckUIsForInventoryReady();
 }
 
-void UUIComponent::OffUIInputTagReleased(const FGameplayTag& InputTag)
+void UUIComponent::InventoryUIInitFinishedNotified()
 {
-	//@Input Tag
-	if (!InputTag.IsValid())
-	{
-		UE_LOGFMT(LogUI, Error, "{0}: 유효하지 않은 InputTag입니다.", __FUNCTION__);
-		return;
-	}
+	bInventoryUIReadyForLoading = true;
 
-	UE_LOGFMT(LogUI, Log, "UI 입력이 해제되었습니다. InputTag: {0}", InputTag.ToString());
+	//@Inventory Loading 시작을 위한 준비가 완료되었는지 체크합니다.
+	CheckUIsForInventoryReady();
+}
 
-	//@UI Category, Input Tag를 Parsing하여 관련 UI Category 찾기
-	FString UICategoryString = FindUICategoryFromInputTag(InputTag);
-	//@Delegate
-	if (!UICategoryString.IsEmpty())
+void UUIComponent::CheckUIsForInventoryReady()
+{
+	//@Delgate, Iventory 로딩 이전에 초기화 완료 확인할 UI들 추가
+	if (bQuickSlotsReadyForLoading && bInventoryUIReadyForLoading)
 	{
-		//@HUD
-		if (UICategoryString == "HUD")
-		{
-			OnUIHUDInputReleased.Broadcast(InputTag);
-		}
-		//@System
-		else if (UICategoryString == "System")
-		{
-			OnUISystemInputReleased.Broadcast(InputTag);
-		}
-		//@Interaction
-		else if (UICategoryString == "Interaction")
-		{
-			OnUIInteractionInputReleased.Broadcast(InputTag);
-		}
-		else
-		{
-			UE_LOGFMT(LogUI, Error, "{0}에 대응되는 UI Category가 존재하지 않습니다. {1}",
-				UICategoryString, __FUNCTION__);
-			return;
-		}
+		UIsForInventoryReady.ExecuteIfBound();
+
+		bQuickSlotsReadyForLoading = false;
+		bInventoryUIReadyForLoading = false;
 	}
 }
-
-void UUIComponent::QuickSlotAssignmentRequested(int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)
+void UUIComponent::CheckAllUIsForAttributeSetReady()
 {
-	//@Delegate
-	RequestItemAssignmentToQuickSlots.Broadcast(SlotNum, UniqueItemID, ItemType, ItemTag, ItemCount);
+	//@Delegate, Attribute Set 로딩 이전에 초기화 완료 확인할 UI들 추가
+	if (bStateBarsReadyForLoading)
+	{
+		UIsForAttributeSetReady.ExecuteIfBound();
 
-}
-
-void UUIComponent::QuickSlotItemRemovalRequested(int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)
-{
-	RequestQuickSlotItemRemoval.Broadcast(SlotNum, UniqueItemID, ItemType, ItemTag, ItemCount);
-
-}
-
-void UUIComponent::QuickSlotItemUpdateRequested(int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)
-{
-	//@Delegate
-	RequestQuickSlotItemUpdate.Broadcast(SlotNum, UniqueItemID, ItemType, ItemTag, ItemCount);
-
+		bStateBarsReadyForLoading = false;
+	}
 }
 #pragma endregion

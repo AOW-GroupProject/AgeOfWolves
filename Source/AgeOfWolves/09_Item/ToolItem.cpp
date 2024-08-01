@@ -16,9 +16,9 @@ AToolItem::AToolItem(const FObjectInitializer& ObjectInitializer)
     ItemType = EItemType::Tool;
 }
 
-bool AToolItem::ActivateItem_Implementation()
+bool AToolItem::TryActivateItem_Implementation()
 {
-    if (Super::ActivateItem_Implementation())
+    if (Super::TryActivateItem_Implementation())
     {
         //@GA활성화 로직 작성
         return true;

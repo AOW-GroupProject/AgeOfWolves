@@ -32,6 +32,8 @@ class UPawnData;
 class UBaseAttributeSet;
 class UBaseAbilitySystemComponent; 
 class UUserWidget;
+class UAOWSaveGame;
+class UAbilityManagerSubsystem;
 
 /**
  * Player State contaions pawn's info interacting with others
@@ -52,17 +54,23 @@ protected:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	//~End Of APlayerState Interface
+protected:
+	
+
+public:
+	UFUNCTION()
+		void InitializePlayerState();
 #pragma endregion
 
 #pragma region Gameplay Ability System
 public:
-	/*
-	* @목적: PawnData를 통해 캐릭터의 최초(게임 시작 시점) 기본 GA, GE, AttributeSet을 ASC에 등록하는 작업을 수행합니다.
-	* @설명: 등록 순서는 AttributeBase -> GE -> GA 순서를 유지합니다. AttributeBase의 각 Attribute의 초기 값을 GE를 통해 초기화하기 때문입니다!
-	* @참고: Inventory -> HUD -> GAS(AS->GE->GA)
-	*/
+	//@로딩 작업
 	UFUNCTION()
-		void LoadAbilitySystem();
+		void LoadGameAbilitySystem();
+	//@Inventory의 Item 정보를 Save File로부터 Load합니다.
+	void LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame);
+	//@Inventory의 Item 정보를 Item Manager로부터 Load합니다.
+	void LoadDefaultAbilitySystemFromAbilityManager(UAbilityManagerSubsystem* AbilityManager);
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Ability System|Pawn Data")

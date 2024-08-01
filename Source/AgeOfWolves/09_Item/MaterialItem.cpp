@@ -16,9 +16,9 @@ AMaterialItem::AMaterialItem(const FObjectInitializer& ObjectInitializer)
     ItemType = EItemType::Material;
 }
 
-bool AMaterialItem::ActivateItem_Implementation()
+bool AMaterialItem::TryActivateItem_Implementation()
 {
-    if (Super::ActivateItem_Implementation())
+    if (Super::TryActivateItem_Implementation())
     {
         //@활성화 로직 작성
         return true;

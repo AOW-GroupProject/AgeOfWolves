@@ -24,7 +24,7 @@ public:
 
 #pragma region Activation
 protected:
-	virtual bool ActivateItem_Implementation() override;
+	virtual bool TryActivateItem_Implementation() override;
 #pragma endregion
 
 #pragma region Property

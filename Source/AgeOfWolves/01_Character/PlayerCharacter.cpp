@@ -5,13 +5,9 @@
 #include "PlayerCharacter.h"
 #include "Logging/StructuredLog.h"
 
-#include "04_Component/BaseInputComponent.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
-<<<<<<< HEAD
 #include "04_Component/InventoryComponent.h"
-=======
 #include "04_Component/LockOnComponent.h" 
->>>>>>> develop
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Camera/CameraComponent.h"
@@ -32,15 +28,12 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
 	)
 {
-<<<<<<< HEAD
-	// @Component 
-=======
+
 	PrimaryActorTick.bCanEverTick = true;
 	// @Input Component 
->>>>>>> develop
 	{
-		InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
 		InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
+		LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOn Component"));
 	}
 	// @Capsule
 	{
@@ -90,27 +83,22 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 			GetMesh()->SetAnimInstanceClass(animInstance.Class);
 	}
 
-	// Create Combat Component on Player Character 
-	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOn Component"));
-
 }
 
 void APlayerCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
+	if (InventoryComponent)
+	{
+		RequestStartInitByPlayerCharacter.AddUFunction(InventoryComponent, "InitializeInventory");
+	}
 }
 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-<<<<<<< HEAD
-	//@TODO: Refactoring
-	BaseInputComponent = Cast<UBaseInputComponent>(InputComponent);
-	check(BaseInputComponent);
-	BaseAnimInstance = Cast<UBaseAnimInstance>(GetMesh()->GetAnimInstance());
-=======
->>>>>>> develop
+
 }
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -122,12 +110,7 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-<<<<<<< HEAD
 
-	AdjustCameraTransform(DeltaSeconds);
-=======
-	// AdjustCameraTransform(DeltaSeconds);
->>>>>>> develop
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)
@@ -136,16 +119,8 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 
 	Super::PossessedBy(NewController);
 
-	//@Input Component
-	if (auto BaseInputComp = Cast<UBaseInputComponent>(InputComponent))
-	{
-		BaseInputComp->LoadPlayerInputSetup();
-	}
-	//@Inventory Comp
-	if (InventoryComponent && InventoryComponent->LoadInventory())
-	{
-		InventoryComponent->BindToUIComponent(NewController);
-	}
+	//@초기화 알림 이벤트
+	RequestStartInitByPlayerCharacter.Broadcast(NewController);
 
 }
 

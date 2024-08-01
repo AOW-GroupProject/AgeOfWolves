@@ -9,6 +9,8 @@
 #include "StateBars.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogStateBars, Log, All)
+//@초기화 완료 이벤트
+DECLARE_DELEGATE(FStateBarsInitFinished);
 
 class UProgressBar;
 class UVerticalBox;
@@ -34,6 +36,13 @@ protected:
 	virtual void NativeConstruct(); // 화면에 렌더되기 직전에 호출됨
 	virtual void NativeDestruct();
 	//~ End UUserWidget Interface
+protected:
+	//@외부 바인딩
+	void ExternalBindingToAttributeSet();
+public:
+	//@초기화
+	UFUNCTION()
+		void InitializeStateBars();
 #pragma endregion 
 
 #pragma region SubWidgets
@@ -50,7 +59,13 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category = "State Bar", meta = (BindWidget))
 		UProgressBar* SP;
 
-#pragma region Attribute Value
+#pragma region Delegates
+public:
+	FStateBarsInitFinished StateBarsInitFinished;
+
+#pragma endregion
+
+#pragma region Callbacks
 protected:
 	/*
 	* @목적 : OwningPawn의 PlayerState의 Attribute 값 변화 이벤트에 등록할 콜백 함수입니다.

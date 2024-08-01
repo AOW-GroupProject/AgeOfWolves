@@ -15,23 +15,28 @@ class UUserWidget;
 class UUIManagerSubsystem;
 class UBaseInputComponent;
 
-//@HUD UI Event
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUIHUDInputEvent, const FGameplayTag&, InputTag);
-//@System UI Event
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUISystemInputEvent, const FGameplayTag&, InputTag);
-//@Interaction UI Event
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnUIInteractionInputEvent, const FGameplayTag&, InputTag);
-//@Item Removed
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemRemovalRequested, const FGuid&, UniqueItemID);
-//@Item Activated
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemActivated, const FGuid&, UniqueItemID);
+//@초기화 요청 이벤트
+DECLARE_MULTICAST_DELEGATE(FRequestInitializationByUIComp);
 
-//@Item QuickSlot Assigned
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FRequestItemAssignmentToQuickSlot, int32, SlotNum, const FGuid&, UniqueItemID, EItemType, ItemType, const FGameplayTag&, ItemTag, int32, ItemCount);
-//@Quick Slot Item Removal
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FRequestQuickSlotItemRemoval, int32, SlotNum, const FGuid&, UniqueItemID, EItemType, ItemType, const FGameplayTag&, ItemTag, int32, ItemCount);
-//@QuickSlot Itme Updated 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FRequestQuickSlotItemUpdate, int32, SlotNum, const FGuid&, UniqueItemID, EItemType, ItemType, const FGameplayTag&, ItemTag, int32, ItemCount);
+//@HUD의 초기화 완료 이벤트
+DECLARE_DELEGATE(FUIsForInventoryReady);
+//@State Bars의 초기화 완료 이벤트
+DECLARE_DELEGATE(FUIsForAttributeSetReady);
+
+//@TODO: 각 System UI에 옮길 예정
+//@System UI Event
+DECLARE_MULTICAST_DELEGATE_OneParam(FNotifySystemUIInputActivation, const FGameplayTag&);
+//@TODO: 각 Interaction UI에 옮길 예정
+//@Interaction UI Event
+DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyInteractionUIInputActivation, const FGameplayTag&);
+
+//@TODO: Inventory UI로 옮길 예정
+//@아이템 제거 알림 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyItemRemovalFromInventory, const FGuid&);
+//@아이템 업데이트 알림 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyInventoryItemUpdated, const FGuid&);
+//@아이템 활성화 알림 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyInventoryItemActivation, const FGuid&);
 
 /*
 * UUIComponent
@@ -56,17 +61,33 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	//~ End of UActorComponent Interface
+private:
+	//@내부 바인딩
+	void InternalBindToHUDUI();
+	void InternalBindToSystemUI();
+public:
+	//@초기화
+	UFUNCTION()
+		void InitializeUIComponent();
+protected:
+	void CheckUIsForInventoryReady();
+	void CheckAllUIsForAttributeSetReady();
 #pragma endregion
 
 #pragma region UI
-public:
-	//@Widget 생성
-    void CreateUI(const UUIManagerSubsystem& UIManagerSubsystem, EUICategory Category);
-	//@Widget 정보 Load
-    bool LoadUI();
-	//@Binding 작업
-	void BindUIToUIComponent();
-	void BindToInventoryComponent(const APawn* OwningPawn);
+protected:
+	void CreateAndSetupWidget(APlayerController* PC, EUICategory UICategory, const FUIInformation& UIInfo, UEnum* EnumPtr);
+	//@HUD UI
+	bool bQuickSlotsReadyForLoading = false;
+	bool bStateBarsReadyForLoading = false;
+	void SetupHUDUI(UUserWidget* NewWidget);
+	//@System UI
+	bool bInventoryUIReadyForLoading = false;
+	void SetupSystemUI(UUserWidget* NewWidget);
+	//@Interaction UI
+	bool bInteractionUIsInitFinished = false;
+	void SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* NewWidget);
+
 protected:
 	//@Widget을 화면에 나타냅니다.
     UFUNCTION(BlueprintCallable, Category = "UI")
@@ -85,97 +106,52 @@ protected:
 	//@Interaction
 	UPROPERTY()
 		TMap<FGameplayTag, UUserWidget*> MInteractionUIs;
-
+private:
+	FString FindUICategoryFromInputTag(const FGameplayTag& InputTag);
 public:
     UFUNCTION(BlueprintCallable, Category = "UI")
-        UUserWidget* GetUI(EUICategory UICategory, const FGameplayTag& UITag) const;
+        UUserWidget* GetUI(EUICategory UICategory, const FGameplayTag& UITag = FGameplayTag()) const;
 	UFUNCTION(BlueprintCallable, Category = "UI")
 		TArray<UUserWidget*> GetCategoryUIs(EUICategory UICategory) const;
 #pragma endregion
 
-#pragma region Input Component
-private:
-	UPROPERTY()
-		UBaseInputComponent* BaseInputComponent;
-public:
-	bool LoadUIInputComponent();
-	void BindInputComponentToInputActions();
-private:
-	void DestroyUIInputComponent();
-	void EnterSystemUIMode();
-	void ExitSystemUIMode();
-
-public:
-	void SetUIInputPriority(int32 NewPriority);
-	void SetUIInputBlocking(bool bShouldBlock);
-
-private:
-	FString FindUICategoryFromInputTag(const FGameplayTag& InputTag);
-#pragma endregion
-
 #pragma region Delegates
-	//@Delegate: HUD
-	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
-		FOnUIHUDInputEvent OnUIHUDInputTriggered;
-	//@Delegate: HUD
-	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
-		FOnUIHUDInputEvent OnUIHUDInputReleased;
-	//@Delegate: System
-	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
-		FOnUISystemInputEvent OnUISystemInputTriggered;
-	//@Delegate: System
-	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
-		FOnUISystemInputEvent OnUISystemInputReleased;
-	//@Delegate: Interaction
-	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
-		FOnUIInteractionInputEvent OnUIInteractionInputTriggered;
-	//@Delegate: Interaction
-	UPROPERTY(BlueprintAssignable, Category = "UI|Input")
-		FOnUIInteractionInputEvent OnUIInteractionInputReleased;
-
 public:
-	//@Delegate: Item을 Quick Slot 추가 요청
-	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
-		FRequestItemAssignmentToQuickSlot RequestItemAssignmentToQuickSlots;
-	//@Delegate: Quick Slot Item의 제거 요청
-	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
-		FRequestQuickSlotItemRemoval RequestQuickSlotItemRemoval;
-	//@Delegate: Quick Slot Item의 업데이트 요청 
-	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
-		FRequestQuickSlotItemUpdate RequestQuickSlotItemUpdate;
-	//@Delegate: Item 제거 요청
-	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
-		FOnItemRemovalRequested OnItemRemovalRequested;
-	//@Delegate: Item 활성화 요청
-	UPROPERTY(BlueprintAssignable, Category = "UI|Inventory")
-		FOnItemActivated OnItemActivated;
+	//@초기화 요청 이벤트
+	FRequestInitializationByUIComp RequestInitializationByUIComp;
+public:
+	//@Inventory 로딩 준비 완료 이벤트
+	FUIsForInventoryReady UIsForInventoryReady;
+	//@Attriburte Set 로딩 준비 완료 이벤트
+	FUIsForAttributeSetReady UIsForAttributeSetReady;
+public:
+	//@TODO: 각 System UI에 옮길 예정
+	//@System 관련 사용자 입력 Trigger 이벤트
+	FNotifySystemUIInputActivation NotifySystemUIInputActivation;
+	//@TODO: 각 Interaction UI에 옮길 예정
+	//@Interaction 관련 사용자 입력 Trigger 이벤트
+	FNotifyInteractionUIInputActivation NotifyInteractionUIInputActivation;
+
+//@TODO: Inventory UI 제작 시 아래 Delegate들을 Inventory UI로 옮겨줍니다.
+public:
+	//@인벤토리 UI 아이템 제거 알림 이벤트
+	FNotifyItemRemovalFromInventory NotifyItemRemovalFromInventory;
+	//@인벤토리 UI 아이템 업데이트 알림 이벤트
+	FNotifyInventoryItemUpdated NotifyInventoryItemUpdated;
+	//@인벤토리 UI 아이템 활성화 알림 이벤트
+	FNotifyInventoryItemActivation NotifyInventoryItemActivation;
 #pragma endregion
 
 #pragma region Callbacks
 public:
-	//@Callback: Input Comp
 	UFUNCTION()
-		void OnUIInputTagTriggered(const FGameplayTag& InputTag);
-	//@Callback: Input Comp
+		void StateBarsInitFinishedNotified();
+	//@Callback: HUD의 Quick Slots 초기와 완료를 알리는 이벤트 호출
 	UFUNCTION()
-		void OffUIInputTagReleased(const FGameplayTag& InputTag);
-	//@Callback: Inventory UI
+		void QuickSlotsInitFinishedNotified();
+	//@Callback: System UI의 Inventory UI 초기화 완료를 알리는 이벤트 호출
 	UFUNCTION()
-		void QuickSlotAssignmentRequested(
-			int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
-		);
-	//@Callback: Inventory UI
-		//@Callback: Inventory Comp
-	UFUNCTION()
-		void QuickSlotItemRemovalRequested(
-			int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
-		);
-
-	//@Callback: Inventory Comp
-	UFUNCTION()
-		void QuickSlotItemUpdateRequested(
-			int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
-		);
+		void InventoryUIInitFinishedNotified();
 #pragma endregion
 
 };

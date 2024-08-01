@@ -6,7 +6,9 @@
 #include "14_Subsystem/ItemManagerSubsystem.h"
 #include "09_Item/Item.h"
 
-#include "04_Component/UIComponent.h"
+#include "04_Component/UIComponent.h" // 제거 예정
+#include "08_UI/01_HUD/PlayerHUD.h"
+#include "08_UI/01_HUD/QuickSlots.h"
 
 
 DEFINE_LOG_CATEGORY(LogInventory)
@@ -57,6 +59,7 @@ TSubclassOf<AItem> FInventoryItem::GetItemClass() const
 
     return ItemCDO->GetClass();
 }
+
 EItemType FInventoryItem::GetItemType() const
 {
     if (!ItemCDO.Get())
@@ -66,6 +69,11 @@ EItemType FInventoryItem::GetItemType() const
     }
 
     return ItemCDO->GetItemType();
+}
+
+AItem* FInventoryItem::GetItem()
+{
+    return ItemCDO.Get() ? ItemCDO : nullptr;
 }
 #pragma endregion
 
@@ -95,9 +103,6 @@ void UInventoryComponent::OnUnregister()
 void UInventoryComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
-
-    Inventory.Empty();
-    QuickSlots.SetNum(MaxQuicKSlotSize);
 }
 
 void UInventoryComponent::DestroyComponent(bool bPromoteChildren)
@@ -118,11 +123,85 @@ void UInventoryComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
     //@TODO: Save Game에 현재 Inventory 정보 저장
 }
+
+void UInventoryComponent::ExternalBindToUIComponent(const AController* Controller)
+{
+    check(Controller);
+
+    if (auto UIComponent = Controller->FindComponentByClass<UUIComponent>())
+    {
+        //@UI Comp의 HUD 초기화 완료 이벤트(아이템 로드 작업 과 HUD의 초기화 작업의 동기화)
+        UIComponent->UIsForInventoryReady.BindUFunction(this, "LoadInventory");
+        //@TODO: 두 UI 모두 Loading 준비가 완료 되었을 때 LoadInventory 수행하도록 설정
+        //UIComponent->InventoryUIReadyForLoading.BindUFunction(this, "LoadInventory");
+
+        UE_LOGFMT(LogInventory, Log, "Inventory Component가 UI Component에 성공적으로 바인딩 되었습니다.");
+    }
+}
+
+void UInventoryComponent::ExternalBindToQuickSlots()
+{
+    UE_LOGFMT(LogInventory, Log, "{0}: QuickSlots 바인딩 작업을 시작합니다.", __FUNCTION__);
+
+    //@Owner Pawn
+    APawn* OwnerPawn = Cast<APawn>(GetOwner());
+    if (!OwnerPawn)
+    {
+        UE_LOGFMT(LogInventory, Warning, "{0}: 소유자 Pawn을 가져오는 데 실패했습니다.", __FUNCTION__);
+        return;
+    }
+    //@PC
+    APlayerController* PlayerController = Cast<APlayerController>(OwnerPawn->GetController());
+    if (!PlayerController)
+    {
+        UE_LOGFMT(LogInventory, Warning, "{0}: PlayerController를 가져오는 데 실패했습니다.", __FUNCTION__);
+        return;
+    }
+    //@UI Comp
+    UUIComponent* UIComponent = PlayerController->FindComponentByClass<UUIComponent>();
+    if (!UIComponent)
+    {
+        UE_LOGFMT(LogInventory, Warning, "{0}: UIComponent를 가져오는 데 실패했습니다.", __FUNCTION__);
+        return;
+    }
+    //@Player HUD
+    UPlayerHUD* PlayerHUD = Cast<UPlayerHUD>(UIComponent->GetUI(EUICategory::HUD));
+    if (!PlayerHUD)
+    {
+        UE_LOGFMT(LogInventory, Warning, "{0}: PlayerHUD를 가져오는 데 실패했습니다.", __FUNCTION__);
+        return;
+    }
+    //@Quick Slots
+    UQuickSlots* QuickSlotsUI = PlayerHUD->GetQuickSlotsUI();
+    if (!QuickSlotsUI)
+    {
+        UE_LOGFMT(LogInventory, Warning, "{0}: QuickSlots를 가져오는 데 실패했습니다.", __FUNCTION__);
+        return;
+    }
+    //@External Binding
+    QuickSlotsUI->QuickSlotItemActivated.BindUFunction(this, "StartUseItem");
+
+    UE_LOGFMT(LogInventory, Log, "{0}: Inventory Component가 QuickSlots에 성공적으로 바인딩 되었습니다.", __FUNCTION__);
+}
+
+void UInventoryComponent::InitializeInventory(const AController* Controller)
+{
+    //@외부 바인딩
+    ExternalBindToUIComponent(Controller);
+    //@Inventory
+    Inventory.Empty();
+    //@Quick Slots
+    QuickSlots.SetNum(MaxQuicKSlotSize);
+}
+
 #pragma endregion
 
 #pragma region Inventory
-bool UInventoryComponent::LoadInventory()
+void UInventoryComponent::LoadInventory()
 {
+    UE_LOGFMT(LogInventory, Warning, "Inventory의 Load 작업을 시작합니다 : {0}", __FUNCTION__);
+    //@외부 바인딩
+    ExternalBindToQuickSlots();
     //@GameInstance
     if (const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this)))
     {
@@ -131,20 +210,14 @@ bool UInventoryComponent::LoadInventory()
         {
             auto* SaveGameInstance = GameInstance->GetSaveGameInstance();
             LoadItemsFromSaveGame(SaveGameInstance);
-
-            return true;
         }
         //@Item Manager
         else
         {
             UItemManagerSubsystem* ItemManager = GameInstance->GetSubsystem<UItemManagerSubsystem>();
             LoadDefaultItemsFromItemManager(ItemManager);
-
-            return true;
         }
     }
-
-    return false;
 }
 
 void UInventoryComponent::LoadItemsFromSaveGame(UAOWSaveGame* SaveGame)
@@ -156,7 +229,7 @@ void UInventoryComponent::LoadItemsFromSaveGame(UAOWSaveGame* SaveGame)
     }
 
     //@TODO: SaveGame으로부터 Save된 Inventory 정보 가져와서 초기화
-    //@TODO: HUD에게 Quick Slots Assgined Item 정보 전달
+    //@TODO: Quick Slot Item들 추가
 }
 
 void UInventoryComponent::LoadDefaultItemsFromItemManager(UItemManagerSubsystem* ItemManager)
@@ -178,21 +251,6 @@ void UInventoryComponent::LoadDefaultItemsFromItemManager(UItemManagerSubsystem*
     for (auto& it : DefaultItems)
     {
         AddItem(ItemManager, it.Value, it.Key);
-    }
-
-}
-
-void UInventoryComponent::BindToUIComponent(const AController* Controller)
-{
-    check(Controller);
-
-    if (auto UIComponent = Controller->FindComponentByClass<UUIComponent>())
-    {
-        UIComponent->RequestItemAssignmentToQuickSlots.AddDynamic(this, &UInventoryComponent::OnRequestItemAssignmentToQuickSlots);
-        UIComponent->RequestQuickSlotItemRemoval.AddDynamic(this, &UInventoryComponent::OnRequestQuickSlotItemRemoval);
-        UIComponent->RequestQuickSlotItemUpdate.AddDynamic(this, &UInventoryComponent::OnRequestQuickSlotItemUpdate);
-
-        UE_LOGFMT(LogInventory, Log, "Inventory Component가 UI Component에 성공적으로 바인딩 되었습니다.");
     }
 }
 
@@ -225,7 +283,6 @@ void UInventoryComponent::AddItem(AItem* AlreadySpawnedItem, int32 Num)
     if (FindExistingItem(ItemTag, ExistingItemID))
     {
         AddExistingItem(ExistingItemID, *ItemInfo, Num);
-        OnItemAddedToInventory.Broadcast(ExistingItemID);
     }
     //@Add New Item
     else
@@ -236,7 +293,7 @@ void UInventoryComponent::AddItem(AItem* AlreadySpawnedItem, int32 Num)
             UE_LOGFMT(LogInventory, Error, "{0}: 인벤토리에 해당 아이템을 추가하는데 실패했습니다.", ItemTag.ToString());
             return;
         }
-        OnItemAddedToInventory.Broadcast(NewID);
+        RequestInitializationByInvenComp.Broadcast(NewID);
     }
 }
 
@@ -282,7 +339,6 @@ void UInventoryComponent::AddItem(UItemManagerSubsystem* ItemManager, TSubclassO
     if (FindExistingItemByClass(BlueprintItemClass, ExistingItemID))
     {
         AddExistingItem(ExistingItemID, *ItemInfo, Num);
-        OnItemAddedToInventory.Broadcast(ExistingItemID);
     }
     //@Add New Item
     else
@@ -294,9 +350,7 @@ void UInventoryComponent::AddItem(UItemManagerSubsystem* ItemManager, TSubclassO
             return;
         }
         //@Delegate
-        OnItemAddedToInventory.Broadcast(NewID);
-        //@TEST
-        OnQuickSlotItemAssigned.Broadcast(1, NewID, ItemInfo->ItemType, ItemInfo->ItemTag, Num);
+        RequestInitializationByInvenComp.Broadcast(NewID);
     }
 }
 
@@ -310,7 +364,7 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
         return FGuid();
     }
     //@Game Insatnce
-    UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(this);
+    UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(OwnerActor);
     if (!GameInstance)
     {
         UE_LOGFMT(LogInventory, Error, "GameInstance를 가져올 수 없습니다.");
@@ -355,10 +409,11 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
             Num, ItemInfo->MaxStack);
         return FGuid();
     }
-    //@Callbacks
+    //@Binding
+    //@TODO: Inventory의 internal Binding
     if (AlreadySpawnedItem)
     {
-        OnItemAddedToInventory.AddDynamic(AlreadySpawnedItem, &AItem::OnItemAddedToInventory);
+        RequestInitializationByInvenComp.AddUFunction(AlreadySpawnedItem, "InitializeItem");
     }
     //@FInventoryItem
     FGuid NewID = FGuid::NewGuid();
@@ -368,6 +423,15 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
     if (AlreadySpawnedItem)
     {
         DisableItem(AlreadySpawnedItem);
+    }
+    //@Quick Slots
+    if (ItemInfo->bObssessedToQuickSlots
+        && ItemInfo->bConsumable
+        && ItemInfo->QuickSlotNum > 0 && ItemInfo->QuickSlotNum < 4)
+    {
+        QuickSlots[ItemInfo->QuickSlotNum] = NewID;
+        
+        QuickSlotItemsLoaded.ExecuteIfBound(ItemInfo->QuickSlotNum, NewID, ItemInfo->ItemType, ItemInfo->ItemTag, Num);
     }
 
     UE_LOGFMT(LogInventory, Log, "{0}: 인벤토리에 새로운 아이템이 추가되었습니다. 개수: {1}",
@@ -404,7 +468,16 @@ void UInventoryComponent::AddExistingItem(const FGuid& ItemId, const FItemInform
     {
         UE_LOGFMT(LogInventory, Log, "{0}: 아이템 {1}개가 성공적으로 추가되었습니다. 현재 갯수: {2}/{3}",
             ExistingItem.GetItemTag().ToString(), ActuallyAdded, ExistingItem.ItemCount, MaxStack);
+
+        //@Quick Slots에 할당되어 있는 아이템인지 확인
+        int32 index = IsItemAssignedToQuickSlots(ItemId);
+        if (index != -1 && index >= 0 && index <= 3)
+        {
+            QuickSlotItemUpdated.ExecuteIfBound(index + 1, ItemId, ExistingItem.ItemCount);
+        }
     }
+
+    
 }
 
 void UInventoryComponent::RemoveExistingItem()
@@ -440,9 +513,79 @@ bool UInventoryComponent::FindExistingItem(const FGameplayTag& ItemTag, FGuid& O
     return false;
 }
 
-void UInventoryComponent::StartUseItem(const FGuid& UniqueItemId)
+bool UInventoryComponent::StartUseItem(const FGuid& UniqueItemID, int32 QuickSlotNum)
 {
-	//@Item 활성화
+    //@FInventoryItem
+    FInventoryItem* InventoryItem = Inventory.Find(UniqueItemID);
+    if (!InventoryItem)
+    {
+        UE_LOGFMT(LogInventory, Warning, "아이템 사용 실패: 아이템 ID {0}를 인벤토리에서 찾을 수 없습니다.", UniqueItemID.ToString());
+        return false;
+    }
+    //@Item Manager Subsystem
+    UItemManagerSubsystem* ItemManager = GetWorld()->GetGameInstance()->GetSubsystem<UItemManagerSubsystem>();
+    if (!ItemManager)
+    {
+        UE_LOGFMT(LogInventory, Error, "ItemManagerSubsystem을 가져올 수 없습니다.");
+        return false;
+    }
+    //@FItemInformation
+    const FItemInformation* ItemInfo = ItemManager->GetItemInformation<FItemInformation>(InventoryItem->GetItemType(), InventoryItem->GetItemTag());
+    if (!ItemInfo)
+    {
+        UE_LOGFMT(LogInventory, Error, "ItemInformation을 가져올 수 없습니다.");
+        return false;
+    }
+
+    //@Log
+    UEnum* ItemTypeEnum = StaticEnum<EItemType>();
+    FString ItemTypeString = ItemTypeEnum ? ItemTypeEnum->GetNameStringByValue(static_cast<int64>(InventoryItem->GetItemType())) : TEXT("Unknown");
+    UE_LOGFMT(LogInventory, Log, "아이템 사용 시작: 아이템 ID {0}, 아이템 유형 {1}, 아이템 태그 {2}, 현재 수량 {3}",
+        UniqueItemID.ToString(), ItemTypeString, InventoryItem->GetItemTag().ToString(), InventoryItem->ItemCount);
+
+    //@Try Activate Item
+    if (AItem* Item = InventoryItem->GetItem())
+    {
+        if (Item->TryActivateItem())
+        {
+            //@Item Count
+            InventoryItem->ItemCount--;
+            if (InventoryItem->ItemCount == 0)
+            {
+                //@bRemovable == true
+                if (ItemInfo->bRemovable)
+                {
+                    //@Inventory Remove
+                    Inventory.Remove(UniqueItemID);
+                    //@Quick Slot Remove
+                    int32 QuickSlotIndex = IsItemAssignedToQuickSlots(UniqueItemID);
+                    if (QuickSlotIndex != -1)
+                    {
+                        QuickSlots[QuickSlotIndex] = FGuid();
+                    }
+
+                    UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 모두 소진되어 인벤토리에서 제거되었습니다.", InventoryItem->GetItemTag().ToString());
+                }
+                //@bRemovable == false
+                else
+                {
+                    UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 모두 소진되었지만, 제거 불가능한 아이템이므로 인벤토리에 유지됩니다.", InventoryItem->GetItemTag().ToString());
+                }
+            }
+            UE_LOGFMT(LogInventory, Log, "아이템 {0} 사용 완료. 남은 수량: {1}", InventoryItem->GetItemTag().ToString(), InventoryItem->ItemCount);
+            return true;
+        }
+        else
+        {
+            UE_LOGFMT(LogInventory, Warning, "아이템 {0} 사용 실패.", InventoryItem->GetItemTag().ToString());
+            return false;
+        }
+    }
+    else
+    {
+        UE_LOGFMT(LogInventory, Error, "아이템 {0}의 CDO가 유효하지 않습니다.", UniqueItemID.ToString());
+        return false;
+    }
 }
 
 void UInventoryComponent::SpawnItem()
@@ -512,83 +655,25 @@ void UInventoryComponent::DisableItem(AItem* Item)
         Comp->SetVisibility(false);
     }
 }
+
+int32 UInventoryComponent::IsItemAssignedToQuickSlots(const FGuid& UniqueItemID)
+{
+    for (int32 i = 0; i < QuickSlots.Num(); ++i)
+    {
+        if (QuickSlots[i] == UniqueItemID)
+        {
+            // 아이템이 퀵슬롯에 할당되어 있으면 해당 슬롯의 인덱스를 반환 (0-based)
+            return i;
+        }
+    }
+
+    // 아이템이 퀵슬롯에 할당되어 있지 않으면 -1 반환
+    return -1;
+}
 #pragma endregion
 
 #pragma region Callbacks
-void UInventoryComponent::OnItemRemovalRequested(const FGuid& UniqueItemID)
-{
-    if (Inventory.Contains(UniqueItemID))
-    {
-        //@TODO: bRemovabl 체크, 갯수 제거 혹은 완전 제거 여부 설계
-        FInventoryItem& ItemToRemove = Inventory[UniqueItemID];
-        FGameplayTag ItemTag = ItemToRemove.GetItemTag();
-        EItemType ItemType = ItemToRemove.GetItemType();
-        //@Inventory
-        Inventory.Remove(UniqueItemID);
-       //@Delegate
-        OnItemRemovedFromInventory.Broadcast(UniqueItemID, ItemType, ItemTag);
 
-        UE_LOGFMT(LogInventory, Log, "아이템 {0} ({1})이(가) 인벤토리에서 제거되었습니다.",
-            UniqueItemID.ToString(), ItemTag.ToString());
-    }
-    else
-    {
-        UE_LOGFMT(LogInventory, Warning, "제거하려는 아이템 ID {0}을(를) 인벤토리에서 찾을 수 없습니다.", UniqueItemID.ToString());
-    }
-
-}
-
-void UInventoryComponent::OnItemActivationRequested(const FGuid& UniqueItemID)
-{
-    //@Inventory
-    if (Inventory.Contains(UniqueItemID))
-    {
-        //@FInventoryItem
-        FInventoryItem& Item = Inventory[UniqueItemID];
-        UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 활성화를 시도합니다.", Item.GetItemTag().ToString());
-        //@Start Use Item
-        StartUseItem(UniqueItemID);
-    }
-    else
-    {
-        UE_LOGFMT(LogInventory, Warning, "활성화하려는 아이템 ID {0}을(를) 찾을 수 없습니다.", UniqueItemID.ToString());
-    }
-}
-
-void UInventoryComponent::OnRequestItemAssignmentToQuickSlots(int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)
-{
-    //@MaxSize
-    if (SlotNum > 0 && SlotNum <= MaxQuicKSlotSize)
-    {
-        //@Inventory
-        if (Inventory.Contains(UniqueItemID))
-        {
-            //@QuickSlots
-            QuickSlots[SlotNum - 1] = UniqueItemID;
-            UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 퀵슬롯 {1}에 할당되었습니다.",
-                Inventory[UniqueItemID].GetItemTag().ToString(), SlotNum);
-            //@Delegates
-            OnQuickSlotItemAssigned.Broadcast(
-                SlotNum, UniqueItemID, Inventory[UniqueItemID].GetItemType(), Inventory[UniqueItemID].GetItemTag(), Inventory[UniqueItemID].ItemCount);
-        }
-        else
-        {
-            UE_LOGFMT(LogInventory, Warning, "퀵슬롯에 할당하려는 아이템 ID {0}을(를) 찾을 수 없습니다.", UniqueItemID.ToString());
-        }
-    }
-    else
-    {
-        UE_LOGFMT(LogInventory, Error, "유효하지 않은 퀵슬롯 인덱스: {0}", SlotNum);
-    }
-}
-
-void UInventoryComponent::OnRequestQuickSlotItemRemoval(int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)
-{
-}
-
-void UInventoryComponent::OnRequestQuickSlotItemUpdate(int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)
-{
-}
 #pragma endregion
 
 //void UInventoryComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)

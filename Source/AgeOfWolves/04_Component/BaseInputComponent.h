@@ -14,10 +14,11 @@ class UObject;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInputComponent, Log, All)
 
-DECLARE_DYNAMIC_DELEGATE(FPlayerInputInit);
+//@Input Component 초기화 완료 이벤트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNotifyInputComponentInitFinished);
 
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOnUIInputTriggered, const FGameplayTag&, UIInputTag);
-DECLARE_DYNAMIC_DELEGATE_OneParam(FOnUIInputReleased, const FGameplayTag&, UIInputTag);
+DECLARE_DELEGATE_OneParam(FUIInputTagTriggered, const FGameplayTag&);
+DECLARE_DELEGATE_OneParam(FUIInputTagReleased, const FGameplayTag&);
 
 /**
  * @목적 : Enhanced Input System 활용을 위한 사용자 정의 Input Component를 정의합니다.
@@ -44,38 +45,12 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	//~End Of UActorComponent interface
 public:
-	/*
-	* @목적 : 사용자의 입력 시스템의 초기화 작업을 수행하는 함수입니다.
-	* @설명 : 사용자 캐릭터의 Pawn Data의 InputConfing(Data Asset)을 통해 Enhanced Input System의 초기화 작업을 진행합니다.
-	*/
-	bool LoadPlayerInputSetup();
-
-	// @목적 : 사용자 입력 시스템 초기화 작업 완료 이벤트
-	FPlayerInputInit OnPlayerInputInitFinished;
-#pragma endregion 
-
-#pragma region IMC(Input Mapping Context)
-public:
-	// @설명 : Enhanced Input System에 사용자의 IMC(Input Mapping Context)를 등록합니다.
-	void AddInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
-	// @설명 : Enhanced Input System에 등록된 사용자의 특정 IMC(Input Mapping Context)를 제거합니다.
-	void RemoveInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
-#pragma endregion
-
-#pragma region Binding
-	void BindNativeInputActions(const UInputConfig* InputConfig);
-	void BindAbilityInputActions(const UInputConfig* InputConfig);
-	void BindUIInputActions(const UInputConfig* InputConfig);
-	template<typename UserClass, typename FuncType>
-	void BindNativeInputAction(const UInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func)
-	{
-		check(InputConfig);
-
-		if (const auto& InputAction = InputConfig->FindNativeInputActionForTag(InputTag))
-		{
-			BindAction(InputAction, TriggerEvent, Object, Func);
-		}
-	}
+	UFUNCTION()
+		void InitializeInputComponent();
+private:
+	//@Internal Binding
+	void InternalBindToInputActions(const APlayerController* PC);
+	//@Bind IA Template
 	template<typename UserClass, typename PressedFuncType, typename ReleasedFuncType>
 	void BindInputActions(const TArray<FInputActionInfo>& InputActionInfos, UserClass* Object, PressedFuncType PressedFunc, ReleasedFuncType ReleasedFunc)
 	{
@@ -97,11 +72,45 @@ public:
 			}
 		}
 	}
+	//@Bind Native IA Template
+	template<typename UserClass, typename FuncType>
+	void BindNativeInputAction(const UInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func)
+	{
+		check(InputConfig);
+
+		if (const auto& InputAction = InputConfig->FindNativeInputActionForTag(InputTag))
+		{
+			BindAction(InputAction, TriggerEvent, Object, Func);
+		}
+	}
+	void BindNativeInputActions(const UInputConfig* InputConfig);
+	void BindAbilityInputActions(const UInputConfig* InputConfig);
+	void BindUIInputActions(const UInputConfig* InputConfig);
 	// @breif : Remove BindHandles Interacting with corressponding Ability Input Action
 	void RemoveBinds(TArray<uint32>& BindHandles);
+#pragma endregion 
+
+#pragma region IMC(Input Mapping Context)
+public:
+	// @설명 : Enhanced Input System에 사용자의 IMC(Input Mapping Context)를 등록합니다.
+	void AddInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
+	// @설명 : Enhanced Input System에 등록된 사용자의 특정 IMC(Input Mapping Context)를 제거합니다.
+	void RemoveInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
 #pragma endregion
 
-#pragma region Native Input Action
+#pragma region Delegate
+public:
+	//@Input Component의 초기화 완료 이벤트
+	UPROPERTY(BlueprintAssignable, Category = "Input Component")
+		FNotifyInputComponentInitFinished NotifyInputComponentInitFinished;
+public:
+	//@UI Input Tag의 활성화 이벤튼
+	FUIInputTagTriggered UIInputTagTriggered;
+	//@UI Input Tag의 해제 이벤트
+	FUIInputTagReleased UIInputTagReleased;
+#pragma endregion
+
+#pragma region Callbacks
 protected:
 	// @목적 : 사용자의 Move IA에 대응되는 캐릭터 이동 조작을 정의하는 콜백 함수
 	void Input_Move(const FInputActionValue& Value);
@@ -111,39 +120,23 @@ protected:
 	void Input_LockOn(const FInputActionValue& Value);
 	// @목적 : 사용자의 LeftMouse IA에 대응되는 Left Mouse 입력 처리를 담당하는 콜백 함수 
 	void Input_LeftMousePressed(const FInputActionValue& Value);
-
-	void Input_CountMouseLeftInput();
-
-	// @설명 : 현재 플레이어의 입력 벡터
-	FVector2D InputVector;
-
-public:
-	FORCEINLINE AActor* GetTargetEnemy() { return TargetEnemy; }
-	FORCEINLINE bool GetbLockOn() { return bLockOn; }
-	FORCEINLINE float GetMaxLockOnDistance() { return MaxLockOnDistance; }
-	FORCEINLINE FVector2D GetInputVector() { return InputVector; }
-#pragma endregion
-
-#pragma region Ability Input Action
 protected:
 	// @목적 : 사용자의 Ability IA관련 키 눌림에 대응되는 콜백 함수
-	void Input_AbilityInputTagPressed(FGameplayTag InputTag);
+	void OnAbilityInputTagTriggered(FGameplayTag InputTag);
 	// @목적 : 사용자의 Ability IA관련 키 해제에 대응되는 콜백 함수
-	void Input_AbilityInputTagReleased(FGameplayTag InputTag);
+	void OnAbilityInputTagReleased(FGameplayTag InputTag);
+protected:
+	//@UI Input Tag Triggered 이벤트를 구독하는 콜백
+	void OnUIInputTagTriggered(FGameplayTag InputTag);
+	//@UI Input Tag Released 이벤트를 구독하는 콜백
+	void OnUIInputTagReleased(FGameplayTag InputTag);
 #pragma endregion
 
-#pragma region UI Input Action
+#pragma region Etc
+private:
+	FVector2D InputVector;
 public:
-<<<<<<< HEAD
-	FOnUIInputTriggered OnUIInputTriggered;
-	FOnUIInputReleased OnUIInputReleased;
-
-private: 
-	void Input_UIInputTagTriggered(FGameplayTag InputTag);
-	void Input_UIInputTagReleased(FGameplayTag InputTag);
+	FORCEINLINE FVector2D GetInputVector() { return InputVector; }
 #pragma endregion
 
-=======
-	FORCEINLINE FVector2D GetInputVector() { return InputVector; }
->>>>>>> develop
 };

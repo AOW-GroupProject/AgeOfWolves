@@ -9,6 +9,7 @@
 
 #include "04_Component/InventoryComponent.h"
 #include "04_Component/UIComponent.h"
+#include "04_Component/BaseInputComponent.h"
 
 #include "01_Character/CharacterBase.h"
 
@@ -20,16 +21,36 @@ ABasePlayerController::ABasePlayerController(const FObjectInitializer& ObjectIni
 	:Super(ObjectInitializer)
 {
 	UIComponent = CreateDefaultSubobject<UUIComponent>(TEXT("UI Component"));
+    InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
 }
 
 void ABasePlayerController::PreInitializeComponents()
 {
 	Super::PreInitializeComponents();
+
 }
 
 void ABasePlayerController::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+    
+    //@Input Comp
+    if (const auto BaseInputComp = Cast<UBaseInputComponent>(InputComponent))
+    {
+        //@초기화 작업 동기화
+        RequestStartInitByPC.AddUFunction(BaseInputComp, "InitializeInputComponent");
+    }
+    //@UI Comp
+    if (UIComponent)
+    {
+        //@초기화 작업 동기화
+        RequestStartInitByPC.AddUFunction(UIComponent, "InitializeUIComponent");
+    }
+    //@PS
+    if (auto PS = GetPlayerState<APlayerStateBase>())
+    {
+        RequestStartInitByPC.AddUFunction(PS, "InitializePlayerState");
+    }
 }
 
 void ABasePlayerController::BeginPlay()
@@ -58,10 +79,8 @@ void ABasePlayerController::AcknowledgePossession(APawn* P)
 {
     Super::AcknowledgePossession(P);
 
-    //1. UI
-    InitializeUIComponent();
-    //2. Player State(ASC)
-    InitializePlayerState();
+    //@Delegate : 각 컴포넌트의 초기화 작업을 유도하는 Delegate이므로, Binding 이후에 실행
+    RequestStartInitByPC.Broadcast();
 }
 
 void ABasePlayerController::PreProcessInput(const float DeltaTime, const bool bGamePaused)
@@ -87,58 +106,14 @@ void ABasePlayerController::PostProcessInput(const float DeltaTime, const bool b
 
 	Super::PostProcessInput(DeltaTime, bGamePaused);
 }
-#pragma endregion
 
-#pragma region Init
-void ABasePlayerController::InitializeUIComponent()
+UBaseInputComponent* ABasePlayerController::GetBaseInputComponent() const
 {
-    check(AcknowledgedPawn)
-
-    //@UI Component
-    if (UIComponent && UIComponent->LoadUI() && UIComponent->LoadUIInputComponent())
+    if (auto BaseInputComp = Cast<UBaseInputComponent>(InputComponent))
     {
-        UIComponent->BindUIToUIComponent();
-        UIComponent->BindToInventoryComponent(AcknowledgedPawn);
-        UIComponent->BindInputComponentToInputActions();
-    }
-}
-
-void ABasePlayerController::InitializePlayerState()
-{
-    //@Pawn
-    if (!AcknowledgedPawn)
-    {
-        UE_LOGFMT(LogPlayerController, Error, "AcknowledgePossession: Possessed Pawn이 유효하지 않습니다.");
-        return;
-    }
-    //@Character Base
-    ACharacterBase* CharacterBase = Cast<ACharacterBase>(AcknowledgedPawn);
-    if (!CharacterBase)
-    {
-        UE_LOGFMT(LogPlayerController, Warning, "AcknowledgePossession: Possessed Pawn이 ACharacterBase 타입이 아닙니다.");
-        return;
-    }
-    //@Player State
-    APlayerStateBase* PS = GetPlayerState<APlayerStateBase>();
-    if (!PS)
-    {
-        UE_LOGFMT(LogPlayerController, Error, "AcknowledgePossession: PlayerState가 유효하지 않거나 APlayerStateBase 타입이 아닙니다.");
-        return;
-    }
-    //@Player State Load
-    PS->LoadAbilitySystem();
-    //@ASC
-    UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
-    if (ASC)
-    {
-        CharacterBase->SetAbilitySystemComponent(ASC);
-        UE_LOGFMT(LogPlayerController, Log, "AbilitySystemComponent가 Character에 성공적으로 설정되었습니다.");
-    }
-    else
-    {
-        UE_LOGFMT(LogPlayerController, Error, "AcknowledgePossession: PlayerState의 AbilitySystemComponent가 유효하지 않거나 UBaseAbilitySystemComponent 타입이 아닙니다.");
+        return BaseInputComp;
     }
 
-    UE_LOGFMT(LogPlayerController, Log, "AcknowledgePossession: 프로세스가 완료되었습니다.");
+    return nullptr;
 }
 #pragma endregion

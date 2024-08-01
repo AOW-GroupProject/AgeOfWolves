@@ -50,16 +50,15 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 void UBaseAnimInstance::FindMovementState()
 {
 
-
 	// @FIX: 240 -> 350 상향
 	// #1. 뛰기
 	if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 400.f && Speed > 0.05f)
 	{
 		MovementState = EMovementState::Run;
-		if(LastMovementState == EMovementState::Idle) LastMovementState = MovementState;
+		LastMovementState = MovementState;
 	}
 	// #2. 걷기
-	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 0.f && Speed > 10.f)
+	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 0.f && OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed < 600.f && Speed > 10.f)
 	{
 		MovementState = EMovementState::Walk;
 	}

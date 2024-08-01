@@ -1,8 +1,6 @@
 #include "StateBars.h"
 #include "Logging/StructuredLog.h"
 
-// Slate 활용 Test, 주석 처리
-//#include "08_UI/SStateBars.h"
 #include "Components/VerticalBox.h"
 #include "Components/ProgressBar.h"
 #include "03_Player/PlayerStateBase.h"
@@ -24,17 +22,9 @@ void UStateBars::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	// Attribute 이름과 이에 대응되는 State Bar를 TMap 유형의 자료구조에 저장
-	MStateBars.Empty();
-	MStateBars.Add({ "Health", HP });
-	MStateBars.Add({ "Mana", MP});
-	MStateBars.Add({ "Stamina", SP});
+	//@외부 바인딩
+	ExternalBindingToAttributeSet();
 
-	// Attribute 수치 변화 이벤트에 콜백 함수 등록
-	if (const auto PS = GetOwningPlayerState<APlayerStateBase>())
-	{
-		PS->OnAnyAttributeValueChanged.AddDynamic(this, &UStateBars::OnAttributeValueChanged);
-	}
 }
 
 void UStateBars::NativePreConstruct()
@@ -50,6 +40,26 @@ void UStateBars::NativeConstruct()
 void UStateBars::NativeDestruct()
 {
 	Super::NativeDestruct();
+}
+
+void UStateBars::ExternalBindingToAttributeSet()
+{
+	// Attribute 수치 변화 이벤트에 콜백 함수 등록
+	if (const auto PS = GetOwningPlayerState<APlayerStateBase>())
+	{
+		PS->OnAnyAttributeValueChanged.AddDynamic(this, &UStateBars::OnAttributeValueChanged);
+	}
+}
+
+void UStateBars::InitializeStateBars()
+{
+
+	// Attribute 이름과 이에 대응되는 State Bar를 TMap 유형의 자료구조에 저장
+	MStateBars.Add({ "Health", HP });
+	MStateBars.Add({ "Mana", MP });
+	MStateBars.Add({ "Stamina", SP });
+
+	StateBarsInitFinished.ExecuteIfBound();
 }
 
 /*

@@ -28,6 +28,8 @@ void AItem::PostRegisterAllComponents()
 
 void AItem::PreInitializeComponents()
 {
+	//@External Binding
+
 	Super::PreInitializeComponents();
 
 }
@@ -49,37 +51,28 @@ void AItem::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 
 }
+
+void AItem::InitializeItem(const FGuid& UniqueId)
+{
+	UE_LOGFMT(LogItem, Log, "{0}이 Iventory에 추가되었습니다.", GetName());
+
+	//@External Binding(Inventory Comp)
+	
+}
+#pragma endregion
+
+#pragma region Item
+bool AItem::TryActivateItem_Implementation()
+{
+	return true;
+}
 #pragma endregion
 
 #pragma region Callbacks
-void AItem::OnItemAddedToInventory(const FGuid& UniqueId)
-{
-	 UE_LOGFMT(LogItem, Log, "{0}이 Iventory에 추가되었습니다.", GetName());
-
-}
 
 void AItem::OnItemRemovedFromInventory()
 {
 	UE_LOGFMT(LogItem, Log, "{0}이 Iventory에서 제거되었습니다.", GetName());
 
-}
-
-void AItem::OnItemStartUse()
-{
-	UE_LOGFMT(LogItem, Log, "{0}이 활성화되었습니다.", GetName());
-
-}
-
-void AItem::OnItemEndUse()
-{
-	UE_LOGFMT(LogItem, Log, "{0}의 활성화가 종료되었습니다.", GetName());
-
-}
-#pragma endregion
-
-#pragma region Activation
-bool AItem::ActivateItem_Implementation()
-{
-	return false;
 }
 #pragma endregion

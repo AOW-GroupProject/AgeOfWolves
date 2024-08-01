@@ -16,9 +16,9 @@ AEquipmentItem::AEquipmentItem(const FObjectInitializer& ObjectInitializer)
     ItemType = EItemType::Equipment;
 }
 
-bool AEquipmentItem::ActivateItem_Implementation()
+bool AEquipmentItem::TryActivateItem_Implementation()
 {
-	if (Super::ActivateItem_Implementation())
+	if (Super::TryActivateItem_Implementation())
 	{
 		//@활성화 로직 작성
 		return true;

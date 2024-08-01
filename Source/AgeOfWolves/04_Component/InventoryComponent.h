@@ -11,18 +11,23 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInventory, Log, All);
 
-//@인벤토리 아이템 추가 
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_OneParam(FOnItemAddedToInventory, const FGuid&, UniqueId);
+//@아이템 초기화 요청 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FRequestInitializationByInvenComp, const FGuid&);
 //@인벤토리 아이템 제거
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FOnItemRemovedFromInventory, const FGuid&, UniqueItemID, EItemType, ItemType, const FGameplayTag&, ItemTag);
-//@퀵슬롯 업데이트
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FOnQuickSlotItemUpdated, int32, SlotNum, const FGuid&, UniqueItemID, EItemType, ItemType, const FGameplayTag&, ItemTag, int32, ItemCount);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FItemRemovedFromInventory, const FGuid&, UniqueItemID, EItemType, ItemType, const FGameplayTag&, ItemTag);
+
 //@퀵슬롯 정보 로드
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_FiveParams(FOnQuickSlotItemAssigned, int32, SlotNum, const FGuid&, UniqueItemID, EItemType, ItemType, const FGameplayTag&, ItemTag, int32, ItemCount);
+DECLARE_DELEGATE_FiveParams(FQuickSlotItemsLoaded, int32, const FGuid&, EItemType, const FGameplayTag&, int32);
+//@퀵슬롯 정보 업데이트 (강화 정보 등 추가 예정)
+DECLARE_DELEGATE_ThreeParams(FQuickSlotItemUpdated, int32, const FGuid&, int32);
+
+//@아이템 활성화 이벤트(한 번에 하나의 아이템 활성화 강요)
+DECLARE_DELEGATE_RetVal(bool, FItemStartActivation);
 
 
 class UAOWSaveGame;
 class UItemManagerSubsystem;
+class AController;
 
 #pragma region Inventory Item
 /*
@@ -54,6 +59,7 @@ public:
 	const FGameplayTag GetItemTag() const;
 	TSubclassOf<AItem> GetItemClass() const;
 	EItemType GetItemType() const;
+	AItem* GetItem();
 #pragma endregion
 
 #pragma region Info
@@ -99,31 +105,29 @@ protected:
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	//~ End of UActorComponent Interface
 public:
+	//@외부 바인딩
+	void ExternalBindToUIComponent(const AController* Controller);
+	void ExternalBindToQuickSlots();
+private:
+	//@초기화 함수
+	UFUNCTION()
+		void InitializeInventory(const AController* Controller);
+#pragma endregion
+
+#pragma region Inventory
+public:
 	/*
 	* @목적: Inventory의 현재 Item 정보를 초기화합니다.
 	* @설명: Save File이 있을 경우 LoadItemsFromSaveGame를 호출하며, 없을 경우 LoadDefaultItems를 호출합니다.
 	* @참조: LoadItemsFromSaveGame(), LoadDefaultItems()
 	*/
-	bool LoadInventory();
+	UFUNCTION()
+		void LoadInventory();
 private:
 	//@Inventory의 Item 정보를 Save File로부터 Load합니다.
 	void LoadItemsFromSaveGame(UAOWSaveGame* SaveGame);
 	//@Inventory의 Item 정보를 Item Manager로부터 Load합니다.
 	void LoadDefaultItemsFromItemManager(UItemManagerSubsystem* ItemManager);
-public:
-	void BindToUIComponent(const AController* Controller);
-#pragma endregion
-
-#pragma region Inventory
-private:
-	//@저장할 수 있는 최대 아이템 갯수, 수정 절대 하지 마세요
-	const int MaxInventorySize = 30;
-public:
-	UFUNCTION(BlueprintCallable)
-		FORCEINLINE int GetMaxInventorySize() { return MaxInventorySize; }
-protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TMap<FGuid, FInventoryItem> Inventory;
 public:
 	void AddItem(AItem* AlreadySpawnedItem, int32 Num = 1);
 	void AddItem(UItemManagerSubsystem* ItemManager, TSubclassOf<AItem> BlueprintItemClass, int32 Num = 1);
@@ -137,13 +141,23 @@ protected:
 	//@아이템 제거
 	void RemoveExistingItem();
 	//@아이템 사용
-	void StartUseItem(const FGuid& Item);
+	UFUNCTION()
+		bool StartUseItem(const FGuid& UniqueItemID ,int32 QuickSlotNum = 0);
 	//@아이템 스폰
 	void SpawnItem();
 	//@아이템 교체
 	void SwapItem();
 	//@아이템 사용 종료
 	void EndUseItem();
+private:
+	//@저장할 수 있는 최대 아이템 갯수, 수정 절대 하지 마세요
+	const int MaxInventorySize = 30;
+public:
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE int GetMaxInventorySize() { return MaxInventorySize; }
+protected:
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+		TMap<FGuid, FInventoryItem> Inventory;
 #pragma endregion
 
 #pragma region Item
@@ -163,47 +177,24 @@ private:
 public:
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE int GetMaxQuicKSlotSize() { return MaxQuicKSlotSize; }
+	UFUNCTION(BlueprintCallable)
+		int32 IsItemAssignedToQuickSlots(const FGuid& UniqueItemID);
 #pragma endregion
 
 #pragma region Delegates
 public:
 	//@Item, UI Comp(Inventory UI), Save Game 
-	UPROPERTY(BlueprintAssignable)
-		FOnItemAddedToInventory OnItemAddedToInventory;
+	FRequestInitializationByInvenComp RequestInitializationByInvenComp;
 	//@Item, UI Comp(Inventory UI, HUD UI), Save Game 
-	UPROPERTY(BlueprintAssignable)
-		FOnItemRemovedFromInventory OnItemRemovedFromInventory;
+	FItemRemovedFromInventory ItemRemovedFromInventory;
+public:
 	//@UI Comp(HUD), Save Game
-	UPROPERTY(BlueprintAssignable)
-		FOnQuickSlotItemAssigned OnQuickSlotItemAssigned;
-	//@UI Comp(HUD), Save Game
-	UPROPERTY(BlueprintAssignable)
-		FOnQuickSlotItemUpdated OnQuickSlotItemUpdated;
+	FQuickSlotItemsLoaded QuickSlotItemsLoaded;
+	FQuickSlotItemUpdated QuickSlotItemUpdated;
 #pragma endregion
 
 #pragma region Callbacks
-public:
-	//@UI Comp(Inventory UI)
-	UFUNCTION()
-		void OnItemRemovalRequested(const FGuid& UniqueItemID);
-	//@UI Comp(Inventory UI, HUD)
-	UFUNCTION()
-		void OnItemActivationRequested(const FGuid& UniqueItemID);
-	//@UI Comp(Inventory UI)
-	UFUNCTION()
-		void OnRequestItemAssignmentToQuickSlots(
-			int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
-		);
-	//@UI Comp(Inventory UI)
-	UFUNCTION()
-		void OnRequestQuickSlotItemRemoval(
-			int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
-		);
-	//@UI Comp(Inventory UI)
-	UFUNCTION()
-		void OnRequestQuickSlotItemUpdate(
-			int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount
-		);
+
 #pragma endregion
 
 };

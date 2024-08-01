@@ -181,6 +181,12 @@ public:
 	//@사용 가능한가?
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "ItemType != EItemType::Material"))
 		bool bConsumable = false;
+	//@Quick Slot에 추가될 아이템인가?(현재 HP, MP 포션 예정)
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "ItemType == EItemType::Tool"))
+		bool bObssessedToQuickSlots = false;
+	//@Quick Slot에 추가될 아이템인가?(현재 HP, MP 포션 예정)
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "bObssessedToQuickSlots == true"))
+		int32 QuickSlotNum = -1;
 	//@최대 가질 수 있는 갯수
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bStackable == true"))
 		int32 MaxStack = -1;
@@ -191,7 +197,7 @@ public:
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "(bStackable == true)&&(bDefault == true)"))
 		int32 DefaultGivenStack = 1;
 	//@제거 가능한가?
-	UPROPERTY(EditAnywhere)
+	UPROPERTY(EditAnywhere, meta = (EditCondtion = "bObssessedToQuickSlots == false"))
 		bool bRemovable = false;
 	//@갯수가 0이되면 Inventory에서 바로 제거할 것인지
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bStackable == bRemovable"))
@@ -295,30 +301,19 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason);
 	//~End Of UObject Interface
-#pragma endregion
 
-#pragma region CallBacks
 public:
-	//@Inventory의 아이템 추가 이벤트에 등록되는 콜백
+	//@Item 초기화
 	UFUNCTION()
-		void OnItemAddedToInventory(const FGuid& UniqueId);
-	//@Inventory의 아이템 제거 이벤트에 등록되는 콜백
-	UFUNCTION()
-		void OnItemRemovedFromInventory();
-	//@Item 활성화 시작 콜백
-	UFUNCTION()
-		void OnItemStartUse();
-	//@Item 활성화 종료 콜백
-	UFUNCTION()
-		void OnItemEndUse();
+		void InitializeItem(const FGuid& UniqueId);
 #pragma endregion
 
-#pragma region Activation
+#pragma region Item
 public:
 	//@아이템 활성화
 	UFUNCTION(BlueprintNativeEvent)
-		bool ActivateItem();
-	virtual bool ActivateItem_Implementation();
+		bool TryActivateItem();
+	virtual bool TryActivateItem_Implementation();
 #pragma endregion 
 
 #pragma region Property
@@ -333,4 +328,13 @@ public:
 	FORCEINLINE const EItemType GetItemType() const { return ItemType; }
 	FORCEINLINE const FGameplayTag& GetItemTag() const { return ItemTag; }
 #pragma endregion
+
+#pragma region CallBacks
+public:
+	//@Inventory의 아이템 제거 이벤트에 등록되는 콜백
+	UFUNCTION()
+		void OnItemRemovedFromInventory();
+#pragma endregion
+
+
 };
