@@ -17,7 +17,7 @@ DEFINE_LOG_CATEGORY(LogInventory)
 #pragma region Inventory Item
 
 #pragma region Default Setting
-FInventoryItem::FInventoryItem(AActor* Actor, TSubclassOf<AItem> ItemBlueprintClass, int32 Num, FGuid ItemID)
+FInventoryItem::FInventoryItem(AActor* Actor, TSubclassOf<AItem> ItemBlueprintClass, int32 Num, FGuid ItemID, bool bRemovable)
 {
 	check(Actor);
     check(ItemBlueprintClass);
@@ -34,6 +34,8 @@ FInventoryItem::FInventoryItem(AActor* Actor, TSubclassOf<AItem> ItemBlueprintCl
     }
 	//@Item Count
 	ItemCount = Num;
+    //@bRemovable
+    this->bRemovable = bRemovable;
 }
 
 const FGameplayTag FInventoryItem::GetItemTag() const
@@ -417,7 +419,7 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
     }
     //@FInventoryItem
     FGuid NewID = FGuid::NewGuid();
-    FInventoryItem NewInvenItem(OwnerActor, BlueprintItemClass, Num, NewID);
+    FInventoryItem NewInvenItem(OwnerActor, BlueprintItemClass, Num, NewID, ItemInfo->bRemovable);
     Inventory.Add(NewID, NewInvenItem);
     //@Disable Item
     if (AlreadySpawnedItem)
@@ -433,6 +435,8 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
         
         QuickSlotItemsLoaded.ExecuteIfBound(ItemInfo->QuickSlotNum, NewID, ItemInfo->ItemType, ItemInfo->ItemTag, Num);
     }
+    //@Delegate
+    NewItemAssignedToInventory.Broadcast(NewID, ItemInfo->ItemType, ItemInfo->ItemTag);
 
     UE_LOGFMT(LogInventory, Log, "{0}: 인벤토리에 새로운 아이템이 추가되었습니다. 개수: {1}",
         ItemToUse->GetItemTag().ToString(), Num);
@@ -445,46 +449,108 @@ void UInventoryComponent::AddExistingItem(const FGuid& ItemId, const FItemInform
     //@Existing FInventory Item
     if (!Inventory.Contains(ItemId))
     {
-        UE_LOGFMT(LogInventory, Error, "인벤토리에 해당 ItemId를 가진 아이템이 없습니다.");
+        UE_LOGFMT(LogInventory, Error, "인벤토리에 ItemId {0}를 가진 아이템이 없습니다.", ItemId.ToString());
         return;
     }
+
     //@Existing Item
     FInventoryItem& ExistingItem = Inventory[ItemId];
+
     //@Count
     int32 CurrentCount = ExistingItem.ItemCount;
     int32 MaxStack = ItemInfo.MaxStack;
+
     //@Available Space
     int32 AvailableSpace = FMath::Max(0, MaxStack - CurrentCount);
     int32 ActuallyAdded = FMath::Min(Num, AvailableSpace);
+
     //@Add Existing Item
     ExistingItem.ItemCount += ActuallyAdded;
 
     if (ActuallyAdded < Num)
     {
-        UE_LOGFMT(LogInventory, Warning, "{0}: 최대 저장 갯수({1})를 초과하여 일부만 추가되었습니다. 추가된 갯수: {2}, 초과된 갯수: {3}",
+        UE_LOGFMT(LogInventory, Warning, "아이템 {0}: 최대 저장 갯수({1})를 초과하여 일부만 추가되었습니다. 추가된 갯수: {2}, 초과된 갯수: {3}",
             ExistingItem.GetItemTag().ToString(), MaxStack, ActuallyAdded, Num - ActuallyAdded);
+    }
+
+    UE_LOGFMT(LogInventory, Log, "기존 아이템 {0}: {1}개가 추가되었습니다. 현재 갯수: {2}/{3}",
+        ExistingItem.GetItemTag().ToString(), ActuallyAdded, ExistingItem.ItemCount, MaxStack);
+
+    //@Quick Slots에 할당되어 있는 아이템인지 확인
+    int32 QuickSlotIndex = IsItemAssignedToQuickSlots(ItemId);
+    if (QuickSlotIndex != -1 && QuickSlotIndex >= 0 && QuickSlotIndex < MaxQuicKSlotSize)
+    {
+        QuickSlotItemUpdated.ExecuteIfBound(QuickSlotIndex + 1, ItemId, ExistingItem.ItemCount);
+    }
+
+    //@Delegate for existing item update
+    InventoryItemUpdated.Broadcast(ItemId, ExistingItem.GetItemType(), ExistingItem.GetItemTag(), ExistingItem.ItemCount);
+}
+
+void UInventoryComponent::RemoveExistingItem(const FGuid& ItemId, const FItemInformation& ItemInfo, int32 Num)
+{
+    //@아이템 존재 확인
+    if (!Inventory.Contains(ItemId))
+    {
+        UE_LOGFMT(LogInventory, Error, "아이템 제거 실패: 인벤토리에 ID {0}인 아이템이 없습니다.", ItemId.ToString());
+        return;
+    }
+    //@아이템 정보 가져오기
+    FInventoryItem& ExistingItem = Inventory[ItemId];
+    int32 CurrentCount = ExistingItem.ItemCount;
+    //@제거할 수량 계산
+    int32 ActuallyRemoved = FMath::Min(CurrentCount, Num);
+    ExistingItem.ItemCount -= ActuallyRemoved;
+    //@아이템 완전 제거 여부 확인
+    if (ExistingItem.ItemCount <= 0 && ExistingItem.bRemovable)
+    {
+        //@인벤토리에서 아이템 제거
+        Inventory.Remove(ItemId);
+
+        UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 인벤토리에서 완전히 제거되었습니다.", ItemInfo.ItemTag.ToString());
+
+        //@아이템 제거 이벤트 발생
+        ItemRemovedFromInventory.Broadcast(ItemId);
     }
     else
     {
-        UE_LOGFMT(LogInventory, Log, "{0}: 아이템 {1}개가 성공적으로 추가되었습니다. 현재 갯수: {2}/{3}",
-            ExistingItem.GetItemTag().ToString(), ActuallyAdded, ExistingItem.ItemCount, MaxStack);
-
-        //@Quick Slots에 할당되어 있는 아이템인지 확인
-        int32 index = IsItemAssignedToQuickSlots(ItemId);
-        if (index != -1 && index >= 0 && index <= 3)
+        if (ExistingItem.ItemCount <= 0)
         {
-            QuickSlotItemUpdated.ExecuteIfBound(index + 1, ItemId, ExistingItem.ItemCount);
+            //@제거 불가능한 아이템은 수량을 0으로 유지
+            ExistingItem.ItemCount = 0;
+
+            UE_LOGFMT(LogInventory, Log, "제거 불가능한 아이템 {0}의 수량이 0이 되었습니다.", ItemInfo.ItemTag.ToString());
         }
+        else
+        {
+            UE_LOGFMT(LogInventory, Log, "아이템 {0}의 수량이 {1}개 감소했습니다. 현재 수량: {2}",
+                ItemInfo.ItemTag.ToString(), ActuallyRemoved, ExistingItem.ItemCount);
+        }
+
+        //@아이템 업데이트 이벤트 발생
+        InventoryItemUpdated.Broadcast(ItemId, ItemInfo.ItemType, ItemInfo.ItemTag, ExistingItem.ItemCount);
     }
 
-    
-}
+    //@퀵슬롯 업데이트
+    int32 QuickSlotIndex = IsItemAssignedToQuickSlots(ItemId);
+    if (QuickSlotIndex != -1 && QuickSlotIndex >= 0 && QuickSlotIndex < MaxQuicKSlotSize)
+    {
+        if (ExistingItem.ItemCount <= 0 && ExistingItem.bRemovable)
+        {
+            //@퀵슬롯에서 제거
+            QuickSlots[QuickSlotIndex] = FGuid();
 
-void UInventoryComponent::RemoveExistingItem()
-{
-    //@갯수 확인, bRemovable 확인
-    //@콜백 함수 제거 
-    //@제거
+            UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 퀵슬롯 {1}에서 제거되었습니다.", ItemInfo.ItemTag.ToString(), QuickSlotIndex + 1);
+        }
+        else
+        {
+            //@퀵슬롯 수량 업데이트
+            QuickSlotItemUpdated.ExecuteIfBound(QuickSlotIndex + 1, ItemId, ExistingItem.ItemCount);
+
+            UE_LOGFMT(LogInventory, Log, "퀵슬롯 {0}의 아이템 {1} 수량이 업데이트되었습니다. 현재 수량: {2}",
+                QuickSlotIndex + 1, ItemInfo.ItemTag.ToString(), ExistingItem.ItemCount);
+        }
+    }
 }
 
 bool UInventoryComponent::FindExistingItemByClass(TSubclassOf<AItem> ItemClass, FGuid& OutItemID)
@@ -565,13 +631,25 @@ bool UInventoryComponent::StartUseItem(const FGuid& UniqueItemID, int32 QuickSlo
                     }
 
                     UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 모두 소진되어 인벤토리에서 제거되었습니다.", InventoryItem->GetItemTag().ToString());
+
+                    //@아이템 제거 이벤트 발생
+                    ItemRemovedFromInventory.Broadcast(UniqueItemID);
                 }
                 //@bRemovable == false
                 else
                 {
                     UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 모두 소진되었지만, 제거 불가능한 아이템이므로 인벤토리에 유지됩니다.", InventoryItem->GetItemTag().ToString());
+
+                    //@아이템 업데이트 이벤트 발생 (수량 0)
+                    InventoryItemUpdated.Broadcast(UniqueItemID, InventoryItem->GetItemType(), InventoryItem->GetItemTag(), 0);
                 }
             }
+            else
+            {
+                //@아이템 업데이트 이벤트 발생
+                InventoryItemUpdated.Broadcast(UniqueItemID, InventoryItem->GetItemType(), InventoryItem->GetItemTag(), InventoryItem->ItemCount);
+            }
+
             UE_LOGFMT(LogInventory, Log, "아이템 {0} 사용 완료. 남은 수량: {1}", InventoryItem->GetItemTag().ToString(), InventoryItem->ItemCount);
             return true;
         }

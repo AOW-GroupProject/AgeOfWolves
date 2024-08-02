@@ -13,8 +13,13 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInventory, Log, All);
 
 //@아이템 초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FRequestInitializationByInvenComp, const FGuid&);
-//@인벤토리 아이템 제거
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FItemRemovedFromInventory, const FGuid&, UniqueItemID, EItemType, ItemType, const FGameplayTag&, ItemTag);
+
+//@인벤토리 아이템 추가 이벤트
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FNewItemAssignedToInventory, const FGuid&, EItemType, const FGameplayTag&);
+//@인벤토리 아이템 제거 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FItemRemovedFromInventory, const FGuid&);
+//@인벤토리 아이템 업데이트 이벤트(강화 정보, 개수 정보)
+DECLARE_MULTICAST_DELEGATE_FourParams(FInventoryItemUpdated, const FGuid&, EItemType, const FGameplayTag&, int32);
 
 //@퀵슬롯 정보 로드
 DECLARE_DELEGATE_FiveParams(FQuickSlotItemsLoaded, int32, const FGuid&, EItemType, const FGameplayTag&, int32);
@@ -44,7 +49,7 @@ struct FInventoryItem
 public:
 	FInventoryItem(){}
 	/*FInventoryItem(AActor* Actor, AItem* Item, int32 Num, FGuid ItemID);*/
-	FInventoryItem(AActor* Actor, TSubclassOf<AItem> ItemBlueprintClass, int32 Num, FGuid ItemID);
+	FInventoryItem(AActor* Actor, TSubclassOf<AItem> ItemBlueprintClass, int32 Num, FGuid ItemID, bool bRemovable);
 	//@사용자 정의 대입 연산자
 	const bool operator=(const FInventoryItem& OtherInventoryItem) const
 	{
@@ -77,6 +82,7 @@ public:
 	//@Item 갯수
 	UPROPERTY(VisibleAnywhere)
 		int32 ItemCount = -1;
+	bool bRemovable = false;
 #pragma endregion
 
 };
@@ -139,7 +145,7 @@ protected:
 	//@Inventory에 기존 아이템 추가
 	void AddExistingItem(const FGuid& ItemId, const FItemInformation& ItemInfo, int32 Num);
 	//@아이템 제거
-	void RemoveExistingItem();
+	void RemoveExistingItem(const FGuid& ItemId, const FItemInformation& ItemInfo, int32 Num=1);
 	//@아이템 사용
 	UFUNCTION()
 		bool StartUseItem(const FGuid& UniqueItemID ,int32 QuickSlotNum = 0);
@@ -183,17 +189,22 @@ public:
 
 #pragma region Delegates
 public:
-	//@Item, UI Comp(Inventory UI), Save Game 
+	//@초기화 요청 이벤트
 	FRequestInitializationByInvenComp RequestInitializationByInvenComp;
-	//@Item, UI Comp(Inventory UI, HUD UI), Save Game 
+	//@새 아이템 추가 이벤트: Item, Inven UI
+	FNewItemAssignedToInventory NewItemAssignedToInventory;
+	//@아이템 제거 이벤트: Item, Inven UI
 	FItemRemovedFromInventory ItemRemovedFromInventory;
+	//@아이템 업데이트 이벤트: Item, Inven UI
+	FInventoryItemUpdated InventoryItemUpdated;
 public:
-	//@UI Comp(HUD), Save Game
+	//@퀵슬롯 아이템 로딩 이벤트 
 	FQuickSlotItemsLoaded QuickSlotItemsLoaded;
+	//@퀵슬롯 아이템 업데이트 이벤트
 	FQuickSlotItemUpdated QuickSlotItemUpdated;
-#pragma endregion
+public:
+	//@TODO: Inventory UI 관련 이벤트
 
-#pragma region Callbacks
 
 #pragma endregion
 

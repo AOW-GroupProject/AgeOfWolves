@@ -17,8 +17,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInputComponent, Log, All)
 //@Input Component 초기화 완료 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNotifyInputComponentInitFinished);
 
-DECLARE_DELEGATE_OneParam(FUIInputTagTriggered, const FGameplayTag&);
-DECLARE_DELEGATE_OneParam(FUIInputTagReleased, const FGameplayTag&);
+DECLARE_MULTICAST_DELEGATE_OneParam(FUIInputTagTriggered, const FGameplayTag&);
+DECLARE_MULTICAST_DELEGATE_OneParam(FUIInputTagReleased, const FGameplayTag&);
 
 /**
  * @목적 : Enhanced Input System 활용을 위한 사용자 정의 Input Component를 정의합니다.

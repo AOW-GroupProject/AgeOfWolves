@@ -124,7 +124,8 @@ void UQuickSlots::ExternalBindToInputComponent()
         return;
     }
     //@Binding
-    BaseInputComp->UIInputTagTriggered.BindUFunction(this, "StartActivation");
+    BaseInputComp->UIInputTagTriggered.AddUFunction(this, "StartActivation");
+    BaseInputComp->UIInputTagReleased.AddUFunction(this, "StartActivation");
 
 }
 
@@ -188,7 +189,7 @@ void UQuickSlots::InitializeQuickSlots()
 #pragma region Callbacks
 void UQuickSlots::StartActivation(const FGameplayTag& InputTag)
 {
-    
+    //@TODO: Triggered와 Released 각각에 대한 처리
     //@Slot Index
     int32 SlotIndex = -1;
     if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot1")))

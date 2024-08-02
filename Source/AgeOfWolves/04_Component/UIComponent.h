@@ -23,20 +23,9 @@ DECLARE_DELEGATE(FUIsForInventoryReady);
 //@State Bars의 초기화 완료 이벤트
 DECLARE_DELEGATE(FUIsForAttributeSetReady);
 
-//@TODO: 각 System UI에 옮길 예정
-//@System UI Event
-DECLARE_MULTICAST_DELEGATE_OneParam(FNotifySystemUIInputActivation, const FGameplayTag&);
 //@TODO: 각 Interaction UI에 옮길 예정
 //@Interaction UI Event
 DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyInteractionUIInputActivation, const FGameplayTag&);
-
-//@TODO: Inventory UI로 옮길 예정
-//@아이템 제거 알림 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyItemRemovalFromInventory, const FGuid&);
-//@아이템 업데이트 알림 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyInventoryItemUpdated, const FGuid&);
-//@아이템 활성화 알림 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyInventoryItemActivation, const FGuid&);
 
 /*
 * UUIComponent
@@ -124,22 +113,6 @@ public:
 	FUIsForInventoryReady UIsForInventoryReady;
 	//@Attriburte Set 로딩 준비 완료 이벤트
 	FUIsForAttributeSetReady UIsForAttributeSetReady;
-public:
-	//@TODO: 각 System UI에 옮길 예정
-	//@System 관련 사용자 입력 Trigger 이벤트
-	FNotifySystemUIInputActivation NotifySystemUIInputActivation;
-	//@TODO: 각 Interaction UI에 옮길 예정
-	//@Interaction 관련 사용자 입력 Trigger 이벤트
-	FNotifyInteractionUIInputActivation NotifyInteractionUIInputActivation;
-
-//@TODO: Inventory UI 제작 시 아래 Delegate들을 Inventory UI로 옮겨줍니다.
-public:
-	//@인벤토리 UI 아이템 제거 알림 이벤트
-	FNotifyItemRemovalFromInventory NotifyItemRemovalFromInventory;
-	//@인벤토리 UI 아이템 업데이트 알림 이벤트
-	FNotifyInventoryItemUpdated NotifyInventoryItemUpdated;
-	//@인벤토리 UI 아이템 활성화 알림 이벤트
-	FNotifyInventoryItemActivation NotifyInventoryItemActivation;
 #pragma endregion
 
 #pragma region Callbacks

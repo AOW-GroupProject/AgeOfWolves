@@ -30,10 +30,11 @@ protected:
 	virtual void NativeDestruct();
 	//~ End UUserWidget Interface
 protected:
+	//@외부 바인딩
 	void ExternalBindingToInventoryComp();
 	void ExternalBindingToInputComp();
-
 public:
+	//@초기화
 	UFUNCTION()
 		void InitializeInventoryUI();
 #pragma endregion
@@ -41,6 +42,27 @@ public:
 #pragma region Delegates
 public:
 	FInventoryUIInitFinished InventoryUIInitFinished;
+#pragma endregion
+
+#pragma region Callbacks
+protected:
+	//@UI Input Tag 활성화 이벤트에 바인딩 되는 콜백: Input Comp
+	UFUNCTION()
+		void OnUIInputTagTriggered(const FGameplayTag& InputTag);
+	//@UI Input Tag 해제 이벤트에 바인딩 되는 콜백: Input Comp
+	UFUNCTION()
+		void OnUIInputTagReleased(const FGameplayTag& InputTag);
+protected:
+	//@새로운 아이템 추가 이벤트에 바인딩 되는 콜백: Inven Comp
+	UFUNCTION()
+		void OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag);
+	//@기존 아이템 제거 이벤트에 바인딩 되는 콜백: Inven Comp
+	UFUNCTION()
+		void OnItemRemovedFromInventory(const FGuid& UniqueItemID);
+	//@기존 아이템 업데이트 이벤트에 바인딩 되는 콜백: Inven Comp
+	UFUNCTION()
+		void OnInventoryItemUpdated(const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 UpdatedItemCount);
+
 #pragma endregion
 
 };

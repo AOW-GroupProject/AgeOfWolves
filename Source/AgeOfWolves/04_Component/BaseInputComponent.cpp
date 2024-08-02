@@ -317,7 +317,7 @@ void UBaseInputComponent::OnUIInputTagTriggered(FGameplayTag InputTag)
 {
 	UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
 
-	UIInputTagTriggered.ExecuteIfBound(InputTag);
+	UIInputTagTriggered.Broadcast(InputTag);
 
 }
 
@@ -325,7 +325,7 @@ void UBaseInputComponent::OnUIInputTagReleased(FGameplayTag InputTag)
 {
 	UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
 
-	UIInputTagReleased.ExecuteIfBound(InputTag);
+	UIInputTagReleased.Broadcast(InputTag);
 
 }
 #pragma endregion

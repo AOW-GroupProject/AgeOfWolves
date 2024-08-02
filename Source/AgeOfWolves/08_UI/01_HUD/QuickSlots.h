@@ -13,8 +13,9 @@ class ABasePlayerController;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogQuickSlots, Log, All)
 
+//@초기화 완료 이벤트(초기화 작업 비동기화)
 DECLARE_DELEGATE(FQuickSlotsInitFinished);
-
+//@퀵슬롯 아이템 활성화 이벤트(반환 값)
 DECLARE_DELEGATE_RetVal_TwoParams(bool, FQuickSlotItemActivated, const FGuid&, int32);
 
 /**
