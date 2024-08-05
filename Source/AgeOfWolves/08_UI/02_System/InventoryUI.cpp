@@ -118,7 +118,6 @@ void UInventoryUI::InitializeInventoryUI()
 #pragma endregion
 
 #pragma region Callbacks
-
 void UInventoryUI::OnUIInputTagTriggered(const FGameplayTag& InputTag)
 {
     UE_LOGFMT(LogInventoryUI, Log, "UI 입력 태그 트리거됨: {0}", InputTag.ToString());

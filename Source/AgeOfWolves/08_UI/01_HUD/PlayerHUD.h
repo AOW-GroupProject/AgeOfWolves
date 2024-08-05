@@ -34,9 +34,9 @@ public:
 
 protected:
 	//~ Begin UUserWidget Interfaces
-	virtual void NativeOnInitialized(); // 메모리 할당 완료, 화면에 렌더되기 전에 호출됨
+	virtual void NativeOnInitialized(); 
 	virtual void NativePreConstruct();
-	virtual void NativeConstruct(); // 화면에 렌더되기 직전에 호출됨
+	virtual void NativeConstruct(); 
 	virtual void NativeDestruct();
 	//~ End UUserWidget Interface
 protected:

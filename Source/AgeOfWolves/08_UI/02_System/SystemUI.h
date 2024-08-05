@@ -11,66 +11,95 @@ DECLARE_LOG_CATEGORY_EXTERN(LogSystemUI, Log, All)
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitBySystemUI);
 //@Inventory UI 초기화 완료 알림 이벤트
 DECLARE_DELEGATE(FNotifyInventoryUIInitFinished);
+//@Tool Bar 초기화 완료 알림 이벤트
+DECLARE_DELEGATE(FNotifyToolBarInitFinished);
 
 class UScaleBox;
+class UImage;
+class UTextBlock;
+class UOverlay;
+
 class UInventoryUI;
+class USystemUIToolBar;
 
 /**
  * USystemUI
- * 
+ *
  * System 관련 UI들의 프레임을 정의합니다.
  */
 UCLASS()
 class AGEOFWOLVES_API USystemUI : public UUserWidget
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 #pragma region Default Setting
 public:
-	USystemUI(const FObjectInitializer& ObjectInitializer);
+    USystemUI(const FObjectInitializer& ObjectInitializer);
 
 protected:
-	//~ Begin UUserWidget Interfaces
-	virtual void NativeOnInitialized(); // 메모리 할당 완료, 화면에 렌더되기 전에 호출됨
-	virtual void NativePreConstruct();
-	virtual void NativeConstruct(); // 화면에 렌더되기 직전에 호출됨
-	virtual void NativeDestruct();
-	//~ End UUserWidget Interface
+    //~ Begin UUserWidget Interfaces
+    virtual void NativeOnInitialized() override;
+    virtual void NativePreConstruct() override;
+    virtual void NativeConstruct() override;
+    virtual void NativeDestruct() override;
+    //~ End UUserWidget Interface
 protected:
-	//@내부 바인딩
-	void InternalBindingToInventoryUI(UInventoryUI* InventoryUI);
+    void InternalBindingToToolBar(USystemUIToolBar* ToolBar);
+    void InternalBindingToInventoryUI(UInventoryUI* InventoryUI);
 public:
-	//@초기화
-	UFUNCTION()
-		void InitializeSystemUI();
+    //@초기화
+    UFUNCTION()
+        void InitializeSystemUI();
 #pragma endregion
 
-#pragma region Sub Widgets
+#pragma region SubWidgets
 protected:
-	//@Inventory UI를 생성합니다.
-	void CreateInventoryUI();
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UOverlay* SystemUIOverlay;
+
+    UPROPERTY(BlueprintReadWrite, Category = "System", meta = (BindWidget))
+        UImage* SystemUI_Outer_BG;
+    UPROPERTY(BlueprintReadWrite, Category = "System", meta = (BindWidget))
+        UImage* SystemUI_Inner_BG;
+    const float Inner_BG_Padding = 10.f;
+
+    UPROPERTY(BlueprintReadWrite, Category = "System", meta = (BindWidget))
+        UScaleBox* ToolBarBox;
+    UPROPERTY(EditDefaultsOnly, category = "System")
+        TSubclassOf<USystemUIToolBar> ToolBarClass;
+
+    UPROPERTY(BlueprintReadWrite, Category = "System | Inventory UI", meta = (BindWidget))
+        UScaleBox* InventoryUIBox;
+    UPROPERTY(EditDefaultsOnly, category = "System | Inventory UI")
+        TSubclassOf<UInventoryUI> InventoryUIClass;
+
 protected:
-	UPROPERTY(BlueprintReadWrite, Category = "System | Inventory UI", meta = (BindWidget))
-		UScaleBox* InventoryUIBox;
-	UPROPERTY(EditDefaultsOnly, category = "System | Inventory UI")
-		TSubclassOf<UInventoryUI> InventoryUIClass;
+    void CreateBG();
+    //@Tool Bar 생성
+    void CreateToolBar();
+    //@Inventory UI를 생성합니다.
+    void CreateInventoryUI();
+
 public:
-	UFUNCTION(BlueprintCallable, Category = "System | Inventory UI")
-		UInventoryUI* GetInventoryUI() const;
+    UFUNCTION(BlueprintCallable, Category = "System | Inventory UI")
+        UInventoryUI* GetInventoryUI() const;
 #pragma endregion
 
 #pragma region Delegates
 public:
-	//@초기화 요청 이벤트
-	FRequestStartInitBySystemUI RequestStartInitBySystemUI;
-	//@초기화 완료
-	FNotifyInventoryUIInitFinished NotifyInventoryUIInitFinished;
+    //@초기화 요청 이벤트
+    FRequestStartInitBySystemUI RequestStartInitBySystemUI;
+public:
+    //@초기화 완료
+    FNotifyInventoryUIInitFinished NotifyInventoryUIInitFinished;
+    FNotifyToolBarInitFinished NotifyToolBarInitFinished;
 #pragma endregion
 
 #pragma region Callbacks
 protected:
-	UFUNCTION()
-		void OnInventoryUIInitFinished();
+    UFUNCTION()
+        void OnInventoryUIInitFinished();
+    UFUNCTION()
+        void OnToolBarInitFinished();
 #pragma endregion
-	
 };

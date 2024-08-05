@@ -11,7 +11,9 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInventoryUI, Log, All)
 DECLARE_DELEGATE(FInventoryUIInitFinished);
 
 /**
+ * UInventoryUI
  * 
+ * Inventory UI를 정의합니다.
  */
 UCLASS()
 class AGEOFWOLVES_API UInventoryUI : public UUserWidget
@@ -62,7 +64,6 @@ protected:
 	//@기존 아이템 업데이트 이벤트에 바인딩 되는 콜백: Inven Comp
 	UFUNCTION()
 		void OnInventoryItemUpdated(const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 UpdatedItemCount);
-
 #pragma endregion
 
 };

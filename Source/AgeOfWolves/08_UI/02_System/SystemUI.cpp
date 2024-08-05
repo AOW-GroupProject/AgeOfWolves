@@ -2,9 +2,13 @@
 #include "Logging/StructuredLog.h"    
 
 #include "08_UI/02_System/InventoryUI.h"
+#include "08_UI/02_System/SystemUIToolBar.h"
 
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 #include "Components/ScaleBox.h"
 #include "Components/ScaleBoxSlot.h"
+#include "Components/Image.h"
 
 DEFINE_LOG_CATEGORY(LogSystemUI)
 
@@ -33,6 +37,20 @@ void USystemUI::NativeDestruct()
     Super::NativeDestruct();
 }
 
+void USystemUI::InternalBindingToToolBar(USystemUIToolBar* ToolBar)
+{
+    //@Inventory UI
+    if (!ToolBar)
+    {
+        UE_LOGFMT(LogSystemUI, Error, "ToolBar UI가 유효하지 않습니다.");
+        return;
+    }
+    //@Internal Binding
+    ToolBar->ToolBarInitFinished.BindUFunction(this, "OnToolBarInitFinished");
+
+    UE_LOGFMT(LogSystemUI, Log, "SystemUI: Tool Bar UI의 OnInitFinished에 OnToolBarInitFinished 함수를 바인딩했습니다.");
+}
+
 void USystemUI::InternalBindingToInventoryUI(UInventoryUI* InventoryUI)
 {
     //@Inventory UI
@@ -51,6 +69,9 @@ void USystemUI::InitializeSystemUI()
 {
     UE_LOGFMT(LogSystemUI, Log, "SystemUI 초기화 시작");
 
+    //@TODO: Sub UI들의 생성 작업 여기
+    CreateBG();
+    //CreateToolBar();
     CreateInventoryUI();
 
     RequestStartInitBySystemUI.Broadcast();
@@ -59,7 +80,80 @@ void USystemUI::InitializeSystemUI()
 }
 #pragma endregion
 
-#pragma region Inventory UI
+#pragma region SubWidgets
+void USystemUI::CreateBG()
+{
+    if (!SystemUIOverlay || !SystemUI_Outer_BG || !SystemUI_Inner_BG)
+    {
+        UE_LOGFMT(LogSystemUI, Error, "배경 설정에 필요한 위젯이 없습니다.");
+        return;
+    }
+
+    // Outer BG 설정
+    UOverlaySlot* OuterBGSlot = Cast<UOverlaySlot>(SystemUI_Outer_BG->Slot);
+    if (OuterBGSlot)
+    {
+        OuterBGSlot->SetHorizontalAlignment(HAlign_Fill);
+        OuterBGSlot->SetVerticalAlignment(VAlign_Fill);
+    }
+
+    // Inner BG 설정
+    UOverlaySlot* InnerBGSlot = Cast<UOverlaySlot>(SystemUI_Inner_BG->Slot);
+    if (InnerBGSlot)
+    {
+        InnerBGSlot->SetHorizontalAlignment(HAlign_Fill);
+        InnerBGSlot->SetVerticalAlignment(VAlign_Fill);
+
+        // 뷰포트 크기 가져오기
+        FVector2D ViewportSize;
+        if (GEngine && GEngine->GameViewport)
+        {
+            GEngine->GameViewport->GetViewportSize(ViewportSize);
+        }
+
+        // 패딩 계산
+        float PaddingValue = FMath::Min(ViewportSize.X, ViewportSize.Y) * (Inner_BG_Padding / 100.0f);
+
+        // 패딩 설정
+        InnerBGSlot->SetPadding(FMargin(PaddingValue));
+    }
+}
+
+void USystemUI::CreateToolBar()
+{
+    //@Scale Box
+    if (!IsValid(ToolBarBox))
+    {
+        UE_LOGFMT(LogSystemUI, Error, "ToolBarBox가 유효하지 않습니다.");
+        return;
+    }
+    //@Tool Bar Class
+    if (!ensureMsgf(ToolBarClass, TEXT("ToolBarClass가 설정되지 않았습니다.")))
+    {
+        return;
+    }
+    //@Create Widget
+    USystemUIToolBar* ToolBar = CreateWidget<USystemUIToolBar>(this, ToolBarClass);
+    if (!IsValid(ToolBar))
+    {
+        UE_LOGFMT(LogSystemUI, Error, "ToolBar 위젯 생성에 실패했습니다.");
+        return;
+    }
+    //@비동기 초기화를 위한 바인딩
+    RequestStartInitBySystemUI.AddUFunction(ToolBar, "InitializeToolBar");
+    //@Internal Binding
+    InternalBindingToToolBar(ToolBar);
+    //@Add Child
+    UScaleBoxSlot* ScaleBoxSlot = Cast<UScaleBoxSlot>(ToolBarBox->AddChild(ToolBar));
+    if (ScaleBoxSlot)
+    {
+        ScaleBoxSlot->SetHorizontalAlignment(HAlign_Fill);
+        ScaleBoxSlot->SetVerticalAlignment(VAlign_Fill);
+
+        UE_LOGFMT(LogSystemUI, Log, "ToolBar 위젯이 성공적으로 추가되었습니다.");
+    }
+}
+
 void USystemUI::CreateInventoryUI()
 {
     //@Scale Box
@@ -120,10 +214,20 @@ UInventoryUI* USystemUI::GetInventoryUI() const
 
     return InventoryUI;
 }
+#pragma endregion
 
+#pragma region Callbacks
 void USystemUI::OnInventoryUIInitFinished()
 {
     //@Delegate
     NotifyInventoryUIInitFinished.ExecuteIfBound();
+}
+
+void USystemUI::OnToolBarInitFinished()
+{
+    if (NotifyToolBarInitFinished.IsBound())
+    {
+        NotifyToolBarInitFinished.Execute();
+    }
 }
 #pragma endregion

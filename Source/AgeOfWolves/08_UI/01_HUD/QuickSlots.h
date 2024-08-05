@@ -40,7 +40,7 @@ protected:
 private:
     //@외부 바인딩
     void ExternalBindToInventoryComponent();
-    void ExternalBindToInputComponent();
+    void ExternalBindToUIComponent();
 public:
     //@초기화
     UFUNCTION()
@@ -48,6 +48,11 @@ public:
 #pragma endregion
 
 #pragma  region Quick Slot
+protected:
+    //@HUD 관련 사용자 입력의 Trigger 이벤트 구독
+     void StartActivation(const FGameplayTag& InputTag);
+    //@HUD 관련 사용자 입력의 Released 이벤트 구독
+   void EndActivation(const FGameplayTag& InputTag);
 protected:
     UPROPERTY(EditDefaultsOnly, Category = "Quick Slot")
         TSubclassOf<UQuickSlot> QuickSlotClass;
@@ -83,12 +88,11 @@ protected:
     //@기존 아이템 업데이트 이벤트 구독
     UFUNCTION()
         void OnQuickSlotItemUpdated(int32 SlotNum, const FGuid& UniqueItemID, int32 Num);
-    //@HUD 관련 사용자 입력의 Trigger 이벤트 구독
+protected:
     UFUNCTION()
-        void StartActivation(const FGameplayTag& InputTag);
-    //@HUD 관련 사용자 입력의 Released 이벤트 구독
+        void QuickSlotInputTriggeredNotified(const FGameplayTag& InputTag);
     UFUNCTION()
-        void EndActivation(const FGameplayTag& InputTag);
+        void QuickSlotInputReleasedNotified(const FGameplayTag& InputTag);
 #pragma endregion
 
 };

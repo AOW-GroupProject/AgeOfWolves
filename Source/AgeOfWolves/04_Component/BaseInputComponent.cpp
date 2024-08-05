@@ -4,20 +4,19 @@
 #include "BaseInputComponent.h"
 #include "Logging/StructuredLog.h"
 
-#include "03_Player/BasePlayerController.h"
-
+#include "GameplayTagContainer.h"
 #include "01_Character/PawnData.h"
 #include "EnhancedInputSubsystems.h"
 #include "14_Subsystem/InputManagerSubsystem.h"
+
+#include "03_Player/BasePlayerController.h"
 
 #include "01_Character/PlayerCharacter.h"
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "04_Component/LockOnComponent.h"
 
-
-#include "GameplayTagContainer.h"
-
+#include "04_Component/UIComponent.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInputComponent)
 
@@ -49,6 +48,8 @@ void UBaseInputComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
 
+	//@External Binding
+	ExternalBindingToUIComponent();
 }
 
 void UBaseInputComponent::DestroyComponent(bool bPromoteChildren)
@@ -66,6 +67,29 @@ void UBaseInputComponent::BeginPlay()
 void UBaseInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
+}
+
+void UBaseInputComponent::ExternalBindingToUIComponent()
+{
+	
+	//@PC
+	APlayerController* PC = Cast<APlayerController>(GetOwner());
+	if (!PC)
+	{
+		UE_LOGFMT(LogInputComponent, Error, "Controller를 PlayerController로 캐스팅할 수 없습니다.");
+		return;
+	}
+	//@UI Component
+	UUIComponent* UIComp = PC->FindComponentByClass<UUIComponent>();
+	if (!UIComp)
+	{
+		UE_LOGFMT(LogInputComponent, Error, "PlayerController에서 UIComponent를 찾을 수 없습니다.");
+		return;
+	}
+	//@External Binding
+	UIComp->RequestSwapIMC.BindUObject(this, &UBaseInputComponent::SwapMappings);
+
+	UE_LOGFMT(LogInputComponent, Log, "UIComponent와 InputComponent가 성공적으로 바인딩되었습니다.");
 }
 
 void UBaseInputComponent::InitializeInputComponent()
@@ -95,15 +119,21 @@ void UBaseInputComponent::InitializeInputComponent()
 	}
 	//@Input Configs
 	const TArray<UInputConfig*>& InputConfigs = InputManagerSubsystem->GetInputConfigs();
-	//@Add IMC
+	//@Add IMC and find highest priority
+	int32 HighestPriority = TNumericLimits<int32>::Lowest();
 	for (auto InputConfig : InputConfigs)
 	{
 		InputManagerSubsystem->AddMappingContext(InputConfig->InputMappingContext, InputConfig->MappingPriority);
+		if (InputConfig->MappingPriority > HighestPriority)
+		{
+			HighestPriority = InputConfig->MappingPriority;
+			CurrentIMCTag = InputConfig->IMCTag;
+		}
 	}
 	//@Delegate
 	NotifyInputComponentInitFinished.Broadcast();
 
-	UE_LOGFMT(LogInputComponent, Log, "플레이어 입력 초기화가 완료되었습니다.");
+	UE_LOGFMT(LogInputComponent, Log, "플레이어 입력 초기화가 완료되었습니다. 현재 활성화된 IMC: {0}", CurrentIMCTag.ToString());
 }
 
 void UBaseInputComponent::InternalBindToInputActions(const APlayerController* PC)
@@ -201,50 +231,131 @@ void UBaseInputComponent::RemoveInputMappings(const UInputConfig* InputConfig, U
 	InputSubsystem->RemoveMappingContext(InputConfig->InputMappingContext);
 
 }
+
+void UBaseInputComponent::SwapMappings(const FGameplayTag& NewIMCTag)
+{
+	if (CurrentIMCTag == NewIMCTag)
+	{
+		UE_LOGFMT(LogInputComponent, Log, "이미 {0} IMC가 활성화되어 있습니다.", NewIMCTag.ToString());
+		return;
+	}
+
+	APlayerController* PC = Cast<APlayerController>(GetOwner());
+	if (!PC)
+	{
+		UE_LOGFMT(LogInputComponent, Error, "Owner가 PlayerController가 아닙니다.");
+		return;
+	}
+
+	ULocalPlayer* LocalPlayer = PC->GetLocalPlayer();
+	if (!LocalPlayer)
+	{
+		UE_LOGFMT(LogInputComponent, Error, "LocalPlayer를 찾을 수 없습니다.");
+		return;
+	}
+
+	UInputManagerSubsystem* InputManagerSubsystem = LocalPlayer->GetSubsystem<UInputManagerSubsystem>();
+	if (!InputManagerSubsystem)
+	{
+		UE_LOGFMT(LogInputComponent, Error, "InputManagerSubsystem을 찾을 수 없습니다.");
+		return;
+	}
+
+	UEnhancedInputLocalPlayerSubsystem* InputSubsystem = LocalPlayer->GetSubsystem<UEnhancedInputLocalPlayerSubsystem>();
+	if (!InputSubsystem)
+	{
+		UE_LOGFMT(LogInputComponent, Error, "EnhancedInputLocalPlayerSubsystem을 찾을 수 없습니다.");
+		return;
+	}
+
+	const TArray<UInputConfig*>& InputConfigs = InputManagerSubsystem->GetInputConfigs();
+	UInputConfig* CurrentConfig = nullptr;
+	UInputConfig* NewConfig = nullptr;
+
+	for (UInputConfig* Config : InputConfigs)
+	{
+		if (Config->IMCTag == CurrentIMCTag)
+		{
+			CurrentConfig = Config;
+		}
+		else if (Config->IMCTag == NewIMCTag)
+		{
+			NewConfig = Config;
+		}
+
+		if (CurrentConfig && NewConfig)
+		{
+			break;
+		}
+	}
+
+	if (CurrentConfig)
+	{
+		InputSubsystem->RemoveMappingContext(CurrentConfig->InputMappingContext);
+	}
+
+	if (NewConfig)
+	{
+		InputSubsystem->AddMappingContext(NewConfig->InputMappingContext, NewConfig->MappingPriority);
+		CurrentIMCTag = NewIMCTag;
+		UE_LOGFMT(LogInputComponent, Log, "{0} IMC로 전환되었습니다.", NewIMCTag.ToString());
+	}
+	else
+	{
+		UE_LOGFMT(LogInputComponent, Warning, "{0} IMC를 찾을 수 없습니다.", NewIMCTag.ToString());
+	}
+}
+
 #pragma endregion
 
 #pragma region Callbacks
 void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 {
-	if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
+	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
-		if (APawn* Pawn = PC->GetPawn())
+		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
 		{
-			FVector2D MovementVector = Value.Get<FVector2D>();
-			InputVector = MovementVector;
+			if (APawn* Pawn = PC->GetPawn())
+			{
+				FVector2D MovementVector = Value.Get<FVector2D>();
+				InputVector = MovementVector;
 
-			const FRotator Rotation = PC->GetControlRotation();
-			const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
+				const FRotator Rotation = PC->GetControlRotation();
+				const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
 
-			// Forward, Backward
-			const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-			Pawn->AddMovementInput(ForwardDirection, MovementVector.X);
+				// Forward, Backward
+				const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+				Pawn->AddMovementInput(ForwardDirection, MovementVector.X);
 
-			// Right, Left
-			const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-			Pawn->AddMovementInput(RightDirection, MovementVector.Y);
+				// Right, Left
+				const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+				Pawn->AddMovementInput(RightDirection, MovementVector.Y);
+			}
 		}
 	}
 }
 
 void UBaseInputComponent::Input_Look(const FInputActionValue& InputActionValue)
 {
-	if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
+	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
-		if (APawn* Pawn = PC->GetPawn())
+		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
 		{
-			APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(Pawn);
-			if (PlayerCharacter && PlayerCharacter->GetLockOnComponent()->GetbLockOn() == true) return;
-
-			const FVector2D Value = InputActionValue.Get<FVector2D>();
-			if (Value.X != 0.0f)
+			if (APawn* Pawn = PC->GetPawn())
 			{
-				PC->AddYawInput(Value.X);
-			}
+				APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(Pawn);
+				if (PlayerCharacter && PlayerCharacter->GetLockOnComponent()->GetbLockOn() == true) return;
 
-			if (Value.Y != 0.0f)
-			{
-				PC->AddPitchInput(Value.Y);
+				const FVector2D Value = InputActionValue.Get<FVector2D>();
+				if (Value.X != 0.0f)
+				{
+					PC->AddYawInput(Value.X);
+				}
+
+				if (Value.Y != 0.0f)
+				{
+					PC->AddPitchInput(Value.Y);
+				}
 			}
 		}
 	}
@@ -252,18 +363,21 @@ void UBaseInputComponent::Input_Look(const FInputActionValue& InputActionValue)
 
 void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 {
-	if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
+	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
-		if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(PC->GetPawn()))
+		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
 		{
-			ULockOnComponent* LockOnComponent = PlayerCharacter->GetLockOnComponent();
-			if (LockOnComponent->GetbLockOn() == true)
+			if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(PC->GetPawn()))
 			{
-				LockOnComponent->CancelLockOn();
-			}
-			else
-			{
-				LockOnComponent->StartLockOn();
+				ULockOnComponent* LockOnComponent = PlayerCharacter->GetLockOnComponent();
+				if (LockOnComponent->GetbLockOn() == true)
+				{
+					LockOnComponent->CancelLockOn();
+				}
+				else
+				{
+					LockOnComponent->StartLockOn();
+				}
 			}
 		}
 	}
@@ -271,15 +385,18 @@ void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 
 void UBaseInputComponent::Input_LeftMousePressed(const FInputActionValue& Value)
 {
-	if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
+	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
-		if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(PC->GetPawn()))
+		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
 		{
-			APlayerStateBase* PlayerStateBase = Cast<APlayerStateBase>(PlayerCharacter->GetPlayerState());
-			if (PlayerStateBase && PlayerStateBase->GetAbilitySystemComponent())
+			if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(PC->GetPawn()))
 			{
-				FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Active.Attack"));
-				PlayerStateBase->GetAbilitySystemComponent()->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag));
+				APlayerStateBase* PlayerStateBase = Cast<APlayerStateBase>(PlayerCharacter->GetPlayerState());
+				if (PlayerStateBase && PlayerStateBase->GetAbilitySystemComponent())
+				{
+					FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Active.Attack"));
+					PlayerStateBase->GetAbilitySystemComponent()->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag));
+				}
 			}
 		}
 	}
@@ -287,13 +404,16 @@ void UBaseInputComponent::Input_LeftMousePressed(const FInputActionValue& Value)
 
 void UBaseInputComponent::OnAbilityInputTagTriggered(FGameplayTag InputTag)
 {
-	if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
+	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
-		if (APlayerStateBase* PS = Cast<APlayerStateBase>(PC->PlayerState))
+		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
 		{
-			if (UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
+			if (APlayerStateBase* PS = Cast<APlayerStateBase>(PC->PlayerState))
 			{
-				ASC->AbilityInputTagTriggered(InputTag);
+				if (UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
+				{
+					ASC->AbilityInputTagTriggered(InputTag);
+				}
 			}
 		}
 	}
@@ -301,13 +421,16 @@ void UBaseInputComponent::OnAbilityInputTagTriggered(FGameplayTag InputTag)
 
 void UBaseInputComponent::OnAbilityInputTagReleased(FGameplayTag InputTag)
 {
-	if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
+	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
-		if (APlayerStateBase* PS = Cast<APlayerStateBase>(PC->PlayerState))
+		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
 		{
-			if (UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
+			if (APlayerStateBase* PS = Cast<APlayerStateBase>(PC->PlayerState))
 			{
-				ASC->AbilityInputTagReleased(InputTag);
+				if (UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
+				{
+					ASC->AbilityInputTagReleased(InputTag);
+				}
 			}
 		}
 	}

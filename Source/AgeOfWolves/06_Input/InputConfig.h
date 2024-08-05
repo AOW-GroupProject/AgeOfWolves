@@ -13,6 +13,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInputConfig, Log, All)
 class UInputAction;
 class UInputMappingContext;
 
+
+
 USTRUCT(BlueprintType)
 struct FInputActionInfo
 {
@@ -40,6 +42,10 @@ class AGEOFWOLVES_API UInputConfig : public UDataAsset
 public:
 	UInputConfig(const FObjectInitializer& ObjectInitializer);
 
+public:
+	
+
+public:
 	UFUNCTION(BlueprintCallable, Category = "Input | Input Action")
 		const UInputAction* FindNativeInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
 
@@ -50,6 +56,8 @@ public:
 		const UInputAction* FindUIInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound = true) const;
 
 public:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input | Input Mapping Context")
+		FGameplayTag IMCTag;
 	//@IMC
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Input | Input Mapping Context")
 		TObjectPtr<UInputMappingContext> InputMappingContext;

@@ -44,6 +44,9 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	//~End Of UActorComponent interface
+protected:
+	void ExternalBindingToUIComponent();
+
 public:
 	UFUNCTION()
 		void InitializeInputComponent();
@@ -91,11 +94,19 @@ private:
 #pragma endregion 
 
 #pragma region IMC(Input Mapping Context)
+private:
+	//@현재 최 우선순위로 설정된 IMC의 Gameplay Tag
+	FGameplayTag CurrentIMCTag;
+public:
+	FORCEINLINE const FGameplayTag& GetCurrentIMCTag() { return CurrentIMCTag; }
 public:
 	// @설명 : Enhanced Input System에 사용자의 IMC(Input Mapping Context)를 등록합니다.
 	void AddInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
 	// @설명 : Enhanced Input System에 등록된 사용자의 특정 IMC(Input Mapping Context)를 제거합니다.
 	void RemoveInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
+	//@Enhanced Input System에 등록된 사용자의 IMC의 우선순위를 변경해줍니다.
+	UFUNCTION()
+		void SwapMappings(const FGameplayTag& NewIMCTag);
 #pragma endregion
 
 #pragma region Delegate
