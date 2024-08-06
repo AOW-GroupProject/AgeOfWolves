@@ -20,7 +20,7 @@ UENUM(BlueprintType)
 enum class EUICategory : uint8
 {
 	HUD = 0		UMETA(DisplayName = "HUD"),
-	System		UMETA(DisplayName = "System"),
+	Menu		UMETA(DisplayName = "Menu"),
 	Interaction	UMETA(DisplayName = "Interaction"),
 	MAX,
 };
@@ -76,9 +76,9 @@ protected:
 	//@HUD UI Informations
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI | HUD")
         TArray<FUIInformation> HUDUIInformations;
-	//@System UI Informations
-    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI | System")
-        TArray<FUIInformation> SystemUIInformations;
+	//@Menu UI Informations
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI | Menu")
+        TArray<FUIInformation> MenuUIInformations;
 	//@Interaction UI Informations
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI | Interaction")
         TArray<FUIInformation> InteractionUIInformations;

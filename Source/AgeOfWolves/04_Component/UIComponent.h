@@ -30,6 +30,14 @@ DECLARE_DELEGATE_OneParam(FNotifyQuickSlotInputTriggered, const FGameplayTag&);
 //@Quick Slot 관련 IA 해제 알림 이벤트
 DECLARE_DELEGATE_OneParam(FNotifyQuickSlotInputReleased, const FGameplayTag&);
 
+//@Menu UI관련 IA 트리거 알림 이벤트
+DECLARE_DELEGATE_OneParam(FNotifyMenuUIInputTriggered, const FGameplayTag&);
+//@Menu UI관련 IA 해제 알림 이벤트
+DECLARE_DELEGATE_OneParam(FNotifyMenuUIInputReleased, const FGameplayTag&);
+
+//@Widget의 Visibility 관련 알림 이벤트: Animation
+DECLARE_MULTICAST_DELEGATE_OneParam(FWidgetVisibilityChanged, bool);
+
 //@TODO: 각 Interaction UI에 옮길 예정
 //@Interaction UI Event
 DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyInteractionUIInputActivation, const FGameplayTag&);
@@ -63,7 +71,7 @@ private:
 private:
 	//@내부 바인딩
 	void InternalBindToHUDUI();
-	void InternalBindToSystemUI();
+	void InternalBindToMenuUI();
 public:
 	//@초기화
 	UFUNCTION()
@@ -80,10 +88,10 @@ protected:
 	bool bQuickSlotsReadyForLoading = false;
 	bool bStateBarsReadyForLoading = false;
 	void SetupHUDUI(UUserWidget* NewWidget);
-	//@System UI
+	//@Menu UI
 	bool bToolBarReadyForLoading = false;
 	bool bInventoryUIReadyForLoading = false;
-	void SetupSystemUI(UUserWidget* NewWidget);
+	void SetupMenuUI(UUserWidget* NewWidget);
 	//@Interaction UI
 	bool bInteractionUIsInitFinished = false;
 	void SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* NewWidget);
@@ -103,9 +111,9 @@ protected:
 	//@HUD
     UPROPERTY()
         TObjectPtr<UUserWidget> HUDUI;
-	//@System
+	//@Menu
 	UPROPERTY()
-		TObjectPtr<UUserWidget> SystemUI;
+		TObjectPtr<UUserWidget> MenuUI;
 	//@Interaction
 	UPROPERTY()
 		TMap<FGameplayTag, UUserWidget*> MInteractionUIs;
@@ -141,10 +149,10 @@ protected:
 	//@Callback: HUD의 Quick Slots 초기와 완료를 알리는 이벤트 호출
 	UFUNCTION()
 		void QuickSlotsInitFinishedNotified();
-	//@Callback: System UI의 Tool Bar의 초기화 완료를 알리는 이벤트 호출
+	//@Callback: Menu UI의 Tool Bar의 초기화 완료를 알리는 이벤트 호출
 	UFUNCTION()
-		void SystemUIToolBarInitFinishedNotified();
-	//@Callback: System UI의 Inventory UI 초기화 완료를 알리는 이벤트 호출
+		void MenuUIToolBarInitFinishedNotified();
+	//@Callback: Menu UI의 Inventory UI 초기화 완료를 알리는 이벤트 호출
 	UFUNCTION()
 		void InventoryUIInitFinishedNotified();
 protected:

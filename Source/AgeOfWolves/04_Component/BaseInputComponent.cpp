@@ -438,7 +438,7 @@ void UBaseInputComponent::OnAbilityInputTagReleased(FGameplayTag InputTag)
 
 void UBaseInputComponent::OnUIInputTagTriggered(FGameplayTag InputTag)
 {
-	UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
+	//UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
 
 	UIInputTagTriggered.Broadcast(InputTag);
 
@@ -446,7 +446,7 @@ void UBaseInputComponent::OnUIInputTagTriggered(FGameplayTag InputTag)
 
 void UBaseInputComponent::OnUIInputTagReleased(FGameplayTag InputTag)
 {
-	UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
+	//UE_LOGFMT(LogInputComponent, Log, "{0}", InputTag.GetTagName().ToString());
 
 	UIInputTagReleased.Broadcast(InputTag);
 

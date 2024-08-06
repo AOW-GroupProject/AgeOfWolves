@@ -8,7 +8,7 @@
 
 #include "14_Subsystem/UIManagerSubsystem.h"
 #include "08_UI/01_HUD/PlayerHUD.h"
-#include "08_UI/02_System/SystemUI.h"
+#include "08_UI/02_Menu/MenuUI.h"
 
 #include "03_Player/BasePlayerController.h"
 #include "04_Component/BaseInputComponent.h"
@@ -100,16 +100,16 @@ void UUIComponent::InternalBindToHUDUI()
 	PlayerHUD->NotifyStateBarsInitFinished.BindUFunction(this, "StateBarsInitFinishedNotified");
 }
 
-void UUIComponent::InternalBindToSystemUI()
+void UUIComponent::InternalBindToMenuUI()
 {
-	USystemUI* SystemUIRef = Cast<USystemUI>(SystemUI);
-	if (!SystemUIRef)
+	UMenuUI* MenuUIRef = Cast<UMenuUI>(MenuUI);
+	if (!MenuUIRef)
 	{
 		UE_LOGFMT(LogUI, Error, "HUDUI를 UPlayerHUD로 캐스팅할 수 없습니다.");
 		return;
 	}
 
-	SystemUIRef->NotifyInventoryUIInitFinished.BindUFunction(this, "InventoryUIInitFinishedNotified");
+	MenuUIRef->NotifyInventoryUIInitFinished.BindUFunction(this, "InventoryUIInitFinishedNotified");
 }
 
 void UUIComponent::InitializeUIComponent()
@@ -182,16 +182,18 @@ void UUIComponent::CreateAndSetupWidget(APlayerController* PC, EUICategory UICat
 	case EUICategory::HUD:
 		SetupHUDUI(NewWidget);
 		break;
-	case EUICategory::System:
-		SetupSystemUI(NewWidget);
+	case EUICategory::Menu:
+		SetupMenuUI(NewWidget);
 		break;
 	case EUICategory::Interaction:
 		SetupInteractionUI(UIInfo.UITag, NewWidget);
 		break;
 	}
-	//@UI 표시 여부 설정
+
+	//@Visibility
 	UIInfo.bShownOnBeginPlay ? ShowUI(UICategory, UIInfo.UITag) : HideUI(UICategory, UIInfo.UITag);
-	NewWidget->AddToViewport();
+	UIInfo.bShownOnBeginPlay ? NewWidget->AddToViewport() : nullptr;
+
 	//@UI 생성 로그
 	UE_LOGFMT(LogUI, Log, "{0} 카테고리의 {1} UI가 생성되었습니다.",
 		EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)), *UIInfo.UITag.ToString());
@@ -215,22 +217,22 @@ void UUIComponent::SetupHUDUI(UUserWidget* NewWidget)
 	UE_LOGFMT(LogUI, Log, "HUD가 성공적으로 설정되었습니다.");
 }
 
-void UUIComponent::SetupSystemUI(UUserWidget* NewWidget)
+void UUIComponent::SetupMenuUI(UUserWidget* NewWidget)
 {
-	// SystemUI 설정
-	SystemUI = NewWidget;
-	USystemUI* System = Cast<USystemUI>(SystemUI);
-	if (!System)
+	// MenuUI 설정
+	MenuUI = NewWidget;
+	UMenuUI* Menu = Cast<UMenuUI>(MenuUI);
+	if (!Menu)
 	{
-		UE_LOGFMT(LogUI, Error, "SystemUI를 USystemUI로 캐스팅할 수 없습니다.");
+		UE_LOGFMT(LogUI, Error, "MenuUI를 UMenuUI로 캐스팅할 수 없습니다.");
 		return;
 	}
-	//@SystemUI 지연 초기화 함수 바인딩
-	RequestInitializationByUIComp.AddUFunction(System, "InitializeSystemUI");
-	//@SystemUI 내부 바인딩
-	InternalBindToSystemUI();
+	//@MenuUI 지연 초기화 함수 바인딩
+	RequestInitializationByUIComp.AddUFunction(Menu, "InitializeMenuUI");
+	//@MenuUI 내부 바인딩
+	InternalBindToMenuUI();
 
-	UE_LOGFMT(LogUI, Log, "SystemUI가 성공적으로 설정되었습니다.");
+	UE_LOGFMT(LogUI, Log, "MenuUI가 성공적으로 설정되었습니다.");
 }
 
 void UUIComponent::SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* NewWidget)
@@ -241,9 +243,24 @@ void UUIComponent::SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* Ne
 
 void UUIComponent::ShowUI(EUICategory UICategory, const FGameplayTag& UITag)
 {
-	if (UUserWidget* UI = GetUI(UICategory, UITag))
+	UUserWidget* UI = GetUI(UICategory, UITag);
+	if (!UI)
 	{
+		return;
+	}
+
+	switch (UICategory)
+	{
+	case EUICategory::HUD:
 		UI->SetVisibility(ESlateVisibility::Visible);
+		break;
+	case EUICategory::Menu:
+		UI->AddToViewport();
+	case EUICategory::Interaction:
+		UI->AddToViewport();
+		break;
+	default:
+		UE_LOGFMT(LogUI, Warning, "알 수 없는 UI 카테고리입니다: {0}", *UEnum::GetValueAsString(UICategory));
 	}
 }
 
@@ -254,7 +271,20 @@ void UUIComponent::ShowAllUI(EUICategory UICategory)
 	{
 		if (Widget)
 		{
-			Widget->SetVisibility(ESlateVisibility::Visible);
+			switch (UICategory)
+			{
+			case EUICategory::HUD:
+				Widget->SetVisibility(ESlateVisibility::Visible);
+				break;
+			case EUICategory::Menu:
+				Widget->AddToViewport();
+				break;
+			case EUICategory::Interaction:
+				Widget->AddToViewport();
+				break;
+			default:
+				UE_LOGFMT(LogUI, Warning, "알 수 없는 UI 카테고리입니다: {0}", *UEnum::GetValueAsString(UICategory));
+			}
 		}
 	}
 	UE_LOGFMT(LogUI, Log, "모든 {0} UI가 표시되었습니다.", *UEnum::GetValueAsString(UICategory));
@@ -262,9 +292,25 @@ void UUIComponent::ShowAllUI(EUICategory UICategory)
 
 void UUIComponent::HideUI(EUICategory UICategory, const FGameplayTag& UITag)
 {
-	if (UUserWidget* UI = GetUI(UICategory, UITag))
+	UUserWidget* UI = GetUI(UICategory, UITag);
+	if (!UI)
 	{
+		return;
+	}
+
+	switch (UICategory)
+	{
+	case EUICategory::HUD:
 		UI->SetVisibility(ESlateVisibility::Collapsed);
+		break;
+	case EUICategory::Menu:
+		UI->RemoveFromParent();
+		break;
+	case EUICategory::Interaction:
+		UI->RemoveFromParent();
+		break;
+	default:
+		UE_LOGFMT(LogUI, Warning, "알 수 없는 UI 카테고리입니다: {0}", *UEnum::GetValueAsString(UICategory));
 	}
 }
 
@@ -275,12 +321,24 @@ void UUIComponent::HideAllUI(EUICategory UICategory)
 	{
 		if (Widget)
 		{
-			Widget->SetVisibility(ESlateVisibility::Collapsed);
+			switch (UICategory)
+			{
+			case EUICategory::HUD:
+				Widget->SetVisibility(ESlateVisibility::Collapsed);
+				break;
+			case EUICategory::Menu:
+				Widget->RemoveFromParent();
+				break;
+			case EUICategory::Interaction:
+				Widget->RemoveFromParent();
+				break;
+			default:
+				UE_LOGFMT(LogUI, Warning, "알 수 없는 UI 카테고리입니다: {0}", *UEnum::GetValueAsString(UICategory));
+			}
 		}
 	}
 	UE_LOGFMT(LogUI, Log, "모든 {0} UI가 숨겨졌습니다.", *UEnum::GetValueAsString(UICategory));
 }
-
 
 FString UUIComponent::FindUICategoryFromInputTag(const FGameplayTag& InputTag)
 {
@@ -293,7 +351,7 @@ FString UUIComponent::FindUICategoryFromInputTag(const FGameplayTag& InputTag)
 
 		if (Parts.Num() >= 3)
 		{
-			return Parts[2]; // "HUD", "System", "Interaction" 등을 반환
+			return Parts[2]; // "HUD", "Menu", "Interaction" 등을 반환
 		}
 	}
 
@@ -306,8 +364,8 @@ UUserWidget* UUIComponent::GetUI(EUICategory UICategory, const FGameplayTag& UIT
 	{
 	case EUICategory::HUD:
 		return HUDUI;
-	case EUICategory::System:
-		return SystemUI;
+	case EUICategory::Menu:
+		return MenuUI;
 	case EUICategory::Interaction:
 		if (auto* Widget = MInteractionUIs.Find(UITag))
 		{
@@ -329,8 +387,8 @@ TArray<UUserWidget*> UUIComponent::GetCategoryUIs(EUICategory UICategory) const
 	case EUICategory::HUD:
 		if (HUDUI) Result.Add(HUDUI);
 		break;
-	case EUICategory::System:
-		if (SystemUI) Result.Add(SystemUI);
+	case EUICategory::Menu:
+		if (MenuUI) Result.Add(MenuUI);
 		break;
 	case EUICategory::Interaction:
 		MInteractionUIs.GenerateValueArray(Result);
@@ -358,7 +416,7 @@ void UUIComponent::QuickSlotsInitFinishedNotified()
 	CheckUIsForInventoryReady();
 }
 
-void UUIComponent::SystemUIToolBarInitFinishedNotified()
+void UUIComponent::MenuUIToolBarInitFinishedNotified()
 {
 	bToolBarReadyForLoading = true;
 
@@ -394,29 +452,29 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 		{
 			NotifyQuickSlotInputTriggered.ExecuteIfBound(InputTag);
 		}
-		// SystemUI 열기 Input Tag 처리
-		else if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.OpenSystemUI")))
+		// MenuUI 열기 Input Tag 처리
+		else if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.OpenMenuUI")))
 		{
 			//@Hide HUD
 			HideAllUI(EUICategory::HUD);
-			//@Request IMC Swapping(PlayerOnGround -> SystemUI)
-			RequestSwapIMC.ExecuteIfBound(FGameplayTag::RequestGameplayTag(FName("Input.IMC.SystemUI")));
-			//@Show System UI
-			ShowAllUI(EUICategory::System);
+			//@Request IMC Swapping(PlayerOnGround -> MenuUI)
+			RequestSwapIMC.ExecuteIfBound(FGameplayTag::RequestGameplayTag(FName("Input.IMC.MenuUI")));
+			//@Show Menu UI
+			ShowAllUI(EUICategory::Menu);
 		}
 	}
-	else if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.SystemUI")))
+	else if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.MenuUI")))
 	{
-		if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.CloseSystemUI")))
+		if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.CloseMenuUI")))
 		{
-			//@Hide System UI
-			HideAllUI(EUICategory::System);
-			//@Request IMC Swapping(PlayerOnGround <- SystemUI)
+			//@Hide Menu UI
+			HideAllUI(EUICategory::Menu);
+			//@Request IMC Swapping(PlayerOnGround <- MenuUI)
 			RequestSwapIMC.ExecuteIfBound(FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")));
 			//@Show HUD
 			ShowAllUI(EUICategory::HUD);
 		}
-		//@TODO: System UI 관련 사용자 입력 관련 처리 작업
+		//@TODO: Menu UI 관련 사용자 입력 관련 처리 작업
 	}
 }
 
@@ -438,12 +496,12 @@ void UUIComponent::OnUIInputReleased(const FGameplayTag& InputTag)
 		{
 			NotifyQuickSlotInputReleased.ExecuteIfBound(InputTag);
 		}
-		// 다른 UI 관련 Input Tag는 무시 (OpenSystemUI는 Release에서 특별한 처리가 필요 없음)
+		// 다른 UI 관련 Input Tag는 무시 (OpenMenuUI는 Release에서 특별한 처리가 필요 없음)
 	}
-	else if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.SystemUI")))
+	else if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.MenuUI")))
 	{
-		// SystemUI 모드에서의 UI 입력 해제 처리
-		//HandleSystemUIInputRelease(InputTag);
+		// MenuUI 모드에서의 UI 입력 해제 처리
+		//HandleMenuUIInputRelease(InputTag);
 	}
 }
 

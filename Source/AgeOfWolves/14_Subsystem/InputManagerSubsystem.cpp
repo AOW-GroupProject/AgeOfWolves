@@ -39,7 +39,7 @@ void UInputManagerSubsystem::LoadInputConfigs()
     }
     //@Player UI Input Config
     {
-        UInputConfig* InputConfig = LoadObject<UInputConfig>(nullptr, TEXT("/Script/AgeOfWolves.InputConfig'/Game/Blueprints/06_Input/SystemUI/IC_SystemUI.IC_SystemUI'"));
+        UInputConfig* InputConfig = LoadObject<UInputConfig>(nullptr, TEXT("/Script/AgeOfWolves.InputConfig'/Game/Blueprints/06_Input/MenuUI/IC_MenuUI.IC_MenuUI'"));
         if (InputConfig)
         {
             InputConfigs.Add(InputConfig);

@@ -36,8 +36,8 @@ const TArray<FUIInformation>* UUIManagerSubsystem::GetUICategoryInformations(con
     {
     case EUICategory::HUD:
         return &UICollection->GetUICategoryInformations(EUICategory::HUD);
-    case EUICategory::System:
-        return &UICollection->GetUICategoryInformations(EUICategory::System);
+    case EUICategory::Menu:
+        return &UICollection->GetUICategoryInformations(EUICategory::Menu);
     case EUICategory::Interaction:
         return &UICollection->GetUICategoryInformations(EUICategory::Interaction);
     default:

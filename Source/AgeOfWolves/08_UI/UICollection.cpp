@@ -9,7 +9,7 @@ UUICollection::UUICollection(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
     HUDUIInformations.Empty();
-    SystemUIInformations.Empty();
+    MenuUIInformations.Empty();
     InteractionUIInformations.Empty();
 }
 
@@ -19,8 +19,8 @@ const TArray<FUIInformation>& UUICollection::GetUICategoryInformations(const EUI
     {
     case EUICategory::HUD:
         return HUDUIInformations;
-    case EUICategory::System:
-        return SystemUIInformations;
+    case EUICategory::Menu:
+        return MenuUIInformations;
     case EUICategory::Interaction:
         return InteractionUIInformations;
     default:

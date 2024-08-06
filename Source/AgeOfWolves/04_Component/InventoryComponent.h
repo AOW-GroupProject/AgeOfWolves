@@ -29,7 +29,6 @@ DECLARE_DELEGATE_ThreeParams(FQuickSlotItemUpdated, int32, const FGuid&, int32);
 //@아이템 활성화 이벤트(한 번에 하나의 아이템 활성화 강요)
 DECLARE_DELEGATE_RetVal(bool, FItemStartActivation);
 
-
 class UAOWSaveGame;
 class UItemManagerSubsystem;
 class AController;
