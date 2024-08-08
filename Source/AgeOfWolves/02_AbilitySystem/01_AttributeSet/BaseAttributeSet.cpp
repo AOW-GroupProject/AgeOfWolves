@@ -1,8 +1,11 @@
-// Fill out your copyright notice in the Description page of Project Settings.
+﻿// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "BaseAttributeSet.h"
 #include "Logging/StructuredLog.h"
+
+#include "GameplayEffectExtension.h"
+
 
 DEFINE_LOG_CATEGORY(LogAttributeSet)
 
@@ -13,7 +16,7 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 {
 	TArray<FGameplayAttribute> AllAttributes;
 
-	// ��� �Ӽ��� FGameplayAttribute ��ü�� �߰�
+	// 모든 속성을 FGameplayAttribute 객체로 추가
 	AllAttributes.Add(GetHealthAttribute());
 	AllAttributes.Add(GetMaxHealthAttribute());
 	AllAttributes.Add(GetHealthRegenRateAttribute());
@@ -80,6 +83,41 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 {
 	Super::PostGameplayEffectExecute(Data);
 
+	if (Data.EvaluatedData.Attribute == GetHealthAttribute())
+	{
+		SetHealth(FMath::Clamp(GetHealth(), 0.f, GetMaxHealth()));
+	}
+	if (Data.EvaluatedData.Attribute == GetManaAttribute())
+	{
+		SetMana(FMath::Clamp(GetMana(), 0.f, GetMaxMana()));
+	}
+	if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
+	{
+		SetStamina(FMath::Clamp(GetStamina(), 0.f, GetMaxStamina()));
+	}
+
+	float MinimumHealth = 0.f;
+	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
+	{
+		const float LocalIncomingDamage = GetDamage();
+		SetDamage(0.f);
+		if (LocalIncomingDamage > 0.f)
+		{
+			const float NewHealth = GetHealth() - LocalIncomingDamage;
+			SetHealth(FMath::Clamp(NewHealth, 0.f, GetMaxHealth()));
+
+			const bool bFatal = NewHealth <= 0.f;
+			if (bFatal)
+			{
+				// ToDo : 죽음 관련 로직 처리
+			}
+			else
+			{
+				// ToDo : 피격 관련 로직 처리
+			}
+			// ToDo : 그 외 로직 처리
+		}
+	}
 }
 
 void UBaseAttributeSet::AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty)

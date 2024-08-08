@@ -1,4 +1,3 @@
-
 #include "PlayerStateBase.h"
 #include "Logging/StructuredLog.h"
 
@@ -13,6 +12,7 @@
 #include "04_Component/BaseCharacterMovementComponent.h"
 
 #include "08_UI/StateBars.h"
+
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 

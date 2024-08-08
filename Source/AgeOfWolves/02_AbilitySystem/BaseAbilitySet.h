@@ -55,10 +55,14 @@ public:
 
 	// Level of ability to grant.
 	UPROPERTY(EditDefaultsOnly)
-		bool IsActive = false;
+		bool bActive = false;
+
+		// Level of ability to grant.
+	UPROPERTY(EditDefaultsOnly)
+		bool bInputBinded = false;
 
 	// Tag used to process input for the ability.
-	UPROPERTY(EditDefaultsOnly, Meta = (Categories = "InputTag", EditCondition = "IsActive==true"))
+	UPROPERTY(EditDefaultsOnly, Meta = (Categories = "InputTag", EditCondition = "bActive&&bInputBinded"))
 		FGameplayTag InputTag;
 };
 

@@ -96,7 +96,7 @@ void UBaseAbilitySet::GiveStartupGameplayAbilityToAbilitySystem(UBaseAbilitySyst
 
 		if (!IsValid(AbilityToGrant.Ability))
 		{
-			UE_LOGFMT(LogAbilitySet, Error, "Ability Set의 {0}번째 Gameplay Ability가 유효하지 않습니다!", FString::FromInt(AbilityIndex));
+			UE_LOGFMT(LogAbilitySet, Error, "Ability Set의 {0}번째 Input Binded Gameplay Ability가 유효하지 않습니다!", FString::FromInt(AbilityIndex));
 			continue;
 		}
 		
@@ -108,7 +108,7 @@ void UBaseAbilitySet::GiveStartupGameplayAbilityToAbilitySystem(UBaseAbilitySyst
 		AbilitySpec.SourceObject = SourceObject;
 
 		// 3. Active GA는 별도의 Input Tag를 AbilitySpec에 저장합니다. 
-		if(AbilityToGrant.IsActive)
+		if(AbilityToGrant.bActive && AbilityToGrant.bInputBinded)
 			AbilitySpec.DynamicAbilityTags.AddTag(AbilityToGrant.InputTag);
 
 		// 4. ASC 등록
@@ -122,4 +122,5 @@ void UBaseAbilitySet::GiveStartupGameplayAbilityToAbilitySystem(UBaseAbilitySyst
 			OutGrantedHandles->AddAbilitySpecHandle(AbilitySpecHandle);
 		}
 	}
+
 }
