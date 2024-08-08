@@ -42,9 +42,15 @@ void ABaseMonster::PostInitializeComponents()
 
 	//여기서 서브시스템 호출하면 BP_Wolf 켜기만 하면 에디터 꺼져서 BeginPlay로 옮김
 
+	if (UGameplayStatics::GetGameInstance(GetWorld()))
+	{
+		UMonsterDataSubsystem* MonsterDataSubSystem = UGameplayStatics::GetGameInstance(GetWorld())->GetSubsystem<UMonsterDataSubsystem>();
 
-	
-
+		if (MonsterDataSubSystem)
+		{
+			MonsterDataSubSystem->CustomFunction(MonsterName, SingleMonsterData, AbilitySystemComponent, SetGrantedHandles);
+		}
+	}
 	
 }
 
@@ -52,12 +58,9 @@ void ABaseMonster::PostInitializeComponents()
 void ABaseMonster::BeginPlay()
 {
 	Super::BeginPlay();
-	UMonsterDataSubsystem* MonsterDataSubSystem = UGameplayStatics::GetGameInstance(GetWorld())->GetSubsystem<UMonsterDataSubsystem>();
 
-	if (MonsterDataSubSystem)
-	{
-		MonsterDataSubSystem->CustomFunction(MonsterName, SingleMonsterData, AbilitySystemComponent, SetGrantedHandles);
-	}
+	
+	
 	
 }
 

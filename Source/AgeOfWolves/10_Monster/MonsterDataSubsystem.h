@@ -32,6 +32,7 @@ public:
 #pragma region Data
 public:
     // @설명: 각 캐릭터에게서 이름을 받아와 해당 MonsterData를 복사해준다.
+	// 
     void CustomFunction(EMonsterName name, FSingleMonsterData &SingleMonsterData, UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles);
 
 

@@ -11,7 +11,7 @@
 
 #include "MonsterData.generated.h"
 
-
+// @수정: 태그 사용 가능
 UENUM(BlueprintType)
 enum class EMonsterName : uint8
 {
