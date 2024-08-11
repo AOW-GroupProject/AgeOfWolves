@@ -36,7 +36,7 @@ DECLARE_DELEGATE_OneParam(FNotifyMenuUIInputTriggered, const FGameplayTag&);
 DECLARE_DELEGATE_OneParam(FNotifyMenuUIInputReleased, const FGameplayTag&);
 
 //@Widget의 Visibility 관련 알림 이벤트: Animation
-DECLARE_MULTICAST_DELEGATE_OneParam(FWidgetVisibilityChanged, bool);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FWidgetVisibilityChanged, UUserWidget*, bool);
 
 //@TODO: 각 Interaction UI에 옮길 예정
 //@Interaction UI Event
@@ -132,14 +132,22 @@ public:
 	FRequestInitializationByUIComp RequestInitializationByUIComp;
 	//@IMC 변경 오청 이벤트
 	FRequestSwapIMC RequestSwapIMC;
+
 public:
 	//@Inventory 로딩 준비 완료 이벤트
 	FUIsForInventoryReady UIsForInventoryReady;
 	//@Attriburte Set 로딩 준비 완료 이벤트
 	FUIsForAttributeSetReady UIsForAttributeSetReady;
+
 public:
+	//@퀵슬롯 입력 활성화 알림 이벤트
 	FNotifyQuickSlotInputTriggered NotifyQuickSlotInputTriggered;
+	//@큭쉴롯 입력 해제 알림 이벤트
 	FNotifyQuickSlotInputReleased NotifyQuickSlotInputReleased;
+
+public:
+	//@UI 가시성 변화 이벤트
+	FWidgetVisibilityChanged WidgetVisibilityChanged;
 #pragma endregion
 
 #pragma region Callbacks

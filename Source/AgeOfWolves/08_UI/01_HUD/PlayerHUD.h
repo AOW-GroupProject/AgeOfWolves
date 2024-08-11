@@ -40,6 +40,10 @@ protected:
 	virtual void NativeDestruct();
 	//~ End UUserWidget Interface
 protected:
+	//@외부 바인딩
+	void ExternalBindingToUIComponent();
+
+protected:
 	//@내부 바인딩
 	void InternalBindToStateBars(UStateBars* StateBars) ;
 	void InternalBindToQuickSlots(UQuickSlots* QuickSlots) ;
@@ -71,7 +75,6 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, Category = "HUD | Quick Slots")
 		UQuickSlots* GetQuickSlotsUI() const;
-
 #pragma endregion
 
 #pragma region Delegates
@@ -86,8 +89,15 @@ public:
 
 #pragma region Callbacks
 protected:
+	//@UI의 가시성 변화 이벤트에 바인딩 되는 콜백
+	UFUNCTION()
+		void OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible);
+
+protected:
+	//@퀵슬롯 초기화 완료 이벤트에 등록하는 콜백
 	UFUNCTION()
 		void OnQuickSlotsInitFinished();
+	//@상태 창 초기화 완료 이벤트에 등록되는 콜백
 	UFUNCTION()
 		void OnStateBarsInitFinished();
 #pragma endregion

@@ -3,6 +3,8 @@
 #include "PlayerHUD.h"
 #include "Logging/StructuredLog.h"    
 
+#include "04_Component/UIComponent.h"
+
 #include "08_UI/01_HUD/QuickSlots.h"
 #include "08_UI/01_HUD/StateBars.h"
 
@@ -22,6 +24,9 @@ void UPlayerHUD::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
+    //@TODO: 외부 바인딩
+    //@외부 바인딩
+    ExternalBindingToUIComponent();
 }
 
 void UPlayerHUD::NativePreConstruct()
@@ -38,6 +43,34 @@ void UPlayerHUD::NativeConstruct()
 void UPlayerHUD::NativeDestruct()
 {
     Super::NativeDestruct();
+}
+
+void UPlayerHUD::ExternalBindingToUIComponent()
+{
+    //@World
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        UE_LOGFMT(LogHUD, Error, "PlayerHUD::ExternalBindingToUIComponent: 월드가 null입니다");
+        return;
+    }
+    //@PC
+    APlayerController* PC = World->GetFirstPlayerController();
+    if (!PC)
+    {
+        UE_LOGFMT(LogHUD, Error, "PlayerHUD::ExternalBindingToUIComponent: 플레이어 컨트롤러가 null입니다");
+        return;
+    }
+    //@UI Comp
+    UUIComponent* UIComp = PC->FindComponentByClass<UUIComponent>();
+    if (!UIComp)
+    {
+        UE_LOGFMT(LogHUD, Error, "{0}: UI 컴포넌트가 유효하지 않습니다", __FUNCTION__);
+        return;
+    }
+    //@외부 바인딩
+    UIComp->WidgetVisibilityChanged.AddUObject(this, &UPlayerHUD::OnUIVisibilityChanged);
+    UE_LOGFMT(LogHUD, Log, "PlayerHUD가 UIComponent의 WidgetVisibilityChanged 델리게이트에 성공적으로 바인딩되었습니다.");
 }
 
 void UPlayerHUD::InternalBindToStateBars(UStateBars* StateBars)
@@ -203,11 +236,37 @@ UStateBars* UPlayerHUD::GetStateBarsUI() const
 #pragma endregion
 
 #pragma region Callbacks
+void UPlayerHUD::OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible)
+{
+    if (Widget != this)
+    {
+        return;
+    }
+
+    if (bVisible)
+    {
+        SetVisibility(ESlateVisibility::Visible);
+        UE_LOGFMT(LogHUD, Log, "PlayerHUD가 표시되었습니다.");
+
+        // TODO: HUD가 표시될 때 필요한 추가 로직
+
+    }
+    else
+    {
+        SetVisibility(ESlateVisibility::Collapsed);
+        UE_LOGFMT(LogHUD, Log, "PlayerHUD가 숨겨졌습니다.");
+
+        // TODO: HUD가 숨겨질 때 필요한 추가 로직
+
+    }
+}
+
 void UPlayerHUD::OnStateBarsInitFinished()
 {
     //@Deelgate
     NotifyStateBarsInitFinished.ExecuteIfBound();
 }
+
 
 void UPlayerHUD::OnQuickSlotsInitFinished()
 {
