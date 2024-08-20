@@ -180,12 +180,37 @@ void UBaseInputComponent::BindAbilityInputActions(const UInputConfig* InputConfi
 {
 	if (!InputConfig->AbilityInputActions.IsEmpty())
 	{
+<<<<<<< HEAD
 		UE_LOGFMT(LogInputComponent, Log, "어빌리티 입력 액션을 바인딩합니다.");
 		BindInputActions(InputConfig->AbilityInputActions, this, &ThisClass::OnAbilityInputTagTriggered, &ThisClass::OnAbilityInputTagReleased);
 	}
 	else
 	{
 		UE_LOGFMT(LogInputComponent, Warning, "바인딩할 어빌리티 입력 액션이 없습니다.");
+=======
+		if (const UPawnData* PawnData = PS->GetPawnData())
+		{
+			if (const UInputConfig* InputConfig = PawnData->InputConfig)
+			{
+				// #1. IMC to Subsystem
+				AddInputMappings(InputConfig, Subsystem);
+			
+
+				// #2. Native Input Actions
+				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Move")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Move);
+				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Look);
+				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LockOn);
+				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LeftMouse.Pressed")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LeftMousePressed);
+
+				// #3. Ability Input Actions
+				TArray<uint32> BindHandles;
+				BindAbilityInputActions(InputConfig, this, &ThisClass::Input_AbilityInputTagPressed, &ThisClass::Input_AbilityInputTagReleased, /*out*/ BindHandles);
+
+				// #4. Delegate Executed
+				OnPlayerInputInitFinished.ExecuteIfBound();
+			}
+		}
+>>>>>>> develop
 	}
 }
 

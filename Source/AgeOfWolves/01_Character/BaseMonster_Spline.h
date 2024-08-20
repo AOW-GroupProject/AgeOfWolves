@@ -35,6 +35,11 @@ protected:
 
 #pragma endregion
 
+#pragma region State
+public:
+	virtual void WhenEndState() override;
+#pragma endregion
+
 #pragma region Interface
 public:
 	/*
@@ -58,6 +63,11 @@ public:
 #pragma endregion
 
 #pragma region Spline
+private:
+	FVector SplineTargetVector;
+
+	FVector SplineVectorBeforeDetectingPlayer;
+
 public:
 
 	
@@ -71,8 +81,21 @@ public:
 	* @참조 : -
 	*/
 	void SetSplineActor(ABaseSpline* spline);
-	
 
+	/*
+	* @설명 : DetectingPlayer로 바뀔 때 저장해둔 spline지점에서 멀리 떨어졌을 때 다시 돌아갈 변수를 반환한다.
+	* @참조 : -
+	*/
+	UFUNCTION(BlueprintCallable)
+	FVector GetSplineVectorToPatrol();
+	
+	/*
+	* @목적 : spline지점에서 너무 멀어졌을 때 실행하는 함수.
+	* @설명 : 즉시 Patrol 상태로 변경하고, 3초동안 플레이어를 인식할 수 없도록 한다.
+	* @참조 : -
+	*/
+	UFUNCTION(BlueprintCallable)
+	void WaitToReactivateDetecting();
 	
 #pragma region Distance에 따른 Tangent
 

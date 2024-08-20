@@ -5,9 +5,13 @@
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
 #include "Engine/DataTable.h"
+#include "GameplayTagContainer.h"
+
+#include "02_AbilitySystem/BaseAbilitySet.h"
+
 #include "MonsterData.generated.h"
 
-
+// @수정: 태그 사용 가능
 UENUM(BlueprintType)
 enum class EMonsterName : uint8
 {
@@ -61,6 +65,9 @@ public:
 	int SkillID;
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "SkillData")
+	FGameplayTagContainer SkillTag;
+
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "SkillData")
 	FString SkillName = FString(TEXT(""));
 
 	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "SkillData")
@@ -108,10 +115,27 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SingleMonsterData")
 	TMap<int, FMonsterSkillData> MonsterSkillData; //FSkillData 수정하면 입력한 데이터 전부 사라짐
+
+	// Gameplay abilities to grant when this ability set is granted.
+	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Abilities", meta = (TitleProperty = GameplayAbility))
+	TArray<FBaseAbilitySet_GameplayAbility> GameplayAbilities;
+
+	// Gameplay effects to grant when this ability set is granted.
+	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Effects", meta = (TitleProperty = GameplayEffect))
+	TArray<FBaseAbilitySet_GameplayEffect> GameplayEffects;
+
+	// Attribute sets to grant when this ability set is granted.
+	UPROPERTY(EditDefaultsOnly, Category = "Attribute Sets", meta = (TitleProperty = AttributeSet))
+	TArray<FBaseAbilitySet_AttributeSet> AttributeSets;
 	
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SingleMonsterData")
 	FString MonsterName = FString(TEXT(""));
+
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SingleMonsterData")
+	FPermanentStat PermanentStat;
+
+
 
 
 };
