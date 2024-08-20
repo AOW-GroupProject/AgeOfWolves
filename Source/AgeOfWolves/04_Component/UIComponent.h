@@ -38,7 +38,6 @@ DECLARE_DELEGATE_OneParam(FNotifyMenuUIInputReleased, const FGameplayTag&);
 //@Widget의 Visibility 관련 알림 이벤트: Animation
 DECLARE_MULTICAST_DELEGATE_TwoParams(FWidgetVisibilityChanged, UUserWidget*, bool);
 
-//@TODO: 각 Interaction UI에 옮길 예정
 //@Interaction UI Event
 DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyInteractionUIInputActivation, const FGameplayTag&);
 
@@ -148,6 +147,11 @@ public:
 public:
 	//@UI 가시성 변화 이벤트
 	FWidgetVisibilityChanged WidgetVisibilityChanged;
+
+public:
+	//@Menu UI 입력 이벤트
+	FNotifyMenuUIInputTriggered NotifyMenuUIInputTriggered;
+	FNotifyMenuUIInputReleased NotifyMenuUIInputReleased;
 #pragma endregion
 
 #pragma region Callbacks

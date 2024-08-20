@@ -2,28 +2,25 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "Engine/DataTable.h"
 
 #include "MenuUI.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMenuUI, Log, All)
 
 //@초기화 요청 이벤트
-DECLARE_MULTICAST_DELEGATE(FRequestStartInitByMenuUI);
+DECLARE_MULTICAST_DELEGATE_OneParam(FRequestStartInitByMenuUI, EMenuCategory);
 //@Inventory UI 초기화 완료 알림 이벤트
 DECLARE_DELEGATE(FNotifyInventoryUIInitFinished);
 //@Tool Bar 초기화 완료 알림 이벤트
 DECLARE_DELEGATE(FNotifyToolBarInitFinished);
 
-class UScaleBox;
 class UImage;
 class UTextBlock;
 class UOverlay;
-
 class UMenuUIToolBar;
-class UInventoryUI;
-class ULevelUI;
-class UMapUI;
-class USystemUI;
+
+class UMenuUIContent;
 
 /*
 * @EMenuCategory
@@ -38,6 +35,24 @@ enum class EMenuCategory : uint8
     Map             UMETA(DisplayName = "Map"),
     System          UMETA(DisplayName = "System"),
     MAX,
+};
+
+/*
+* @FMenuContentUI
+* 
+* Menu UI 내부 콘텐츠의 정보를 담고 있는 구조체
+*/
+USTRUCT(BlueprintType)
+struct FMenuUIContentInfo: public FTableRowBase
+{
+  GENERATED_BODY()
+public:
+    //@해당 컨텐츠를 나타낼 메뉴 카테고리
+    UPROPERTY(EditAnywhere, Category = "Menu Content UI | Category")
+        EMenuCategory MenuCategory;
+    //@블루프린트 클래스
+    UPROPERTY(EditAnywhere, Category = "Menu Content UI | Content")
+        TSubclassOf<UMenuUIContent> MenuUIContentClass;
 };
 
 /**
@@ -67,88 +82,69 @@ protected:
     void ExternalBindingToUIComponent();
 
 protected:
-    //@내부 바인딩
+    // 내부 바인딩 함수
     void InternalBindingToToolBar(UMenuUIToolBar* ToolBar);
-    void InternalBindingToInventoryUI(UInventoryUI* InventoryUI);
-    void InternalBindingToLevelUI(ULevelUI* LevelUI);
-    void InternalBindingToMapUI(UMapUI* MapUI);
-    void InternalBindingToSystemUI(USystemUI* SystemUI);
+    void InternalBindingToMenuUIContent(UMenuUIContent* MenuUIContent);
+
 public:
     //@초기화
     UFUNCTION()
         void InitializeMenuUI();
+
+protected:
+    //@Inventory UI 초기화 완료 체크 함수
+    bool bInventoryUIInitFinished= false;
+    void CheckInventoryUIInitFinished();
+
+    bool bLevelUIInitFinished = false;
+    void CheckLevelUIInitFinished();
+    
+    bool bMapUIInitFinished = false;
+    void CheckMapUIInitFinished();
+
+    bool bSystemUIInitFinished = false;
+    void CheckSystemUIInitFinished();
+
 #pragma endregion
 
 #pragma region SubWidgets
 protected:
-    //@현재 보여지고 있는 Menu UI의 자식 UI
-    EMenuCategory CurrentCategory = EMenuCategory::Inventory;
-
-protected:
-    //@Menu UI를 감싸는 Overlay 위젯
-    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-        UOverlay* MenuUIOverlay;
-
     //@BG 이미지
     UPROPERTY(BlueprintReadWrite, Category = "Menu", meta = (BindWidget))
         UImage* MenuUI_Outer_BG;
     UPROPERTY(BlueprintReadWrite, Category = "Menu", meta = (BindWidget))
         UImage* MenuUI_Inner_BG;
-    const float Inner_BG_Padding = 10.f;
 
     //@Tool Bar UI
-    UPROPERTY(BlueprintReadWrite, Category = "Menu", meta = (BindWidget))
-        UScaleBox* ToolBarBox;
-    UPROPERTY(EditDefaultsOnly, category = "Menu")
+    UPROPERTY(BlueprintReadWrite, Category = "Menu | Tool Bar UI", meta = (BindWidget))
+        UOverlay* ToolBarOverlay;
+    UPROPERTY(EditDefaultsOnly, Category = "Menu | Tool Bar")
         TSubclassOf<UMenuUIToolBar> ToolBarClass;
-
+    
+protected:
+    //@Menu UI Content를 담을 Overlay
+    UPROPERTY(BlueprintReadWrite, Category = "Menu", meta = (BindWidget))
+        UOverlay* MenuUIContentOverlay;
+    //@Menu UI 내부 컨텐츠를 표시할 UI
+    UPROPERTY(EditDefaultsOnly, Category = "Menu | Content")
+        TArray<FMenuUIContentInfo> MenuContent;
+    //@현재 보여지고 있는 Menu UI의 자식 UI
+    EMenuCategory CurrentCategory = EMenuCategory::Inventory;
     //@카테고리와 위젯을 매핑하는 맵
-    TMap<EMenuCategory, UUserWidget*> ChildUIs;
-
-    //@Inventory UI
-    UPROPERTY(BlueprintReadWrite, Category = "Menu | Inventory UI", meta = (BindWidget))
-        UScaleBox* InventoryUIBox;
-    UPROPERTY(EditDefaultsOnly, category = "Menu | Inventory UI")
-        TSubclassOf<UInventoryUI> InventoryUIClass;
-
-    //@Level UI
-    UPROPERTY(BlueprintReadWrite, Category = "Menu | Level UI", meta = (BindWidget))
-        UScaleBox* LevelUIBox;
-    UPROPERTY(EditDefaultsOnly, category = "Menu | Level UI")
-        TSubclassOf<ULevelUI> LevelUIClass;
-    
-    //@Map UI
-    UPROPERTY(BlueprintReadWrite, Category = "Menu | Map UI", meta = (BindWidget))
-        UScaleBox* MapUIBox;
-    UPROPERTY(EditDefaultsOnly, category = "Menu | Map UI")
-        TSubclassOf<UMapUI> MapUIClass;
-    
-    //@System UI
-    UPROPERTY(BlueprintReadWrite, Category = "Menu | System UI", meta = (BindWidget))
-        UScaleBox* SystemUIBox;
-    UPROPERTY(EditDefaultsOnly, category = "Menu | System UI")
-        TSubclassOf<USystemUI> SystemUIClass;
+    TMap<EMenuCategory, TObjectPtr<UUserWidget>> MMenuContents;
 
 protected:
-    //@BG 생성
-    void CreateBG();
     //@Tool Bar 생성
     void CreateToolBar();
-
-protected:
+    //@Menu UI 컨텐츠 생성
     void CreateAllCategoryUIs();
-    //@inventory UI
-    void CreateInventoryUI();
-    //@Level UI
-    void CreateLevelUI();
-    //@Map UI
-    void CreateMapUI();
-    //@System UI
-    void CreateSystemUI();
 
 public:
     //@가시성 관리
     void SetCategoryVisibility(EMenuCategory Category, bool bVisible);
+    //@ToolBar UI 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Menu")
+        UMenuUIToolBar* GetToolBarUI() const;
     //@카테고리별 UI 가져오기
     UFUNCTION(BlueprintCallable, Category = "Menu")
         UUserWidget* GetCategoryUI(EMenuCategory Category) const;
@@ -171,17 +167,20 @@ protected:
     //@UI의 가시성 변화 이벤트에 바인딩 되는 콜백
     UFUNCTION()
         void OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible);
+
 protected:
+    //@Input 이벤트에 등록하는 콜백
+    UFUNCTION()
+        void MenuUIInputTriggeredNotified(const FGameplayTag& InputTag);
+    UFUNCTION()
+        void MenuUIInputReleasedNotified(const FGameplayTag& InputTag);
+
+protected:
+    //@초기화 완료 이벤트에 등록하는 콜백
     UFUNCTION()
         void OnToolBarInitFinished();
     UFUNCTION()
-        void OnInventoryUIInitFinished();
-    UFUNCTION()
-        void OnLevelUIInitFinished();
-    UFUNCTION()
-        void OnMapUIInitFinished();
-    UFUNCTION()
-        void OnSystemUIInitFinished();
+        void OnMenuUIContentInitFinished(EMenuCategory Category);
 protected:
     //@Menu Tool Bar의 Menu Category 선택 이벤트에 바인딩 되는 콜백
     UFUNCTION()

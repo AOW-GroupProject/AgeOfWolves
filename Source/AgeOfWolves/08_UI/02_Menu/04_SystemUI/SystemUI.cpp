@@ -1,12 +1,10 @@
-
 #include "SystemUI.h"
 #include "Logging/StructuredLog.h"
 
-#include "Components/ScaleBox.h"
-#include "Components/ScaleBoxSlot.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 
 DEFINE_LOG_CATEGORY(LogSystemUI)
-
 
 USystemUI::USystemUI(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
@@ -15,31 +13,34 @@ USystemUI::USystemUI(const FObjectInitializer& ObjectInitializer)
 void USystemUI::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
-
-    //@TODO: 외부 바인딩 수행 장소
+    // 추가적인 초기화 작업
 }
 
 void USystemUI::NativePreConstruct()
 {
     Super::NativePreConstruct();
-
 }
 
 void USystemUI::NativeConstruct()
 {
     Super::NativeConstruct();
-
 }
 
 void USystemUI::NativeDestruct()
 {
     Super::NativeDestruct();
-
 }
 
-void USystemUI::InitializeSystemUI()
+void USystemUI::InitializeMenuUIContent(EMenuCategory Category)
 {
-    //@TODO: 초기화 작업 수행
+    Super::InitializeMenuUIContent(Category);
+    // SystemUI 특화 초기화 작업 수행
 
-    SystemUIInitFinished.ExecuteIfBound();
+    CheckMenuUIContentInitFinished();
+}
+
+void USystemUI::CheckMenuUIContentInitFinished() const
+{
+    Super::CheckMenuUIContentInitFinished();
+    // 추가적인 초기화 완료 체크 로직
 }

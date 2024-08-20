@@ -439,6 +439,7 @@ void UUIComponent::InventoryUIInitFinishedNotified()
 
 void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 {
+	//@Base Input Comp
 	UBaseInputComponent* BaseInputComp = Cast<UBaseInputComponent>(GetOwner()->InputComponent);
 	if (!BaseInputComp)
 	{
@@ -481,14 +482,13 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 	//@MenuUI IMC
 	else if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.MenuUI")))
 	{
+		//@Close Menu UI
 		if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.CloseMenuUI")))
 		{
 			//@Hide Menu UI
 			HideAllUI(EUICategory::Menu);
 			//@Request IMC Swapping(PlayerOnGround <- MenuUI)
 			RequestSwapIMC.ExecuteIfBound(FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")));
-			//@TODO: Request MenuUI Open
-			
 			//@Show HUD
 			ShowAllUI(EUICategory::HUD);
 			//@Interaction
@@ -500,21 +500,28 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 				PC->SetInputMode(FInputModeGameOnly());
 			}
 		}
-		//@TODO: Menu UI 관련 사용자 입력 관련 처리 작업
+		//@Menu UI
+		if (InputTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Input.UI.MenuUI"))))
+		{
+			NotifyMenuUIInputTriggered.ExecuteIfBound(InputTag);
+		}
+
 	}
 }
 
 void UUIComponent::OnUIInputReleased(const FGameplayTag& InputTag)
 {
+	//@Base Input Comp
 	UBaseInputComponent* BaseInputComp = Cast<UBaseInputComponent>(GetOwner()->InputComponent);
 	if (!BaseInputComp)
 	{
 		UE_LOGFMT(LogUI, Error, "BaseInputComponent을 찾을 수 없습니다.");
 		return;
 	}
-
+	//@Current IMC
 	FGameplayTag CurrentIMCTag = BaseInputComp->GetCurrentIMCTag();
 
+	//@PlayerOnGround IMC
 	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
 		// QuickSlots 관련 Input Tag 처리
@@ -524,10 +531,14 @@ void UUIComponent::OnUIInputReleased(const FGameplayTag& InputTag)
 		}
 		// 다른 UI 관련 Input Tag는 무시 (OpenMenuUI는 Release에서 특별한 처리가 필요 없음)
 	}
+	//@UI IMC
 	else if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.MenuUI")))
 	{
 		// MenuUI 모드에서의 UI 입력 해제 처리
-		//HandleMenuUIInputRelease(InputTag);
+		if (InputTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Input.UI.MenuUI"))))
+		{
+			NotifyMenuUIInputReleased.ExecuteIfBound(InputTag);
+		}
 	}
 }
 #pragma endregion

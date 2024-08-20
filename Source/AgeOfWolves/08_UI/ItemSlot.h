@@ -1,34 +1,33 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-#include "Components/Overlay.h"
-#include "Components/VerticalBox.h"
-#include "Components/Image.h"
-#include "Components/EditableText.h"
-#include "GameplayTagContainer.h"
 
-#include "QuickSlot.generated.h"
+#include "ItemSlot.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogQuickSlot, Log, All)
+DECLARE_LOG_CATEGORY_EXTERN(LogItemSlot, Log, All)
+
+//@초기화 완료 이벤트
+DECLARE_DELEGATE(FItemSlotInitFinished);
+
+class UOverlay;
+class UImage;
+class UVerticalBox;
+class UEditableText;
 
 /**
- * UQuickSlot
- * 
- * @목적: HUD 구성 요소 중 QuickSlots의 구성 요소로 사용자가 활용 가능한 아이템을 표시하는 UI입니다.
+ * @UItemSlot
+ *
+ * 아이템을 표시하는 UI입니다.
  */
 UCLASS()
-class AGEOFWOLVES_API UQuickSlot : public UUserWidget
+class AGEOFWOLVES_API UItemSlot : public UUserWidget
 {
 	GENERATED_BODY()
 
-friend class UQuickSlots;
-
 #pragma region Default Setting
 public:
-	UQuickSlot(const FObjectInitializer& ObjectInitializer);
+	UItemSlot(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	//~ Begin UUserWidget Interfaces
@@ -40,7 +39,7 @@ protected:
 #pragma endregion
 
 #pragma region SubWidgets
-protected:
+public:
 	//@퀵슬롯에 새로운 아이템을 할당합니다.
 	void AssignNewItem(const FGuid& ID, UTexture2D* ItemImage, bool bIsStackable, int32 ItemCount, bool bIsRemovable);
 	//@퀵슬롯에 할당된 기존 아이템 정보를 업데이트 합니다.
@@ -84,3 +83,4 @@ public:
 
 
 };
+

@@ -1,11 +1,10 @@
 #include "MapUI.h"
 #include "Logging/StructuredLog.h"
 
-#include "Components/ScaleBox.h"
-#include "Components/ScaleBoxSlot.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 
 DEFINE_LOG_CATEGORY(LogMapUI)
-
 
 UMapUI::UMapUI(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
@@ -14,31 +13,34 @@ UMapUI::UMapUI(const FObjectInitializer& ObjectInitializer)
 void UMapUI::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
-
-    //@TODO: 외부 바인딩 수행
+    // 추가적인 초기화 작업
 }
 
 void UMapUI::NativePreConstruct()
 {
     Super::NativePreConstruct();
-
 }
 
 void UMapUI::NativeConstruct()
 {
     Super::NativeConstruct();
-
 }
 
 void UMapUI::NativeDestruct()
 {
     Super::NativeDestruct();
-
 }
 
-void UMapUI::InitializeMapUI()
+void UMapUI::InitializeMenuUIContent(EMenuCategory Category)
 {
-    //@TODO: 초기화 작업 수행 
+    Super::InitializeMenuUIContent(Category);
+    // MapUI 특화 초기화 작업 수행
 
-    MapUIInitFinished.ExecuteIfBound();
+    CheckMenuUIContentInitFinished();
+}
+
+void UMapUI::CheckMenuUIContentInitFinished() const
+{
+    Super::CheckMenuUIContentInitFinished();
+    // 추가적인 초기화 완료 체크 로직
 }

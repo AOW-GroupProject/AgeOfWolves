@@ -1,63 +1,48 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
-
+#include "08_UI/02_Menu/MenuUIContent.h"
 #include "LevelUI.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogLevelUI, Log, All)
 
-DECLARE_DELEGATE(FLevelUIInitFinished);
-
 class UOverlay;
-class UScaleBox;
 class UImage;
 
 /**
  * @ULevelUI
- * 
- * 캐릭터의 Status 관련 정보를 보여주는 UI, Menu UI의 자식 UI입니다.
+ *
+ * 캐릭터의 Status 관련 정보를 보여주는 UI, MenuUIContent의 자식 UI입니다.
  */
 UCLASS()
-class AGEOFWOLVES_API ULevelUI : public UUserWidget
+class AGEOFWOLVES_API ULevelUI : public UMenuUIContent
 {
-	GENERATED_BODY()
-	
+    GENERATED_BODY()
+
 #pragma region Default Setting
 public:
-	ULevelUI(const FObjectInitializer& ObjectInitializer);
+    ULevelUI(const FObjectInitializer& ObjectInitializer);
 
 protected:
-	//~ Begin UUserWidget Interfaces
-	virtual void NativeOnInitialized(); // 메모리 할당 완료, 화면에 렌더되기 전에 호출됨
-	virtual void NativePreConstruct();
-	virtual void NativeConstruct(); // 화면에 렌더되기 직전에 호출됨
-	virtual void NativeDestruct();
-	//~ End UUserWidget Interface
-public:
-	//@초기화
-	UFUNCTION()
-		void InitializeLevelUI();
+    virtual void NativeOnInitialized() override;
+    virtual void NativePreConstruct() override;
+    virtual void NativeConstruct() override;
+    virtual void NativeDestruct() override;
+
+protected:
+    virtual void InitializeMenuUIContent(EMenuCategory Category) override;
+
+protected:
+    virtual void CheckMenuUIContentInitFinished() const override;
 #pragma endregion
 
 #pragma region SubWidgets
 protected:
-	//@Level UI Overlay
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-		UOverlay* LevelUIOverlay;
-
-	//@Title Image를 담을 Scale Box
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-		UScaleBox* TitleImageBox;
-	UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-		UImage* TitleImage;
+    // TitleImage는 이미 MenuUIContent에 있으므로 여기서 제거합니다.
+    // 필요한 추가 위젯들을 여기에 선언합니다.
 #pragma endregion
 
 #pragma region Delegates
-public:
-	//@초기화 완료 이벤트
-	FLevelUIInitFinished LevelUIInitFinished;
+    // MenuUIContent에서 이미 델리게이트를 상속받으므로 여기서는 제거합니다.
 #pragma endregion
 };

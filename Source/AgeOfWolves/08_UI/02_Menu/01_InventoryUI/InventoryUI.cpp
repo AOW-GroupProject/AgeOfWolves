@@ -4,11 +4,10 @@
 #include "04_Component/InventoryComponent.h"
 #include "04_Component/BaseInputComponent.h"
 
-#include "08_UI/02_Menu/01_InventoryUI/ItemSlots.h"
-#include "08_UI/02_Menu/01_InventoryUI/ItemDescription.h"
+#include "08_UI/02_Menu/01_InventoryUI/InventoryUIContent.H"
 
-#include "Components/ScaleBox.h"
-#include "Components/ScaleBoxSlot.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 
 DEFINE_LOG_CATEGORY(LogInventoryUI)
 
@@ -113,142 +112,87 @@ void UInventoryUI::ExternalBindingToInputComp()
     BaseInputComp->UIInputTagReleased.AddUFunction(this, "OnUIInputTagReleased");
 }
 
-void UInventoryUI::InternalBindingToItemSlots(UItemSlots* ItemSlots)
-{
-    //@Item Slots
-    if (!ItemSlots)
-    {
-        UE_LOGFMT(LogInventoryUI, Error, "ItemSlots UI가 유효하지 않습니다.");
-        return;
-    }
-
-    ItemSlots->ItemSlotsInitFinished.BindUFunction(this, "OnItemSlotsInitFinished");
-}
-
-void UInventoryUI::InternalBindingToItemDescription(UItemDescription* ItemDescription)
+void UInventoryUI::InternalBindingToInventoryUIContent(UInventoryUIContent* InventoryUIContent)
 {
     //@Item Description
-    if (!ItemDescription)
+    if (!InventoryUIContent)
     {
-        UE_LOGFMT(LogInventoryUI, Error, "ItemDescription UI가 유효하지 않습니다.");
+        UE_LOGFMT(LogInventoryUI, Error, "InventoryUIContent UI가 유효하지 않습니다.");
         return;
     }
 
-    ItemDescription->ItemDescriptionInitFinished.BindUFunction(this, "OnItemDescriptionInitFinished");
+    InventoryUIContent->InventoryUIContentInitFinished.BindUFunction(this, "OnInventoryUIContentInitFinished");
 }
 
-void UInventoryUI::InitializeInventoryUI()
+void UInventoryUI::InitializeMenuUIContent(EMenuCategory Category)
 {
-    //@Item Slots
-    CreateItemSlots();
-    //@Item Descrption
-    CreateItemDescription();
+    Super::InitializeMenuUIContent(Category);
+
+    //@Create Inventory Content UI
+    CreateInventoryContent();
 
     //@초기화 완료 이벤트 호출
-    InventoryUIInitFinished.ExecuteIfBound();
+    RequestStartInitByInventoryUI.Broadcast();
 }
 
-void UInventoryUI::CheckInventoryUIInitialization()
+void UInventoryUI::CheckMenuUIContentInitFinished() const
 {
-    if (bItemSlotsInitialized && bItemDescriptionInitialized)
+    if (bInventoryUIContentReady)
     {
         UE_LOGFMT(LogInventoryUI, Log, "InventoryUI의 모든 서브위젯 초기화가 완료되었습니다.");
 
-        //@Delegate
-        InventoryUIInitFinished.ExecuteIfBound();
+        //@Super
+        Super::CheckMenuUIContentInitFinished();
     }
+
 }
 #pragma endregion
 
 #pragma region SubWidgets
-void UInventoryUI::CreateItemSlots()
+void UInventoryUI::CreateInventoryContent()
 {
-    if (!ItemSlotsBox)
+    if (!InventoryUIContentOverlay)
     {
-        UE_LOGFMT(LogInventoryUI, Error, "ItemSlotsBox가 유효하지 않습니다.");
+        UE_LOGFMT(LogInventoryUI, Error, "InventoryUIContentOverlay가 유효하지 않습니다.");
         return;
     }
 
-    if (!ensureMsgf(ItemSlotsClass, TEXT("ItemSlotsClass가 설정되지 않았습니다.")))
+    if (!ensureMsgf(InventoryUIContentClass, TEXT("InventoryUIContentClass가 설정되지 않았습니다.")))
     {
         return;
     }
 
-    UItemSlots* ItemSlots = CreateWidget<UItemSlots>(this, ItemSlotsClass);
-    if (ItemSlots)
+    UInventoryUIContent* InventoryUIContent = CreateWidget<UInventoryUIContent>(this, InventoryUIContentClass);
+    if (InventoryUIContent)
     {
-        UScaleBoxSlot* ScaleBoxSlot = Cast<UScaleBoxSlot>(ItemSlotsBox->AddChild(ItemSlots));
-        if (ScaleBoxSlot)
+        RequestStartInitByInventoryUI.AddUFunction(InventoryUIContent, "InitializeInventoryUIContent");
+        InternalBindingToInventoryUIContent(InventoryUIContent);
+
+        UOverlaySlot* OverlaySlot = InventoryUIContentOverlay->AddChildToOverlay(InventoryUIContent);
+        if (OverlaySlot)
         {
-            ScaleBoxSlot->SetHorizontalAlignment(HAlign_Fill);
-            ScaleBoxSlot->SetVerticalAlignment(VAlign_Fill);
+            OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+            OverlaySlot->SetVerticalAlignment(VAlign_Fill);
         }
 
-        RequestStartInitByInventoryUI.AddUFunction(ItemSlots, "InitializeItemSlots");
-        InternalBindingToItemSlots(ItemSlots);
-
-        UE_LOGFMT(LogInventoryUI, Log, "ItemSlots 위젯이 성공적으로 추가되었습니다.");
+        UE_LOGFMT(LogInventoryUI, Log, "Inventory Content UI 위젯이 성공적으로 추가되었습니다.");
     }
     else
     {
-        UE_LOGFMT(LogInventoryUI, Error, "ItemSlots 위젯 생성에 실패했습니다.");
-    }
-}
-
-void UInventoryUI::CreateItemDescription()
-{
-    if (!ItemDescriptionBox)
-    {
-        UE_LOGFMT(LogInventoryUI, Error, "ItemDescriptionBox가 유효하지 않습니다.");
-        return;
-    }
-
-    if (!ensureMsgf(ItemDescriptionClass, TEXT("ItemDescriptionClass가 설정되지 않았습니다.")))
-    {
-        return;
-    }
-
-    UItemDescription* ItemDescription = CreateWidget<UItemDescription>(this, ItemDescriptionClass);
-    if (ItemDescription)
-    {
-        UScaleBoxSlot* ScaleBoxSlot = Cast<UScaleBoxSlot>(ItemDescriptionBox->AddChild(ItemDescription));
-        if (ScaleBoxSlot)
-        {
-            ScaleBoxSlot->SetHorizontalAlignment(HAlign_Fill);
-            ScaleBoxSlot->SetVerticalAlignment(VAlign_Fill);
-        }
-
-        RequestStartInitByInventoryUI.AddUFunction(ItemDescription, "InitializeItemDescription");
-        InternalBindingToItemDescription(ItemDescription);
-
-        UE_LOGFMT(LogInventoryUI, Log, "ItemDescription 위젯이 성공적으로 추가되었습니다.");
-    }
-    else
-    {
-        UE_LOGFMT(LogInventoryUI, Error, "ItemDescription 위젯 생성에 실패했습니다.");
+        UE_LOGFMT(LogInventoryUI, Error, "Inventory Content UI 위젯 생성에 실패했습니다.");
     }
 }
 #pragma endregion
 
 #pragma region Callbacks
-void UInventoryUI::OnItemSlotsInitFinished()
+void UInventoryUI::OnInventoryUIContentInitFinished()
 {
-    UE_LOGFMT(LogInventoryUI, Log, "ItemSlots 초기화가 완료되었습니다.");
+    UE_LOGFMT(LogInventoryUI, Log, "InventoryUIContent 초기화가 완료되었습니다.");
 
     //@Init Finished
-    bItemSlotsInitialized = true;
+    bInventoryUIContentReady = true;
     //@Inventory UI의 초기화 완료 여부 체크
-    CheckInventoryUIInitialization();
-}
-
-void UInventoryUI::OnItemDescriptionInitFinished()
-{
-    UE_LOGFMT(LogInventoryUI, Log, "ItemDescription 초기화가 완료되었습니다.");
-
-    //@Init Finished
-    bItemDescriptionInitialized = true;
-    //@Inventory UI의 초기화 완료 여부 체크
-    CheckInventoryUIInitialization();
+    CheckMenuUIContentInitFinished();
 }
 
 void UInventoryUI::OnUIInputTagTriggered(const FGameplayTag& InputTag)

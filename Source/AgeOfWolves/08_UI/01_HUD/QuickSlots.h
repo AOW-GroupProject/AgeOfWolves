@@ -8,8 +8,8 @@
 #include "QuickSlots.generated.h"
 
 class UVerticalBox;
-class UQuickSlot;
 class ABasePlayerController;
+class UItemSlot;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogQuickSlots, Log, All)
 
@@ -55,10 +55,10 @@ protected:
    void EndActivation(const FGameplayTag& InputTag);
 protected:
     UPROPERTY(EditDefaultsOnly, Category = "Quick Slot")
-        TSubclassOf<UQuickSlot> QuickSlotClass;
+        TSubclassOf<UItemSlot> ItemSlotClass;
     //@3개의 Quick Slot
     UPROPERTY()
-        TArray<UQuickSlot*> QuickSlots;
+        TArray<UItemSlot*> QuickSlots;
     //@왼쪽 Quick Slot List
     UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
         UVerticalBox* QuickSlotList1;

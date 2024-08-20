@@ -6,7 +6,7 @@
 
 #include "Components/VerticalBox.h"
 #include "Components/VerticalBoxSlot.h"
-#include "08_UI/01_HUD/QuickSlot.h"
+#include "08_UI/ItemSlot.h"
 
 #include "04_Component/InventoryComponent.h"
 #include "04_Component/UIComponent.h"
@@ -31,12 +31,11 @@ void UQuickSlots::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	check(QuickSlotClass);
+	check(ItemSlotClass);
 
     //@External Binding
     ExternalBindToUIComponent();
     ExternalBindToInventoryComponent();
-
 }
 
 void UQuickSlots::NativePreConstruct()
@@ -124,16 +123,16 @@ void UQuickSlots::ExternalBindToUIComponent()
 
 void UQuickSlots::InitializeQuickSlots()
 {
-    if (!QuickSlotClass->IsValidLowLevel())
+    if (!ItemSlotClass->IsValidLowLevel())
     {
-        UE_LOGFMT(LogQuickSlots, Error, "유효하지 않은 Quick Slot Class 유형입니다.");
+        UE_LOGFMT(LogQuickSlots, Error, "유효하지 않은 Item Slot Class 유형입니다.");
         return;
     }
 
     //@QuickSlotList1 (1번 슬롯)
     for (int32 i = 0; i < QuickSlotList1MaxSize; ++i)
     {
-        UQuickSlot* QuickSlot = CreateWidget<UQuickSlot>(this, QuickSlotClass);
+        UItemSlot* QuickSlot = CreateWidget<UItemSlot>(this, ItemSlotClass);
         if (IsValid(QuickSlot))
         {
             //@bStackable
@@ -152,7 +151,7 @@ void UQuickSlots::InitializeQuickSlots()
     //@QuickSlotList2 (2번, 3번 슬롯)
     for (int32 i = 0; i < QuickSlotList2MaxSize; ++i)
     {
-        UQuickSlot* QuickSlot = CreateWidget<UQuickSlot>(this, QuickSlotClass);
+        UItemSlot* QuickSlot = CreateWidget<UItemSlot>(this, ItemSlotClass);
         if (IsValid(QuickSlot))
         {
             //@bStackable
@@ -201,7 +200,7 @@ void UQuickSlots::StartActivation(const FGameplayTag& InputTag)
     if (SlotIndex != -1 && SlotIndex < QuickSlots.Num())
     {
         //@Quick Slot
-        UQuickSlot* TargetQuickSlot = QuickSlots[SlotIndex];
+        UItemSlot* TargetQuickSlot = QuickSlots[SlotIndex];
         if (TargetQuickSlot)
         {
             //@FGuid
@@ -268,25 +267,25 @@ void UQuickSlots::OnQuickSlotItemsLoaded(int32 SlotNum, const FGuid& UniqueItemI
     UE_LOGFMT(LogQuickSlots, Log, "퀵슬롯 아이템 할당 요청: 슬롯 번호 {0}, 아이템 ID {1}, 아이템 유형 {2}, 아이템 태그 {3}, 아이템 수량 {4}",
         SlotNum, UniqueItemID.ToString(), ItemTypeString, ItemTag.ToString(), ItemCount);
 
-    // 슬롯 번호가 유효한지 확인
+    //@Slot Num
     if (SlotNum < 0 || SlotNum >= QuickSlots.Num())
     {
         UE_LOGFMT(LogQuickSlots, Error, "유효하지 않은 퀵슬롯 번호입니다: {0}", SlotNum);
         return;
     }
 
-    // 해당 슬롯의 QuickSlot 위젯 가져오기
-    UQuickSlot* TargetQuickSlot = QuickSlots[SlotNum-1];
+    //@Quick Slot
+    UItemSlot* TargetQuickSlot = QuickSlots[SlotNum-1];
     if (!TargetQuickSlot)
     {
         UE_LOGFMT(LogQuickSlots, Error, "퀵슬롯 위젯을 찾을 수 없습니다: {0}", SlotNum);
         return;
     }
 
-    // QuickSlot에 아이템 정보 설정
+   //@GuID
     TargetQuickSlot->SetUniqueItemID(UniqueItemID);
 
-    // ItemManagerSubsystem을 통해 아이템 정보 가져오기
+    //@Item Manager Subsystem
     UItemManagerSubsystem* ItemManager = GetWorld()->GetGameInstance()->GetSubsystem<UItemManagerSubsystem>();
     if (ItemManager)
     {
@@ -318,7 +317,7 @@ void UQuickSlots::OnQuickSlotItemUpdated(int32 SlotNum, const FGuid& UniqueItemI
         return;
     }
 
-    UQuickSlot* TargetQuickSlot = QuickSlots[SlotNum - 1];
+    UItemSlot* TargetQuickSlot = QuickSlots[SlotNum - 1];
     if (!TargetQuickSlot)
     {
         UE_LOGFMT(LogQuickSlots, Error, "퀵슬롯 위젯을 찾을 수 없습니다: {0}", SlotNum);

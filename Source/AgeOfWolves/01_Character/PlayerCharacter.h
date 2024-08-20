@@ -33,7 +33,7 @@ public:
 	APlayerCharacter(const FObjectInitializer& ObjectInitializer);
 
 protected:
-	//~BeginAActor interface
+	//~Begin AActor interface
 	/*
 	* @목적: Actor Component가 모두 초기화 된 후, 각 Component 사이의 의존 관계를 정의합니다.
 	* @설명: 의존 관계의 두 Component 간 선후 관계 파악 후 Callback 등록 작업

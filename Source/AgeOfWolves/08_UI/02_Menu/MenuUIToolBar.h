@@ -15,8 +15,6 @@ DECLARE_DELEGATE(FToolBarInitFinished);
 
 //@Menu Category 버튼 선택 이벤트
 DECLARE_DELEGATE_OneParam(FMenuCategoryButtonClikced, EMenuCategory);
-//@닫기 버튼 선택 이벤트
-DECLARE_DELEGATE(FCloseButtonClicked);
 
 class UHorizontalBox;
 class UButton;
@@ -58,6 +56,8 @@ protected:
 protected:
     //@현재 선택된 카테고리
     EMenuCategory CurrentCategory = EMenuCategory::Inventory;
+    //@Menu Category의 총 버튼 개수
+    const int32 MenuCategoryCount = 4;
     //@Menu Category 버튼들을 담고 있는 배열
     TMap<UButton*, EMenuCategory> MCategoryButtons;
     //@Inventory UI 버튼
@@ -73,15 +73,32 @@ protected:
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UButton* SystemUIButton;
 
+public:
+    //@메뉴 카테고리를 왼쪽으로 이동
+    void MoveCategoryLeft();
+    //@메뉴 카테고리를 오른쪽으로 이동
+    void MoveCategoryRight();
+
 private:
     //@현재 선택된 버튼의 스타일을 업데이트합니다.
     void UpdateButtonStyle(UButton* SelectedButton, UButton* PreviousButton = nullptr);
 
 private:
-    void HandleButtonClick(EMenuCategory Category);
-    void HandleButtonHover(EMenuCategory Category);
-    void HandleButtonUnhover(EMenuCategory Category);
+    //@버튼 클릭 이벤트에 대한 처리
+    UFUNCTION(BlueprintCallable, Category = "Menu UI | Button Click")
+        void HandleButtonClick(EMenuCategory Category);
+    //@버튼 호버 이벤트에 대한 처리
+    UFUNCTION(BlueprintCallable, Category = "Menu UI | Button Hovered")
+        void HandleButtonHover(EMenuCategory Category);
+    //@버튼 언호버 이벤트에 대한 처리
+    UFUNCTION(BlueprintCallable, Category = "Menu UI | Button Unhovered")
+        void HandleButtonUnhover(EMenuCategory Category);
 
+protected:
+    //@인덱스에 해당하는 메뉴 카테고리를 반환
+    int32 GetCurrentCategoryIndex();
+    //@메뉴 카테고리에 대응되는 인덱스 반환
+    EMenuCategory GetMenuCategoryFromIndex(int32 Index);
 #pragma endregion
 
 #pragma region Delegates

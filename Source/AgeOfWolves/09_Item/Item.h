@@ -40,6 +40,7 @@ enum class EItemType : uint8
 	Tool = 0		UMETA(DisplayName = "Tools"),
 	Equipment		UMETA(DisplayName = "Equipment"),
 	Material		UMETA(DisplayName = "Material"),
+	Memory			UMETA(DisplayName = "Memory"),
 	MAX,
 };
 

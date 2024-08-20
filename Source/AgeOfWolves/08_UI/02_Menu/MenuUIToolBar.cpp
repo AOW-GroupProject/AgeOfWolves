@@ -48,7 +48,8 @@ void UMenuUIToolBar::InitializeToolBar()
     //@Update Button Style
     UpdateButtonStyle(InventoryUIButton);
 	//@Delegate: 초기화 완료 이벤트
-	ToolBarInitFinished.ExecuteIfBound();
+    ToolBarInitFinished.ExecuteIfBound();
+	
 }
 #pragma endregion
 
@@ -60,7 +61,6 @@ void UMenuUIToolBar::CreateButtons()
         UE_LOGFMT(LogToolBar, Error, "CategoryButtonsBox가 유효하지 않습니다.");
         return;
     }
-
     //@Inventory UI 버튼
     if (InventoryUIButton)
     {
@@ -101,6 +101,32 @@ void UMenuUIToolBar::CreateButtons()
         //@MCategoryButtons
         MCategoryButtons.Add(SystemUIButton, EMenuCategory::System);
     }
+}
+
+void UMenuUIToolBar::MoveCategoryLeft()
+{
+    //@Current Idx
+    int32 CurrentIndex = GetCurrentCategoryIndex();
+    //@New Idx
+    int32 NewIndex = (CurrentIndex - 1 + MenuCategoryCount) % MenuCategoryCount;
+    //@New Category
+    EMenuCategory NewCategory = GetMenuCategoryFromIndex(NewIndex);
+    //Handle Button Click
+    HandleButtonClick(NewCategory);
+    UE_LOGFMT(LogToolBar, Log, "메뉴 카테고리가 왼쪽으로 이동했습니다. 새 카테고리: {0}", *UEnum::GetValueAsString(NewCategory));
+}
+
+void UMenuUIToolBar::MoveCategoryRight()
+{
+    //@Current Index
+    int32 CurrentIndex = GetCurrentCategoryIndex();
+    //@New Index
+    int32 NewIndex = (CurrentIndex + 1) % MenuCategoryCount;
+    //@New Category
+    EMenuCategory NewCategory = GetMenuCategoryFromIndex(NewIndex);
+    //@Handle Button Click
+    HandleButtonClick(NewCategory);
+    UE_LOGFMT(LogToolBar, Log, "메뉴 카테고리가 오른쪽으로 이동했습니다. 새 카테고리: {0}", *UEnum::GetValueAsString(NewCategory));
 }
 
 void UMenuUIToolBar::UpdateButtonStyle(UButton* SelectedButton, UButton* PreviousButton)
@@ -151,7 +177,6 @@ void UMenuUIToolBar::HandleButtonClick(EMenuCategory Category)
     UE_LOGFMT(LogToolBar, Log, "{0} 버튼이 클릭되었습니다.", *UEnum::GetValueAsString(Category));
 }
 
-
 void UMenuUIToolBar::HandleButtonHover(EMenuCategory Category)
 {
     UE_LOGFMT(LogToolBar, Log, "{0} 버튼에 마우스가 올라갔습니다.", *UEnum::GetValueAsString(Category));
@@ -164,6 +189,18 @@ void UMenuUIToolBar::HandleButtonUnhover(EMenuCategory Category)
     UE_LOGFMT(LogToolBar, Log, "버튼에서 마우스가 벗어났습니다.");
 
     //@TODO: Hover Image 관련 설정
+}
+
+int32 UMenuUIToolBar::GetCurrentCategoryIndex()
+{
+    return static_cast<int32>(CurrentCategory);
+}
+
+EMenuCategory UMenuUIToolBar::GetMenuCategoryFromIndex(int32 Index)
+{
+    // 유효한 범위로 인덱스를 제한합니다.
+    Index = FMath::Clamp(Index, 0, MenuCategoryCount - 1);
+    return static_cast<EMenuCategory>(Index);
 }
 #pragma endregion
 

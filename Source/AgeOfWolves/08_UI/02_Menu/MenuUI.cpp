@@ -4,15 +4,12 @@
 #include "04_Component/UIComponent.h"
 
 #include "08_UI/02_Menu/MenuUIToolBar.h"
-#include "08_UI/02_Menu/01_InventoryUI/InventoryUI.h"
-#include "08_UI/02_Menu/02_LevelUI/LevelUI.h"
-#include "08_UI/02_Menu/03_MapUI/MapUI.h"
-#include "08_UI/02_Menu/04_SystemUI/SystemUI.h"
+#include "08_UI/02_Menu/MenuUIContent.h"
 
+//@TODO: Menu Content UI 설꼐 이후 아래 #include 제거
+#include "Components/CanvasPanel.h"
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
-#include "Components/ScaleBox.h"
-#include "Components/ScaleBoxSlot.h"
 #include "Components/Image.h"
 
 DEFINE_LOG_CATEGORY(LogMenuUI)
@@ -70,7 +67,12 @@ void UMenuUI::ExternalBindingToUIComponent()
         return;
     }
 
+    //@Visibility 변화 이벤트
     UIComp->WidgetVisibilityChanged.AddUObject(this, &UMenuUI::OnUIVisibilityChanged);
+    //@Input 이벤트
+    UIComp->NotifyMenuUIInputTriggered.BindUFunction(this, "MenuUIInputTriggeredNotified");
+    UIComp->NotifyMenuUIInputReleased.BindUFunction(this, "MenuUIInputReleasedNotified");
+
     UE_LOGFMT(LogMenuUI, Log, "MenuUI가 UIComponent의 WidgetVisibilityChanged 델리게이트에 성공적으로 바인딩되었습니다.");
 }
 
@@ -82,270 +84,170 @@ void UMenuUI::InternalBindingToToolBar(UMenuUIToolBar* ToolBar)
         UE_LOGFMT(LogMenuUI, Error, "ToolBar UI가 유효하지 않습니다.");
         return;
     }
-    //@Internal Binding
+    //@툴바 초기화 완료 이벤트
     ToolBar->ToolBarInitFinished.BindUFunction(this, "OnToolBarInitFinished");
+    //@툴바 메뉴 카테고리 선택 이벤트
     ToolBar->MenuCategoryButtonClikced.BindUFunction(this, "OnMenuCategoryButtonClikced");
 
     UE_LOGFMT(LogMenuUI, Log, "MenuUI: Tool Bar UI의 OnInitFinished에 OnToolBarInitFinished 함수를 바인딩했습니다.");
 }
 
-void UMenuUI::InternalBindingToInventoryUI(UInventoryUI* InventoryUI)
+void UMenuUI::InternalBindingToMenuUIContent(UMenuUIContent* MenuUIContent)
 {
-    //@Inventory UI
-    if (!InventoryUI)
+    if (!MenuUIContent)
     {
-        UE_LOGFMT(LogMenuUI, Error, "Inventory UI가 유효하지 않습니다.");
+        UE_LOGFMT(LogMenuUI, Error, "MenuUIContent가 유효하지 않습니다.");
         return;
     }
-    //@Internal Binding
-    InventoryUI->InventoryUIInitFinished.BindUFunction(this, "OnInventoryUIInitFinished");
 
-    UE_LOGFMT(LogMenuUI, Log, "MenuUI: InventoryUI의 OnInitFinished에 OnInventoryUIInitFinished 함수를 바인딩했습니다.");
-}
+    //@내부 바인딩
+    MenuUIContent->MenuUIContentInitFinished.BindUFunction(this, "OnMenuUIContentInitFinished");
 
-void UMenuUI::InternalBindingToLevelUI(ULevelUI* LevelUI)
-{
-    if (!LevelUI)
-    {
-        UE_LOGFMT(LogMenuUI, Error, "Level UI가 유효하지 않습니다.");
-        return;
-    }
-    LevelUI->LevelUIInitFinished.BindUFunction(this, "OnLevelUIInitFinished");
-    UE_LOGFMT(LogMenuUI, Log, "MenuUI: LevelUI의 LevelUIInitFinished에 OnLevelUIInitFinished 함수를 바인딩했습니다.");
-}
-
-void UMenuUI::InternalBindingToMapUI(UMapUI* MapUI)
-{
-    if (!MapUI)
-    {
-        UE_LOGFMT(LogMenuUI, Error, "Map UI가 유효하지 않습니다.");
-        return;
-    }
-    MapUI->MapUIInitFinished.BindUFunction(this, "OnMapUIInitFinished");
-    UE_LOGFMT(LogMenuUI, Log, "MenuUI: MapUI의 MapUIInitFinished에 OnMapUIInitFinished 함수를 바인딩했습니다.");
-}
-
-void UMenuUI::InternalBindingToSystemUI(USystemUI* SystemUI)
-{
-    if (!SystemUI)
-    {
-        UE_LOGFMT(LogMenuUI, Error, "System UI가 유효하지 않습니다.");
-        return;
-    }
-    SystemUI->SystemUIInitFinished.BindUFunction(this, "OnSystemUIInitFinished");
-    UE_LOGFMT(LogMenuUI, Log, "MenuUI: SystemUI의 SystemUIInitFinished에 OnSystemUIInitFinished 함수를 바인딩했습니다.");
+    UE_LOGFMT(LogMenuUI, Log, "MenuUIContent의 초기화 완료 이벤트에 콜백 함수를 바인딩했습니다.");
 }
 
 void UMenuUI::InitializeMenuUI()
 {
-    //@BG
-    CreateBG();
-    //@TODO: Tool Bar
+    //@Tool Bar
     CreateToolBar();
     //@All UIs
     CreateAllCategoryUIs();
-    //@초기화 요청 이벤트 호출
-    RequestStartInitByMenuUI.Broadcast();
+    //@초기화 요청 이벤트 호
+    for (int8 MenuIdx = 0; MenuIdx < static_cast<int8>(EMenuCategory::MAX); ++MenuIdx)
+    {
+        RequestStartInitByMenuUI.Broadcast(static_cast<EMenuCategory>(MenuIdx));
+    }
+}
+
+void UMenuUI::CheckInventoryUIInitFinished()
+{
+    //@초기화 완료 여부
+    if (bInventoryUIInitFinished)
+    {
+        //@이벤트 호출
+        NotifyInventoryUIInitFinished.ExecuteIfBound();
+    }
+}
+
+void UMenuUI::CheckLevelUIInitFinished()
+{
+    if (bLevelUIInitFinished)
+    {
+        UE_LOGFMT(LogMenuUI, Log, "Level UI의 초기화가 완료되었습니다.");
+        // NotifyLevelUIInitFinished.ExecuteIfBound(); // 필요시 추가
+    }
+}
+
+void UMenuUI::CheckMapUIInitFinished()
+{
+    if (bMapUIInitFinished)
+    {
+        UE_LOGFMT(LogMenuUI, Log, "Map UI의 초기화가 완료되었습니다.");
+        // NotifyMapUIInitFinished.ExecuteIfBound(); // 필요시 추가
+    }
+}
+
+void UMenuUI::CheckSystemUIInitFinished()
+{
+    if (bSystemUIInitFinished)
+    {
+        UE_LOGFMT(LogMenuUI, Log, "System UI의 초기화가 완료되었습니다.");
+        // NotifySystemUIInitFinished.ExecuteIfBound(); // 필요시 추가
+    }
 }
 #pragma endregion
 
 #pragma region SubWidgets
-void UMenuUI::CreateBG()
-{
-    if (!MenuUIOverlay || !MenuUI_Outer_BG || !MenuUI_Inner_BG)
-    {
-        UE_LOGFMT(LogMenuUI, Error, "배경 설정에 필요한 위젯이 없습니다.");
-        return;
-    }
-
-    UE_LOGFMT(LogMenuUI, Log, "배경 생성을 시작합니다.");
-
-    // Outer BG 설정
-    UOverlaySlot* OuterBGSlot = Cast<UOverlaySlot>(MenuUI_Outer_BG->Slot);
-    if (!OuterBGSlot)
-    {
-        UE_LOGFMT(LogMenuUI, Warning, "Outer BG 슬롯 설정에 실패했습니다.");
-        return;
-    }
-
-    // Inner BG 설정
-    UOverlaySlot* InnerBGSlot = Cast<UOverlaySlot>(MenuUI_Inner_BG->Slot);
-    if (!InnerBGSlot)
-    {
-        UE_LOGFMT(LogMenuUI, Warning, "Inner BG 슬롯 설정에 실패했습니다.");
-        return;
-    }
-
-    UE_LOGFMT(LogMenuUI, Log, "배경 생성이 완료되었습니다.");
-}
-
 void UMenuUI::CreateToolBar()
 {
-    //@Scale Box
-    if (!IsValid(ToolBarBox))
-    {
-        UE_LOGFMT(LogMenuUI, Error, "ToolBarBox가 유효하지 않습니다.");
-        return;
-    }
-    //@Tool Bar Class
-    if (!ensureMsgf(ToolBarClass, TEXT("ToolBarClass가 설정되지 않았습니다.")))
+    if (!ensureMsgf(ToolBarClass && ToolBarOverlay, TEXT("ToolBarClass 또는 ToolBarOverlay가 유효하지 않습니다.")))
     {
         return;
     }
-    //@Create Widget
+
     UMenuUIToolBar* ToolBar = CreateWidget<UMenuUIToolBar>(this, ToolBarClass);
     if (!IsValid(ToolBar))
     {
         UE_LOGFMT(LogMenuUI, Error, "ToolBar 위젯 생성에 실패했습니다.");
         return;
     }
-    //@비동기 초기화를 위한 바인딩
-    RequestStartInitByMenuUI.AddUFunction(ToolBar, "InitializeToolBar");
-    //@Internal Binding
-    InternalBindingToToolBar(ToolBar);
-    //@Add Child
-    UScaleBoxSlot* ScaleBoxSlot = Cast<UScaleBoxSlot>(ToolBarBox->AddChild(ToolBar));
-    if (ScaleBoxSlot)
-    {
-        ScaleBoxSlot->SetHorizontalAlignment(HAlign_Fill);
-        ScaleBoxSlot->SetVerticalAlignment(VAlign_Fill);
 
-        UE_LOGFMT(LogMenuUI, Log, "ToolBar 위젯이 성공적으로 추가되었습니다.");
+    RequestStartInitByMenuUI.AddUFunction(ToolBar, "InitializeToolBar");
+    InternalBindingToToolBar(ToolBar);
+
+    if(UOverlaySlot* OverlaySlot = ToolBarOverlay->AddChildToOverlay(ToolBar))
+    {
+        OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+        OverlaySlot->SetVerticalAlignment(VAlign_Fill);
     }
+
+    UE_LOGFMT(LogMenuUI, Log, "ToolBar가 성공적으로 생성되고 ToolBarOverlay에 추가되었습니다.");
 }
 
 void UMenuUI::CreateAllCategoryUIs()
 {
-    //@Inventory UI
-    CreateInventoryUI();
-    //@Level UI
-    CreateLevelUI();
-    //@Map UI
-    CreateMapUI();
-    //@System UI
-    CreateSystemUI();
-}
-
-void UMenuUI::CreateInventoryUI()
-{
-    if (!IsValid(InventoryUIBox) || !InventoryUIClass)
+    //@Menu UI Content Overlay
+    if (!IsValid(MenuUIContentOverlay))
     {
-        UE_LOGFMT(LogMenuUI, Error, "InventoryUIBox 또는 InventoryUIClass가 유효하지 않습니다.");
+        UE_LOGFMT(LogMenuUI, Error, "MenuUIContentOverlay가 유효하지 않습니다.");
         return;
     }
-
-    UInventoryUI* InventoryUI = CreateWidget<UInventoryUI>(this, InventoryUIClass);
-    if (IsValid(InventoryUI))
+    //@TSet
+    TSet<EMenuCategory> CreatedCategories;
+    //@Menu Content
+    for (const FMenuUIContentInfo& ContentUI : MenuContent)
     {
-        //@Scale Box
-        UScaleBoxSlot* ScaleBoxSlot = Cast<UScaleBoxSlot>(InventoryUIBox->AddChild(InventoryUI));
-        if (ScaleBoxSlot)
+        //@Contains
+        if (CreatedCategories.Contains(ContentUI.MenuCategory))
         {
-            ScaleBoxSlot->SetHorizontalAlignment(HAlign_Fill);
-            ScaleBoxSlot->SetVerticalAlignment(VAlign_Fill);
+            UE_LOGFMT(LogMenuUI, Warning, "{0} 카테고리의 MenuUIContent가 이미 생성되었습니다. 중복 생성을 건너뜁니다.", *UEnum::GetValueAsString(ContentUI.MenuCategory));
+            continue;
         }
-        //@TMap
-        ChildUIs.Add(EMenuCategory::Inventory, InventoryUI);
-        //@바인딩
-        RequestStartInitByMenuUI.AddUFunction(InventoryUI, "InitializeInventoryUI");
+        //@MenuUIContentClass
+        if (!ContentUI.MenuUIContentClass)
+        {
+            UE_LOGFMT(LogMenuUI, Warning, "{0} 카테고리의 MenuUIContentClass가 설정되지 않았습니다.", *UEnum::GetValueAsString(ContentUI.MenuCategory));
+            continue;
+        }
+        //@MenuUIContent
+        UMenuUIContent* NewContent = CreateWidget<UMenuUIContent>(this, ContentUI.MenuUIContentClass);
+        if (!NewContent)
+        {
+            UE_LOGFMT(LogMenuUI, Error, "{0} 카테고리의 MenuUIContent 생성에 실패했습니다.", *UEnum::GetValueAsString(ContentUI.MenuCategory));
+            continue;
+        }
+
+        //@MMenuContents
+        MMenuContents.Add(ContentUI.MenuCategory, NewContent);
+
+        //@초기화 요청 이벤트
+        RequestStartInitByMenuUI.AddUFunction(NewContent, "InitializeMenuUIContent");
+
         //@내부 바인딩
-        InternalBindingToInventoryUI(InventoryUI);
+        InternalBindingToMenuUIContent(NewContent);
 
-        UE_LOGFMT(LogMenuUI, Log, "InventoryUI가 성공적으로 생성되고 ScaleBox에 추가되었습니다.");
-    }
-    else
-    {
-        UE_LOGFMT(LogMenuUI, Error, "InventoryUI 생성에 실패했습니다.");
-    }
-}
-
-void UMenuUI::CreateLevelUI()
-{
-    if (!IsValid(LevelUIBox) || !LevelUIClass)
-    {
-        UE_LOGFMT(LogMenuUI, Error, "LevelUIBox 또는 LevelUIClass가 유효하지 않습니다.");
-        return;
-    }
-
-    ULevelUI* LevelUI = CreateWidget<ULevelUI>(this, LevelUIClass);
-    if (IsValid(LevelUI))
-    {
-        //@Scale Box
-        UScaleBoxSlot* ScaleBoxSlot = Cast<UScaleBoxSlot>(LevelUIBox->AddChild(LevelUI));
-        if (ScaleBoxSlot)
+        //@OverlaySlot
+        if (UOverlaySlot* OverlaySlot = MenuUIContentOverlay->AddChildToOverlay(NewContent))
         {
-            ScaleBoxSlot->SetHorizontalAlignment(HAlign_Fill);
-            ScaleBoxSlot->SetVerticalAlignment(VAlign_Fill);
+            OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+            OverlaySlot->SetVerticalAlignment(VAlign_Fill);
         }
-        //@TMap
-        ChildUIs.Add(EMenuCategory::Level, LevelUI);
-        //@바인딩
-        RequestStartInitByMenuUI.AddUFunction(LevelUI, "InitializeLevelUI");
-        // 필요한 경우 내부 바인딩 추가
 
-        UE_LOGFMT(LogMenuUI, Log, "LevelUI가 성공적으로 생성되고 ScaleBox에 추가되었습니다.");
-    }
-    else
-    {
-        UE_LOGFMT(LogMenuUI, Error, "LevelUI 생성에 실패했습니다.");
-    }
-}
+        //@TSet
+        CreatedCategories.Add(ContentUI.MenuCategory);
 
-void UMenuUI::CreateMapUI()
-{
-    if (!IsValid(MapUIBox) || !MapUIClass)
-    {
-        UE_LOGFMT(LogMenuUI, Error, "MapUIBox 또는 MapUIClass가 유효하지 않습니다.");
-        return;
+        UE_LOGFMT(LogMenuUI, Log, "{0} 카테고리의 MenuUIContent가 성공적으로 생성되고 MenuUIContentOverlay에 추가되었습니다.",
+            *UEnum::GetValueAsString(ContentUI.MenuCategory));
     }
 
-    UMapUI* MapUI = CreateWidget<UMapUI>(this, MapUIClass);
-    if (IsValid(MapUI))
+    //@생성에 실패한 Category의 콘텐츠
+    for (uint8 i = 0; i < static_cast<uint8>(EMenuCategory::MAX); ++i)
     {
-        UScaleBoxSlot* ScaleBoxSlot = Cast<UScaleBoxSlot>(MapUIBox->AddChild(MapUI));
-        if (ScaleBoxSlot)
+        EMenuCategory Category = static_cast<EMenuCategory>(i);
+        if (!CreatedCategories.Contains(Category))
         {
-            ScaleBoxSlot->SetHorizontalAlignment(HAlign_Fill);
-            ScaleBoxSlot->SetVerticalAlignment(VAlign_Fill);
+            UE_LOGFMT(LogMenuUI, Warning, "{0} 카테고리의 MenuUIContent가 생성되지 않았습니다.", *UEnum::GetValueAsString(Category));
         }
-        ChildUIs.Add(EMenuCategory::Map, MapUI);
-        RequestStartInitByMenuUI.AddUFunction(MapUI, "InitializeMapUI");
-        // 필요한 경우 내부 바인딩 추가
-
-        UE_LOGFMT(LogMenuUI, Log, "MapUI가 성공적으로 생성되고 ScaleBox에 추가되었습니다.");
-    }
-    else
-    {
-        UE_LOGFMT(LogMenuUI, Error, "MapUI 생성에 실패했습니다.");
-    }
-}
-
-void UMenuUI::CreateSystemUI()
-{
-    if (!IsValid(SystemUIBox) || !SystemUIClass)
-    {
-        UE_LOGFMT(LogMenuUI, Error, "SystemUIBox 또는 SystemUIClass가 유효하지 않습니다.");
-        return;
-    }
-
-    USystemUI* SystemUI = CreateWidget<USystemUI>(this, SystemUIClass);
-    if (IsValid(SystemUI))
-    {
-        UScaleBoxSlot* ScaleBoxSlot = Cast<UScaleBoxSlot>(SystemUIBox->AddChild(SystemUI));
-        if (ScaleBoxSlot)
-        {
-            ScaleBoxSlot->SetHorizontalAlignment(HAlign_Fill);
-            ScaleBoxSlot->SetVerticalAlignment(VAlign_Fill);
-        }
-        ChildUIs.Add(EMenuCategory::System, SystemUI);
-        RequestStartInitByMenuUI.AddUFunction(SystemUI, "InitializeSystemUI");
-        // 필요한 경우 내부 바인딩 추가
-
-        UE_LOGFMT(LogMenuUI, Log, "SystemUI가 성공적으로 생성되고 ScaleBox에 추가되었습니다.");
-    }
-    else
-    {
-        UE_LOGFMT(LogMenuUI, Error, "SystemUI 생성에 실패했습니다.");
     }
 }
 
@@ -358,9 +260,31 @@ void UMenuUI::SetCategoryVisibility(EMenuCategory Category, bool bVisible)
     }
 }
 
+UMenuUIToolBar* UMenuUI::GetToolBarUI() const
+{
+    if (!ToolBarOverlay)
+    {
+        UE_LOGFMT(LogMenuUI, Error, "ToolBarOverlay가 유효하지 않습니다.");
+        return nullptr;
+    }
+
+    TArray<UWidget*> Children = ToolBarOverlay->GetAllChildren();
+    for (UWidget* Child : Children)
+    {
+        UMenuUIToolBar* ToolBar = Cast<UMenuUIToolBar>(Child);
+        if (ToolBar)
+        {
+            return ToolBar;
+        }
+    }
+
+    UE_LOGFMT(LogMenuUI, Warning, "ToolBarOverlay에서 UMenuUIToolBar를 찾을 수 없습니다.");
+    return nullptr;
+}
+
 UUserWidget* UMenuUI::GetCategoryUI(EMenuCategory Category) const
 {
-    if (auto FoundWidget = ChildUIs.Find(Category))
+    if (auto FoundWidget = MMenuContents.Find(Category))
     {
         return *FoundWidget;
     }
@@ -378,13 +302,13 @@ void UMenuUI::OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible)
 
     if (bVisible)
     {
-        // 현재 카테고리 UI만 표시하고 나머지는 숨김
-        for (auto& Pair : ChildUIs)
+        //@Menu UI 내부에 표시할 Category의 Content 가시성
+        for (auto& Pair : MMenuContents)
         {
             SetCategoryVisibility(Pair.Key, Pair.Key == CurrentCategory);
         }
 
-        // MenuUI를 뷰포트에 추가
+        //@Add To Viewport
         AddToViewport();
 
         UE_LOGFMT(LogMenuUI, Log, "MenuUI가 뷰포트에 추가되었습니다. 현재 카테고리: {0}", *UEnum::GetValueAsString(CurrentCategory));
@@ -394,13 +318,13 @@ void UMenuUI::OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible)
     }
     else
     {
-        // MenuUI가 숨겨질 때
-        // 모든 카테고리 UI 숨김
-        for (auto& Pair : ChildUIs)
+        //@Menu UI 내부 Content 가시성
+        for (auto& Pair : MMenuContents)
         {
             SetCategoryVisibility(Pair.Key, false);
         }
 
+        //@Remove From Parent
         RemoveFromParent();
         UE_LOGFMT(LogMenuUI, Log, "MenuUI가 부모로부터 제거되었습니다.");
 
@@ -409,33 +333,95 @@ void UMenuUI::OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible)
     }
 }
 
-void UMenuUI::OnToolBarInitFinished()
+void UMenuUI::MenuUIInputTriggeredNotified(const FGameplayTag& InputTag)
 {
-    if (NotifyToolBarInitFinished.IsBound())
+    UE_LOGFMT(LogMenuUI, Log, "Menu UI 입력이 트리거되었습니다. InputTag: {0}", *InputTag.ToString());
+
+    //@Menu UI Tool Bar
+    UMenuUIToolBar* ToolBar = GetToolBarUI();
+    if (!ToolBar)
     {
-        NotifyToolBarInitFinished.Execute();
+        UE_LOGFMT(LogMenuUI, Error, "ToolBar를 찾을 수 없습니다.");
+        return;
+    }
+
+    //@Move Menu Category To Left
+    if (InputTag.MatchesTagExact(FGameplayTag::RequestGameplayTag(FName("Input.UI.MenuUI.MoveMenuCategory_Left"))))
+    {
+        ToolBar->MoveCategoryLeft();
+    }
+    //@Move Menu Category To Right
+    if (InputTag.MatchesTagExact(FGameplayTag::RequestGameplayTag(FName("Input.UI.MenuUI.MoveMenuCategory_Right"))))
+    {
+        ToolBar->MoveCategoryRight();
     }
 }
 
-void UMenuUI::OnInventoryUIInitFinished()
+void UMenuUI::MenuUIInputReleasedNotified(const FGameplayTag& InputTag)
+{
+    UE_LOGFMT(LogMenuUI, Log, "Menu UI 입력이 해제되었습니다. InputTag: {0}", *InputTag.ToString());
+
+    // TODO: 여기에 입력 해제 처리 로직을 추가하세요
+
+}
+
+void UMenuUI::OnToolBarInitFinished()
 {
     //@Delegate
-    NotifyInventoryUIInitFinished.ExecuteIfBound();
+    //NotifyToolBarInitFinished.ExecuteIfBound();
 }
 
-void UMenuUI::OnLevelUIInitFinished()
+void UMenuUI::OnMenuUIContentInitFinished(EMenuCategory Category)
 {
-}
+    UE_LOGFMT(LogMenuUI, Log, "{0} 카테고리의 MenuUIContent 초기화가 완료되었습니다.", *UEnum::GetValueAsString(Category));
 
-void UMenuUI::OnMapUIInitFinished()
-{
-}
-
-void UMenuUI::OnSystemUIInitFinished()
-{
+    switch (Category)
+    {
+    case EMenuCategory::Inventory:
+        bInventoryUIInitFinished = true;
+        CheckInventoryUIInitFinished();
+        break;
+    case EMenuCategory::Level:
+        bLevelUIInitFinished = true;
+        CheckLevelUIInitFinished();
+        break;
+    case EMenuCategory::Map:
+        bMapUIInitFinished = true;
+        CheckMapUIInitFinished();
+        break;
+    case EMenuCategory::System:
+        bSystemUIInitFinished = true;
+        CheckSystemUIInitFinished();
+        break;
+    default:
+        UE_LOGFMT(LogMenuUI, Warning, "알 수 없는 MenuUIContent 카테고리입니다.");
+        break;
+    }
 }
 
 void UMenuUI::OnMenuCategoryButtonClikced(EMenuCategory MenuCategory)
 {
+    //@Current Category 
+    if (CurrentCategory == MenuCategory)
+    {
+        return;
+    }
+
+    //@Previous Category
+    SetCategoryVisibility(CurrentCategory, false);
+
+    //@Curretn Category Update
+    CurrentCategory = MenuCategory;
+
+    //@Visibility 
+    SetCategoryVisibility(CurrentCategory, true);
+
+    UE_LOGFMT(LogMenuUI, Log, "메뉴 카테고리가 {0}에서 {1}(으)로 변경되었습니다.",
+        *UEnum::GetValueAsString(CurrentCategory),
+        *UEnum::GetValueAsString(MenuCategory));
+
+    // TODO: 필요한 경우 추가 로직 구현
+    // 예: 애니메이션 재생, 포커스 설정 등
+
 }
 #pragma endregion
