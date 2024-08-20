@@ -114,7 +114,7 @@ void UMonsterDataSubsystem::GiveStartupGameplayAbilityToAbilitySystem(UBaseAbili
 		//AbilitySpec.SourceObject = SourceObject;
 
 		// 3. Active GA는 별도의 Input Tag를 AbilitySpec에 저장합니다. 
-		if (AbilityToGrant.IsActive)
+		if (AbilityToGrant.bActive)
 			AbilitySpec.DynamicAbilityTags.AddTag(AbilityToGrant.InputTag);
 
 		// 4. ASC 등록
