@@ -71,7 +71,7 @@ protected:
 	*	2. Unblock 수행
 	*	3. Unblock된 GA 중 선택적으로 Passive GA에 대하여 재 활성화 동작 수행
 	*/
-	void OnAbilityEnded(UGameplayAbility* Ability);
+	virtual void OnAbilityEnded(UGameplayAbility* Ability);
 
 #pragma endregion
 

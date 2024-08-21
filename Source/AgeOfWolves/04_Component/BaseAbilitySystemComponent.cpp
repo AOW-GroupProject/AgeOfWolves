@@ -332,7 +332,7 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 		{
 			if (UGameplayAbility* Ability = AbilitySpec->Ability)
 			{
-				TryActivateAbility(AbilitySpecHandle);
+				Super::TryActivateAbility(AbilitySpecHandle);
 			}
 		}
 	}
@@ -418,7 +418,7 @@ void UBaseAbilitySystemComponent::GetAbilityRelationshipActivationTags(const FGa
 {
 	//check(AbilityTagRelationship)
 
-	if (AbilityTagRelationshipMapping->IsValidLowLevel())
+	if (AbilityTagRelationshipMapping)
 	{
 		AbilityTagRelationshipMapping->GetRequiredAndBlockedActivationTags(AbilityTags, OutActivationRequired, OutActivationBlocked);
 	}

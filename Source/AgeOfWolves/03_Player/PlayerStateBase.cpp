@@ -4,7 +4,7 @@
 #include "GameFramework/PlayerController.h"
 
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
-#include "04_Component/BaseAbilitySystemComponent.h"
+#include "04_Component/PlayerAbilitySystemComponent.h"
 
 #include "01_Character/PawnData.h"
 
@@ -22,7 +22,7 @@ DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 APlayerStateBase::APlayerStateBase()
 {
 	PawnData = nullptr;
-	AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
+	AbilitySystemComponent = CreateDefaultSubobject<UPlayerAbilitySystemComponent>(TEXT("Ability System Component"));
 
 	HUDClass = nullptr;
 	HUD = nullptr;

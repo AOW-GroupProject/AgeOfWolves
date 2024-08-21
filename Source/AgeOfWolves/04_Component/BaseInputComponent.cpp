@@ -9,14 +9,12 @@
 #include "EnhancedInputSubsystems.h"
 #include "06_Input/InputConfig.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
-#include "04_Component/CombatComponent.h"
 #include "04_Component/LockOnComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
 #include "01_Character/PlayerCharacter.h"
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
-#include "04_Component/CombatComponent.h"
 #include "05_Animation/BaseAnimInstance.h"
 #include "06_Input/InputConfig.h"
 
@@ -87,7 +85,6 @@ void UBaseInputComponent::InitializePlayersInputActionsSetup()
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Move")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Move);
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Look);
 				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LockOn);
-				BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LeftMouse.Pressed")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LeftMousePressed);
 
 				// #3. Ability Input Actions
 				TArray<uint32> BindHandles;
@@ -207,7 +204,7 @@ void UBaseInputComponent::Input_LeftMousePressed(const FInputActionValue& Value)
 		{
 			if (PlayerStateBase->GetAbilitySystemComponent())
 			{
-				FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Active.Attack"));
+				FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Active.Attack.Normal"));
 				PlayerStateBase->GetAbilitySystemComponent()->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag));
 			}
 		}
@@ -242,5 +239,4 @@ void UBaseInputComponent::Input_AbilityInputTagReleased(FGameplayTag InputTag)
 			}
 		}
 	}
-
 }

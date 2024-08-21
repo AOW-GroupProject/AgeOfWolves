@@ -27,7 +27,6 @@ enum class EAkoniAttackType : uint8
 	ATT_MAX  UMETA(Hidden),
 };
 
-// Todo : Enemy�� ����� �� �ְ� Class �з�?
 
 UENUM(BlueprintType)
 enum class EEnemyAttackType : uint8
@@ -52,9 +51,6 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AttackAbilityInfo")
 	bool bFirstAttack = false;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AttackAbilityInfo")
-	int ComboIndex = 1;
-
 	UPROPERTY(EditDefaultsOnly, Category = "AttackAbilityInfo")
 	TMap<FGameplayTag, FScalableFloat> DamageTypes;
 
@@ -73,8 +69,5 @@ private:
 public: 
 	UFUNCTION(BlueprintCallable, Category = "Ability | Getter")
 	APlayerCharacter* GetPlayerCharacterFromActorInfo() const;
-
-	UFUNCTION(BlueprintCallable, Category = "Ability | Getter")
-	UCombatComponent* GetCombatComponentFromPlayerCharacter() const;
 	
 };
