@@ -36,6 +36,10 @@ protected:
 	virtual void NativeConstruct(); // 화면에 렌더되기 직전에 호출됨
 	virtual void NativeDestruct();
 	//~ End UUserWidget Interface
+public:
+	UFUNCTION()
+		virtual void InitializeItemSlot();
+
 #pragma endregion
 
 #pragma region SubWidgets
@@ -47,19 +51,27 @@ public:
 	//@퀵슬롯에 할당된 기존 아이템을 제거합니다.
 	void ClearAssignedItem(bool bForceClear = false);
 protected:
+	//@Item Slot에 할당된 아이템의 고유 아이디(Inventory Component에서 발급)
+	FGuid UniqueItemID;
 	/*
 	* @목적 : HUD의 Quick Slot들 중 단일 Slot을 구성하는 Widget입니다.
 	* @설명 : Quick Slot 목록 중 한 Slot을 나타내며, Overlay를 통해 UImage 와 UEditableText를 하나로 묶어줍니다.
 	*/
-	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
+	UPROPERTY(BlueprintReadWrite, Category = "Item Slot", meta = (BindWidget))
 		UOverlay* SlotOverlay;
-	FGuid UniqueItemID;
-	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
+	UPROPERTY(BlueprintReadWrite, Category = "Item Slot", meta = (BindWidget))
+		UImage* SlotBGImage;
+	UPROPERTY(BlueprintReadWrite, Category = "Item Slot", meta = (BindWidget))
 		UImage* SlotImage;
-	bool bStackable;
-	bool bRemovable;
+protected:
+	UPROPERTY(BlueprintReadWrite, Category = "Item Slot", meta = (BindWidget))
+		UOverlay* SlotItemNumOverlay;
 	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
 		UEditableText* SlotItemNum;
+protected:
+	bool bStackable = false;
+	bool bRemovable = false;
+
 public:
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE void SetUniqueItemID(const FGuid& ItemID) { UniqueItemID = ItemID; }
@@ -81,6 +93,8 @@ public:
 		int32 GetSlotItemNum() const;
 #pragma endregion
 
+public:
+	FItemSlotInitFinished ItemSlotInitFinished;
 
 };
 

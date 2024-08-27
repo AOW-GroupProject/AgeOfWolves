@@ -8,7 +8,10 @@ DEFINE_LOG_CATEGORY(LogMapUI)
 
 UMapUI::UMapUI(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
-{}
+{
+    //@Menu Category
+    MenuCategory = EMenuCategory::Map;
+}
 
 void UMapUI::NativeOnInitialized()
 {
@@ -31,15 +34,15 @@ void UMapUI::NativeDestruct()
     Super::NativeDestruct();
 }
 
-void UMapUI::InitializeMenuUIContent(EMenuCategory Category)
+void UMapUI::InitializeMenuUIContent()
 {
-    Super::InitializeMenuUIContent(Category);
+    Super::InitializeMenuUIContent();
     // MapUI 특화 초기화 작업 수행
 
     CheckMenuUIContentInitFinished();
 }
 
-void UMapUI::CheckMenuUIContentInitFinished() const
+void UMapUI::CheckMenuUIContentInitFinished()
 {
     Super::CheckMenuUIContentInitFinished();
     // 추가적인 초기화 완료 체크 로직

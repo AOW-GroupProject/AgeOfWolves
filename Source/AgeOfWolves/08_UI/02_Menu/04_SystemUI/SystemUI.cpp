@@ -8,7 +8,9 @@ DEFINE_LOG_CATEGORY(LogSystemUI)
 
 USystemUI::USystemUI(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
-{}
+{
+    MenuCategory = EMenuCategory::System;
+}
 
 void USystemUI::NativeOnInitialized()
 {
@@ -31,15 +33,15 @@ void USystemUI::NativeDestruct()
     Super::NativeDestruct();
 }
 
-void USystemUI::InitializeMenuUIContent(EMenuCategory Category)
+void USystemUI::InitializeMenuUIContent()
 {
-    Super::InitializeMenuUIContent(Category);
+    Super::InitializeMenuUIContent();
     // SystemUI 특화 초기화 작업 수행
 
     CheckMenuUIContentInitFinished();
 }
 
-void USystemUI::CheckMenuUIContentInitFinished() const
+void USystemUI::CheckMenuUIContentInitFinished()
 {
     Super::CheckMenuUIContentInitFinished();
     // 추가적인 초기화 완료 체크 로직

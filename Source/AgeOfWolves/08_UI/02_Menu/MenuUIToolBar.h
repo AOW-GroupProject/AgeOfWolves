@@ -58,7 +58,7 @@ protected:
     EMenuCategory CurrentCategory = EMenuCategory::Inventory;
     //@Menu Category의 총 버튼 개수
     const int32 MenuCategoryCount = 4;
-    //@Menu Category 버튼들을 담고 있는 배열
+    //@Menu Category 버튼들을 담고 있는 맵 컨테이너
     TMap<UButton*, EMenuCategory> MCategoryButtons;
     //@Inventory UI 버튼
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
@@ -111,6 +111,7 @@ public:
 
 #pragma region Callbacks
 protected:
+    //@Button Clicked 이벤트에 등록되는 콜백
     UFUNCTION()
         FORCEINLINE void OnInventoryButtonClicked() { HandleButtonClick(EMenuCategory::Inventory); }
     UFUNCTION()
@@ -119,7 +120,7 @@ protected:
         FORCEINLINE void OnMapButtonClicked() { HandleButtonClick(EMenuCategory::Map); }
     UFUNCTION()
         FORCEINLINE void OnSystemButtonClicked() { HandleButtonClick(EMenuCategory::System); }
-
+    //@Button Hovered 이벤트에 등록되는 콜백
     UFUNCTION()
         FORCEINLINE void OnInventoryButtonHovered() { HandleButtonHover(EMenuCategory::Inventory); }
     UFUNCTION()
@@ -128,7 +129,7 @@ protected:
         FORCEINLINE void OnMapButtonHovered() { HandleButtonHover(EMenuCategory::Map); }
     UFUNCTION()
         FORCEINLINE void OnSystemButtonHovered() { HandleButtonHover(EMenuCategory::System); }
-
+    //Butotn Unhovered 이벤트에 등록되는 콜백
     UFUNCTION()
         FORCEINLINE void OnInventoryButtonUnhovered() { HandleButtonUnhover(EMenuCategory::Inventory); }
     UFUNCTION()

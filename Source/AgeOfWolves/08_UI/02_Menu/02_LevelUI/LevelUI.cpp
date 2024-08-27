@@ -8,7 +8,9 @@ DEFINE_LOG_CATEGORY(LogLevelUI)
 
 ULevelUI::ULevelUI(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
-{}
+{
+    MenuCategory = EMenuCategory::Level;
+}
 
 void ULevelUI::NativeOnInitialized()
 {
@@ -31,15 +33,15 @@ void ULevelUI::NativeDestruct()
     Super::NativeDestruct();
 }
 
-void ULevelUI::InitializeMenuUIContent(EMenuCategory Category)
+void ULevelUI::InitializeMenuUIContent()
 {
-    Super::InitializeMenuUIContent(Category);
+    Super::InitializeMenuUIContent();
     // LevelUI 특화 초기화 작업 수행
 
     CheckMenuUIContentInitFinished();
 }
 
-void ULevelUI::CheckMenuUIContentInitFinished() const
+void ULevelUI::CheckMenuUIContentInitFinished()
 {
     Super::CheckMenuUIContentInitFinished();
     // 추가적인 초기화 완료 체크 로직

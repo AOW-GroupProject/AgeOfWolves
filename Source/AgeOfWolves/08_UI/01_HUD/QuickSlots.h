@@ -40,7 +40,7 @@ protected:
 private:
     //@외부 바인딩
     void ExternalBindToInventoryComponent();
-    void ExternalBindToUIComponent();
+    void ExternalBindToInputComponent();
 public:
     //@초기화
     UFUNCTION()
@@ -80,6 +80,14 @@ public:
 
 #pragma region Callbacks
 protected:
+    //@퀵슬롯 관련 사용자 입력 활성화 알림 이벤트 구독
+    UFUNCTION()
+        void QuickSlotInputTriggeredNotified(const FGameplayTag& InputTag);
+    //@퀵슬롯 관련 사용자 입력 해제 알림 이벤트 구독
+    UFUNCTION()
+        void QuickSlotInputReleasedNotified(const FGameplayTag& InputTag);
+
+protected:
     //@새로운 아이템 추가 이벤트 구독
     UFUNCTION()
         void OnQuickSlotItemsLoaded(
@@ -88,11 +96,6 @@ protected:
     //@기존 아이템 업데이트 이벤트 구독
     UFUNCTION()
         void OnQuickSlotItemUpdated(int32 SlotNum, const FGuid& UniqueItemID, int32 Num);
-protected:
-    UFUNCTION()
-        void QuickSlotInputTriggeredNotified(const FGameplayTag& InputTag);
-    UFUNCTION()
-        void QuickSlotInputReleasedNotified(const FGameplayTag& InputTag);
 #pragma endregion
 
 };

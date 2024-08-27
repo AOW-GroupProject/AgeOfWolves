@@ -9,7 +9,7 @@
 #include "08_UI/ItemSlot.h"
 
 #include "04_Component/InventoryComponent.h"
-#include "04_Component/UIComponent.h"
+#include "04_Component/BaseInputComponent.h"
 
 #include "Kismet/GameplayStatics.h"
 #include "03_Player/BasePlayerController.h"
@@ -34,8 +34,8 @@ void UQuickSlots::NativeOnInitialized()
 	check(ItemSlotClass);
 
     //@External Binding
-    ExternalBindToUIComponent();
     ExternalBindToInventoryComponent();
+    ExternalBindToInputComponent();
 }
 
 void UQuickSlots::NativePreConstruct()
@@ -92,7 +92,7 @@ void UQuickSlots::ExternalBindToInventoryComponent()
     UE_LOGFMT(LogQuickSlots, Log, "Inventory Component에 성공적으로 바인딩 되었습니다 : {0}", __FUNCTION__);
 }
 
-void UQuickSlots::ExternalBindToUIComponent()
+void UQuickSlots::ExternalBindToInputComponent()
 {
     //@World
     UWorld* World = GetWorld();
@@ -109,16 +109,15 @@ void UQuickSlots::ExternalBindToUIComponent()
         return;
     }
     //@Input Comp
-    auto UIComp = PC->FindComponentByClass<UUIComponent>();
-    if (!UIComp)
+    auto InputComp = PC->FindComponentByClass<UBaseInputComponent>();
+    if (!InputComp)
     {
         UE_LOGFMT(LogQuickSlots, Error, "{0}: UI Component가 유효하지 않습니다", __FUNCTION__);
     }
-    
-    //@Binding
-    UIComp->NotifyQuickSlotInputTriggered.BindUFunction(this, "QuickSlotInputTriggeredNotified");
-    UIComp->NotifyQuickSlotInputReleased.BindUFunction(this, "QuickSlotInputReleasedNotified");
 
+    //@Binding
+    InputComp->UIInputTagTriggered.AddUFunction(this, "QuickSlotInputTriggeredNotified");
+    InputComp->UIInputTagTriggered.AddUFunction(this, "QuickSlotInputReleasedNotified");
 }
 
 void UQuickSlots::InitializeQuickSlots()
@@ -259,6 +258,23 @@ void UQuickSlots::EndActivation(const FGameplayTag& InputTag)
 #pragma endregion
 
 #pragma region Callbacks
+void UQuickSlots::QuickSlotInputTriggeredNotified(const FGameplayTag& InputTag)
+{
+    //@퀵슬롯 활성화 이벤트 관리
+    if (InputTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot1")))
+        || InputTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot2")))
+        || InputTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot3"))))
+    {
+        StartActivation(InputTag);
+    }
+}
+
+void UQuickSlots::QuickSlotInputReleasedNotified(const FGameplayTag& InputTag)
+{
+    //@TODO: Quick Slot 관련 Input Tag의 해제 알림 이벤트 발생 시 수행할 동작 아래에서 작성...
+
+}
+
 void UQuickSlots::OnQuickSlotItemsLoaded(int32 SlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)
 {
     UEnum* ItemTypeEnum = StaticEnum<EItemType>();
@@ -339,14 +355,5 @@ void UQuickSlots::OnQuickSlotItemUpdated(int32 SlotNum, const FGuid& UniqueItemI
         UE_LOGFMT(LogQuickSlots, Warning, "퀵슬롯 {0}번의 아이템 ID가 일치하지 않습니다. 예상: {1}, 실제: {2}",
             SlotNum, UniqueItemID.ToString(), TargetQuickSlot->GetUniqueItemID().ToString());
     }
-}
-
-void UQuickSlots::QuickSlotInputTriggeredNotified(const FGameplayTag& InputTag)
-{
-    StartActivation(InputTag);
-}
-
-void UQuickSlots::QuickSlotInputReleasedNotified(const FGameplayTag& InputTag)
-{
 }
 #pragma endregion

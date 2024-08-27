@@ -431,12 +431,13 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
         && ItemInfo->bConsumable
         && ItemInfo->QuickSlotNum > 0 && ItemInfo->QuickSlotNum < 4)
     {
+        //@Quick Slots
         QuickSlots[ItemInfo->QuickSlotNum] = NewID;
-        
+        //@Delegate
         QuickSlotItemsLoaded.ExecuteIfBound(ItemInfo->QuickSlotNum, NewID, ItemInfo->ItemType, ItemInfo->ItemTag, Num);
     }
     //@Delegate
-    NewItemAssignedToInventory.Broadcast(NewID, ItemInfo->ItemType, ItemInfo->ItemTag);
+    ItemAssignedToInventory.Broadcast(NewID, ItemInfo->ItemType, ItemInfo->ItemTag);
 
     UE_LOGFMT(LogInventory, Log, "{0}: 인벤토리에 새로운 아이템이 추가되었습니다. 개수: {1}",
         ItemToUse->GetItemTag().ToString(), Num);

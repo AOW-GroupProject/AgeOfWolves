@@ -15,7 +15,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInventory, Log, All);
 DECLARE_MULTICAST_DELEGATE_OneParam(FRequestInitializationByInvenComp, const FGuid&);
 
 //@인벤토리 아이템 추가 이벤트
-DECLARE_MULTICAST_DELEGATE_ThreeParams(FNewItemAssignedToInventory, const FGuid&, EItemType, const FGameplayTag&);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FItemAssignedToInventory, const FGuid&, EItemType, const FGameplayTag&);
 //@인벤토리 아이템 제거 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FItemRemovedFromInventory, const FGuid&);
 //@인벤토리 아이템 업데이트 이벤트(강화 정보, 개수 정보)
@@ -191,7 +191,7 @@ public:
 	//@초기화 요청 이벤트
 	FRequestInitializationByInvenComp RequestInitializationByInvenComp;
 	//@새 아이템 추가 이벤트: Item, Inven UI
-	FNewItemAssignedToInventory NewItemAssignedToInventory;
+	FItemAssignedToInventory ItemAssignedToInventory;
 	//@아이템 제거 이벤트: Item, Inven UI
 	FItemRemovedFromInventory ItemRemovedFromInventory;
 	//@아이템 업데이트 이벤트: Item, Inven UI
@@ -201,10 +201,6 @@ public:
 	FQuickSlotItemsLoaded QuickSlotItemsLoaded;
 	//@퀵슬롯 아이템 업데이트 이벤트
 	FQuickSlotItemUpdated QuickSlotItemUpdated;
-public:
-	//@TODO: Inventory UI 관련 이벤트
-
-
 #pragma endregion
 
 };

@@ -267,12 +267,11 @@ void UUIComponent::SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* Ne
 
 void UUIComponent::ShowUI(EUICategory UICategory, const FGameplayTag& UITag)
 {
-	//@UI
 	UUserWidget* UI = GetUI(UICategory, UITag);
 	if (UI)
 	{
-		WidgetVisibilityChanged.Broadcast(UI, true);
-		UE_LOGFMT(LogUI, Log, "{0} 카테고리의 {1} UI 표시 요청을 보냈습니다.",
+		UI->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+		UE_LOGFMT(LogUI, Log, "{0} 카테고리의 {1} UI가 표시되었습니다.",
 			*UEnum::GetValueAsString(UICategory), *UITag.ToString());
 	}
 	else
@@ -284,12 +283,11 @@ void UUIComponent::ShowUI(EUICategory UICategory, const FGameplayTag& UITag)
 
 void UUIComponent::HideUI(EUICategory UICategory, const FGameplayTag& UITag)
 {
-	//@UI
 	UUserWidget* UI = GetUI(UICategory, UITag);
 	if (UI)
 	{
-		WidgetVisibilityChanged.Broadcast(UI, false);
-		UE_LOGFMT(LogUI, Log, "{0} 카테고리의 {1} UI 숨김 요청을 보냈습니다.",
+		UI->SetVisibility(ESlateVisibility::Collapsed);
+		UE_LOGFMT(LogUI, Log, "{0} 카테고리의 {1} UI가 숨겨졌습니다.",
 			*UEnum::GetValueAsString(UICategory), *UITag.ToString());
 	}
 	else
@@ -301,7 +299,6 @@ void UUIComponent::HideUI(EUICategory UICategory, const FGameplayTag& UITag)
 
 void UUIComponent::ShowAllUI(EUICategory UICategory)
 {
-	//wUI
 	TArray<UUserWidget*> Widgets = GetCategoryUIs(UICategory);
 	if (Widgets.Num() > 0)
 	{
@@ -309,10 +306,10 @@ void UUIComponent::ShowAllUI(EUICategory UICategory)
 		{
 			if (Widget && Widget->IsValidLowLevel())
 			{
-				WidgetVisibilityChanged.Broadcast(Widget, true);
+				Widget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 			}
 		}
-		UE_LOGFMT(LogUI, Log, "모든 {0} UI 표시 요청을 보냈습니다. 총 {1}개의 UI가 처리되었습니다.",
+		UE_LOGFMT(LogUI, Log, "모든 {0} UI가 표시되었습니다. 총 {1}개의 UI가 처리되었습니다.",
 			*UEnum::GetValueAsString(UICategory), Widgets.Num());
 	}
 	else
@@ -324,7 +321,6 @@ void UUIComponent::ShowAllUI(EUICategory UICategory)
 
 void UUIComponent::HideAllUI(EUICategory UICategory)
 {
-	//@UI
 	TArray<UUserWidget*> Widgets = GetCategoryUIs(UICategory);
 	if (Widgets.Num() > 0)
 	{
@@ -332,10 +328,10 @@ void UUIComponent::HideAllUI(EUICategory UICategory)
 		{
 			if (Widget && Widget->IsValidLowLevel())
 			{
-				WidgetVisibilityChanged.Broadcast(Widget, false);
+				Widget->SetVisibility(ESlateVisibility::Collapsed);
 			}
 		}
-		UE_LOGFMT(LogUI, Log, "모든 {0} UI 숨김 요청을 보냈습니다. 총 {1}개의 UI가 처리되었습니다.",
+		UE_LOGFMT(LogUI, Log, "모든 {0} UI가 숨겨졌습니다. 총 {1}개의 UI가 처리되었습니다.",
 			*UEnum::GetValueAsString(UICategory), Widgets.Num());
 	}
 	else
@@ -452,15 +448,8 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 	//@PlayerOnGround IMC
 	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
-		//@퀵슬롯 활성화 이벤트 관리
-		if (InputTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot1")))
-			|| InputTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot2")))
-			|| InputTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot3"))))
-		{
-			NotifyQuickSlotInputTriggered.ExecuteIfBound(InputTag);
-		}
 		//@Menu UI 열기
-		else if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.OpenMenuUI")))
+		if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.OpenMenuUI")))
 		{
 			//@Hide HUD
 			HideAllUI(EUICategory::HUD);
@@ -476,7 +465,6 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 				PC->bShowMouseCursor = true;
 				PC->SetInputMode(FInputModeGameAndUI());
 			}
-
 		}
 	}
 	//@MenuUI IMC
@@ -500,12 +488,6 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 				PC->SetInputMode(FInputModeGameOnly());
 			}
 		}
-		//@Menu UI
-		if (InputTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Input.UI.MenuUI"))))
-		{
-			NotifyMenuUIInputTriggered.ExecuteIfBound(InputTag);
-		}
-
 	}
 }
 
@@ -524,11 +506,6 @@ void UUIComponent::OnUIInputReleased(const FGameplayTag& InputTag)
 	//@PlayerOnGround IMC
 	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
-		// QuickSlots 관련 Input Tag 처리
-		if (InputTag.MatchesTag(FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot"))))
-		{
-			NotifyQuickSlotInputReleased.ExecuteIfBound(InputTag);
-		}
 		// 다른 UI 관련 Input Tag는 무시 (OpenMenuUI는 Release에서 특별한 처리가 필요 없음)
 	}
 	//@UI IMC

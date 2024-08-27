@@ -30,10 +30,10 @@ protected:
     virtual void NativeDestruct() override;
 
 protected:
-    virtual void InitializeMenuUIContent(EMenuCategory Category) override;
+    virtual void InitializeMenuUIContent() override;
 
 protected:
-    virtual void CheckMenuUIContentInitFinished() const override;
+    virtual void CheckMenuUIContentInitFinished() override;
 
 #pragma endregion
 

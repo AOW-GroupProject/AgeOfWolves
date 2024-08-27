@@ -245,7 +245,7 @@ void UPlayerHUD::OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible)
 
     if (bVisible)
     {
-        SetVisibility(ESlateVisibility::Visible);
+        SetVisibility(ESlateVisibility::HitTestInvisible);
         UE_LOGFMT(LogHUD, Log, "PlayerHUD가 표시되었습니다.");
 
         // TODO: HUD가 표시될 때 필요한 추가 로직
@@ -266,7 +266,6 @@ void UPlayerHUD::OnStateBarsInitFinished()
     //@Deelgate
     NotifyStateBarsInitFinished.ExecuteIfBound();
 }
-
 
 void UPlayerHUD::OnQuickSlotsInitFinished()
 {

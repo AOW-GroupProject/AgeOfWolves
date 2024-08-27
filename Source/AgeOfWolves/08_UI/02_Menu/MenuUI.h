@@ -9,7 +9,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogMenuUI, Log, All)
 
 //@초기화 요청 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FRequestStartInitByMenuUI, EMenuCategory);
+DECLARE_MULTICAST_DELEGATE(FRequestStartInitByMenuUI);
 //@Inventory UI 초기화 완료 알림 이벤트
 DECLARE_DELEGATE(FNotifyInventoryUIInitFinished);
 //@Tool Bar 초기화 완료 알림 이벤트
@@ -79,8 +79,7 @@ protected:
 
 protected:
     //@외부 바인딩
-    void ExternalBindingToUIComponent();
-
+    void ExternalBindToInputComponent();
 protected:
     // 내부 바인딩 함수
     void InternalBindingToToolBar(UMenuUIToolBar* ToolBar);
@@ -104,7 +103,6 @@ protected:
 
     bool bSystemUIInitFinished = false;
     void CheckSystemUIInitFinished();
-
 #pragma endregion
 
 #pragma region SubWidgets
@@ -166,21 +164,24 @@ public:
 protected:
     //@UI의 가시성 변화 이벤트에 바인딩 되는 콜백
     UFUNCTION()
-        void OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible);
+        void OnUIVisibilityChanged(ESlateVisibility VisibilityType);
 
 protected:
-    //@Input 이벤트에 등록하는 콜백
+    //@Input Tag 활성화 이벤트에 등록하는 콜백
     UFUNCTION()
-        void MenuUIInputTriggeredNotified(const FGameplayTag& InputTag);
+        void OnUIInputTagTriggered(const FGameplayTag& InputTag);
+    //@Input Tag 해제 이벤트에 등록되는 콜백
     UFUNCTION()
-        void MenuUIInputReleasedNotified(const FGameplayTag& InputTag);
+        void OnUIInputTagReleased(const FGameplayTag& InputTag);
 
 protected:
-    //@초기화 완료 이벤트에 등록하는 콜백
+    //@툴바 초기화 완료 이벤트 구독
     UFUNCTION()
         void OnToolBarInitFinished();
+    //@Menu UI Content 초기화 완료 이벤트 구독
     UFUNCTION()
         void OnMenuUIContentInitFinished(EMenuCategory Category);
+
 protected:
     //@Menu Tool Bar의 Menu Category 선택 이벤트에 바인딩 되는 콜백
     UFUNCTION()

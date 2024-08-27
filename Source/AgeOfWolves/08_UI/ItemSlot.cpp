@@ -12,10 +12,13 @@ DEFINE_LOG_CATEGORY(LogItemSlot)
 UItemSlot::UItemSlot(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
 {
+    UniqueItemID = FGuid::FGuid();
     SlotOverlay = nullptr;
+    SlotBGImage = nullptr;
     SlotImage = nullptr;
     SlotItemNum = nullptr;
     bStackable = false;
+    bRemovable = true;
 }
 
 void UItemSlot::NativeOnInitialized()
@@ -34,12 +37,30 @@ void UItemSlot::NativeConstruct()
 {
     Super::NativeConstruct();
 
+    //@기본 가시성 설정은 HitTestInvisible입니다
+    auto RootWidget = GetRootWidget();
+    if (RootWidget)
+    {
+        RootWidget->SetVisibility(ESlateVisibility::HitTestInvisible);
+        UE_LOG(LogTemp, Log, TEXT("ItemSlot: RootWidget 가시성이 HitTestInvisible로 설정되었습니다."));
+    }
+    else
+    {
+        UE_LOG(LogTemp, Warning, TEXT("ItemSlot: RootWidget이 null입니다. 가시성을 설정할 수 없습니다."));
+    }
 }
 
 void UItemSlot::NativeDestruct()
 {
     Super::NativeDestruct();
 
+}
+void UItemSlot::InitializeItemSlot()
+{
+    //아이템 슬롯 관련 초기화 작업들 아래에서 수행...
+
+    //@초기화 완료 이벤트 호출
+    ItemSlotInitFinished.ExecuteIfBound();
 }
 #pragma endregion
 
@@ -57,7 +78,7 @@ void UItemSlot::AssignNewItem(const FGuid& ID, UTexture2D* ItemImage, bool bIsSt
     //@ItemCount
     UpdateItemCount(ItemCount);
 
-    UE_LOGFMT(LogItemSlot, Log, "새 아이템이 퀵슬롯에 할당되었습니다. ID: {0}, 갯수: {1}, 제거가능: {2}, 스택가능: {3}",
+    UE_LOGFMT(LogItemSlot, Log, "새 아이템이 아이템 슬롯에 할당되었습니다. ID: {0}, 갯수: {1}, 제거가능: {2}, 스택가능: {3}",
         UniqueItemID.ToString(), ItemCount, bIsRemovable ? TEXT("Yes") : TEXT("No"), bIsStackable ? TEXT("Yes") : TEXT("No"));
 }
 
@@ -66,7 +87,7 @@ void UItemSlot::UpdateItemCount(int32 NewCount)
     //@Item Count
     SetSlotItemNum(NewCount);
 
-    UE_LOGFMT(LogItemSlot, Log, "퀵슬롯 아이템 갯수가 업데이트되었습니다. ID: {0}, 새 갯수: {1}",
+    UE_LOGFMT(LogItemSlot, Log, "아이템 슬롯의 아이템 갯수가 업데이트되었습니다. ID: {0}, 새 갯수: {1}",
         UniqueItemID.ToString(), NewCount);
 }
 
@@ -84,13 +105,13 @@ void UItemSlot::ClearAssignedItem(bool bForceClear)
         UpdateItemCount(0);
         //@bRemovable
         bRemovable = true;  // 기본값으로 리셋
-        UE_LOGFMT(LogItemSlot, Log, "퀵슬롯의 아이템이 제거되었습니다. 강제 제거: {0}, 원래 제거 가능 여부: {1}",
+        UE_LOGFMT(LogItemSlot, Log, "아이템 슬롯의 아이템이 제거되었습니다. 강제 제거: {0}, 원래 제거 가능 여부: {1}",
             bForceClear ? TEXT("Yes") : TEXT("No"),
             bRemovable ? TEXT("Yes") : TEXT("No"));
     }
     else
     {
-        UE_LOGFMT(LogItemSlot, Warning, "퀵슬롯의 아이템을 제거할 수 없습니다. 제거 불가능한 아이템이며 강제 제거가 지정되지 않았습니다.");
+        UE_LOGFMT(LogItemSlot, Warning, "아이템 슬롯의 아이템을 제거할 수 없습니다. 제거 불가능한 아이템이며 강제 제거가 지정되지 않았습니다.");
     }
 }
 
@@ -103,6 +124,8 @@ void UItemSlot::SetSlotImage(TSoftObjectPtr<UTexture2D> InTexture)
         UTexture2D* LoadedTexture = InTexture.LoadSynchronous();
         if (LoadedTexture)
         {
+            //@Tint
+            SlotImage->SetBrushTintColor(FLinearColor(1.f, 1.f, 1.f, 1.f));
             //@Opacity
             SlotImage->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
             //@Texture

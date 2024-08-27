@@ -40,7 +40,7 @@ void UInventoryToolBar::InitializeInventoryToolBar()
 {
     //@Buttons
     CreateButtons();
-    //@Update Button Style
+    //@Update Button Style, 초기 설정은 Tool 타입
     UpdateButtonStyle(ToolTypeButton);
     //@Delegate: 초기화 완료 이벤트
     InventoryToolBarInitFinished.ExecuteIfBound();
@@ -62,8 +62,8 @@ void UInventoryToolBar::CreateButtons()
         ToolTypeButton->OnClicked.AddDynamic(this, &UInventoryToolBar::OnToolButtonClicked);
         ToolTypeButton->OnHovered.AddDynamic(this, &UInventoryToolBar::OnToolButtonHovered);
         ToolTypeButton->OnUnhovered.AddDynamic(this, &UInventoryToolBar::OnToolButtonUnhovered);
-        //@MCategoryButtons
-        MCategoryButtons.Add(ToolTypeButton, EItemType::Tool);
+        //@MItemTypeButtons
+        MItemTypeButtons.Add(ToolTypeButton, EItemType::Tool);
     }
     //@Material 버튼
     if (MaterialTypeButton)
@@ -72,8 +72,8 @@ void UInventoryToolBar::CreateButtons()
         MaterialTypeButton->OnClicked.AddDynamic(this, &UInventoryToolBar::OnMaterialButtonClicked);
         MaterialTypeButton->OnHovered.AddDynamic(this, &UInventoryToolBar::OnMaterialButtonHovered);
         MaterialTypeButton->OnUnhovered.AddDynamic(this, &UInventoryToolBar::OnMaterialButtonUnhovered);
-        //@MCategoryButtons
-        MCategoryButtons.Add(MaterialTypeButton, EItemType::Material);
+        //@MItemTypeButtons
+        MItemTypeButtons.Add(MaterialTypeButton, EItemType::Material);
     }
     //@Memory 버튼
     if (MemoryTypeButton)
@@ -82,8 +82,8 @@ void UInventoryToolBar::CreateButtons()
         MemoryTypeButton->OnClicked.AddDynamic(this, &UInventoryToolBar::OnMemoryButtonClicked);
         MemoryTypeButton->OnHovered.AddDynamic(this, &UInventoryToolBar::OnMemoryButtonHovered);
         MemoryTypeButton->OnUnhovered.AddDynamic(this, &UInventoryToolBar::OnMemoryButtonUnhovered);
-        //@MCategoryButtons
-        MCategoryButtons.Add(MemoryTypeButton, EItemType::Memory);
+        //@MItemTypeButtons
+        MItemTypeButtons.Add(MemoryTypeButton, EItemType::Memory);
     }
     //@Equipment 버튼 
     if (EquipmentTypeButton)
@@ -92,8 +92,8 @@ void UInventoryToolBar::CreateButtons()
         EquipmentTypeButton->OnClicked.AddDynamic(this, &UInventoryToolBar::OnEquipmentButtonClicked);
         EquipmentTypeButton->OnHovered.AddDynamic(this, &UInventoryToolBar::OnEquipmentButtonHovered);
         EquipmentTypeButton->OnUnhovered.AddDynamic(this, &UInventoryToolBar::OnEquipmentButtonUnhovered);
-        //@MCategoryButtons
-        MCategoryButtons.Add(EquipmentTypeButton, EItemType::Equipment);
+        //@MItemTypeButtons
+        MItemTypeButtons.Add(EquipmentTypeButton, EItemType::Equipment);
     }
 }
 
@@ -103,7 +103,7 @@ void UInventoryToolBar::UpdateButtonStyle(UButton* SelectedButton, UButton* Prev
     if (PreviousButton && PreviousButton != SelectedButton)
     {
         //@Normal의 Original Style
-        FButtonStyle OriginalStyle = PreviousButton->WidgetStyle;
+        FButtonStyle OriginalStyle = PreviousButton->GetStyle();
         //@Normal의 Tint
         OriginalStyle.Normal.TintColor = FSlateColor(FLinearColor(0, 0, 0, 0));  // 완전히 투명하게 설정
         //@Set Style
@@ -113,7 +113,7 @@ void UInventoryToolBar::UpdateButtonStyle(UButton* SelectedButton, UButton* Prev
     if (SelectedButton)
     {
         //@Button Style
-        FButtonStyle ButtonStyle = SelectedButton->WidgetStyle;
+        FButtonStyle ButtonStyle = SelectedButton->GetStyle();
         //@Normal 상태를 Hover 상태로 변경
         ButtonStyle.Normal = ButtonStyle.Hovered;
         //@Normal.Tint를 투명하게
@@ -123,36 +123,36 @@ void UInventoryToolBar::UpdateButtonStyle(UButton* SelectedButton, UButton* Prev
     }
 }
 
-void UInventoryToolBar::HandleButtonClick(EItemType Category)
+void UInventoryToolBar::HandleButtonClick(EItemType ItemType)
 {
     //@Selected
-    UButton* SelectedButton = *MCategoryButtons.FindKey(Category);
+    UButton* SelectedButton = *MItemTypeButtons.FindKey(ItemType);
     //@Previous
-    UButton* PreviousButton = *MCategoryButtons.FindKey(CurrentCategory);
+    UButton* PreviousButton = *MItemTypeButtons.FindKey(CurrentItemType);
     //@Update Style
     if (SelectedButton != PreviousButton)
     {
         UpdateButtonStyle(SelectedButton, PreviousButton);
     }
-    //@Current Category
-    CurrentCategory = Category;
+    //@Current ItemType
+    CurrentItemType = ItemType;
     //@Delegate
     if (InventoryToolBarButtonClikced.IsBound())
     {
-        InventoryToolBarButtonClikced.Execute(Category);
+        InventoryToolBarButtonClikced.Execute(ItemType);
     }
 
-    UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 클릭되었습니다.", *UEnum::GetValueAsString(Category));
+    UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 클릭되었습니다.", *UEnum::GetValueAsString(ItemType));
 }
 
-void UInventoryToolBar::HandleButtonHover(EItemType Category)
+void UInventoryToolBar::HandleButtonHover(EItemType ItemType)
 {
-    UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼에 마우스가 올라갔습니다.", *UEnum::GetValueAsString(Category));
+    UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼에 마우스가 올라갔습니다.", *UEnum::GetValueAsString(ItemType));
 
     //@TODO: Hover Image 설정
 }
 
-void UInventoryToolBar::HandleButtonUnhover(EItemType Category)
+void UInventoryToolBar::HandleButtonUnhover(EItemType ItemType)
 {
     UE_LOGFMT(LogInventoryToolBar, Log, "버튼에서 마우스가 벗어났습니다.");
 

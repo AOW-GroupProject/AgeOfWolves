@@ -1,7 +1,7 @@
 #include "MenuUI.h"
 #include "Logging/StructuredLog.h"    
 
-#include "04_Component/UIComponent.h"
+#include "04_Component/BaseInputComponent.h"
 
 #include "08_UI/02_Menu/MenuUIToolBar.h"
 #include "08_UI/02_Menu/MenuUIContent.h"
@@ -23,9 +23,13 @@ void UMenuUI::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
-    //@TODO: UI Component에 외부 바인딩
     //@외부 바인딩
-    ExternalBindingToUIComponent();
+    ExternalBindToInputComponent();
+
+    //@자체 바인딩
+    OnVisibilityChanged.AddDynamic(this, &UMenuUI::OnUIVisibilityChanged);
+
+    //@외부 바인딩 아래에서 수행...
 
 }
 
@@ -44,36 +48,33 @@ void UMenuUI::NativeDestruct()
     Super::NativeDestruct();
 }
 
-void UMenuUI::ExternalBindingToUIComponent()
+void UMenuUI::ExternalBindToInputComponent()
 {
+    //@TODO: UI Comp에서 전달하는 UI Input Tag 활성화/해제 이벤트 바인딩 아래에서 수행...
     UWorld* World = GetWorld();
     if (!World)
     {
-        UE_LOGFMT(LogMenuUI, Error, "MenuUI::ExternalBindingToUIComponent: 월드가 null입니다");
+        UE_LOGFMT(LogMenuUI, Error, "{0}: World is null", __FUNCTION__);
         return;
     }
-
+    //@PC
     APlayerController* PC = World->GetFirstPlayerController();
     if (!PC)
     {
-        UE_LOGFMT(LogMenuUI, Error, "MenuUI::ExternalBindingToUIComponent: 플레이어 컨트롤러가 null입니다");
+        UE_LOGFMT(LogMenuUI, Error, "{0}: PlayerController is null", __FUNCTION__);
         return;
     }
-
-    UUIComponent* UIComp = PC->FindComponentByClass<UUIComponent>();
-    if (!UIComp)
+    //@Input Comp
+    UBaseInputComponent* BaseInputComp = Cast<UBaseInputComponent>(PC->InputComponent);
+    if (!BaseInputComp)
     {
-        UE_LOGFMT(LogMenuUI, Error, "{0}: UI 컴포넌트가 유효하지 않습니다", __FUNCTION__);
+        UE_LOGFMT(LogMenuUI, Error, "{0}: Input Component를 찾을 수 없습니다", __FUNCTION__);
         return;
     }
 
-    //@Visibility 변화 이벤트
-    UIComp->WidgetVisibilityChanged.AddUObject(this, &UMenuUI::OnUIVisibilityChanged);
-    //@Input 이벤트
-    UIComp->NotifyMenuUIInputTriggered.BindUFunction(this, "MenuUIInputTriggeredNotified");
-    UIComp->NotifyMenuUIInputReleased.BindUFunction(this, "MenuUIInputReleasedNotified");
-
-    UE_LOGFMT(LogMenuUI, Log, "MenuUI가 UIComponent의 WidgetVisibilityChanged 델리게이트에 성공적으로 바인딩되었습니다.");
+    //@외부 바인딩
+    BaseInputComp->UIInputTagTriggered.AddUFunction(this, "OnUIInputTagTriggered");
+    BaseInputComp->UIInputTagReleased.AddUFunction(this, "OnUIInputTagReleased");
 }
 
 void UMenuUI::InternalBindingToToolBar(UMenuUIToolBar* ToolBar)
@@ -113,10 +114,7 @@ void UMenuUI::InitializeMenuUI()
     //@All UIs
     CreateAllCategoryUIs();
     //@초기화 요청 이벤트 호
-    for (int8 MenuIdx = 0; MenuIdx < static_cast<int8>(EMenuCategory::MAX); ++MenuIdx)
-    {
-        RequestStartInitByMenuUI.Broadcast(static_cast<EMenuCategory>(MenuIdx));
-    }
+    RequestStartInitByMenuUI.Broadcast();
 }
 
 void UMenuUI::CheckInventoryUIInitFinished()
@@ -124,6 +122,7 @@ void UMenuUI::CheckInventoryUIInitFinished()
     //@초기화 완료 여부
     if (bInventoryUIInitFinished)
     {
+        bInventoryUIInitFinished = false;
         //@이벤트 호출
         NotifyInventoryUIInitFinished.ExecuteIfBound();
     }
@@ -135,6 +134,7 @@ void UMenuUI::CheckLevelUIInitFinished()
     {
         UE_LOGFMT(LogMenuUI, Log, "Level UI의 초기화가 완료되었습니다.");
         // NotifyLevelUIInitFinished.ExecuteIfBound(); // 필요시 추가
+        bLevelUIInitFinished = false;
     }
 }
 
@@ -144,6 +144,7 @@ void UMenuUI::CheckMapUIInitFinished()
     {
         UE_LOGFMT(LogMenuUI, Log, "Map UI의 초기화가 완료되었습니다.");
         // NotifyMapUIInitFinished.ExecuteIfBound(); // 필요시 추가
+        bMapUIInitFinished = false;
     }
 }
 
@@ -153,6 +154,7 @@ void UMenuUI::CheckSystemUIInitFinished()
     {
         UE_LOGFMT(LogMenuUI, Log, "System UI의 초기화가 완료되었습니다.");
         // NotifySystemUIInitFinished.ExecuteIfBound(); // 필요시 추가
+        bSystemUIInitFinished = false;
     }
 }
 #pragma endregion
@@ -160,21 +162,23 @@ void UMenuUI::CheckSystemUIInitFinished()
 #pragma region SubWidgets
 void UMenuUI::CreateToolBar()
 {
+    //@Tool Bar Blueprint class, Tool Bar Overlay
     if (!ensureMsgf(ToolBarClass && ToolBarOverlay, TEXT("ToolBarClass 또는 ToolBarOverlay가 유효하지 않습니다.")))
     {
         return;
     }
-
+    //@Tool Bar
     UMenuUIToolBar* ToolBar = CreateWidget<UMenuUIToolBar>(this, ToolBarClass);
     if (!IsValid(ToolBar))
     {
         UE_LOGFMT(LogMenuUI, Error, "ToolBar 위젯 생성에 실패했습니다.");
         return;
     }
-
+    //@초기화 요청 이벤트
     RequestStartInitByMenuUI.AddUFunction(ToolBar, "InitializeToolBar");
+    //@내부 바인딩
     InternalBindingToToolBar(ToolBar);
-
+    //@Alignment
     if(UOverlaySlot* OverlaySlot = ToolBarOverlay->AddChildToOverlay(ToolBar))
     {
         OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
@@ -256,7 +260,8 @@ void UMenuUI::SetCategoryVisibility(EMenuCategory Category, bool bVisible)
     //@Widget
     if (UUserWidget* Widget = GetCategoryUI(Category))
     {
-        Widget->SetVisibility(bVisible ? ESlateVisibility::Visible : ESlateVisibility::Collapsed);
+        //@Visibility
+        Widget->SetVisibility(bVisible ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
     }
 }
 
@@ -293,14 +298,10 @@ UUserWidget* UMenuUI::GetCategoryUI(EMenuCategory Category) const
 #pragma endregion
 
 #pragma region Callbacks
-void UMenuUI::OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible)
+void UMenuUI::OnUIVisibilityChanged(ESlateVisibility VisibilityType)
 {
-    if (Widget != this)
-    {
-        return;
-    }
 
-    if (bVisible)
+    if (VisibilityType == ESlateVisibility::SelfHitTestInvisible)
     {
         //@Menu UI 내부에 표시할 Category의 Content 가시성
         for (auto& Pair : MMenuContents)
@@ -316,7 +317,7 @@ void UMenuUI::OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible)
         // TODO: MenuUI가 표시될 때 필요한 추가 로직
         // 예: 애니메이션 재생, 초기 포커스 설정 등
     }
-    else
+    else if(VisibilityType == ESlateVisibility::Collapsed)
     {
         //@Menu UI 내부 Content 가시성
         for (auto& Pair : MMenuContents)
@@ -333,7 +334,7 @@ void UMenuUI::OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible)
     }
 }
 
-void UMenuUI::MenuUIInputTriggeredNotified(const FGameplayTag& InputTag)
+void UMenuUI::OnUIInputTagTriggered(const FGameplayTag& InputTag)
 {
     UE_LOGFMT(LogMenuUI, Log, "Menu UI 입력이 트리거되었습니다. InputTag: {0}", *InputTag.ToString());
 
@@ -357,7 +358,7 @@ void UMenuUI::MenuUIInputTriggeredNotified(const FGameplayTag& InputTag)
     }
 }
 
-void UMenuUI::MenuUIInputReleasedNotified(const FGameplayTag& InputTag)
+void UMenuUI::OnUIInputTagReleased(const FGameplayTag& InputTag)
 {
     UE_LOGFMT(LogMenuUI, Log, "Menu UI 입력이 해제되었습니다. InputTag: {0}", *InputTag.ToString());
 
@@ -373,7 +374,6 @@ void UMenuUI::OnToolBarInitFinished()
 
 void UMenuUI::OnMenuUIContentInitFinished(EMenuCategory Category)
 {
-    UE_LOGFMT(LogMenuUI, Log, "{0} 카테고리의 MenuUIContent 초기화가 완료되었습니다.", *UEnum::GetValueAsString(Category));
 
     switch (Category)
     {

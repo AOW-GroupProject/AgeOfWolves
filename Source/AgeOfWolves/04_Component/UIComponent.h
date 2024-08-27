@@ -25,11 +25,6 @@ DECLARE_DELEGATE(FUIsForInventoryReady);
 //@State Bars의 초기화 완료 이벤트
 DECLARE_DELEGATE(FUIsForAttributeSetReady);
 
-//@Quick Slot 관련 IA 트리거 알림 이벤트
-DECLARE_DELEGATE_OneParam(FNotifyQuickSlotInputTriggered, const FGameplayTag&);
-//@Quick Slot 관련 IA 해제 알림 이벤트
-DECLARE_DELEGATE_OneParam(FNotifyQuickSlotInputReleased, const FGameplayTag&);
-
 //@Menu UI관련 IA 트리거 알림 이벤트
 DECLARE_DELEGATE_OneParam(FNotifyMenuUIInputTriggered, const FGameplayTag&);
 //@Menu UI관련 IA 해제 알림 이벤트
@@ -76,23 +71,25 @@ public:
 	UFUNCTION()
 		void InitializeUIComponent();
 protected:
+	bool bToolBarReadyForLoading = false;
+	bool bQuickSlotsReadyForLoading = false;
+	bool bInventoryUIReadyForLoading = false;
 	void CheckUIsForInventoryReady();
+
+	bool bStateBarsReadyForLoading = false;
 	void CheckAllUIsForAttributeSetReady();
+
+	bool bInteractionUIsInitFinished = false;
 #pragma endregion
 
 #pragma region UI
 protected:
 	void CreateAndSetupWidget(APlayerController* PC, EUICategory UICategory, const FUIInformation& UIInfo, UEnum* EnumPtr);
 	//@HUD UI
-	bool bQuickSlotsReadyForLoading = false;
-	bool bStateBarsReadyForLoading = false;
 	void SetupHUDUI(UUserWidget* NewWidget);
 	//@Menu UI
-	bool bToolBarReadyForLoading = false;
-	bool bInventoryUIReadyForLoading = false;
 	void SetupMenuUI(UUserWidget* NewWidget);
 	//@Interaction UI
-	bool bInteractionUIsInitFinished = false;
 	void SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* NewWidget);
 
 protected:
@@ -139,12 +136,6 @@ public:
 	FUIsForAttributeSetReady UIsForAttributeSetReady;
 
 public:
-	//@퀵슬롯 입력 활성화 알림 이벤트
-	FNotifyQuickSlotInputTriggered NotifyQuickSlotInputTriggered;
-	//@큭쉴롯 입력 해제 알림 이벤트
-	FNotifyQuickSlotInputReleased NotifyQuickSlotInputReleased;
-
-public:
 	//@UI 가시성 변화 이벤트
 	FWidgetVisibilityChanged WidgetVisibilityChanged;
 
@@ -168,8 +159,10 @@ protected:
 	UFUNCTION()
 		void InventoryUIInitFinishedNotified();
 protected:
+	//@UI Input Tag 활성화 이벤트 구독
 	UFUNCTION()
 		void OnUIInputTriggered(const FGameplayTag& InputTag);
+	//@UI Input Tag 해제 이벤트 구독
 	UFUNCTION()
 		void OnUIInputReleased(const FGameplayTag& InputTag);
 #pragma endregion

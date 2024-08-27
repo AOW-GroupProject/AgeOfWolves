@@ -10,15 +10,15 @@ DECLARE_LOG_CATEGORY_EXTERN(LogMenuUIContent, Log, All)
 
 class UImage;
 
-//@ÃÊ±âÈ­ ¿äÃ» ÀÌº¥Æ®
+//@ì´ˆê¸°í™” ìš”ì²­ ì´ë²¤íŠ¸
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByMenuUIContent)
-//@ÃÊ±âÈ­ ¿Ï·á ÀÌº¥Æ®
+//@ì´ˆê¸°í™” ì™„ë£Œ ì´ë²¤íŠ¸
 DECLARE_DELEGATE_OneParam(FMenuUIContentInitFinished, EMenuCategory);
 
 /**
  * @UMenuContentUI
  * 
- * Menu UI ³»ºÎ ÄÁÅÙÃ÷¸¦ ³ªÅ¸³»´Â UI¸¦ Á¤ÀÇÇÕ´Ï´Ù.
+ * Menu UI ë‚´ë¶€ ì»¨í…ì¸ ë¥¼ ë‚˜íƒ€ë‚´ëŠ” UIë¥¼ ì •ì˜í•©ë‹ˆë‹¤.
  */
 UCLASS()
 class AGEOFWOLVES_API UMenuUIContent : public UUserWidget
@@ -37,47 +37,50 @@ protected:
     //~ End UUserWidget Interface
 
 protected:
-    //@¿ÜºÎ ¹ÙÀÎµù
+    //@ì™¸ë¶€ ë°”ì¸ë”©
 
 protected:
-    //@³»ºÎ ¹ÙÀÎµù
+    //@ë‚´ë¶€ ë°”ì¸ë”©
 
 public:
-    //@ÃÊ±âÈ­
-    //@¿À¹ö¶óÀÌµù ½Ã UFUNCTION() Á¦¿Ü
+    //@ì´ˆê¸°í™”
+    //@ì˜¤ë²„ë¼ì´ë”© ì‹œ UFUNCTION() ì œì™¸
     UFUNCTION()
-        virtual void InitializeMenuUIContent(EMenuCategory Category);
+        virtual void InitializeMenuUIContent(){}
 protected:
-    //@TODO: °¢ ¸â¹öµéÀÇ ÃÊ±âÈ­ ¿Ï·á ¿©ºÒ¸£ È®ÀÎÇÏ´Â boolean º¯¼ö ¼±¾ğ
-    //@ÃÊ±âÈ­ ¿Ï·á È®ÀÎ ÇÔ¼ö
-    virtual void CheckMenuUIContentInitFinished() const;
+    //@TODO: ê° ë©¤ë²„ë“¤ì˜ ì´ˆê¸°í™” ì™„ë£Œ ì—¬ë¶ˆë¥´ í™•ì¸í•˜ëŠ” boolean ë³€ìˆ˜ ì„ ì–¸
+    //@ì´ˆê¸°í™” ì™„ë£Œ í™•ì¸ í•¨ìˆ˜
+    virtual void CheckMenuUIContentInitFinished();
 #pragma endregion
 
 #pragma region Info
 protected:
-    //@Menu ContentÀÇ Category¸¦ ¼³Á¤ÇÕ´Ï´Ù.
-    //@ÂüÁ¶: InitializeMenuUIContent()
+    //@Menu Contentì˜ Categoryë¥¼ ì„¤ì •í•©ë‹ˆë‹¤.
+    //@ì°¸ì¡°: InitializeMenuUIContent()
     EMenuCategory MenuCategory = EMenuCategory::MAX;
 #pragma endregion
 
 #pragma region SubWidgets
 protected:
-    //@Menu ContentÀÇ Å¸ÀÌÆ² ÀÌ¹ÌÁö
+    //@Menu Contentì˜ íƒ€ì´í‹€ ì´ë¯¸ì§€
     UPROPERTY(BlueprintReadWrite, Category = "Menu Content | Title Image", meta = (BindWidget))
         UImage* TitleImage;
 #pragma endregion
 
 #pragma region Delegates
 public:
-    //@ÃÊ±âÈ­ ¿äÃ» ÀÌº¥Æ®
+    //@ì´ˆê¸°í™” ìš”ì²­ ì´ë²¤íŠ¸
     FRequestStartInitByMenuUIContent RequestStartInitByMenuUIContent;
-    //@ÃÊ±âÈ­ ¿Ï·á ÀÌº¥Æ®
+    //@ì´ˆê¸°í™” ì™„ë£Œ ì´ë²¤íŠ¸
     FMenuUIContentInitFinished MenuUIContentInitFinished;
 #pragma endregion
 
 #pragma region Callbacks
 protected:
-    //@TODO: ¸â¹öµéÀÇ ÃÊ±âÈ­ ¿Ï·á¿¡ µî·ÏµÇ´Â Äİ¹é ÇÔ¼öµé CheckMenuUIContentInitFinished ÇÔ¼ö È£Ãâ
+    //@TODO: ì•„ë˜ ê°€ì‹œì„± ë³€í™” ì´ë²¤íŠ¸ ì˜¤ë²„ë¼ì´ë”©...
+    //@ê°€ì‹œì„± ë³€í™” ì´ë²¤íŠ¸ì— ë“±ë¡ë˜ëŠ” ì½œë°±
+    UFUNCTION()
+        virtual void OnUIVisibilityChanged(ESlateVisibility VisibilityType) {}
 #pragma endregion
 	
 };

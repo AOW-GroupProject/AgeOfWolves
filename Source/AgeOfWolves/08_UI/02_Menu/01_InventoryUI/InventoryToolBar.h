@@ -11,7 +11,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInventoryToolBar, Log, All)
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FInventoryToolBarInitFinished);
 
-//@Item Category 버튼 선택 이벤트
+//@Item Type 버튼 선택 이벤트
 DECLARE_DELEGATE_OneParam(FInventoryToolBarButtonClikced, EItemType);
 
 class UHorizontalBox;
@@ -19,13 +19,13 @@ class UButton;
 
 /**
  * @UInventoryToolBar
- * 
- * Inventory UI의 Item Slot에 나타낼 아이템 카테고리를 선택할 수 있는 툴 바
+ *
+ * Inventory UI의 Item Slot에 나타낼 아이템 타입을 선택할 수 있는 툴 바
  */
 UCLASS()
 class AGEOFWOLVES_API UInventoryToolBar : public UUserWidget
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 #pragma region Default Setting
 public:
@@ -51,10 +51,10 @@ protected:
         UHorizontalBox* ItemTypeButtonBox;
 
 protected:
-    //@현재 선택된 카테고리
-    EItemType CurrentCategory = EItemType::Tool;
-    //@Menu Category 버튼들을 담고 있는 배열
-    TMap<UButton*, EItemType> MCategoryButtons;
+    //@현재 선택된 아이템 타입
+    EItemType CurrentItemType = EItemType::Tool;
+    //@아이템 타입 버튼들을 담고 있는 맵
+    TMap<UButton*, EItemType> MItemTypeButtons;
     //@Tool 버튼
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UButton* ToolTypeButton;
@@ -73,9 +73,9 @@ private:
     void UpdateButtonStyle(UButton* SelectedButton, UButton* PreviousButton = nullptr);
 
 private:
-    void HandleButtonClick(EItemType Category);
-    void HandleButtonHover(EItemType Category);
-    void HandleButtonUnhover(EItemType Category);
+    void HandleButtonClick(EItemType ItemType);
+    void HandleButtonHover(EItemType ItemType);
+    void HandleButtonUnhover(EItemType ItemType);
 #pragma endregion
 
 #pragma region Delegates
@@ -114,4 +114,5 @@ protected:
         FORCEINLINE void OnMemoryButtonUnhovered() { HandleButtonUnhover(EItemType::Memory); }
     UFUNCTION()
         FORCEINLINE void OnEquipmentButtonUnhovered() { HandleButtonUnhover(EItemType::Equipment); }
+#pragma endregion
 };

@@ -36,18 +36,19 @@ protected:
     //~End UUserWidget
 protected:
     //@외부 바인딩
-    void ExternalBindingToInventoryComp();
-    void ExternalBindingToInputComp();
+
 protected:
     //@내부 바인딩
     void InternalBindingToInventoryUIContent(UInventoryUIContent* InventoryUIContent);
 protected:
+    //~UMenuUIContent Interface
     //@초기화 함수
-    virtual void InitializeMenuUIContent(EMenuCategory Category) override;
+    virtual void InitializeMenuUIContent() override;
+    //~End UMenuUIContent Interface
+
 protected:
     bool bInventoryUIContentReady= false;
-    virtual void CheckMenuUIContentInitFinished() const override;
-
+    virtual void CheckMenuUIContentInitFinished() override;
 #pragma endregion
 
 #pragma region SubWidgets
@@ -63,7 +64,7 @@ protected:
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UOverlay* InventoryUIContentOverlay;
     //@Item Slots 블루프린트 클래스(WBP)
-    UPROPERTY(EditDefaultsOnly, Category = "Inventory UI | Item Slot")
+    UPROPERTY(EditDefaultsOnly, Category = "Inventory UI | Inventory UI Content")
         TSubclassOf<UInventoryUIContent> InventoryUIContentClass;
 #pragma endregion
 
@@ -82,23 +83,9 @@ protected:
         void OnInventoryUIContentInitFinished();
 
 protected:
-    //@Input Tag 활성화 이벤트에 등록하는 콜백
-    UFUNCTION()
-        void OnUIInputTagTriggered(const FGameplayTag& InputTag);
-    //@Input Tag 해제 이벤트에 등록되는 콜백
-    UFUNCTION()
-        void OnUIInputTagReleased(const FGameplayTag& InputTag);
-
-protected:
-    //@Inventory Comp의 아이템 할당 이벤트에 등록되는 콜백
-    UFUNCTION()
-        void OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag);
-    //@Inventory Comp의 아이템 제거 이벤트에 등록되는 콜백
-    UFUNCTION()
-        void OnItemRemovedFromInventory(const FGuid& UniqueItemID);
-    //@Inventory Comp의 아이테 업데이트 이벤트에 등록되는 콜백
-    UFUNCTION()
-        void OnInventoryItemUpdated(const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 UpdatedItemCount);
+    //~UMenuUIContent Interface
+    virtual void OnUIVisibilityChanged(ESlateVisibility VisibilityType) override;
+    //~End UMenuUIContent Interface
 #pragma endregion
 
 };

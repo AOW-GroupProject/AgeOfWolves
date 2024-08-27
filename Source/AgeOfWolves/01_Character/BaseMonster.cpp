@@ -17,29 +17,7 @@ ABaseMonster::ABaseMonster()
  	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
 
-<<<<<<< HEAD
-	static ConstructorHelpers::FObjectFinder<UMonsterData> dataAsset(TEXT("/Script/AgeOfWolves.MonsterData'/Game/Blueprints/10_Monster/MonsterData.MonsterData'"));
-	if (dataAsset.Object)
-	{
-		MonsterDataFile = dataAsset.Object;
-	}
-	if (MonsterDataFile->MonsterData.Find(MonsterName))
-	{
-		SingleMonsterData = *(MonsterDataFile->MonsterData.Find(MonsterName));
-		InitializeMonsterData();
-	}
-	else
-	{
-		//일단 주석처리
-		//Destroy();
-	}
-=======
 	bAbilitiesInitialized = false;
-
-	
-	
-
->>>>>>> develop
 	AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
 	
 

@@ -2,15 +2,20 @@
 #include "Logging/StructuredLog.h"
 
 DEFINE_LOG_CATEGORY(LogMenuUIContent)
+#pragma region Default Setting
 
 UMenuUIContent::UMenuUIContent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
-{}
+{
+	//@í•˜ìœ„ í´ë˜ìŠ¤ëŠ” Menu Categoryë¥¼ ì—¬ê¸°ì„œ ì„¤ì •í•´ì¤ë‹ˆë‹¤...
+}
 
 void UMenuUIContent::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
+	//@ê°€ì‹œì„± ë³€í™” ì´ë²¤íŠ¸ì— ë°”ì¸ë”©
+	OnVisibilityChanged.AddDynamic(this, &UMenuUIContent::OnUIVisibilityChanged);
 }
 
 void UMenuUIContent::NativePreConstruct()
@@ -31,30 +36,21 @@ void UMenuUIContent::NativeDestruct()
 
 }
 
-void UMenuUIContent::InitializeMenuUIContent(EMenuCategory Category)
+void UMenuUIContent::CheckMenuUIContentInitFinished()
 {
-	//@Menu Category
-	MenuCategory = Category;
+	//@TODO: Internal Binding ìˆ˜í–‰ í›„ Callbackë“¤ë¡œ ë¶€í„° ì²´í¬ëœ í•­ëª©ë“¤ ëª¨ë‘ ì°¸ì¸ì§€ í™•ì¸
 
-	//@TODO: ³»ºÎ Subwidget »ı¼º
-	
-	//@TODO: ÃÊ±âÈ­ ¿äÃ» ÀÌº¥Æ® È£Ãâ
-	
-	//@TOOD: ³»ºÎ ¸â¹öµé °áÁ¤ ¹× ³»ºÎ ¹ÙÀÎµù ¼öÇàÇÏ¸é Áö¿öÁİ´Ï´Ù.
-	//CheckMenuUIContentInitFinished();
-}
-
-void UMenuUIContent::CheckMenuUIContentInitFinished() const
-{
-	//@TODO: Internal Binding ¼öÇà ÈÄ Callbackµé·Î ºÎÅÍ Ã¼Å©µÈ Ç×¸ñµé ¸ğµÎ ÂüÀÎÁö È®ÀÎ
-
-	//@ÃÊ±âÈ­ ¿Ï·á ÀÌº¥Æ® È£Ãâ
+	//@ì´ˆê¸°í™” ì™„ë£Œ ì´ë²¤íŠ¸ í˜¸ì¶œ
 	if (MenuCategory == EMenuCategory::MAX)
 	{
-		UE_LOGFMT(LogMenuUIContent, Warning, "ÇÒ´ç ¹ŞÀº Menu Category°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.");
+		UE_LOGFMT(LogMenuUIContent, Warning, "í• ë‹¹ ë°›ì€ Menu Categoryê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
 		return;
 	}
 
-	//@ÃÊ±âÈ­ ¿Ï·á ÀÌº¥Æ® È£Ãâ
+	//@ì´ˆê¸°í™” ì™„ë£Œ ì´ë²¤íŠ¸ í˜¸ì¶œ
 	MenuUIContentInitFinished.ExecuteIfBound(MenuCategory);
 }
+#pragma endregion
+
+
+
