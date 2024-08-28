@@ -54,6 +54,12 @@ public:
     //@초기화
     UFUNCTION()
         void InitializeItemSlots();
+
+protected:
+    //@초기화 완료 체크
+    bool bItemSlotReady = false;
+    void CheckItemSlotInitFinished();
+
 #pragma endregion
 
 #pragma region SubWidgets
@@ -62,6 +68,12 @@ protected:
     EItemType ItemType = EItemType::MAX;
     //@현재 선택된 Item Slot에 대한 Weak Ptr
     TWeakObjectPtr<UInteractableItemSlot> CurrentSelectedItemSlot = nullptr;
+
+public:
+    //@주의: 아무 곳에서 호출하면 안됩니다.
+    //@Item Slots의 상태를 초기 상태로 리셋합니다.
+    UFUNCTION(BlueprintCallable, Category = "Item Slots")
+        void ResetItemSlots();
 
 protected:
     //@Item Slot 생성
@@ -116,8 +128,9 @@ protected:
     //@마지막 Item Slot 초기화 완료 이벤트에 등록하는 콜백
     UFUNCTION()
         void OnItemSlotInitFinished();
+    //@Item Slot Button 클릭 이벤트 구독
     UFUNCTION()
-        void OnItemSlotButtonClicked();
+        void OnItemSlotButtonClicked(const FGuid& UniqueItemID);
 
 protected:
     //@Input Tag 활성화 이벤트에 등록하는 콜백

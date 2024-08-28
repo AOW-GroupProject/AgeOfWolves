@@ -69,7 +69,7 @@ void UInventoryUIContent::InitializeInventoryUIContent()
     CreateAllItemSlots();
     //@Item Description
     CreateItemDescription();
-    // 초기 가시성 설정
+    //@Item Slots 가시성 업데이트
     UpdateAllItemSlotsVisibility();
     //@초기화 요청 이벤트 호출
     RequestStartInitByInventoryUIContent.Broadcast();
@@ -78,8 +78,15 @@ void UInventoryUIContent::InitializeInventoryUIContent()
 void UInventoryUIContent::CheckInventoryUIContentInitialization()
 {
     //@초기화 완료 이벤트 호출
-    if (bInventoryToolBarReady && bInventoryItemSlotsReady && bInventoryItemDescriptionReady)
+    if (bInventoryItemSlotsReady && bInventoryToolBarReady && bInventoryItemDescriptionReady)
     {
+
+        bInventoryItemSlotsReady = false;
+        bInventoryToolBarReady = false;
+        bInventoryItemDescriptionReady = false;
+        //@Item Slots 가시성 업데이트
+        UpdateAllItemSlotsVisibility();
+        //@Inventory UI Content 초기화 완료 이벤트 호출
         InventoryUIContentInitFinished.ExecuteIfBound();
     }
 }
@@ -181,6 +188,7 @@ void UInventoryUIContent::CreateItemDescription()
 {
     // TODO: 아이템 설명 UI 생성 로직 구현
     bInventoryItemDescriptionReady = true;
+
     CheckInventoryUIContentInitialization();
 }
 
@@ -212,6 +220,30 @@ UUserWidget* UInventoryUIContent::GetItemSlotsUI(EItemType ItemType) const
 #pragma endregion
 
 #pragma region Callbacks
+void UInventoryUIContent::InventoryUIVisibilityChangedNotified(bool bIsVisible)
+{
+    //@Inventory UI 가시성 활성화
+    if (bIsVisible)
+    {
+        UE_LOGFMT(LogInventoryUIContent, Log, "Inventory UI Content가 표시됩니다.");
+
+        //@Inventory Tool Bar
+        if (UInventoryToolBar* ToolBarWidget = Cast<UInventoryToolBar>(ToolBarOverlay->GetChildAt(0)))
+        {
+            ToolBarWidget->ResetToolBar();
+        }
+        //@Item Slots
+        if (UItemSlots* ItemSlotsWidget = Cast<UItemSlots>(GetItemSlotsUI(CurrentItemType)))
+        {
+            ItemSlotsWidget->ResetItemSlots();
+        }
+    }
+    else
+    {
+        //@Inventory UI의 가시성이 비활성화 되었을 때 수행할 동작 아래에서 작성...
+    }
+}
+
 void UInventoryUIContent::OnInventoryToolBarInitFinished()
 {
     bInventoryToolBarReady = true;
@@ -221,17 +253,22 @@ void UInventoryUIContent::OnInventoryToolBarInitFinished()
 void UInventoryUIContent::OnInventoryItemSlotsInitFinished()
 {
     bInventoryItemSlotsReady = true;
+
     CheckInventoryUIContentInitialization();
 }
 
 void UInventoryUIContent::OnInventoryToolBarButtonClicked(EItemType ItemType)
 {
+    //@EItemType
     if (CurrentItemType == ItemType)
     {
         return;
     }
 
+    //@Current Item Type
     CurrentItemType = ItemType;
+
+    //@Update Item Slots Visibility
     UpdateAllItemSlotsVisibility();
 
     UE_LOGFMT(LogInventoryUIContent, Log, "아이템 타입이 {0}(으)로 변경되었습니다.",

@@ -87,6 +87,8 @@ protected:
     void CreateAllItemSlots();
     //@Item Description 생성
     void CreateItemDescription();
+
+protected:
     //@Item Slots의 가시성 설정
     void SetItemTypeVisibility(EItemType ItemType, bool bVisible);
     // 모든 ItemSlots의 가시성을 설정하는 함수
@@ -118,6 +120,8 @@ protected:
     //@Item Description Overlay
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UOverlay* ItemDescriptionOverlay;
+    //@TODO: Item Description 구현에 필요한 정보들...
+
 #pragma endregion
 
 #pragma region Delegate
@@ -129,6 +133,11 @@ public:
 #pragma endregion
 
 #pragma region Callbacks
+public:
+    //@Inventory UI의 가시성 변화 이벤트 구독
+    UFUNCTION()
+        void InventoryUIVisibilityChangedNotified(bool bIsOpened);
+
 protected:
     //@Inventory Tool Bar 초기화 완료 이벤트에 등록하는 콜백
     UFUNCTION()
@@ -136,6 +145,8 @@ protected:
     //@Item Slots 초기화 완료 이벤트에 등록하는 콜백
     UFUNCTION()
         void OnInventoryItemSlotsInitFinished();
+
+protected:
     //@Item Type 버튼 클릭 이벤트에 등록하는 콜백
     UFUNCTION()
         void OnInventoryToolBarButtonClicked(EItemType ItemType);

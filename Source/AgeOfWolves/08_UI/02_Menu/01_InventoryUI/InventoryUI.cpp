@@ -77,6 +77,12 @@ void UInventoryUI::CheckMenuUIContentInitFinished()
 #pragma endregion
 
 #pragma region SubWidgets
+void UInventoryUI::ResetInventoryUI()
+{
+    //@Inventory UI Content
+
+}
+
 void UInventoryUI::CreateInventoryContent()
 {
     if (!InventoryUIContentOverlay)
@@ -93,7 +99,13 @@ void UInventoryUI::CreateInventoryContent()
     UInventoryUIContent* InventoryUIContent = CreateWidget<UInventoryUIContent>(this, InventoryUIContentClass);
     if (InventoryUIContent)
     {
+        //@외부 바인딩
+        //@비동기 초기화 이벤트
         RequestStartInitByInventoryUI.AddUFunction(InventoryUIContent, "InitializeInventoryUIContent");
+        //@가시성 변화 이벤트
+        NotifyInventoryUIVisibilityChanged.BindUObject(InventoryUIContent, &UInventoryUIContent::InventoryUIVisibilityChangedNotified);
+
+        //@내부 바인딩
         InternalBindingToInventoryUIContent(InventoryUIContent);
 
         UOverlaySlot* OverlaySlot = InventoryUIContentOverlay->AddChildToOverlay(InventoryUIContent);
@@ -127,8 +139,20 @@ void UInventoryUI::OnUIVisibilityChanged(ESlateVisibility VisibilityType)
 {
     Super::OnUIVisibilityChanged(VisibilityType);
 
-    //@TODO: 가시성 변화 이벤트 호출시 수행할 동작들 아래에서 작성...
-    //@TODO: 
+    //@가시성 변화 이벤트 호출시 수행할 동작들 아래에서 작성...
+
+    //@가시성 비활성화
+    if (VisibilityType == ESlateVisibility::Collapsed)
+    {
+
+    }
+    //@가시성 활성화
+    else if (VisibilityType == ESlateVisibility::SelfHitTestInvisible)
+    {
+        //@Inventory UI 가시성 변화 이벤트
+        NotifyInventoryUIVisibilityChanged.ExecuteIfBound(true);
+    }
 
 }
 #pragma endregion
+

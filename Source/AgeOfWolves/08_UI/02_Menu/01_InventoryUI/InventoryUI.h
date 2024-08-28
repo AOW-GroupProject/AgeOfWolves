@@ -16,7 +16,10 @@ class UInventoryUIContent;
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByInventoryUI)
 //@초기화 완료 이벤트
-DECLARE_DELEGATE(FInventoryUIInitFinished);
+DECLARE_DELEGATE(FInventoryUIInitFinished)
+
+//@Inventory UI의 Opened 이벤트
+DECLARE_DELEGATE_OneParam(FNotifyInventoryUIVisibilityChanged, bool)
 
 UCLASS()
 class AGEOFWOLVES_API UInventoryUI : public UMenuUIContent
@@ -52,14 +55,15 @@ protected:
 #pragma endregion
 
 #pragma region SubWidgets
+private:
+    //@Inventory UI의 상태를 초기 상태로 되돌립니다.
+    void ResetInventoryUI();
+
 protected:
     //@Item Slots
     void CreateInventoryContent();
 
 protected:
-    //UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-    //    UImage* TitleImage;
-
     //@Item Slots를 담을 Scale Box
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UOverlay* InventoryUIContentOverlay;
@@ -74,6 +78,11 @@ public:
     FRequestStartInitByInventoryUI RequestStartInitByInventoryUI;
     //@초기화 완료 이벤트
     FInventoryUIInitFinished InventoryUIInitFinished;
+
+public:
+    //@가시성 변화 알림 이벤트
+    FNotifyInventoryUIVisibilityChanged NotifyInventoryUIVisibilityChanged;
+
 #pragma endregion
 
 #pragma region Callbacks

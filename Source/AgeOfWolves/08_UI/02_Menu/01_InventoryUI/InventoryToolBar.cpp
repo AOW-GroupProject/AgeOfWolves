@@ -48,6 +48,36 @@ void UInventoryToolBar::InitializeInventoryToolBar()
 #pragma endregion
 
 #pragma region Widgets
+void UInventoryToolBar::ResetToolBar()
+{
+    //@Current Item Type
+    EItemType PreviousType = CurrentItemType;
+    CurrentItemType = EItemType::Tool;
+
+    //@Item Type Button
+    if (PreviousType != EItemType::Tool)
+    {
+        UButton* PreviousButton = *MItemTypeButtons.FindKey(PreviousType);
+        if (PreviousButton)
+        {
+            FButtonStyle OriginalStyle = PreviousButton->GetStyle();
+            OriginalStyle.Normal.TintColor = FSlateColor(FLinearColor(0, 0, 0, 0));
+            PreviousButton->SetStyle(OriginalStyle);
+        }
+    }
+
+    //@Update Button Style
+    if (ToolTypeButton)
+    {
+        UpdateButtonStyle(ToolTypeButton);
+    }
+
+    //@Tool Bar 버튼 클릭 이벤트 호출
+    InventoryToolBarButtonClikced.ExecuteIfBound(CurrentItemType);
+
+    UE_LOGFMT(LogInventoryToolBar, Log, "Inventory Tool Bar가 초기 상태로 리셋되었습니다.");
+}
+
 void UInventoryToolBar::CreateButtons()
 {
     if (!ItemTypeButtonBox)

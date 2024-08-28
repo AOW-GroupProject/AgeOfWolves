@@ -434,7 +434,7 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
         //@Quick Slots
         QuickSlots[ItemInfo->QuickSlotNum] = NewID;
         //@Delegate
-        QuickSlotItemsLoaded.ExecuteIfBound(ItemInfo->QuickSlotNum, NewID, ItemInfo->ItemType, ItemInfo->ItemTag, Num);
+        //QuickSlotItemsLoaded.ExecuteIfBound(ItemInfo->QuickSlotNum, NewID, ItemInfo->ItemType, ItemInfo->ItemTag, Num);
     }
     //@Delegate
     ItemAssignedToInventory.Broadcast(NewID, ItemInfo->ItemType, ItemInfo->ItemTag);

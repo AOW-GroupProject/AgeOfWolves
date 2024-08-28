@@ -2,6 +2,7 @@
 #include "Logging/StructuredLog.h"
 
 DEFINE_LOG_CATEGORY(LogMenuUIContent)
+
 #pragma region Default Setting
 
 UMenuUIContent::UMenuUIContent(const FObjectInitializer& ObjectInitializer)

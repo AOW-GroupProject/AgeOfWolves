@@ -12,6 +12,7 @@ DEFINE_LOG_CATEGORY(LogInteractableItemSlot)
 UInteractableItemSlot::UInteractableItemSlot(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
 {
+    //@Item Slot Button
     ItemSlotButton = nullptr;
 }
 
@@ -89,11 +90,39 @@ void UInteractableItemSlot::CreateButton()
         return;
     }
 
-    //@ButtonStyle
-    OriginalButtonStyle = ItemSlotButton->GetStyle();
-
     //@내부 바인딩
     InternalBindToItemSlotButton(ItemSlotButton);
+
+    //@Normal Style
+    NormalStyle = FButtonStyle();
+    NormalStyle.Normal.TintColor = FSlateColor(FLinearColor(0.f, 0.f, 0.f, 0.f));
+    NormalStyle.Normal.DrawAs = ESlateBrushDrawType::Image;
+
+    //@Hovered Style
+    HoveredStyle = FButtonStyle();
+    HoveredStyle.Normal.SetResourceObject(ButtonFocusImage.LoadSynchronous());
+    HoveredStyle.Normal.TintColor = FSlateColor(FLinearColor(1.f, 1.f, 1.f, 1.f));
+    HoveredStyle.Normal.DrawAs = ESlateBrushDrawType::Image;
+
+    //@Selected Style
+    SelectedStyle = FButtonStyle();
+    SelectedStyle.Normal.SetResourceObject(ButtonFocusImage.LoadSynchronous());
+    SelectedStyle.Normal.TintColor = FSlateColor(FLinearColor(1.f, 1.f, 1.f, 1.f));
+    SelectedStyle.Normal.DrawAs = ESlateBrushDrawType::Image;
+
+    //@모든 스타일의 다른 상태(Hovered, Pressed 등)도 Normal과 동일하게 설정
+    for (FButtonStyle* Style : { &NormalStyle, &HoveredStyle, &SelectedStyle })
+    {
+        Style->Hovered = Style->Normal;
+        Style->Pressed = Style->Normal;
+        Style->Disabled = Style->Normal;
+    }
+
+    //@Current Button State
+    SetButtonState(EItemSlotButtonState::Normal);
+
+    //@Item Slot Button 상호작용 비활성화
+    DeactivateItemSlotInteraction();
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "버튼이 생성되고 이벤트가 바인딩되었습니다.");
 }
@@ -104,12 +133,36 @@ void UInteractableItemSlot::CreateDropDownMenu()
 
 }
 
-void UInteractableItemSlot::UpdateButtonStyle(const FButtonStyle& NewStyle)
+void UInteractableItemSlot::SetButtonState(EItemSlotButtonState NewState)
 {
-    if (ItemSlotButton)
+    if (CurrentButtonState != NewState)
     {
-        ItemSlotButton->SetStyle(NewStyle);
+        //@Current Button State
+        CurrentButtonState = NewState;
+        //@Update Button Style
+        UpdateButtonStyle(CurrentButtonState);
     }
+}
+
+
+void UInteractableItemSlot::UpdateButtonStyle(EItemSlotButtonState NewState)
+{
+    if (!ItemSlotButton) return;
+
+    switch (NewState)
+    {
+    case EItemSlotButtonState::Normal:
+        ItemSlotButton->SetStyle(NormalStyle);
+        break;
+    case EItemSlotButtonState::Hovered:
+        ItemSlotButton->SetStyle(HoveredStyle);
+        break;
+    case EItemSlotButtonState::Selected:
+        ItemSlotButton->SetStyle(SelectedStyle);
+        break;
+    }
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "버튼 스타일이 {0} 상태로 업데이트되었습니다.", *UEnum::GetValueAsString(NewState));
 }
 
 void UInteractableItemSlot::ActivateItemSlotInteraction()
@@ -124,45 +177,61 @@ void UInteractableItemSlot::DeactivateItemSlotInteraction()
 #pragma endregion
 
 #pragma region Callbacks
+
 void UInteractableItemSlot::OnItemSlotButtonSelected_Implementation()
 {
-    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 선택되었습니다.");
+    if (!ItemSlotButton->GetIsEnabled())
+    {
+        UE_LOGFMT(LogInteractableItemSlot, Warning, "아이템 슬롯 버튼이 이미 비활성화 상태입니다. 선택이 무시됩니다. ID: {0}", UniqueItemID.ToString());
+        return;
+    }
 
-    //@Item Slot Button 상호작용 비활성화
+    //@Current Button State
+    SetButtonState(EItemSlotButtonState::Selected);
+    //@Item Slot Button의 비 활성화
     DeactivateItemSlotInteraction();
-    //@버튼 클릭 이벤트 호출 
+    //@Item Slot Button의 클릭 이벤트
     ItemSlotButtonClicked.Broadcast(UniqueItemID);
 
+    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 성공적으로 선택되었습니다. ID: {0}", UniqueItemID.ToString());
 }
 
 void UInteractableItemSlot::OnItemSlotButtonHovered_Implementation()
 {
-    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼 위에 마우스가 올라갔습니다.");
+    if (CurrentButtonState != EItemSlotButtonState::Normal)
+    {
+        return;
+    }
+    //@Current Button State
+    SetButtonState(EItemSlotButtonState::Hovered);
 
-    //@블루프린트에서 상세 구현 진행...
-    //@예: 애니메이션...
+    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에 마우스가 올라갔습니다. ID: {0}", UniqueItemID.ToString());
 }
 
 void UInteractableItemSlot::OnItemSlotButtonUnhovered_Implementation()
 {
-    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에서 마우스가 벗어났습니다.");
-
-    //@블루프린트에서 상세 구현 진행...
-    //@예: 애니메이션...
-
-}
-
-void UInteractableItemSlot::OnItemSlotButtonCanceled_Implementation(const FGuid& ItemID)
-{
-    //@FGuid
-    if (ItemID != UniqueItemID)
+    if (CurrentButtonState != EItemSlotButtonState::Hovered)
     {
         return;
     }
 
-    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼 선택이 취소되었습니다.");
+    //@Current Button State
+    SetButtonState(EItemSlotButtonState::Normal);
 
-    //@블루프린트에서 상세 구현 진행...
-    //@예: 애니메이션...
+    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에서 마우스가 벗어났습니다. ID: {0}", UniqueItemID.ToString());
+}
+
+void UInteractableItemSlot::OnItemSlotButtonCanceled_Implementation(const FGuid& ItemID)
+{
+    if (ItemID != UniqueItemID || ItemSlotButton->GetIsEnabled())
+    {
+        return;
+    }
+    //@Current Button State
+    SetButtonState(EItemSlotButtonState::Normal);
+    //@Item Slot Button의 상호작용 활성화
+    ActivateItemSlotInteraction();
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼 선택이 취소되었습니다. ID: {0}", ItemID.ToString());
 }
 #pragma endregion

@@ -52,7 +52,7 @@ void UItemSlots::NativeDestruct()
 
 void UItemSlots::ExternalBindToInputComp()
 {
-	//@TODO: UI Comp에서 전달하는 UI Input Tag 활성화/해제 이벤트 바인딩 아래에서 수행...
+    //@World
     UWorld* World = GetWorld();
     if (!World)
     {
@@ -141,9 +141,44 @@ void UItemSlots::InitializeItemSlots()
 	//@초기화 요청 이벤트
     RequestStartInitByItemSlots.Broadcast();
 }
+
+void UItemSlots::CheckItemSlotInitFinished()
+{
+    if (bItemSlotReady)
+    {
+        bItemSlotReady = false;
+        //@Item Slots 초기화 완료 이벤트
+        ItemSlotsInitFinished.ExecuteIfBound();
+    }
+}
 #pragma endregion
 
 #pragma region SubWidgets
+void UItemSlots::ResetItemSlots()
+{
+    //@선택 취소 이벤트 호출
+    if (CurrentSelectedItemSlot.IsValid())
+    {
+        CancelLastSelectedItemSlot.Broadcast(CurrentSelectedItemSlot->GetUniqueItemID());
+        CurrentSelectedItemSlot = nullptr;
+    }
+
+    //@First Item Slot
+    UInteractableItemSlot* FirstItemSlot = FindFirstItemSlot();
+    if (!FirstItemSlot)
+    {
+        UE_LOGFMT(LogItemSlots, Warning, "UI가 표시되었지만 첫 번째 아이템 슬롯을 찾을 수 없습니다.");
+        return;
+    }
+
+    //@Force Item Slot Button State
+    //FirstItemSlot->ForceButtonState(EItemSlotButtonState::Hovered);
+
+    UE_LOGFMT(LogItemSlots, Log, "{0}의 Item Slot 목록이 초기 상태로 리셋되었습니다.",
+        *UEnum::GetValueAsString(ItemType));
+
+}
+
 void UItemSlots::CreateItemSlots()
 {
     //@Interactable Item Slot 블루프린트 클래스, Item Slot Box
@@ -215,31 +250,55 @@ void UItemSlots::CreateItemSlots()
 #pragma region Callback
 void UItemSlots::OnUIVisibilityChanged(ESlateVisibility VisibilityType)
 {
-    //@First Item Slot
-    UInteractableItemSlot* FirstSlot = FindFirstItemSlot();
-    if (!FirstSlot)
+    //@SelfHitTestInvisible
+    if (VisibilityType == ESlateVisibility::SelfHitTestInvisible)
     {
-        UE_LOGFMT(LogItemSlots, Warning, "UI가 표시되었지만 첫 번째 아이템 슬롯을 찾을 수 없습니다.");
+        //@Reset Item Slots
+        ResetItemSlots();
     }
-    //@Current Selected Item Slot
-    CurrentSelectedItemSlot = FirstSlot;
-
 }
 
 void UItemSlots::OnItemSlotInitFinished()
 {
+    bItemSlotReady = true;
     //@초기화 완료 이벤트 호출
-    ItemSlotsInitFinished.ExecuteIfBound();
+    CheckItemSlotInitFinished();
 }
 
-void UItemSlots::OnItemSlotButtonClicked()
+void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID)
 {
-    //@TODO: 아이템 슬롯 버튼 클릭 시 해야할 동작들 아래에 작성...
-    //@Cancel Last Selected Item Slot
+    UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 버튼 클릭됨: ID {0}", UniqueItemID.ToString());
+
+    //@CurrentSelectedItemSlot
+    if (CurrentSelectedItemSlot.IsValid() && CurrentSelectedItemSlot->GetUniqueItemID() == UniqueItemID)
+    {
+        UE_LOGFMT(LogItemSlots, Log, "이미 선택된 아이템 슬롯입니다. 처리를 무시합니다: ID {0}", UniqueItemID.ToString());
+        return;
+    }
+
+    //@선택 취소 이벤트 호출
     if (CurrentSelectedItemSlot.IsValid())
     {
-        CancelLastSelectedItemSlot.Broadcast(CurrentSelectedItemSlot->GetUniqueItemID());
+        FGuid PreviousItemID = CurrentSelectedItemSlot->GetUniqueItemID();
+        CancelLastSelectedItemSlot.Broadcast(PreviousItemID);
+
+        UE_LOGFMT(LogItemSlots, Log, "이전에 선택된 아이템 슬롯 취소: ID {0}", PreviousItemID.ToString());
     }
+
+    //@Find Slot By FGuid
+    auto SelectedItemSlot = FindSlotByItemID(UniqueItemID);
+    if (!SelectedItemSlot)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "클릭된 아이템 슬롯을 찾을 수 없습니다: ID {0}", UniqueItemID.ToString());
+        return;
+    }
+
+    //@Current Selected Item Slot 업데이트
+    CurrentSelectedItemSlot = SelectedItemSlot;
+    UE_LOGFMT(LogItemSlots, Log, "새로운 아이템 슬롯이 선택됨: ID {0}", UniqueItemID.ToString());
+
+    // TODO: 필요한 경우 여기에 추가 동작 구현
+    // 예: 선택된 아이템 슬롯의 시각적 상태 변경, 아이템 정보 표시 등
 }
 
 void UItemSlots::OnUIInputTagTriggered(const FGameplayTag& InputTag)
@@ -288,7 +347,10 @@ void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType 
     }
     //@Item Images
     UTexture2D* ItemTexture = ItemInfo->ItemSlotImage.LoadSynchronous();
+    //@Assign New Item
     EmptySlot->AssignNewItem(UniqueItemID, ItemTexture, ItemInfo->bStackable, 1, ItemInfo->bRemovable);
+    //@Enabled
+    EmptySlot->ActivateItemSlotInteraction();
 }
 
 void UItemSlots::OnItemRemovedFromInventory(const FGuid& UniqueItemID)
@@ -299,7 +361,10 @@ void UItemSlots::OnItemRemovedFromInventory(const FGuid& UniqueItemID)
     UInteractableItemSlot* ItemSlot = FindSlotByItemID(UniqueItemID);
     if (ItemSlot)
     {
+        //@Clear Assigned Item
         ItemSlot->ClearAssignedItem();
+        //@Deactive Item Slot
+        ItemSlot->DeactivateItemSlotInteraction();
     }
     else
     {

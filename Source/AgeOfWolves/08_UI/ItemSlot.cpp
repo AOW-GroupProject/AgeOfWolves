@@ -55,6 +55,7 @@ void UItemSlot::NativeDestruct()
     Super::NativeDestruct();
 
 }
+
 void UItemSlot::InitializeItemSlot()
 {
     //아이템 슬롯 관련 초기화 작업들 아래에서 수행...
@@ -68,9 +69,9 @@ void UItemSlot::InitializeItemSlot()
 void UItemSlot::AssignNewItem(const FGuid& ID, UTexture2D* ItemImage, bool bIsStackable, int32 ItemCount, bool bIsRemovable)
 {
     //@Unique Item ID
-    this->UniqueItemID = UniqueItemID;
+    UniqueItemID = ID;
     //@bRemovable
-    this->bRemovable = bIsRemovable;
+    bRemovable = bIsRemovable;
     //@Slot Itme Image
     SetSlotImage(ItemImage);
     //@bStackable
