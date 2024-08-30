@@ -45,7 +45,7 @@ public:
  * 3. Item Description: 현재 선택된 Item 정보를 나타내는 UI
  */
 UCLASS()
-class AGEOFWOLVES_API UInventoryUIContent : public UUserWidget
+class AGEOFWOLVES_API UInventoryUIContent : public  UUserWidget
 {
     GENERATED_BODY()
 

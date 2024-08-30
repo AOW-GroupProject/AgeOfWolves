@@ -459,11 +459,17 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 			RequestSwapIMC.ExecuteIfBound(FGameplayTag::RequestGameplayTag(FName("Input.IMC.MenuUI")));
 			//@Show Menu UI
 			ShowAllUI(EUICategory::Menu);
-			//@Mouse Cursor Shown
+			//@Mouse Cursor Shown and Input Mode Set
 			if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
 			{
+				//@Show Mouse Cursor
 				PC->bShowMouseCursor = true;
-				PC->SetInputMode(FInputModeGameAndUI());
+				//@FInputModeGameAndUI
+				FInputModeGameAndUI InputMode;
+				InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+				InputMode.SetHideCursorDuringCapture(false);
+				//@Set Input Mode
+				PC->SetInputMode(InputMode);
 			}
 		}
 	}
@@ -481,10 +487,12 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 			ShowAllUI(EUICategory::HUD);
 			//@Interaction
 			ShowAllUI(EUICategory::Interaction);
-			//@Hide Mouse Curosr
+			//@Hide Mouse Cursor
 			if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
 			{
+				//@Hide Mouse Curosr
 				PC->bShowMouseCursor = false;
+				//@Set Input Mode
 				PC->SetInputMode(FInputModeGameOnly());
 			}
 		}

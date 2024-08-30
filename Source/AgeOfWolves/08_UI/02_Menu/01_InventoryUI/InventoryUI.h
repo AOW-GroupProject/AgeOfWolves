@@ -9,7 +9,6 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogInventoryUI, Log, All)
 
 class UOverlay;
-class UScaleBox;
 class UImage;
 class UInventoryUIContent;
 

@@ -1,19 +1,19 @@
 #include "InteractableItemSlot.h"
 #include "Logging/StructuredLog.h"
 
-#include "Components/Button.h"
 #include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
+#include "Components/Button.h"
 
-#include "08_UI/02_Menu/01_InventoryUI/ItemSlots.h"
+#include "08_UI/CustomButton.h"
 
 DEFINE_LOG_CATEGORY(LogInteractableItemSlot)
 
 #pragma region Default Setting
 UInteractableItemSlot::UInteractableItemSlot(const FObjectInitializer& ObjectInitializer)
-    :Super(ObjectInitializer)
+    : Super(ObjectInitializer)
 {
-    //@Item Slot Button
-    ItemSlotButton = nullptr;
+    ItemSlotButtonClass = UCustomButton::StaticClass();
 }
 
 void UInteractableItemSlot::NativeOnInitialized()
@@ -48,28 +48,28 @@ void UInteractableItemSlot::NativeConstruct()
 void UInteractableItemSlot::NativeDestruct()
 {
     Super::NativeDestruct();
-
 }
 
-void UInteractableItemSlot::InternalBindToItemSlotButton(UButton* Button)
+void UInteractableItemSlot::InternalBindToItemSlotButton(UCustomButton* InItemSlotButton)
 {
-    if (!Button)
+    if (!InItemSlotButton)
     {
-        UE_LOGFMT(LogInteractableItemSlot, Error, "ItemSlotButton이 null입니다. 위젯 블루프린트에서 올바르게 바인딩되었는지 확인하세요.");
+        UE_LOGFMT(LogInteractableItemSlot, Error, "InItemSlotButton이 null입니다. 바인딩을 수행할 수 없습니다.");
         return;
     }
 
+    //@Button의 상태 별 이벤트에 바인딩 아래에서 수행...
     //@내부 바인딩
-    Button->OnClicked.AddDynamic(this, &UInteractableItemSlot::OnItemSlotButtonSelected);
-    Button->OnHovered.AddDynamic(this, &UInteractableItemSlot::OnItemSlotButtonHovered);
-    Button->OnUnhovered.AddDynamic(this, &UInteractableItemSlot::OnItemSlotButtonUnhovered);
+    InItemSlotButton->ButtonHovered.AddUObject(this, &UInteractableItemSlot::OnItemSlotButtonHovered);
+    InItemSlotButton->ButtonSelected.AddUObject(this, &UInteractableItemSlot::OnItemSlotButtonClicked);
+    InItemSlotButton->ButtonUnhovered.AddUObject(this, &UInteractableItemSlot::OnItemSlotButtonUnhovered);
+
+    UE_LOGFMT(LogInteractableItemSlot, Verbose, "CustomButton 이벤트가 성공적으로 바인딩되었습니다.");
 }
 
 void UInteractableItemSlot::InitializeItemSlot()
 {
-    //@TODO: 상호작용 가능한 아이템 슬롯의 초기화 작업 아래에서 수행...
-
-    //@Button
+    //@CustomButton
     CreateButton();
     //@PopUp UI
     CreateDropDownMenu();
@@ -84,47 +84,50 @@ void UInteractableItemSlot::InitializeItemSlot()
 #pragma region SubWidgets
 void UInteractableItemSlot::CreateButton()
 {
-    if (!ItemSlotButton)
+    //@Slot Overlay
+    if (!SlotOverlay)
     {
-        UE_LOGFMT(LogInteractableItemSlot, Error, "ItemSlotButton이 null입니다. 위젯 블루프린트에서 올바르게 바인딩되었는지 확인하세요.");
+        UE_LOGFMT(LogInteractableItemSlot, Error, "SlotOverlay가 null입니다. 위젯 블루프린트에서 올바르게 바인딩되었는지 확인하세요.");
         return;
     }
+
+    //@ItemSlotButtonClass
+    if (!ItemSlotButtonClass)
+    {
+        UE_LOGFMT(LogInteractableItemSlot, Error, "ItemSlotButtonClass가 설정되지 않았습니다. 에디터에서 ItemSlotButtonClass를 설정해주세요.");
+        return;
+    }
+
+    //@Create Widget
+    UCustomButton* ItemSlotButton = CreateWidget<UCustomButton>(this, ItemSlotButtonClass);
+    if (!ItemSlotButton)
+    {
+        UE_LOGFMT(LogInteractableItemSlot, Error, "UCustomButton 위젯을 생성하지 못했습니다. ItemSlotButtonClass: {0}", *ItemSlotButtonClass->GetName());
+        return;
+    }
+
+
+    //@선택 취소 이벤트 바인딩
+    NotifyItemSlotButtonCanceled.AddUFunction(ItemSlotButton, "ButtonCanceledNotified");
 
     //@내부 바인딩
     InternalBindToItemSlotButton(ItemSlotButton);
 
-    //@Normal Style
-    NormalStyle = FButtonStyle();
-    NormalStyle.Normal.TintColor = FSlateColor(FLinearColor(0.f, 0.f, 0.f, 0.f));
-    NormalStyle.Normal.DrawAs = ESlateBrushDrawType::Image;
-
-    //@Hovered Style
-    HoveredStyle = FButtonStyle();
-    HoveredStyle.Normal.SetResourceObject(ButtonFocusImage.LoadSynchronous());
-    HoveredStyle.Normal.TintColor = FSlateColor(FLinearColor(1.f, 1.f, 1.f, 1.f));
-    HoveredStyle.Normal.DrawAs = ESlateBrushDrawType::Image;
-
-    //@Selected Style
-    SelectedStyle = FButtonStyle();
-    SelectedStyle.Normal.SetResourceObject(ButtonFocusImage.LoadSynchronous());
-    SelectedStyle.Normal.TintColor = FSlateColor(FLinearColor(1.f, 1.f, 1.f, 1.f));
-    SelectedStyle.Normal.DrawAs = ESlateBrushDrawType::Image;
-
-    //@모든 스타일의 다른 상태(Hovered, Pressed 등)도 Normal과 동일하게 설정
-    for (FButtonStyle* Style : { &NormalStyle, &HoveredStyle, &SelectedStyle })
+    //@Alignment
+    UOverlaySlot* OverlaySlot = SlotOverlay->AddChildToOverlay(ItemSlotButton);
+    if (!OverlaySlot)
     {
-        Style->Hovered = Style->Normal;
-        Style->Pressed = Style->Normal;
-        Style->Disabled = Style->Normal;
+        UE_LOGFMT(LogInteractableItemSlot, Error, "CustomButton을 SlotOverlay에 추가하지 못했습니다.");
+        return;
     }
 
-    //@Current Button State
-    SetButtonState(EItemSlotButtonState::Normal);
+    OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+    OverlaySlot->SetVerticalAlignment(VAlign_Fill);
 
-    //@Item Slot Button 상호작용 비활성화
+    //@Item Slot Button 비활성화
     DeactivateItemSlotInteraction();
 
-    UE_LOGFMT(LogInteractableItemSlot, Log, "버튼이 생성되고 이벤트가 바인딩되었습니다.");
+    UE_LOGFMT(LogInteractableItemSlot, Log, "UCustomButton({0})이 생성되고 이벤트가 바인딩되었습니다.", *ItemSlotButtonClass->GetName());
 }
 
 void UInteractableItemSlot::CreateDropDownMenu()
@@ -133,105 +136,95 @@ void UInteractableItemSlot::CreateDropDownMenu()
 
 }
 
-void UInteractableItemSlot::SetButtonState(EItemSlotButtonState NewState)
-{
-    if (CurrentButtonState != NewState)
-    {
-        //@Current Button State
-        CurrentButtonState = NewState;
-        //@Update Button Style
-        UpdateButtonStyle(CurrentButtonState);
-    }
-}
-
-
-void UInteractableItemSlot::UpdateButtonStyle(EItemSlotButtonState NewState)
-{
-    if (!ItemSlotButton) return;
-
-    switch (NewState)
-    {
-    case EItemSlotButtonState::Normal:
-        ItemSlotButton->SetStyle(NormalStyle);
-        break;
-    case EItemSlotButtonState::Hovered:
-        ItemSlotButton->SetStyle(HoveredStyle);
-        break;
-    case EItemSlotButtonState::Selected:
-        ItemSlotButton->SetStyle(SelectedStyle);
-        break;
-    }
-
-    UE_LOGFMT(LogInteractableItemSlot, Log, "버튼 스타일이 {0} 상태로 업데이트되었습니다.", *UEnum::GetValueAsString(NewState));
-}
-
 void UInteractableItemSlot::ActivateItemSlotInteraction()
 {
-    ItemSlotButton->SetIsEnabled(true);
+    UCustomButton* CustomButton = GetItemSlotButton();
+    if (!CustomButton)
+    {
+        UE_LOGFMT(LogInteractableItemSlot, Warning, "CustomButton을 찾을 수 없습니다. 버튼을 활성화할 수 없습니다. ID: {0}", UniqueItemID.ToString());
+        return;
+    }
+    //@Activate Button
+    CustomButton->ActivateButton();
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 활성화되었습니다. ID: {0}", UniqueItemID.ToString());
 }
 
 void UInteractableItemSlot::DeactivateItemSlotInteraction()
 {
-    ItemSlotButton->SetIsEnabled(false);
+    UCustomButton* CustomButton = GetItemSlotButton();
+    if (!CustomButton)
+    {
+        UE_LOGFMT(LogInteractableItemSlot, Warning, "CustomButton을 찾을 수 없습니다. 버튼을 비활성화할 수 없습니다. ID: {0}", UniqueItemID.ToString());
+        return;
+    }
+    //@Deactivate Button
+    CustomButton->DeactivateButton();
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 비활성화되었습니다. ID: {0}", UniqueItemID.ToString());
 }
 #pragma endregion
 
 #pragma region Callbacks
-
-void UInteractableItemSlot::OnItemSlotButtonSelected_Implementation()
+void UInteractableItemSlot::OnItemSlotButtonHovered()
 {
-    if (!ItemSlotButton->GetIsEnabled())
-    {
-        UE_LOGFMT(LogInteractableItemSlot, Warning, "아이템 슬롯 버튼이 이미 비활성화 상태입니다. 선택이 무시됩니다. ID: {0}", UniqueItemID.ToString());
-        return;
-    }
-
-    //@Current Button State
-    SetButtonState(EItemSlotButtonState::Selected);
-    //@Item Slot Button의 비 활성화
-    DeactivateItemSlotInteraction();
-    //@Item Slot Button의 클릭 이벤트
-    ItemSlotButtonClicked.Broadcast(UniqueItemID);
-
-    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 성공적으로 선택되었습니다. ID: {0}", UniqueItemID.ToString());
-}
-
-void UInteractableItemSlot::OnItemSlotButtonHovered_Implementation()
-{
-    if (CurrentButtonState != EItemSlotButtonState::Normal)
-    {
-        return;
-    }
-    //@Current Button State
-    SetButtonState(EItemSlotButtonState::Hovered);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에 마우스가 올라갔습니다. ID: {0}", UniqueItemID.ToString());
 }
 
-void UInteractableItemSlot::OnItemSlotButtonUnhovered_Implementation()
+void UInteractableItemSlot::OnItemSlotButtonUnhovered()
 {
-    if (CurrentButtonState != EItemSlotButtonState::Hovered)
-    {
-        return;
-    }
-
-    //@Current Button State
-    SetButtonState(EItemSlotButtonState::Normal);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에서 마우스가 벗어났습니다. ID: {0}", UniqueItemID.ToString());
 }
 
-void UInteractableItemSlot::OnItemSlotButtonCanceled_Implementation(const FGuid& ItemID)
+void UInteractableItemSlot::OnItemSlotButtonPressed()
 {
-    if (ItemID != UniqueItemID || ItemSlotButton->GetIsEnabled())
+    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 눌렸습니다. ID: {0}", UniqueItemID.ToString());
+
+}
+
+void UInteractableItemSlot::OnItemSlotButtonClicked()
+{
+    //@Item Slot Button 선택 이벤트
+    ItemSlotButtonClicked.Broadcast(UniqueItemID);
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 클릭되었습니다. ID: {0}", UniqueItemID.ToString());
+}
+
+
+void UInteractableItemSlot::OnItemSlotButtonCanceled(const FGuid& ItemID)
+{
+    if (ItemID != UniqueItemID)
     {
         return;
     }
-    //@Current Button State
-    SetButtonState(EItemSlotButtonState::Normal);
-    //@Item Slot Button의 상호작용 활성화
-    ActivateItemSlotInteraction();
+
+    //@Item Slot Button 선택 취소 이벤트
+    NotifyItemSlotButtonCanceled.Broadcast();
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼 선택이 취소되었습니다. ID: {0}", ItemID.ToString());
+}
+#pragma endregion
+
+#pragma region Utility
+UCustomButton* UInteractableItemSlot::GetItemSlotButton() const
+{
+    //@Slot Overlay
+    if (!SlotOverlay)
+    {
+        UE_LOGFMT(LogInteractableItemSlot, Error, "SlotOverlay가 null입니다. CustomButton을 찾을 수 없습니다.");
+        return nullptr;
+    }
+    //@Custom Button
+    for (UWidget* Child : SlotOverlay->GetAllChildren())
+    {
+        if (UCustomButton* CustomButton = Cast<UCustomButton>(Child))
+        {
+            return CustomButton;
+        }
+    }
+
+    return nullptr;
 }
 #pragma endregion

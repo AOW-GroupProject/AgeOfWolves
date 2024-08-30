@@ -11,6 +11,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogItemSlots, Log, All)
 class UVerticalBox;
 class UHorizontalBox;
 class UInteractableItemSlot;
+class UCustomButton;
 
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByItemSlots)
@@ -18,7 +19,7 @@ DECLARE_MULTICAST_DELEGATE(FRequestStartInitByItemSlots)
 DECLARE_DELEGATE(FItemSlotsInitFinished);
 
 //@이전 선택된 아이템 슬롯 취소 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FCancelLastSelectedItemSlot, const FGuid&)
+DECLARE_MULTICAST_DELEGATE_OneParam(FCancelItemSlotButton, const FGuid&)
 
 /**
  * @UItemSlots
@@ -47,7 +48,7 @@ protected:
     void ExternalBindToInventoryComp();
 
 protected:
-    // 내부 바인딩 함수
+    //@내부 바인딩
     void InternalBindingToItemSlot(UInteractableItemSlot* ItemSlot, bool bLastItemSlot = false);
 
 public:
@@ -114,8 +115,7 @@ public:
 
 public:
     //@마지막 선택된 아이템 슬롯의 선택 취소 이벤트
-    FCancelLastSelectedItemSlot CancelLastSelectedItemSlot;
-
+    FCancelItemSlotButton CancelItemSlotButton;
 #pragma endregion
 
 #pragma region Callback

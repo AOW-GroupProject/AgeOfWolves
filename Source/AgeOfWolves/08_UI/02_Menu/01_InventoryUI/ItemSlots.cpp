@@ -10,6 +10,7 @@
 #include "Components/HorizontalBoxSlot.h"
 
 #include "08_UI/InteractableItemSlot.h"
+#include "08_UI/CustomButton.h"
 
 #include "14_Subsystem/ItemManagerSubsystem.h"
 
@@ -119,18 +120,20 @@ void UItemSlots::ExternalBindToInventoryComp()
 
 void UItemSlots::InternalBindingToItemSlot(UInteractableItemSlot* ItemSlot, bool bLastItemSlot)
 {
-    //@Inventory Tool Bar
+    //@Item Slot
     if (!ItemSlot)
     {
         UE_LOGFMT(LogItemSlots, Error, "ItemSlot UI가 유효하지 않습니다.");
         return;
     }
-    
-    //@모든 아이템 슬롯
+
+    //@내부 바인딩
     ItemSlot->ItemSlotButtonClicked.AddUFunction(this, "OnItemSlotButtonClicked");
-    //@마지막 아이템 슬롯
-    if(bLastItemSlot)
+    //@마지막 Item Slot에만 초기화 완료 이벤트 구독
+    if (bLastItemSlot)
         ItemSlot->ItemSlotInitFinished.BindUFunction(this, "OnItemSlotInitFinished");
+
+
 }
 
 void UItemSlots::InitializeItemSlots()
@@ -147,8 +150,11 @@ void UItemSlots::CheckItemSlotInitFinished()
     if (bItemSlotReady)
     {
         bItemSlotReady = false;
+
         //@Item Slots 초기화 완료 이벤트
         ItemSlotsInitFinished.ExecuteIfBound();
+
+        UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 초기화가 완료되었고, CustomButton의 취소 이벤트 바인딩이 수행되었습니다.");
     }
 }
 #pragma endregion
@@ -159,7 +165,7 @@ void UItemSlots::ResetItemSlots()
     //@선택 취소 이벤트 호출
     if (CurrentSelectedItemSlot.IsValid())
     {
-        CancelLastSelectedItemSlot.Broadcast(CurrentSelectedItemSlot->GetUniqueItemID());
+        CancelItemSlotButton.Broadcast(CurrentSelectedItemSlot->GetUniqueItemID());
         CurrentSelectedItemSlot = nullptr;
     }
 
@@ -171,7 +177,7 @@ void UItemSlots::ResetItemSlots()
         return;
     }
 
-    //@Force Item Slot Button State
+    //@TODO: First Item Slot을 Hover 상태로 변경해줍니다.
     //FirstItemSlot->ForceButtonState(EItemSlotButtonState::Hovered);
 
     UE_LOGFMT(LogItemSlots, Log, "{0}의 Item Slot 목록이 초기 상태로 리셋되었습니다.",
@@ -213,7 +219,7 @@ void UItemSlots::CreateItemSlots()
             {
                 //@Item Slot의 외부 바인딩
                 RequestStartInitByItemSlots.AddUFunction(ItemSlot, "InitializeItemSlot");
-                CancelLastSelectedItemSlot.AddUFunction(ItemSlot, "OnItemSlotButtonCanceled");
+                CancelItemSlotButton.AddUFunction(ItemSlot, "OnItemSlotButtonCanceled");
 
                 //@내부 바인딩
                 if (CurrentSlot == TotalSlots - 1)
@@ -280,7 +286,7 @@ void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID)
     if (CurrentSelectedItemSlot.IsValid())
     {
         FGuid PreviousItemID = CurrentSelectedItemSlot->GetUniqueItemID();
-        CancelLastSelectedItemSlot.Broadcast(PreviousItemID);
+        CancelItemSlotButton.Broadcast(PreviousItemID);
 
         UE_LOGFMT(LogItemSlots, Log, "이전에 선택된 아이템 슬롯 취소: ID {0}", PreviousItemID.ToString());
     }

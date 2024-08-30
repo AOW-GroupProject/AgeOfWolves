@@ -134,10 +134,13 @@ void UInventoryToolBar::UpdateButtonStyle(UButton* SelectedButton, UButton* Prev
     {
         //@Normal의 Original Style
         FButtonStyle OriginalStyle = PreviousButton->GetStyle();
+        OriginalStyle.Normal = PreviousButton->GetStyle().Normal;
         //@Normal의 Tint
-        OriginalStyle.Normal.TintColor = FSlateColor(FLinearColor(0, 0, 0, 0));  // 완전히 투명하게 설정
+        OriginalStyle.Normal.TintColor = FSlateColor(FLinearColor(1, 1, 1, 1)); 
         //@Set Style
         PreviousButton->SetStyle(OriginalStyle);
+        UE_LOGFMT(LogInventoryToolBar, Log, "이전 버튼 ({0}) - Hover 상태: {1}",
+            PreviousButton->GetName(), PreviousButton->IsHovered() ? TEXT("True") : TEXT("False"));
     }
     //@Selected Button
     if (SelectedButton)
@@ -147,8 +150,8 @@ void UInventoryToolBar::UpdateButtonStyle(UButton* SelectedButton, UButton* Prev
         //@Normal 상태를 Hover 상태로 변경
         ButtonStyle.Normal = ButtonStyle.Hovered;
         //@Normal.Tint를 투명하게
-        ButtonStyle.Normal.TintColor = FSlateColor(FLinearColor(1, 1, 1, 1));  // 불투명하게 설정
-        //Set Style
+        ButtonStyle.Normal.TintColor = FSlateColor(FLinearColor(1, 1, 1, 1));
+        //@Set Style
         SelectedButton->SetStyle(ButtonStyle);
     }
 }
