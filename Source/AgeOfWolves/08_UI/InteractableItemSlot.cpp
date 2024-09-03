@@ -106,9 +106,8 @@ void UInteractableItemSlot::CreateButton()
         return;
     }
 
-
     //@선택 취소 이벤트 바인딩
-    NotifyItemSlotButtonCanceled.AddUFunction(ItemSlotButton, "ButtonCanceledNotified");
+    NotifyItemSlotButtonCanceled.AddUFunction(ItemSlotButton, "CancelSelectedButton");
 
     //@내부 바인딩
     InternalBindToItemSlotButton(ItemSlotButton);
@@ -168,12 +167,16 @@ void UInteractableItemSlot::DeactivateItemSlotInteraction()
 #pragma region Callbacks
 void UInteractableItemSlot::OnItemSlotButtonHovered()
 {
+    //@Item Slot Button 호버 이벤트
+    ItemSlotButtonHovered.Broadcast(UniqueItemID);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에 마우스가 올라갔습니다. ID: {0}", UniqueItemID.ToString());
 }
 
 void UInteractableItemSlot::OnItemSlotButtonUnhovered()
 {
+    //@Item Slot Button 언호버 이벤트
+    ItemSlotButtonUnhovered.Broadcast(UniqueItemID);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에서 마우스가 벗어났습니다. ID: {0}", UniqueItemID.ToString());
 }
@@ -191,7 +194,6 @@ void UInteractableItemSlot::OnItemSlotButtonClicked()
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 클릭되었습니다. ID: {0}", UniqueItemID.ToString());
 }
-
 
 void UInteractableItemSlot::OnItemSlotButtonCanceled(const FGuid& ItemID)
 {

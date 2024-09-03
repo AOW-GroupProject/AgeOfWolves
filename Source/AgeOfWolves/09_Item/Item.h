@@ -151,7 +151,7 @@ public:
 		FGameplayTag ItemTag;
 	//@Item 이름
 	UPROPERTY(EditAnywhere)
-		FText ItemName;
+		FString ItemName;
 	//@Item 유형
 	UPROPERTY(EditAnywhere)
 		EItemType ItemType = EItemType::MAX;
@@ -164,12 +164,9 @@ public:
 	//@Item Image2(Inventory Slot)
 	UPROPERTY(EditAnywhere)
 		TSoftObjectPtr<UTexture2D> ItemSlotImage;
-	//@Item 이름
+	//@Item 설명 (로컬라이징 가능)
 	UPROPERTY(EditAnywhere)
-		TSoftObjectPtr<UTexture2D> ItemNameImage;
-	//@Item 설명
-	UPROPERTY(EditAnywhere)
-		TSoftObjectPtr<UTexture2D> ItemDescriptionImage;
+		FString ItemDescription;
 	//@되팔 수 있는가?
 	UPROPERTY(EditAnywhere)
 		bool bSellable = false;

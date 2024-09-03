@@ -8,6 +8,7 @@
 #include "Components/VerticalBoxSlot.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/Spacer.h"
 
 #include "08_UI/InteractableItemSlot.h"
 #include "08_UI/CustomButton.h"
@@ -132,8 +133,6 @@ void UItemSlots::InternalBindingToItemSlot(UInteractableItemSlot* ItemSlot, bool
     //@마지막 Item Slot에만 초기화 완료 이벤트 구독
     if (bLastItemSlot)
         ItemSlot->ItemSlotInitFinished.BindUFunction(this, "OnItemSlotInitFinished");
-
-
 }
 
 void UItemSlots::InitializeItemSlots()
@@ -177,9 +176,6 @@ void UItemSlots::ResetItemSlots()
         return;
     }
 
-    //@TODO: First Item Slot을 Hover 상태로 변경해줍니다.
-    //FirstItemSlot->ForceButtonState(EItemSlotButtonState::Hovered);
-
     UE_LOGFMT(LogItemSlots, Log, "{0}의 Item Slot 목록이 초기 상태로 리셋되었습니다.",
         *UEnum::GetValueAsString(ItemType));
 
@@ -187,81 +183,113 @@ void UItemSlots::ResetItemSlots()
 
 void UItemSlots::CreateItemSlots()
 {
+    UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 생성 시작");
+
     //@Interactable Item Slot 블루프린트 클래스, Item Slot Box
     if (!ensureMsgf(InteractableItemSlotClass && ItemSlotBox, TEXT("InteractableItemSlotClass 또는 ItemSlots가 유효하지 않습니다.")))
     {
+        UE_LOGFMT(LogItemSlots, Error, "아이템 슬롯 생성 실패: InteractableItemSlotClass 또는 ItemSlotBox가 유효하지 않음");
         return;
     }
+
     //@Clear Children
     ItemSlotBox->ClearChildren();
 
     int32 TotalSlots = DefaultRows * MaxItemSlotsPerRow;
     int32 CurrentSlot = 0;
 
-    while (CurrentSlot < TotalSlots)
+    for (int32 Row = 0; Row < MaxRows; ++Row)
     {
         UHorizontalBox* HorizontalBox = NewObject<UHorizontalBox>(this);
         UVerticalBoxSlot* VerticalBoxSlot = ItemSlotBox->AddChildToVerticalBox(HorizontalBox);
-        //@Vertical Box Slot
+
         if (VerticalBoxSlot)
         {
             VerticalBoxSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
             VerticalBoxSlot->SetHorizontalAlignment(HAlign_Fill);
             VerticalBoxSlot->SetVerticalAlignment(VAlign_Fill);
-            VerticalBoxSlot->SetPadding(PaddingBetweenRows); // 행 간 간격 추가
+            VerticalBoxSlot->SetPadding(PaddingBetweenRows);
         }
 
-        for (int8 SlotIndex = 0; SlotIndex < MaxItemSlotsPerRow && CurrentSlot < TotalSlots; ++SlotIndex, ++CurrentSlot)
+        if (Row < DefaultRows)
         {
-            //@Item Slot
-            UInteractableItemSlot* ItemSlot = CreateWidget<UInteractableItemSlot>(this, InteractableItemSlotClass);
-            if (ItemSlot)
+            for (int8 SlotIndex = 0; SlotIndex < MaxItemSlotsPerRow && CurrentSlot < TotalSlots; ++SlotIndex, ++CurrentSlot)
             {
-                //@Item Slot의 외부 바인딩
-                RequestStartInitByItemSlots.AddUFunction(ItemSlot, "InitializeItemSlot");
-                CancelItemSlotButton.AddUFunction(ItemSlot, "OnItemSlotButtonCanceled");
-
-                //@내부 바인딩
-                if (CurrentSlot == TotalSlots - 1)
+                UInteractableItemSlot* ItemSlot = CreateWidget<UInteractableItemSlot>(this, InteractableItemSlotClass);
+                if (ItemSlot)
                 {
-                    InternalBindingToItemSlot(ItemSlot, true);
+                    RequestStartInitByItemSlots.AddUFunction(ItemSlot, "InitializeItemSlot");
+                    CancelItemSlotButton.AddUFunction(ItemSlot, "OnItemSlotButtonCanceled");
+
+                    if (CurrentSlot == TotalSlots - 1)
+                    {
+                        InternalBindingToItemSlot(ItemSlot, true);
+                    }
+                    else
+                    {
+                        InternalBindingToItemSlot(ItemSlot);
+                    }
+
+                    UHorizontalBoxSlot* BoxSlot = HorizontalBox->AddChildToHorizontalBox(ItemSlot);
+                    if (BoxSlot)
+                    {
+                        FSlateChildSize SlateChildSize;
+                        SlateChildSize.SizeRule = ESlateSizeRule::Fill;
+                        SlateChildSize.Value = 1.f;
+                        //@Size
+                        BoxSlot->SetSize(SlateChildSize);
+                        //@Alignment
+                        BoxSlot->SetHorizontalAlignment(HAlign_Fill);
+                        BoxSlot->SetVerticalAlignment(VAlign_Fill);
+                        //@Padding
+                        BoxSlot->SetPadding(PaddingBetweenItemSlots);
+                    }
                 }
                 else
                 {
-                    InternalBindingToItemSlot(ItemSlot);
-                }
-
-                //@Horizontal Box Slot, Alignment
-                UHorizontalBoxSlot* BoxSlot = HorizontalBox->AddChildToHorizontalBox(ItemSlot);
-                if (BoxSlot)
-                {
-                    BoxSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
-                    BoxSlot->SetHorizontalAlignment(HAlign_Fill);
-                    BoxSlot->SetVerticalAlignment(VAlign_Fill);
-                    BoxSlot->SetPadding(PaddingBetweenItemSlots);
+                    UE_LOGFMT(LogItemSlots, Error, "InteractableItemSlot 생성 실패: 슬롯 {0}", CurrentSlot + 1);
                 }
             }
-            else
+        }
+        else
+        {
+            // DefaultRows 이후의 행에 대해 Spacer 추가
+            USpacer* Spacer = NewObject<USpacer>(this);
+            if (!Spacer)
             {
-                UE_LOGFMT(LogItemSlots, Error, "InteractableItemSlot 생성 실패");
+                UE_LOGFMT(LogItemSlots, Error, "Spacer 생성 실패!");
+                return;
             }
+            UVerticalBoxSlot* SpacerSlot = ItemSlotBox->AddChildToVerticalBox(Spacer);
+            if (SpacerSlot)
+            {
+                //@FSlateChildSize
+                FSlateChildSize SlateChildSize;
+                SlateChildSize.SizeRule = ESlateSizeRule::Fill;
+                SlateChildSize.Value = 0.5f;
+                //@Size
+                SpacerSlot->SetSize(SlateChildSize);
+                //@Alignment
+                SpacerSlot->SetHorizontalAlignment(HAlign_Fill);
+                SpacerSlot->SetVerticalAlignment(VAlign_Fill);
+            }
+            UE_LOGFMT(LogItemSlots, Verbose, "추가 행 {0}에 Spacer 추가 완료", Row + 1);
         }
     }
 
-    UE_LOGFMT(LogItemSlots, Log, "ItemSlots가 성공적으로 생성되었습니다. 총 슬롯 수: {0}, 행 개수: {1}, 열 개수: {2}",
-        TotalSlots, DefaultRows, MaxItemSlotsPerRow);
+    //@초기 상태로 설정
+    ResetItemSlots();
+
+    UE_LOGFMT(LogItemSlots, Log, "ItemSlots가 성공적으로 생성되었습니다. 총 슬롯 수: {0}, 기본 행 개수: {1}, 최대 행 개수: {2}, 열 개수: {3}",
+        TotalSlots, DefaultRows, MaxRows, MaxItemSlotsPerRow);
 }
 #pragma endregion
 
 #pragma region Callback
 void UItemSlots::OnUIVisibilityChanged(ESlateVisibility VisibilityType)
 {
-    //@SelfHitTestInvisible
-    if (VisibilityType == ESlateVisibility::SelfHitTestInvisible)
-    {
-        //@Reset Item Slots
-        ResetItemSlots();
-    }
+    //@Reset Item Slots
+    ResetItemSlots();
 }
 
 void UItemSlots::OnItemSlotInitFinished()
@@ -354,7 +382,7 @@ void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType 
     //@Item Images
     UTexture2D* ItemTexture = ItemInfo->ItemSlotImage.LoadSynchronous();
     //@Assign New Item
-    EmptySlot->AssignNewItem(UniqueItemID, ItemTexture, ItemInfo->bStackable, 1, ItemInfo->bRemovable);
+    EmptySlot->AssignNewItem(UniqueItemID, ItemInfo, 1);
     //@Enabled
     EmptySlot->ActivateItemSlotInteraction();
 }
@@ -398,6 +426,34 @@ void UItemSlots::OnInventoryItemUpdated(const FGuid& UniqueItemID, EItemType Typ
     {
         UE_LOGFMT(LogItemSlots, Warning, "업데이트할 아이템을 찾을 수 없습니다: ID {0}", UniqueItemID.ToString());
     }
+}
+
+TArray<UInteractableItemSlot*> UItemSlots::GetAllItemSlots() const
+{
+    TArray<UInteractableItemSlot*> AllItemSlots;
+
+    if (!ItemSlotBox)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "ItemSlotBox가 유효하지 않습니다.");
+        return AllItemSlots;
+    }
+
+    for (UWidget* Child : ItemSlotBox->GetAllChildren())
+    {
+        if (UHorizontalBox* HBox = Cast<UHorizontalBox>(Child))
+        {
+            for (UWidget* SlotChild : HBox->GetAllChildren())
+            {
+                if (UInteractableItemSlot* ItemSlot = Cast<UInteractableItemSlot>(SlotChild))
+                {
+                    AllItemSlots.Add(ItemSlot);
+                }
+            }
+        }
+    }
+
+    UE_LOGFMT(LogItemSlots, Log, "{0}개의 아이템 슬롯을 찾았습니다.", AllItemSlots.Num());
+    return AllItemSlots;
 }
 #pragma endregion
 

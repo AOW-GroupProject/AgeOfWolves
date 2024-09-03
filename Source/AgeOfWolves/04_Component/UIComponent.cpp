@@ -493,7 +493,7 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 				//@Hide Mouse Curosr
 				PC->bShowMouseCursor = false;
 				//@Set Input Mode
-				PC->SetInputMode(FInputModeGameOnly());
+				PC->SetInputMode(FInputModeGameAndUI());
 			}
 		}
 	}

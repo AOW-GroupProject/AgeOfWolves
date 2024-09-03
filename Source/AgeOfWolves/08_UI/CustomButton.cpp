@@ -10,16 +10,12 @@ DEFINE_LOG_CATEGORY(LogCustomButton);
 #pragma region Default Setting
 UCustomButton::UCustomButton(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
-{
-    CurrentButtonState = EButtonState::Normal;
-}
+{}
 
 void UCustomButton::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
-    //@Update Butotn Image
-    UpdateButtonImage();
     //@자체 바인딩
     if (Button)
     {
@@ -28,12 +24,13 @@ void UCustomButton::NativeOnInitialized()
         Button->OnPressed.AddDynamic(this, &UCustomButton::OnButtonPressed);
         Button->OnClicked.AddDynamic(this, &UCustomButton::OnButtonClicked);
     }
+
+    SetButtonState(EButtonState::Normal);
 }
 
 void UCustomButton::NativePreConstruct()
 {
     Super::NativePreConstruct();
-
 
 }
 
@@ -53,7 +50,7 @@ void UCustomButton::SetButtonState(EButtonState NewState)
 {
     if (CurrentButtonState != NewState)
     {
-        UE_LOGFMT(LogCustomButton, Verbose, "{0}의 상태가 {1}에서 {2}로 변경됨", *GetName(),
+        UE_LOGFMT(LogCustomButton, Log, "{0}의 상태가 {1}에서 {2}로 변경됨", *GetName(),
             StaticEnum<EButtonState>()->GetNameStringByValue((int64)CurrentButtonState),
             StaticEnum<EButtonState>()->GetNameStringByValue((int64)NewState));
         //@Curretn Button State
@@ -77,21 +74,19 @@ void UCustomButton::UpdateButtonImage()
     {
         if (StateInfo.State == CurrentButtonState)
         {
-            if (CurrentButtonState == EButtonState::Normal
-                || CurrentButtonState == EButtonState::Disabled)
+            if (!StateInfo.Texture.Get())
             {
                 //@Normal 상태일 경우 ButtonImage를 비우고 tint를 0로 설정
                 ButtonImage->SetBrushFromTexture(nullptr);
-                ButtonImage->SetColorAndOpacity(FLinearColor::Transparent);
-                UE_LOGFMT(LogCustomButton, Verbose, "{0}의 이미지가 Normal 상태로 초기화됨", *GetName());
+                ButtonImage->SetBrushTintColor(FLinearColor::Transparent);
+                UE_LOGFMT(LogCustomButton, Log, "{0}의 이미지가 {1} 상태로 초기화됨", *GetName(), StaticEnum<EButtonState>()->GetNameStringByValue((int64)CurrentButtonState));
             }
             else
             {
                 //@다른 상태의 경우 해당 Texture 적용
                 ButtonImage->SetBrushFromTexture(StateInfo.Texture.LoadSynchronous());
-                ButtonImage->SetBrushTintColor(FSlateColor(FLinearColor::White));
-                ButtonImage->SetColorAndOpacity(FLinearColor::White);
-                UE_LOGFMT(LogCustomButton, Verbose, "{0}의 이미지가 {1} 상태로 업데이트됨", *GetName(), StaticEnum<EButtonState>()->GetNameStringByValue((int64)CurrentButtonState));
+                ButtonImage->SetBrushTintColor(FLinearColor(1,1,1,1));
+                UE_LOGFMT(LogCustomButton, Log, "{0}의 이미지가 {1} 상태로 업데이트됨", *GetName(), StaticEnum<EButtonState>()->GetNameStringByValue((int64)CurrentButtonState));
             }
             break;
         }
@@ -214,7 +209,7 @@ void UCustomButton::OnButtonClicked_Implementation()
     //@eg. 애니메이션
 }
 
-void UCustomButton::ButtonCanceledNotified_Implementation()
+void UCustomButton::CancelSelectedButton_Implementation()
 {
     if (CurrentButtonState != EButtonState::Selected)
     {

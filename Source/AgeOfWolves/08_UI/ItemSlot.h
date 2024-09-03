@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "09_Item/Item.h"
 
 #include "ItemSlot.generated.h"
 
@@ -45,11 +46,11 @@ public:
 #pragma region SubWidgets
 public:
 	//@퀵슬롯에 새로운 아이템을 할당합니다.
-	void AssignNewItem(const FGuid& ID, UTexture2D* ItemImage, bool bIsStackable, int32 ItemCount, bool bIsRemovable);
+	virtual void AssignNewItem(const FGuid& ID, const FItemInformation* ItemInformation, int32 ItemCount=-1);
 	//@퀵슬롯에 할당된 기존 아이템 정보를 업데이트 합니다.
 	void UpdateItemCount(int32 NewCount);
 	//@퀵슬롯에 할당된 기존 아이템을 제거합니다.
-	void ClearAssignedItem(bool bForceClear = false);
+	virtual void ClearAssignedItem(bool bForceClear = false);
 protected:
 	//@Item Slot에 할당된 아이템의 고유 아이디(Inventory Component에서 발급)
 	FGuid UniqueItemID;
@@ -96,5 +97,4 @@ public:
 public:
 	FItemSlotInitFinished ItemSlotInitFinished;
 
-};
-
+};

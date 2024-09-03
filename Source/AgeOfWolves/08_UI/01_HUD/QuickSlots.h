@@ -33,10 +33,17 @@ public:
     UQuickSlots(const FObjectInitializer& ObjectInitializer);
 
 protected:
+    //~Begin Of UUserWidget
     virtual void NativeOnInitialized() override;
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    //~End UUserWidget
+
+//@TEST
+protected:
+    //virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
+
 private:
     //@외부 바인딩
     void ExternalBindToInventoryComponent();

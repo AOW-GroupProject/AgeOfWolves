@@ -63,7 +63,8 @@ TArray<TPair<int32, TSubclassOf<AItem>>> UItemManagerSubsystem::GetAllDefaultIte
     TArray<FName> ToolRowNames = ToolItemTable->GetRowNames();
     //@TODO: Equipment Item 관련 Data Table 추가 이후, 아래 코드 주석 해제
     //TArray<FName> EquipmentRowNames = EquipmentItemTable->GetRowNames();
-    //TArray<FName> MaterialRowNames = MaterialItemTable->GetRowNames();
+    //@TODO: Material Item 관련 Data Table 작성 이후, 아래 주석 해제
+    TArray<FName> MaterialRowNames = MaterialItemTable->GetRowNames();
     if (ToolRowNames.Num() == 0 /*|| EquipmentRowNames.Num() == 0 || MaterialRowNames.Num() == 0*/)
     {
         UE_LOGFMT(LogItemManager, Warning, "Item 데이터 테이블이 비어있습니다!");
@@ -107,21 +108,21 @@ TArray<TPair<int32, TSubclassOf<AItem>>> UItemManagerSubsystem::GetAllDefaultIte
     }
     //@Default Material Items
     {
-        //for (const FName& RowName : MaterialRowNames)
-        //{
-        //    FMaterialItemInformation* ItemInfo = MaterialItemTable->FindRow<FMaterialItemInformation>(RowName, TEXT(""));
-        //    if (!ItemInfo)
-        //    {
-        //        UE_LOGFMT(LogItemManager, Error, "Failed to find item information for row: {0}", *RowName.ToString());
-        //        continue;
-        //    }
-        //    if (!ItemInfo->bDefault)
-        //    {
-        //        continue;
-        //    }
-        //    int32 ItemCount = FMath::Min(ItemInfo->DefaultGivenStack, ItemInfo->MaxStack);
-        //    AllItems.Add(TPair<int32, TSubclassOf<AItem>>(ItemCount, ItemInfo->Item));
-        //}
+        for (const FName& RowName : MaterialRowNames)
+        {
+            FMaterialItemInformation* ItemInfo = MaterialItemTable->FindRow<FMaterialItemInformation>(RowName, TEXT(""));
+            if (!ItemInfo)
+            {
+                UE_LOGFMT(LogItemManager, Error, "Failed to find item information for row: {0}", *RowName.ToString());
+                continue;
+            }
+            if (!ItemInfo->bDefault)
+            {
+                continue;
+            }
+            int32 ItemCount = FMath::Min(ItemInfo->DefaultGivenStack, ItemInfo->MaxStack);
+            AllItems.Add(TPair<int32, TSubclassOf<AItem>>(ItemCount, ItemInfo->ItemClass));
+        }
     }
 
     return AllItems;

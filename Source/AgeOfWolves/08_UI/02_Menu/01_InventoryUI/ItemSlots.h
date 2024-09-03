@@ -60,7 +60,6 @@ protected:
     //@초기화 완료 체크
     bool bItemSlotReady = false;
     void CheckItemSlotInitFinished();
-
 #pragma endregion
 
 #pragma region SubWidgets
@@ -128,6 +127,7 @@ protected:
     //@마지막 Item Slot 초기화 완료 이벤트에 등록하는 콜백
     UFUNCTION()
         void OnItemSlotInitFinished();
+protected:
     //@Item Slot Button 클릭 이벤트 구독
     UFUNCTION()
         void OnItemSlotButtonClicked(const FGuid& UniqueItemID);
@@ -153,6 +153,10 @@ protected:
 #pragma endregion
 
 #pragma region Utility Functions
+public:
+    // 모든 Item Slot을 반환하는 함수
+    TArray<UInteractableItemSlot*> GetAllItemSlots() const;
+
 public:
      FORCEINLINE void SetItemType(const EItemType& Type) { ItemType = Type; }
 

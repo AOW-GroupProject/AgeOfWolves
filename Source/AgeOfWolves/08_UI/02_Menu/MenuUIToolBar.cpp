@@ -1,59 +1,99 @@
+// MenuUIToolBar.cpp
+
 #include "MenuUIToolBar.h"
 #include "Logging/StructuredLog.h"
 
-#include "Components/Button.h"
 #include "Components/HorizontalBox.h"
+#include "Components/HorizontalBoxSlot.h"
 
-#include "Styling/SlateTypes.h"
+#include "08_UI/CustomButton.h"
 
 DEFINE_LOG_CATEGORY(LogToolBar)
 
 #pragma region Default Setting
 UMenuUIToolBar::UMenuUIToolBar(const FObjectInitializer& ObjectInitializer)
-	:Super(ObjectInitializer)
+    :Super(ObjectInitializer)
 {}
 
 void UMenuUIToolBar::NativeOnInitialized()
 {
-	Super::NativeOnInitialized();
+    Super::NativeOnInitialized();
 
-	//@External Binding
-	//@TODO: Exeternal Binding to Input Comp(키보드 입력)
-
-
+    //@External Binding
+    //@TODO: External Binding to Input Comp(키보드 입력)
 }
 
 void UMenuUIToolBar::NativePreConstruct()
 {
-	Super::NativePreConstruct();
-
+    Super::NativePreConstruct();
 }
 
 void UMenuUIToolBar::NativeConstruct()
 {
-	Super::NativeConstruct();
-
+    Super::NativeConstruct();
 }
 
 void UMenuUIToolBar::NativeDestruct()
 {
-	Super::NativeDestruct();
+    Super::NativeDestruct();
+}
 
+void UMenuUIToolBar::InternalBindToButton(UCustomButton* Button, EMenuCategory Category)
+{
+    if (!Button)
+    {
+        UE_LOGFMT(LogToolBar, Error, "Button이 유효하지 않습니다.");
+        return;
+    }
+
+    Button->ButtonSelected.AddUObject(this, &UMenuUIToolBar::HandleButtonClick, Category);
+    Button->ButtonHovered.AddUObject(this, &UMenuUIToolBar::HandleButtonHover, Category);
+    Button->ButtonUnhovered.AddUObject(this, &UMenuUIToolBar::HandleButtonUnhover, Category);
 }
 
 void UMenuUIToolBar::InitializeToolBar()
 {
-	//@Buttons
+    //@Buttons
     CreateButtons();
-    //@Update Button Style
-    UpdateButtonStyle(InventoryUIButton);
-	//@Delegate: 초기화 완료 이벤트
+    //@Delegate: 초기화 완료 이벤트
     ToolBarInitFinished.ExecuteIfBound();
-	
 }
 #pragma endregion
 
-#pragma region SubWidgets
+#pragma region Widgets
+void UMenuUIToolBar::ResetToolBar()
+{
+    //@Previous Category
+    EMenuCategory PreviousCategory = CurrentCategory;
+    //@Current Category를 Default Category로 설정
+    CurrentCategory = DefaultCategory;
+
+    //@Previous Category Button
+    if (PreviousCategory != EMenuCategory::MAX
+        && PreviousCategory != DefaultCategory)
+    {
+        //@Button Canceled
+        HandleButtonCanceled(PreviousCategory);
+    }
+
+    //@Default Category Button
+    UCustomButton* DefaultCategoryButton = MMenuCategoryButtons.FindRef(CurrentCategory);
+    if (!DefaultCategoryButton)
+    {
+        UE_LOGFMT(LogToolBar, Error, "Default 카테고리 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
+        return;
+    }
+
+    //@Set Button State
+    DefaultCategoryButton->SetButtonState(EButtonState::Selected);
+
+    //@Menu Category Button 선택 이벤트 호출
+    MenuCategoryButtonClicked.ExecuteIfBound(CurrentCategory);
+
+    UE_LOGFMT(LogToolBar, Log, "MenuUIToolBar가 초기 상태로 리셋되었습니다. 현재 카테고리: {0}",
+        *UEnum::GetValueAsString(CurrentCategory));
+}
+
 void UMenuUIToolBar::CreateButtons()
 {
     if (!CategoryButtonsBox)
@@ -61,118 +101,116 @@ void UMenuUIToolBar::CreateButtons()
         UE_LOGFMT(LogToolBar, Error, "CategoryButtonsBox가 유효하지 않습니다.");
         return;
     }
-    //@Inventory UI 버튼
-    if (InventoryUIButton)
+
+    CategoryButtonsBox->ClearChildren();
+    MMenuCategoryButtons.Empty();
+
+    CreateAndAddButton(EMenuCategory::Inventory, InventoryButtonClass);
+    CreateAndAddButton(EMenuCategory::Level, LevelButtonClass);
+    CreateAndAddButton(EMenuCategory::Map, MapButtonClass);
+    CreateAndAddButton(EMenuCategory::System, SystemButtonClass);
+
+    //@ToolBar를 초기 상태로 설정합니다.
+    ResetToolBar();
+
+    UE_LOGFMT(LogToolBar, Log, "모든 버튼이 생성되고 추가되었습니다.");
+}
+
+void UMenuUIToolBar::CreateAndAddButton(EMenuCategory Category, TSubclassOf<UCustomButton> ButtonClass)
+{
+    //@Button 블루프린트 클래스
+    if (!ButtonClass)
     {
-        //@바인딩
-        InventoryUIButton->OnClicked.AddDynamic(this, &UMenuUIToolBar::OnInventoryButtonClicked);
-        InventoryUIButton->OnHovered.AddDynamic(this, &UMenuUIToolBar::OnInventoryButtonHovered);
-        InventoryUIButton->OnUnhovered.AddDynamic(this, &UMenuUIToolBar::OnInventoryButtonUnhovered);
-        //@MCategoryButtons
-        MCategoryButtons.Add(InventoryUIButton, EMenuCategory::Inventory);
+        UE_LOGFMT(LogToolBar, Error, "{0} 버튼 클래스가 설정되지 않았습니다.", *UEnum::GetValueAsString(Category));
+        return;
     }
-    //@Level UI 버튼
-    if (LevelUIButton)
+
+    //@Create Widget
+    UCustomButton* NewButton = CreateWidget<UCustomButton>(this, ButtonClass);
+    if (!NewButton)
     {
-        //@바인딩
-        LevelUIButton->OnClicked.AddDynamic(this, &UMenuUIToolBar::OnLevelButtonClicked);
-        LevelUIButton->OnHovered.AddDynamic(this, &UMenuUIToolBar::OnLevelButtonHovered);
-        LevelUIButton->OnUnhovered.AddDynamic(this, &UMenuUIToolBar::OnLevelButtonUnhovered);
-        //@MCategoryButtons
-        MCategoryButtons.Add(LevelUIButton, EMenuCategory::Level);
+        UE_LOGFMT(LogToolBar, Error, "Button 생성에 실패했습니다.");
+        return;
     }
-    //@Map UI 버튼
-    if (MapUIButton)
+
+    //@Internal Binding
+    InternalBindToButton(NewButton, Category);
+
+    //@AddChild
+    UHorizontalBoxSlot* HorizontalSlot = CategoryButtonsBox->AddChildToHorizontalBox(NewButton);
+    //@Alignment
+    if (HorizontalSlot)
     {
-        //@바인딩
-        MapUIButton->OnClicked.AddDynamic(this, &UMenuUIToolBar::OnMapButtonClicked);
-        MapUIButton->OnHovered.AddDynamic(this, &UMenuUIToolBar::OnMapButtonHovered);
-        MapUIButton->OnUnhovered.AddDynamic(this, &UMenuUIToolBar::OnMapButtonUnhovered);
-        //@MCategoryButtons
-        MCategoryButtons.Add(MapUIButton, EMenuCategory::Map);
+        //@Size
+        HorizontalSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
+        //@Alignment
+        HorizontalSlot->SetHorizontalAlignment(HAlign_Fill);
+        HorizontalSlot->SetVerticalAlignment(VAlign_Fill);
     }
-    //@System UI 버튼 
-    if (SystemUIButton)
-    {
-        //@바인딩
-        SystemUIButton->OnClicked.AddDynamic(this, &UMenuUIToolBar::OnSystemButtonClicked);
-        SystemUIButton->OnHovered.AddDynamic(this, &UMenuUIToolBar::OnSystemButtonHovered);
-        SystemUIButton->OnUnhovered.AddDynamic(this, &UMenuUIToolBar::OnSystemButtonUnhovered);
-        //@MCategoryButtons
-        MCategoryButtons.Add(SystemUIButton, EMenuCategory::System);
-    }
+    //@TMap
+    MMenuCategoryButtons.Add(Category, NewButton);
 }
 
 void UMenuUIToolBar::MoveCategoryLeft()
 {
-    //@Current Idx
-    int32 CurrentIndex = GetCurrentCategoryIndex();
-    //@New Idx
-    int32 NewIndex = (CurrentIndex - 1 + MenuCategoryCount) % MenuCategoryCount;
+    //@Current Index
+    int32 NewIndex = (GetCurrentCategoryIndex() - 1 + 4) % 4;
     //@New Category
     EMenuCategory NewCategory = GetMenuCategoryFromIndex(NewIndex);
-    //Handle Button Click
-    HandleButtonClick(NewCategory);
+    //@Cancel Button
+    HandleButtonCanceled(CurrentCategory);
+    //@Click Button
+    if (MMenuCategoryButtons.Contains(NewCategory))
+    {
+        auto NewButton = *MMenuCategoryButtons.Find(NewCategory);
+        if (!NewButton)
+        {
+            return;
+        }
+        //@TODO: Button 상태를 Selected로 변경합니다.
+        NewButton->OnButtonClicked();
+    }
+    
     UE_LOGFMT(LogToolBar, Log, "메뉴 카테고리가 왼쪽으로 이동했습니다. 새 카테고리: {0}", *UEnum::GetValueAsString(NewCategory));
 }
 
 void UMenuUIToolBar::MoveCategoryRight()
 {
     //@Current Index
-    int32 CurrentIndex = GetCurrentCategoryIndex();
-    //@New Index
-    int32 NewIndex = (CurrentIndex + 1) % MenuCategoryCount;
+    int32 NewIndex = (GetCurrentCategoryIndex() + 1) % 4;
     //@New Category
     EMenuCategory NewCategory = GetMenuCategoryFromIndex(NewIndex);
-    //@Handle Button Click
-    HandleButtonClick(NewCategory);
+    //@Cancel Button
+    HandleButtonCanceled(CurrentCategory);
+    //@Click Button
+    if (MMenuCategoryButtons.Contains(NewCategory))
+    {
+        auto NewButton = *MMenuCategoryButtons.Find(NewCategory);
+        if (!NewButton)
+        {
+            return;
+        }
+        //@TODO: Button 상태를 Selected로 변경합니다.
+        NewButton->OnButtonClicked();
+    }
+    
     UE_LOGFMT(LogToolBar, Log, "메뉴 카테고리가 오른쪽으로 이동했습니다. 새 카테고리: {0}", *UEnum::GetValueAsString(NewCategory));
-}
-
-void UMenuUIToolBar::UpdateButtonStyle(UButton* SelectedButton, UButton* PreviousButton)
-{
-    //@Previous Button
-    if (PreviousButton && PreviousButton != SelectedButton)
-    {
-        //@Normal의 Original Style
-        FButtonStyle OriginalStyle = PreviousButton->WidgetStyle;
-        //@Normal의 Tint
-        OriginalStyle.Normal.TintColor = FSlateColor(FLinearColor(0, 0, 0, 0));  // 완전히 투명하게 설정
-        //@Set Style
-        PreviousButton->SetStyle(OriginalStyle);
-    }
-    //@Selected Button
-    if (SelectedButton)
-    {
-        //@Button Style
-        FButtonStyle ButtonStyle = SelectedButton->WidgetStyle;
-        //@Normal 상태를 Hover 상태로 변경
-        ButtonStyle.Normal = ButtonStyle.Hovered;
-        //@Normal.Tint를 투명하게
-        ButtonStyle.Normal.TintColor = FSlateColor(FLinearColor(1, 1, 1, 1));  // 불투명하게 설정
-        //Set Style
-        SelectedButton->SetStyle(ButtonStyle);
-    }
 }
 
 void UMenuUIToolBar::HandleButtonClick(EMenuCategory Category)
 {
-    //@Selected
-    UButton* SelectedButton = *MCategoryButtons.FindKey(Category);
-    //@Prvious
-    UButton* PreviousButton = *MCategoryButtons.FindKey(CurrentCategory);
-    //@Update Style
-    if (SelectedButton != PreviousButton)
+    if (CurrentCategory == Category) return;
+
+    if (UCustomButton* PreviousButton = MMenuCategoryButtons.FindRef(CurrentCategory))
     {
-        UpdateButtonStyle(SelectedButton, PreviousButton);
+        HandleButtonCanceled(CurrentCategory);
     }
+
     //@Current Category
     CurrentCategory = Category;
+
     //@Delegate
-    if (MenuCategoryButtonClikced.IsBound())
-    {
-        MenuCategoryButtonClikced.Execute(Category);
-    }
+    MenuCategoryButtonClicked.ExecuteIfBound(Category);
 
     UE_LOGFMT(LogToolBar, Log, "{0} 버튼이 클릭되었습니다.", *UEnum::GetValueAsString(Category));
 }
@@ -181,29 +219,41 @@ void UMenuUIToolBar::HandleButtonHover(EMenuCategory Category)
 {
     UE_LOGFMT(LogToolBar, Log, "{0} 버튼에 마우스가 올라갔습니다.", *UEnum::GetValueAsString(Category));
 
-    //@TODO: Hover Image 설정
+    //@TODO: Hover 상태와 관련된 처리...
 }
 
 void UMenuUIToolBar::HandleButtonUnhover(EMenuCategory Category)
 {
-    UE_LOGFMT(LogToolBar, Log, "버튼에서 마우스가 벗어났습니다.");
+    UE_LOGFMT(LogToolBar, Log, "{0} 버튼에서 마우스가 벗어났습니다.", *UEnum::GetValueAsString(Category));
 
-    //@TODO: Hover Image 관련 설정
+    //@TODO: Unhover 상태와 관련된 처리...
 }
 
-int32 UMenuUIToolBar::GetCurrentCategoryIndex()
+void UMenuUIToolBar::HandleButtonCanceled(EMenuCategory PreviousCategory)
+{
+    //@Previous Button
+    UCustomButton* PreviousButton = MMenuCategoryButtons.FindRef(PreviousCategory);
+    if (!PreviousButton)
+    {
+        UE_LOGFMT(LogToolBar, Error, "Menu Category Button이 유효하지 않습니다!");
+        return;
+    }
+
+    //@Button Canceled Notified
+    PreviousButton->CancelSelectedButton();
+
+    UE_LOGFMT(LogToolBar, Log, "{0} 버튼이 취소되었습니다.", *UEnum::GetValueAsString(PreviousCategory));
+}
+#pragma endregion
+
+#pragma region Utility
+int32 UMenuUIToolBar::GetCurrentCategoryIndex() const
 {
     return static_cast<int32>(CurrentCategory);
 }
 
-EMenuCategory UMenuUIToolBar::GetMenuCategoryFromIndex(int32 Index)
+EMenuCategory UMenuUIToolBar::GetMenuCategoryFromIndex(int32 Index) const
 {
-    // 유효한 범위로 인덱스를 제한합니다.
-    Index = FMath::Clamp(Index, 0, MenuCategoryCount - 1);
-    return static_cast<EMenuCategory>(Index);
+    return static_cast<EMenuCategory>(FMath::Clamp(Index, 0, 3));
 }
-#pragma endregion
-
-#pragma region Callbacks
-
 #pragma endregion

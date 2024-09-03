@@ -59,8 +59,10 @@ UCLASS()
 class AGEOFWOLVES_API UCustomButton : public UUserWidget
 {
     GENERATED_BODY()
-        //@Friend Class 설정
-        friend class UInteractableItemSlot;
+    //@Friend Class 설정
+    friend class UInteractableItemSlot;
+    friend class UInventoryToolBar;
+    friend class UMenuUIToolBar;
 
 #pragma region Default Setting
 public:
@@ -90,10 +92,11 @@ protected:
 private:
     //@Button State를 설정합니다.
     void SetButtonState(EButtonState NewState);
+
 protected:
     //@현재 버튼의 상태를 나타냅니다.
     UPROPERTY(BlueprintReadOnly, Category = "Button")
-        EButtonState CurrentButtonState;
+        EButtonState CurrentButtonState = EButtonState::MAX;
     //@버튼 상태별 정보를 담고 있는 구조체 목록
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
         TArray<FButtonStateInformation> ButtonStateInfos;
@@ -133,8 +136,8 @@ public:
     //@버튼의 Canceled 이벤트 구독
     //@주의: 이를 활용하는 곳에서 Cancel 관련 이벤트 정의 및 아래 콜백과 바인딩 수행
     UFUNCTION(BlueprintNativeEvent, Category = "Button")
-        void ButtonCanceledNotified();
-    virtual void ButtonCanceledNotified_Implementation();
+        void CancelSelectedButton();
+    virtual void CancelSelectedButton_Implementation();
 #pragma endregion
 
 #pragma region
@@ -150,7 +153,12 @@ public:
 #pragma endregion
 
 #pragma region Callbacks
+
+#pragma endregion
+
+#pragma region Utility
 public:
     FORCEINLINE UButton* GetButton() { return Button; }
 #pragma endregion
+
 };

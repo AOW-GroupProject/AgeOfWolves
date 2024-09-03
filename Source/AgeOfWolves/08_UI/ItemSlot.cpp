@@ -66,21 +66,21 @@ void UItemSlot::InitializeItemSlot()
 #pragma endregion
 
 #pragma region SubWidgets
-void UItemSlot::AssignNewItem(const FGuid& ID, UTexture2D* ItemImage, bool bIsStackable, int32 ItemCount, bool bIsRemovable)
+void UItemSlot::AssignNewItem(const FGuid& ID, const FItemInformation* ItemInformation, int32 ItemCount)
 {
     //@Unique Item ID
     UniqueItemID = ID;
     //@bRemovable
-    bRemovable = bIsRemovable;
+    bRemovable = ItemInformation->bRemovable;
     //@Slot Itme Image
-    SetSlotImage(ItemImage);
+    SetSlotImage(ItemInformation->ItemSlotImage);
     //@bStackable
-    SetIsStackable(bIsStackable);
+    SetIsStackable(ItemInformation->bStackable);
     //@ItemCount
     UpdateItemCount(ItemCount);
 
     UE_LOGFMT(LogItemSlot, Log, "새 아이템이 아이템 슬롯에 할당되었습니다. ID: {0}, 갯수: {1}, 제거가능: {2}, 스택가능: {3}",
-        UniqueItemID.ToString(), ItemCount, bIsRemovable ? TEXT("Yes") : TEXT("No"), bIsStackable ? TEXT("Yes") : TEXT("No"));
+        UniqueItemID.ToString(), ItemCount, ItemInformation->bRemovable ? TEXT("Yes") : TEXT("No"), ItemInformation->bStackable ? TEXT("Yes") : TEXT("No"));
 }
 
 void UItemSlot::UpdateItemCount(int32 NewCount)
@@ -118,19 +118,24 @@ void UItemSlot::ClearAssignedItem(bool bForceClear)
 
 void UItemSlot::SetSlotImage(TSoftObjectPtr<UTexture2D> InTexture)
 {
-    //Texture2D
     if (InTexture.IsValid())
     {
-        //SoftObjectPtr, LoadSynchronous
         UTexture2D* LoadedTexture = InTexture.LoadSynchronous();
         if (LoadedTexture)
         {
-            //@Tint
-            SlotImage->SetBrushTintColor(FLinearColor(1.f, 1.f, 1.f, 1.f));
-            //@Opacity
-            SlotImage->SetColorAndOpacity(FLinearColor(1.0f, 1.0f, 1.0f, 1.0f));
-            //@Texture
+            // 텍스처 설정 최적화
+            LoadedTexture->MipGenSettings = TMGS_NoMipmaps;
+            LoadedTexture->CompressionSettings = TC_VectorDisplacementmap;
+            LoadedTexture->Filter = TF_Bilinear;
+            LoadedTexture->UpdateResource();
+
+            SlotImage->SetBrushTintColor(FLinearColor::White);
+            SlotImage->SetColorAndOpacity(FLinearColor::White);
             SlotImage->SetBrushFromTexture(LoadedTexture);
+
+            // 이미지 크기를 원본 텍스처 크기로 설정
+            SlotImage->SetDesiredSizeOverride(FVector2D(LoadedTexture->GetSizeX(), LoadedTexture->GetSizeY()));
+
             UE_LOGFMT(LogItemSlot, Log, "{0}: 슬롯 이미지가 설정되었습니다. 텍스처 이름: {1}", __FUNCTION__, *LoadedTexture->GetName());
         }
         else
@@ -140,6 +145,8 @@ void UItemSlot::SetSlotImage(TSoftObjectPtr<UTexture2D> InTexture)
     }
     else
     {
+        SlotImage->SetBrushFromTexture(nullptr);
+        SlotImage->SetBrushTintColor(FLinearColor::Transparent);
         UE_LOGFMT(LogItemSlot, Warning, "{0}: 유효하지 않은 텍스처 참조", __FUNCTION__);
     }
 }

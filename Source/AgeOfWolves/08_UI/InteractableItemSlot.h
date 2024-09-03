@@ -3,12 +3,18 @@
 #include "CoreMinimal.h"
 #include "08_UI/ItemSlot.h"
 #include "CustomButton.h"
+
 #include "InteractableItemSlot.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInteractableItemSlot, Log, All)
 
+//@아이템 슬롯 버튼 호버 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotButtonHovered, const FGuid&)
+//@아이템 슬롯 버튼 언호버 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotButtonUnhovered, const FGuid&)
 //@아이템 슬롯 버튼 클릭 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotButtonClicked, const FGuid&)
+
 
 //@선택된 아이템 슬롯 버튼 선택 취소 이벤트
 DECLARE_MULTICAST_DELEGATE(FNotifyItemSlotButtonCanceled);
@@ -63,13 +69,17 @@ public:
         void DeactivateItemSlotInteraction();
 
 protected:
-    //@Slot Overlay에 사용자 상호작용 가능한 CustomButton
+    //@Slot Overlay에 추가할 사용자 상호작용 가능한 CustomButton
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Button", meta = (AllowPrivateAccess = "true"))
         TSubclassOf<UCustomButton> ItemSlotButtonClass;
 #pragma endregion
 
 #pragma region Delegates
 public:
+    //@아이템 슬롯 버튼 호버 이벤트
+    FItemSlotButtonHovered ItemSlotButtonHovered;
+    //@아이템 슬롯 버튼 언호버 이벤트
+    FItemSlotButtonUnhovered ItemSlotButtonUnhovered;
     //@아이템 슬롯 버튼 클릭 이벤트
     FItemSlotButtonClicked ItemSlotButtonClicked;
 

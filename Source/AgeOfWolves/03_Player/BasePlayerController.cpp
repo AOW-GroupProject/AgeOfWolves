@@ -34,6 +34,13 @@ void ABasePlayerController::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
     
+    //@Test
+    //@Input Mode
+    FInputModeGameAndUI DefaultInputMode;
+    bShowMouseCursor = false;
+    DefaultInputMode.SetHideCursorDuringCapture(false);
+    SetInputMode(DefaultInputMode);
+
     //@Input Comp
     if (const auto BaseInputComp = Cast<UBaseInputComponent>(InputComponent))
     {

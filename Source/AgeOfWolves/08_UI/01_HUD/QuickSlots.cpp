@@ -319,9 +319,9 @@ void UQuickSlots::OnQuickSlotItemsLoaded(int32 SlotNum, const FGuid& UniqueItemI
         }
 
         // QuickSlot에 새 아이템 할당
-        TargetQuickSlot->AssignNewItem(UniqueItemID, ItemTexture, ItemInfo->bStackable, ItemCount, ItemInfo->bRemovable);
+        TargetQuickSlot->AssignNewItem(UniqueItemID, ItemInfo, ItemCount);
 
-        UE_LOGFMT(LogQuickSlots, Log, "퀵슬롯 {0}번에 아이템이 성공적으로 할당되었습니다: {1}", SlotNum, ItemInfo->ItemName.ToString());
+        UE_LOGFMT(LogQuickSlots, Log, "퀵슬롯 {0}번에 아이템이 성공적으로 할당되었습니다: {1}", SlotNum, ItemInfo->ItemName);
     }
 }
 

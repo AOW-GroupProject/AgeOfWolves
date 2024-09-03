@@ -88,7 +88,7 @@ void UMenuUI::InternalBindingToToolBar(UMenuUIToolBar* ToolBar)
     //@툴바 초기화 완료 이벤트
     ToolBar->ToolBarInitFinished.BindUFunction(this, "OnToolBarInitFinished");
     //@툴바 메뉴 카테고리 선택 이벤트
-    ToolBar->MenuCategoryButtonClikced.BindUFunction(this, "OnMenuCategoryButtonClikced");
+    ToolBar->MenuCategoryButtonClicked.BindUFunction(this, "OnMenuCategoryButtonClikced");
 
     UE_LOGFMT(LogMenuUI, Log, "MenuUI: Tool Bar UI의 OnInitFinished에 OnToolBarInitFinished 함수를 바인딩했습니다.");
 }
