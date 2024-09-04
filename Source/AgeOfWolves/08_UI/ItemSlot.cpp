@@ -118,37 +118,23 @@ void UItemSlot::ClearAssignedItem(bool bForceClear)
 
 void UItemSlot::SetSlotImage(TSoftObjectPtr<UTexture2D> InTexture)
 {
-    if (InTexture.IsValid())
-    {
-        UTexture2D* LoadedTexture = InTexture.LoadSynchronous();
-        if (LoadedTexture)
-        {
-            // 텍스처 설정 최적화
-            LoadedTexture->MipGenSettings = TMGS_NoMipmaps;
-            LoadedTexture->CompressionSettings = TC_VectorDisplacementmap;
-            LoadedTexture->Filter = TF_Bilinear;
-            LoadedTexture->UpdateResource();
 
-            SlotImage->SetBrushTintColor(FLinearColor::White);
-            SlotImage->SetColorAndOpacity(FLinearColor::White);
-            SlotImage->SetBrushFromTexture(LoadedTexture);
-
-            // 이미지 크기를 원본 텍스처 크기로 설정
-            SlotImage->SetDesiredSizeOverride(FVector2D(LoadedTexture->GetSizeX(), LoadedTexture->GetSizeY()));
-
-            UE_LOGFMT(LogItemSlot, Log, "{0}: 슬롯 이미지가 설정되었습니다. 텍스처 이름: {1}", __FUNCTION__, *LoadedTexture->GetName());
-        }
-        else
-        {
-            UE_LOGFMT(LogItemSlot, Warning, "{0}: 텍스처 로딩 실패", __FUNCTION__);
-        }
-    }
-    else
+    UTexture2D* LoadedTexture = InTexture.LoadSynchronous();
+    if (!LoadedTexture)
     {
         SlotImage->SetBrushFromTexture(nullptr);
         SlotImage->SetBrushTintColor(FLinearColor::Transparent);
+
         UE_LOGFMT(LogItemSlot, Warning, "{0}: 유효하지 않은 텍스처 참조", __FUNCTION__);
+        return;
     }
+
+    SlotImage->SetBrushTintColor(FLinearColor::White);
+    SlotImage->SetColorAndOpacity(FLinearColor::White);
+    SlotImage->SetBrushFromTexture(LoadedTexture);
+
+    UE_LOGFMT(LogItemSlot, Log, "{0}: 슬롯 이미지가 설정되었습니다. 텍스처 이름: {1}", __FUNCTION__, *LoadedTexture->GetName());
+
 }
 
 void UItemSlot::SetSlotItemNum(int32 InNum)

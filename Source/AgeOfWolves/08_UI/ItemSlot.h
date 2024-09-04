@@ -40,7 +40,6 @@ protected:
 public:
 	UFUNCTION()
 		virtual void InitializeItemSlot();
-
 #pragma endregion
 
 #pragma region SubWidgets
@@ -97,4 +96,4 @@ public:
 public:
 	FItemSlotInitFinished ItemSlotInitFinished;
 
-};
+};

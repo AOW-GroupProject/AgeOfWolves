@@ -117,7 +117,7 @@ void UItemDescriptionSlot::AssignNewItem(const FGuid& ID, const FItemInformation
     //@Item Name Text Block
     ItemNameTextBox->SetText(FText::FromString(ItemInformation->ItemName));
     //@Item Descrption Text Block
-    ItemDescriptionTextBox->SetText(FText::FromString(ItemInformation->ItemDescription));
+    ItemDescriptionTextBox->SetText(FText::FromString(ArrangeItemDescriptionStringToText(ItemInformation->ItemDescription)));
 
     UE_LOGFMT(LogItemSlot, Log, "새 아이템이 아이템 슬롯에 할당되었습니다. ID: {0}", UniqueItemID.ToString());
 }
@@ -127,7 +127,7 @@ void UItemDescriptionSlot::ClearAssignedItem(bool bForceClear)
     //@FGuid
     UniqueItemID.Invalidate();
     //@Slot Item Image
-    SetSlotImage(nullptr);
+    SetSlotImage(TSoftObjectPtr<UTexture2D>());
     //@Item Name Text Block
     ItemNameTextBox->SetText(FText());
     //@Item Descrption Text Block
@@ -135,6 +135,30 @@ void UItemDescriptionSlot::ClearAssignedItem(bool bForceClear)
 
     UE_LOGFMT(LogItemSlot, Log, "기존 아이템이 아이템 슬롯으로부터 제거되었습니다.");
 
+}
+
+FString UItemDescriptionSlot::ArrangeItemDescriptionStringToText(FString String)
+{
+    //@'.'을 기준으로 문자열 분리
+    TArray<FString> Sentences;
+    String.ParseIntoArray(Sentences, TEXT("."), true);
+
+    //@각 문장에 개행 추가 및 재결합
+    FString FormattedDescription;
+    for (int32 i = 0; i < Sentences.Num(); ++i)
+    {
+        FormattedDescription += Sentences[i].TrimStart().TrimEnd();
+        if (i < Sentences.Num() - 1)  // 마지막 문장이 아니면 '.'과 개행 추가
+        {
+            FormattedDescription += TEXT(".\n");
+        }
+        else if (i == Sentences.Num() - 1 && !Sentences[i].IsEmpty())  // 마지막 문장이면서 비어있지 않으면 '.'만 추가
+        {
+            FormattedDescription += TEXT(".");
+        }
+    }
+
+    return FormattedDescription;
 }
 #pragma endregion
 

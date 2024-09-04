@@ -4,6 +4,7 @@
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
 #include "Components/Button.h"
+#include "Components/Image.h"
 
 #include "08_UI/CustomButton.h"
 
@@ -112,16 +113,34 @@ void UInteractableItemSlot::CreateButton()
     //@내부 바인딩
     InternalBindToItemSlotButton(ItemSlotButton);
 
-    //@Alignment
+    //@Remove Child, Slot Image의 Z-order를 가장 높게 설정하기 위해
+    if (SlotImage)
+    {
+        SlotOverlay->RemoveChild(SlotImage);
+    }
+
+    //@Add Child To Overlay
     UOverlaySlot* OverlaySlot = SlotOverlay->AddChildToOverlay(ItemSlotButton);
     if (!OverlaySlot)
     {
         UE_LOGFMT(LogInteractableItemSlot, Error, "CustomButton을 SlotOverlay에 추가하지 못했습니다.");
         return;
     }
-
     OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
     OverlaySlot->SetVerticalAlignment(VAlign_Fill);
+
+    //@Add Child To Overlay, Slot Image 다시 추가
+    if (SlotImage)
+    {
+        auto OverlayImageSlot = SlotOverlay->AddChildToOverlay(SlotImage);
+        if (!OverlayImageSlot)
+        {
+            UE_LOGFMT(LogInteractableItemSlot, Error, "SlotImage를 SlotOverlay에 추가하지 못했습니다.");
+            return;
+        }
+        OverlayImageSlot->SetHorizontalAlignment(HAlign_Fill);
+        OverlayImageSlot->SetVerticalAlignment(VAlign_Fill);
+    }
 
     //@Item Slot Button 비활성화
     DeactivateItemSlotInteraction();

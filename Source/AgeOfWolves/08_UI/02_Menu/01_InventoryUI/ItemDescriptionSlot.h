@@ -68,6 +68,10 @@ public:
     virtual void ClearAssignedItem(bool bForceClear = false);
 
 protected:
+    FString ArrangeItemDescriptionStringToText(FString String);
+
+
+protected:
     //@수직 상자
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UVerticalBox* ItemDescriptionBox;

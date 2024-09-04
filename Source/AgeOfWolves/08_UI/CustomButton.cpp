@@ -10,7 +10,11 @@ DEFINE_LOG_CATEGORY(LogCustomButton);
 #pragma region Default Setting
 UCustomButton::UCustomButton(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
-{}
+{
+    ButtonOverlay = nullptr;
+    Button = nullptr;
+    ButtonImage = nullptr;
+}
 
 void UCustomButton::NativeOnInitialized()
 {
@@ -74,7 +78,8 @@ void UCustomButton::UpdateButtonImage()
     {
         if (StateInfo.State == CurrentButtonState)
         {
-            if (!StateInfo.Texture.Get())
+            UTexture2D* LoadedTexture = StateInfo.Texture.LoadSynchronous();
+            if (!LoadedTexture)
             {
                 //@Normal 상태일 경우 ButtonImage를 비우고 tint를 0로 설정
                 ButtonImage->SetBrushFromTexture(nullptr);
@@ -84,8 +89,9 @@ void UCustomButton::UpdateButtonImage()
             else
             {
                 //@다른 상태의 경우 해당 Texture 적용
-                ButtonImage->SetBrushFromTexture(StateInfo.Texture.LoadSynchronous());
-                ButtonImage->SetBrushTintColor(FLinearColor(1,1,1,1));
+                ButtonImage->SetBrushFromTexture(LoadedTexture);
+                ButtonImage->SetBrushTintColor(FLinearColor::White);
+                ButtonImage->SetColorAndOpacity(FLinearColor::White);
                 UE_LOGFMT(LogCustomButton, Log, "{0}의 이미지가 {1} 상태로 업데이트됨", *GetName(), StaticEnum<EButtonState>()->GetNameStringByValue((int64)CurrentButtonState));
             }
             break;
