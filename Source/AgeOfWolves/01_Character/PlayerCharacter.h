@@ -5,6 +5,8 @@
 #include "CoreMinimal.h"
 #include "CharacterBase.h"
 
+#include "GenericTeamAgentInterface.h"
+
 #include "PlayerCharacter.generated.h"
 
 /**
@@ -19,7 +21,7 @@ class UCurveFloat;
 class UTestWidget;
 
 UCLASS()
-class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase
+class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 	
@@ -79,5 +81,23 @@ public:
 	FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
 	FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }
 	FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockOnComponent; }
+
+#pragma endregion
+
+#pragma region TeamAgentInterface
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+	int32 ID = 1;
+
+	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
+
+protected:
+	FGenericTeamId TeamId;
+
+	//virtual UBaseMonsterASC* GetMonsterASC() override;
+
+
+#pragma endregion
 
 };

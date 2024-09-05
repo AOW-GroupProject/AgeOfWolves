@@ -29,5 +29,9 @@ private:
 	bool isMoving = false;
 	UPROPERTY(BlueprintReadOnly, Category = "Animation", Meta = (AllowPrivateAccess = true))
 	float Dir = 0;
+	UPROPERTY(BlueprintReadOnly, Category = "Animation", Meta = (AllowPrivateAccess = true))
+	bool IsFocusingPlayer = false; //현재 GetFocusActor가 존재한다면 true. Strafe Movement를 만드는 몬스터라면 이 변수를 Blend Poses by bool에 사용.
+
+
 	
 };

@@ -22,8 +22,10 @@ void UAttackGameplayAbility::CauseDamageToTarget(AActor* TargetActor)
 	{
 		const float ScaledDamage = Pair.Value.GetValueAtLevel(GetAbilityLevel());
 		UAbilitySystemBlueprintLibrary::AssignTagSetByCallerMagnitude(DamageSpecHandle, Pair.Key, ScaledDamage);
+		
 	}
 	GetAbilitySystemComponentFromActorInfo()->ApplyGameplayEffectSpecToTarget(*DamageSpecHandle.Data.Get(), UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor));
+	UE_LOG(LogTemp, Log, TEXT("CauseDamageEffect"));
 }
 
 

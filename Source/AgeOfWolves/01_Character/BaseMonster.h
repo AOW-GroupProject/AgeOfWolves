@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
+#include "GenericTeamAgentInterface.h"
 
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 
@@ -40,6 +41,7 @@ UENUM(BlueprintType)
 enum class EMonsterState : uint8
 {
 	Patrol UMETA(DisplayName = "patrol"),
+	Strafe UMETA(DisplayName = "strafe"),
 	Attacking UMETA(DisplayName = "attacking"), //공격 애니메이션 재생 중
 	DetectingPlayer UMETA(DisplayName = "detectingPlayer"), //플레이어 감지 중
 	Stunned UMETA(DisplayName = "stunned")
@@ -49,7 +51,7 @@ enum class EMonsterState : uint8
 
 
 UCLASS()
-class AGEOFWOLVES_API ABaseMonster : public ACharacter, public IAbilitySystemInterface
+class AGEOFWOLVES_API ABaseMonster : public ACharacter, public IAbilitySystemInterface, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -70,6 +72,23 @@ public:
 	virtual void Tick(float DeltaTime) override;
 
 	virtual void PossessedBy(AController* NewController) override;
+
+#pragma region TeamAgentInterface
+
+public:
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+	int32 ID = 1;
+
+	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
+
+protected:
+	FGenericTeamId TeamId;
+
+	//virtual UBaseMonsterASC* GetMonsterASC() override;
+
+
+#pragma endregion
+
 #pragma region State
 
 protected:
@@ -87,12 +106,15 @@ public:
 	UFUNCTION(BlueprintCallable)
 	void ChangeState(EMonsterState inValue);
 
+	/*
+	* @목적 : 특정 State가 끝났을 때 해줘야 하는 작업들을 담은 함수.
+	* @설명 : switch로 각 State마다 코드를 작성한다. 자식 클래스에서 override해서 사용할 수 있도록 한다.
+	*/
 	UFUNCTION(BlueprintCallable)
 	virtual void WhenEndState();
 
 
 #pragma endregion
-
 
 #pragma region CombatSystem
 public:
@@ -107,14 +129,28 @@ protected:
 #pragma endregion
 
 
+#pragma region MotionWarping
+public:
+	//MotionWarping
+	/*UPROPERTY(BlueprintReadWrite, Category = "MotionWarping")
+	TObjectPtr<class UMotionWarpingComponent> MotionWarpingComp;*/
 
 
-#pragma region MonsterInterface
+	/*
+	* @목적 : 모션워핑을 사용하는 애니메이션 재생 시 바인드해줄 MontageEnded 함수
+	* @설명 : Ability System Component에서 관리하는 Attribute 항목의 수치 변화 이벤트에 등록할 콜백 함수입니다.
+	*		  HUD 구현을 위해 PS에서 제공하는 AttributeBase 관련 인터페이스로 활용 가능합니다(C++환경).
+	* @참조 : APlayerStateBase::InitializeGameplayAbilitySystem()
+	*/
+	UFUNCTION()
+	void OnWarpMontageEnded(UAnimMontage* Montage, bool bInterrupted);
 
-	//virtual UBaseMonsterASC* GetMonsterASC() override;
-
+	void SetWarpTarget(FName name, FVector vector);
 
 #pragma endregion
+
+
+
 
 #pragma region Gameplay Ability System
 public:

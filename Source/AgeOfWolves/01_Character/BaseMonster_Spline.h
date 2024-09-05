@@ -37,6 +37,10 @@ protected:
 
 #pragma region State
 public:
+	/*
+	* @목적 : 특정 State가 끝났을 때 해줘야 하는 작업들을 담은 함수. 
+	* @설명 : BaseMonster에도 있지만 Spline에서만 다루는 변수가 있다면 여기서 처리함.
+	*/
 	virtual void WhenEndState() override;
 #pragma endregion
 
