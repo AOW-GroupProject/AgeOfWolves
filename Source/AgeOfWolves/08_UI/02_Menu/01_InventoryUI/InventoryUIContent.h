@@ -2,6 +2,8 @@
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
+#include "09_Item/Item.h"
+
 #include "InventoryUIContent.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInventoryUIContent, Log, All)
@@ -34,6 +36,9 @@ struct FItemSlotsInfo
 UCLASS()
 class AGEOFWOLVES_API UInventoryUIContent : public UUserWidget
 {
+    //@Friend Class
+    friend class UInventoryUI;
+
     GENERATED_BODY()
 
 #pragma region Default Setting
@@ -60,10 +65,12 @@ protected:
     bool bInventoryToolBarReady = false;
     bool bInventoryItemDescriptionReady = false;
     void CheckInventoryUIContentInitialization();
-
 #pragma endregion
 
 #pragma region SubWidgets
+protected:
+    void ResetInventoryUIContent();
+
 protected:
     void CreateToolBar();
     void CreateAllItemSlots();
@@ -86,7 +93,9 @@ protected:
         TArray<FItemSlotsInfo> ItemSlots;
     UPROPERTY()
         TMap<EItemType, UUserWidget*> MItemSlots;
-    EItemType CurrentItemType;
+
+    EItemType DefaultItemType = EItemType::Tool;
+    EItemType CurrentItemType = EItemType::MAX;
 
 protected:
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
@@ -104,10 +113,6 @@ public:
 #pragma endregion
 
 #pragma region Callbacks
-public:
-    UFUNCTION()
-        void InventoryUIVisibilityChangedNotified(bool bIsVisible);
-
 protected:
     UFUNCTION()
         void OnInventoryToolBarInitFinished();
@@ -118,6 +123,8 @@ protected:
     UFUNCTION()
         void OnInventoryItemDescriptionInitFinished();
 
+
+protected:
     UFUNCTION()
         void OnInventoryToolBarButtonClicked(EItemType ItemType);
 #pragma endregion

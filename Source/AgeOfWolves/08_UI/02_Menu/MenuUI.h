@@ -8,20 +8,26 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMenuUI, Log, All)
 
-//@초기화 요청 이벤트
-DECLARE_MULTICAST_DELEGATE(FRequestStartInitByMenuUI);
-//@Inventory UI 초기화 완료 알림 이벤트
-DECLARE_DELEGATE(FNotifyInventoryUIInitFinished);
-//@Tool Bar 초기화 완료 알림 이벤트
-DECLARE_DELEGATE(FNotifyToolBarInitFinished);
-
+#pragma region Forward Declaration
 class UImage;
 class UTextBlock;
 class UOverlay;
-class UMenuUIToolBar;
 
 class UMenuUIContent;
+class UMenuUIToolBar;
+#pragma endregion
 
+#pragma region Delegates 
+//@초기화 요청 이벤트
+DECLARE_MULTICAST_DELEGATE(FRequestStartInitByMenuUI);
+//@초기화 완료 이벤트
+DECLARE_DELEGATE(FMenuUIInitFinished)
+
+//@Inventory UI 초기화 완료 알림 이벤트
+DECLARE_DELEGATE(FNotifyInventoryUIInitFinished);
+#pragma endregion
+
+#pragma region Enums
 /*
 * @EMenuCategory
 * 
@@ -54,6 +60,7 @@ public:
     UPROPERTY(EditAnywhere, Category = "Menu Content UI | Content")
         TSubclassOf<UMenuUIContent> MenuUIContentClass;
 };
+#pragma endregion
 
 /**
  * UMenuUI
@@ -80,6 +87,8 @@ protected:
 protected:
     //@외부 바인딩
     void ExternalBindToInputComponent();
+    void ExternalBindToUIComponent();
+
 protected:
     // 내부 바인딩 함수
     void InternalBindingToToolBar(UMenuUIToolBar* ToolBar);
@@ -91,21 +100,38 @@ public:
         void InitializeMenuUI();
 
 protected:
+    //@Menu UI의 모든 구성 UI들의 초기화 완료 체크 함수
+    void CheckAllUIsInitFinsiehd();
+
+    bool bMenuToolBarInitFinished = false;
+    void CheckMenuToolBarInitFinished();
+
     //@Inventory UI 초기화 완료 체크 함수
     bool bInventoryUIInitFinished= false;
     void CheckInventoryUIInitFinished();
 
+    //@Level UI 초기화 완료 체크 함수
     bool bLevelUIInitFinished = false;
     void CheckLevelUIInitFinished();
     
+    //@Map UI 초기화 완료 체크 함수
     bool bMapUIInitFinished = false;
     void CheckMapUIInitFinished();
 
+    //#System UI 초기화 완료 체크 함수
     bool bSystemUIInitFinished = false;
     void CheckSystemUIInitFinished();
 #pragma endregion
 
 #pragma region SubWidgets
+protected:
+    //@Menu UI 설정 리셋
+    void ResetMenuUI();
+    //@Tool Bar 생성
+    void CreateToolBar();
+    //@Menu UI 컨텐츠 생성
+    void CreateAllCategoryUIs();
+
 protected:
     //@BG 이미지
     UPROPERTY(BlueprintReadWrite, Category = "Menu", meta = (BindWidget))
@@ -113,6 +139,7 @@ protected:
     UPROPERTY(BlueprintReadWrite, Category = "Menu", meta = (BindWidget))
         UImage* MenuUI_Inner_BG;
 
+protected:
     //@Tool Bar UI
     UPROPERTY(BlueprintReadWrite, Category = "Menu | Tool Bar UI", meta = (BindWidget))
         UOverlay* ToolBarOverlay;
@@ -123,20 +150,19 @@ protected:
     //@Menu UI Content를 담을 Overlay
     UPROPERTY(BlueprintReadWrite, Category = "Menu", meta = (BindWidget))
         UOverlay* MenuUIContentOverlay;
+
+    //@초기 Menu UI가 나타낼 Menu Category
+    EMenuCategory DefaultCategory = EMenuCategory::Inventory;
+    //@현재 보여지고 있는 Menu UI의 자식 UI
+    EMenuCategory CurrentCategory = EMenuCategory::MAX;
     //@Menu UI 내부 컨텐츠를 표시할 UI
     UPROPERTY(EditDefaultsOnly, Category = "Menu | Content")
         TArray<FMenuUIContentInfo> MenuContent;
-    //@현재 보여지고 있는 Menu UI의 자식 UI
-    EMenuCategory CurrentCategory = EMenuCategory::Inventory;
     //@카테고리와 위젯을 매핑하는 맵
     TMap<EMenuCategory, TObjectPtr<UUserWidget>> MMenuContents;
+#pragma endregion
 
-protected:
-    //@Tool Bar 생성
-    void CreateToolBar();
-    //@Menu UI 컨텐츠 생성
-    void CreateAllCategoryUIs();
-
+#pragma region Utility
 public:
     //@가시성 관리
     void SetCategoryVisibility(EMenuCategory Category, bool bVisible);
@@ -152,19 +178,20 @@ public:
 public:
     //@초기화 요청 이벤트
     FRequestStartInitByMenuUI RequestStartInitByMenuUI;
+    //@초기화 완료 이벤트
+    FMenuUIInitFinished MenuUIInitFinished;
 
 public:
     //@Inventory UI의 초기화 완료 이벤트
     FNotifyInventoryUIInitFinished NotifyInventoryUIInitFinished;
-    //@Tool Bar UI의 초기화 완료 이벤트
-    FNotifyToolBarInitFinished NotifyToolBarInitFinished;
 #pragma endregion
 
 #pragma region Callbacks
 protected:
     //@UI의 가시성 변화 이벤트에 바인딩 되는 콜백
-    UFUNCTION()
-        void OnUIVisibilityChanged(ESlateVisibility VisibilityType);
+    UFUNCTION(BlueprintNativeEvent)
+        void OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible);
+    virtual void OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVisible);
 
 protected:
     //@Input Tag 활성화 이벤트에 등록하는 콜백
@@ -184,7 +211,8 @@ protected:
 
 protected:
     //@Menu Tool Bar의 Menu Category 선택 이벤트에 바인딩 되는 콜백
-    UFUNCTION()
+    UFUNCTION(BlueprintNativeEvent)
         void OnMenuCategoryButtonClikced(EMenuCategory MenuCategory);
+    virtual void OnMenuCategoryButtonClikced_Implementation(EMenuCategory MenuCategory);
 #pragma endregion
 };

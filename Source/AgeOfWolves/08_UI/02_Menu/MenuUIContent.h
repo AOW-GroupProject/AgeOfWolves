@@ -9,6 +9,7 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogMenuUIContent, Log, All)
 
 class UImage;
+class UMenuUI;
 
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByMenuUIContent)
@@ -23,6 +24,9 @@ DECLARE_DELEGATE_OneParam(FMenuUIContentInitFinished, EMenuCategory);
 UCLASS()
 class AGEOFWOLVES_API UMenuUIContent : public UUserWidget
 {
+    //@Friend Class
+    friend class UMenuUI;
+
 	GENERATED_BODY()
 #pragma region Default Setting
 public:
@@ -46,7 +50,7 @@ public:
     //@초기화
     //@오버라이딩 시 UFUNCTION() 제외
     UFUNCTION()
-        virtual void InitializeMenuUIContent(){}
+        virtual void InitializeMenuUIContent();
 protected:
     //@TODO: 각 멤버들의 초기화 완료 여불르 확인하는 boolean 변수 선언
     //@초기화 완료 확인 함수
@@ -61,6 +65,9 @@ protected:
 #pragma endregion
 
 #pragma region SubWidgets
+protected:
+    virtual void ResetMenuUIContent() {}
+
 protected:
     //@Menu Content의 타이틀 이미지
     UPROPERTY(BlueprintReadWrite, Category = "Menu Content | Title Image", meta = (BindWidget))
@@ -77,10 +84,11 @@ public:
 
 #pragma region Callbacks
 protected:
-    //@TODO: 아래 가시성 변화 이벤트 오버라이딩...
-    //@가시성 변화 이벤트에 등록되는 콜백
-    UFUNCTION()
-        virtual void OnUIVisibilityChanged(ESlateVisibility VisibilityType) {}
+    UFUNCTION(BlueprintNativeEvent)
+        void OnUIVisibilityChanged(ESlateVisibility VisibilityType);
+    virtual void OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType);
+
+
 #pragma endregion
 	
 };

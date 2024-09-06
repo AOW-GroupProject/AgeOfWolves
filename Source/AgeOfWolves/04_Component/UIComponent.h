@@ -15,6 +15,7 @@ class UUserWidget;
 class UUIManagerSubsystem;
 class UBaseInputComponent;
 
+#pragma region Delegates
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestInitializationByUIComp);
 //@IMC 변경 요청 이벤트
@@ -35,6 +36,7 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FWidgetVisibilityChanged, UUserWidget*, boo
 
 //@Interaction UI Event
 DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyInteractionUIInputActivation, const FGameplayTag&);
+#pragma endregion
 
 /*
 * UUIComponent
@@ -71,19 +73,33 @@ public:
 	UFUNCTION()
 		void InitializeUIComponent();
 protected:
-	bool bToolBarReadyForLoading = false;
+	//@Inventory의 관련 UI들의 초기화 작업 완료를 체크합니다.
 	bool bQuickSlotsReadyForLoading = false;
 	bool bInventoryUIReadyForLoading = false;
-	void CheckUIsForInventoryReady();
+	void CheckAllUIsForInventoryReady();
 
+	//@Player State Base의 AttributeSet 관련 UI들의 초기화 작업 완료를 체크합니다.
 	bool bStateBarsReadyForLoading = false;
 	void CheckAllUIsForAttributeSetReady();
 
-	bool bInteractionUIsInitFinished = false;
+	//@Player HUD, Menu UI들의 초기화 작업 완료를 체크합니다.
+	bool bHUDInitFinished = false;
+	bool bMenuUIInitFinished = false;
+	void CheckAllUIsForDefaultVisibilitySetting();
+
+	//@TODO: 모든 Interaction UI 초기화 완료 체크 함수 작성...
+
 #pragma endregion
 
 #pragma region UI
+private:
+	//@모든 UI 상태를 리셋합니다.
+	void ResetUIs();
+	//@카테고리 별 Reset 작업 수행
+	void ResetCategoryUI(EUICategory UICategory, UUIManagerSubsystem* UIManagerSubsystem);
+
 protected:
+	//@Create Widget
 	void CreateAndSetupWidget(APlayerController* PC, EUICategory UICategory, const FUIInformation& UIInfo, UEnum* EnumPtr);
 	//@HUD UI
 	void SetupHUDUI(UUserWidget* NewWidget);
@@ -92,17 +108,6 @@ protected:
 	//@Interaction UI
 	void SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* NewWidget);
 
-protected:
-	//@Widget을 화면에 나타냅니다.
-    UFUNCTION(BlueprintCallable, Category = "UI")
-        void ShowUI(EUICategory UICategory, const FGameplayTag& UITag);
-	UFUNCTION(BlueprintCallable, Category = "UI")
-		void ShowAllUI(EUICategory UICategory);
-	//@Widget을 화면에서 숨깁니다.
-    UFUNCTION(BlueprintCallable, Category = "UI")
-        void HideUI(EUICategory UICategory, const FGameplayTag& UITag);
-	UFUNCTION(BlueprintCallable, Category = "UI")
-		void HideAllUI(EUICategory UICategory);
 protected:
 	//@HUD
     UPROPERTY()
@@ -113,11 +118,30 @@ protected:
 	//@Interaction
 	UPROPERTY()
 		TMap<FGameplayTag, UUserWidget*> MInteractionUIs;
+#pragma endregion
+
+#pragma region Utility
+protected:
+	//@Widget을 화면에 나타냅니다.
+	UFUNCTION(BlueprintCallable, Category = "UI")
+		void ShowUI(EUICategory UICategory, const FGameplayTag& UITag);
+	UFUNCTION(BlueprintCallable, Category = "UI")
+		void ShowAllUI(EUICategory UICategory);
+	//@Widget을 화면에서 숨깁니다.
+	UFUNCTION(BlueprintCallable, Category = "UI")
+		void HideUI(EUICategory UICategory, const FGameplayTag& UITag);
+	UFUNCTION(BlueprintCallable, Category = "UI")
+		void HideAllUI(EUICategory UICategory);
+
 private:
+	//@Input Tag를 통해 UI를 찾습니다.
 	FString FindUICategoryFromInputTag(const FGameplayTag& InputTag);
+
 public:
-    UFUNCTION(BlueprintCallable, Category = "UI")
-        UUserWidget* GetUI(EUICategory UICategory, const FGameplayTag& UITag = FGameplayTag()) const;
+	//@UICategory와 UI Tag를 통해 UI를 반환합니다.
+	UFUNCTION(BlueprintCallable, Category = "UI")
+		UUserWidget* GetUI(EUICategory UICategory, const FGameplayTag& UITag = FGameplayTag()) const;
+	//@UI Category 관련 UI들을 모두 반환합니다.
 	UFUNCTION(BlueprintCallable, Category = "UI")
 		TArray<UUserWidget*> GetCategoryUIs(EUICategory UICategory) const;
 #pragma endregion
@@ -147,17 +171,25 @@ public:
 
 #pragma region Callbacks
 protected:
+	//@Player HUD의 초기화 완료 이벤트 구독
+	UFUNCTION()
+		void OnHUDInitFinished();
+	UFUNCTION()
+		void OnMenuUIInitFinished();
+
+protected:
+	//@Player HUD의 State Bar의 초기화 완료 이벤트 구독
 	UFUNCTION()
 		void StateBarsInitFinishedNotified();
-	//@Callback: HUD의 Quick Slots 초기와 완료를 알리는 이벤트 호출
+
+protected:
+	//@Player HUD의 Quick Slots의 초기화 완료 이벤트 구독
 	UFUNCTION()
 		void QuickSlotsInitFinishedNotified();
-	//@Callback: Menu UI의 Tool Bar의 초기화 완료를 알리는 이벤트 호출
-	UFUNCTION()
-		void MenuUIToolBarInitFinishedNotified();
-	//@Callback: Menu UI의 Inventory UI 초기화 완료를 알리는 이벤트 호출
+	//@Menu UI의 Inventory UI 초기화 완료를 알리는 이벤트 호출
 	UFUNCTION()
 		void InventoryUIInitFinishedNotified();
+
 protected:
 	//@UI Input Tag 활성화 이벤트 구독
 	UFUNCTION()

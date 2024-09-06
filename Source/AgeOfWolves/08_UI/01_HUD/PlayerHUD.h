@@ -11,10 +11,14 @@ DECLARE_LOG_CATEGORY_EXTERN(LogHUD, Log, All)
 
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByHUD);
+//@HUD 초기화 완료 이벤트
+DECLARE_DELEGATE(FHUDInitFinished);
+
 //@State Bars 초기화 완료 이벤트
 DECLARE_DELEGATE(FNotifyStateBarsInitFinished);
 //@Quick Slot 초기화 완료 이벤트
 DECLARE_DELEGATE(FNotifyQuickSlotsInitFinished);
+
 
 class UScaleBox;
 class UQuickSlots;
@@ -47,10 +51,17 @@ protected:
 	//@내부 바인딩
 	void InternalBindToStateBars(UStateBars* StateBars) ;
 	void InternalBindToQuickSlots(UQuickSlots* QuickSlots) ;
+
 public:
 	//@초기화
 	UFUNCTION()
 		void InitializePlayerHUD();
+
+protected:
+	bool bStateBarsInitFinished = false;
+	bool bQuickSlotsInitFinished = false;
+	void CheckAllUIsInitFinsiehd();
+
 #pragma endregion
 
 #pragma region Subwidgets
@@ -81,6 +92,10 @@ public:
 public:
 	//@초기화 요청 이벤트
 	FRequestStartInitByHUD RequestStartInitByHUD;
+	//@초기화 완료 이벤트
+	FHUDInitFinished HUDInitFinished;
+
+public:
 	//@State Bars 초기화 완료 알림 이벤트
 	FNotifyStateBarsInitFinished NotifyStateBarsInitFinished;
 	//@Quick Slots 초기화 완료 알림 이벤트
@@ -90,8 +105,9 @@ public:
 #pragma region Callbacks
 protected:
 	//@UI의 가시성 변화 이벤트에 바인딩 되는 콜백
-	UFUNCTION()
+	UFUNCTION(BlueprintNativeEvent)
 		void OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible);
+	virtual void OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVisible);
 
 protected:
 	//@퀵슬롯 초기화 완료 이벤트에 등록하는 콜백

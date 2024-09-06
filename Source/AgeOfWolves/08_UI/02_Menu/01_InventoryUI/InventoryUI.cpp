@@ -20,6 +20,9 @@ void UInventoryUI::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
+    //@가시성 변화 이벤트에 바인딩
+    OnVisibilityChanged.AddDynamic(this, &UInventoryUI::OnUIVisibilityChanged);
+
     //@외부 바인딩
 }
 
@@ -52,10 +55,12 @@ void UInventoryUI::InternalBindingToInventoryUIContent(UInventoryUIContent* Inve
 
 void UInventoryUI::InitializeMenuUIContent()
 {
-    Super::InitializeMenuUIContent();
 
     //@Create Inventory Content UI
     CreateInventoryContent();
+
+    //@Super
+    Super::InitializeMenuUIContent();
 
     //@초기화 완료 이벤트 호출
     RequestStartInitByInventoryUI.Broadcast();
@@ -77,10 +82,19 @@ void UInventoryUI::CheckMenuUIContentInitFinished()
 #pragma endregion
 
 #pragma region SubWidgets
-void UInventoryUI::ResetInventoryUI()
+void UInventoryUI::ResetMenuUIContent()
 {
     //@Inventory UI Content
+    for (auto& OverlaySlot : InventoryUIContentOverlay->GetAllChildren())
+    {
+        if (auto Widget = Cast<UInventoryUIContent>(OverlaySlot))
+        {
+            Widget->ResetInventoryUIContent();
+            break;
+        }
+    }
 
+    Super::ResetMenuUIContent();
 }
 
 void UInventoryUI::CreateInventoryContent()
@@ -99,11 +113,8 @@ void UInventoryUI::CreateInventoryContent()
     UInventoryUIContent* InventoryUIContent = CreateWidget<UInventoryUIContent>(this, InventoryUIContentClass);
     if (InventoryUIContent)
     {
-        //@외부 바인딩
         //@비동기 초기화 이벤트
         RequestStartInitByInventoryUI.AddUFunction(InventoryUIContent, "InitializeInventoryUIContent");
-        //@가시성 변화 이벤트
-        NotifyInventoryUIVisibilityChanged.BindUObject(InventoryUIContent, &UInventoryUIContent::InventoryUIVisibilityChangedNotified);
 
         //@내부 바인딩
         InternalBindingToInventoryUIContent(InventoryUIContent);
@@ -135,23 +146,13 @@ void UInventoryUI::OnInventoryUIContentInitFinished()
     CheckMenuUIContentInitFinished();
 }
 
-void UInventoryUI::OnUIVisibilityChanged(ESlateVisibility VisibilityType)
+void UInventoryUI::OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType)
 {
-    Super::OnUIVisibilityChanged(VisibilityType);
 
     //@가시성 변화 이벤트 호출시 수행할 동작들 아래에서 작성...
-
-    //@가시성 비활성화
-    if (VisibilityType == ESlateVisibility::Collapsed)
-    {
-
-    }
-    //@가시성 활성화
-    else if (VisibilityType == ESlateVisibility::SelfHitTestInvisible)
-    {
-        //@Inventory UI 가시성 변화 이벤트
-        NotifyInventoryUIVisibilityChanged.ExecuteIfBound(true);
-    }
+    
+    //@초기 설정으로 Reset
+    ResetMenuUIContent();
 
 }
 #pragma endregion

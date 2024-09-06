@@ -151,6 +151,20 @@ void UMenuUIToolBar::CreateAndAddButton(EMenuCategory Category, TSubclassOf<UCus
     MMenuCategoryButtons.Add(Category, NewButton);
 }
 
+void UMenuUIToolBar::MenuUIVisibilityChangedNotified(bool bIsVisible)
+{
+    //@Menu UI가 열리면 하는 동작
+    if (bIsVisible)
+    {
+
+    }
+    //@Menu UI가 닫히면 하는 동작
+    else
+    {
+
+    }
+}
+
 void UMenuUIToolBar::MoveCategoryLeft()
 {
     //@Current Index

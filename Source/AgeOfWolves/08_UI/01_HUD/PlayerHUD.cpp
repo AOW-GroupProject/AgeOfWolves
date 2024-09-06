@@ -101,14 +101,26 @@ void UPlayerHUD::InitializePlayerHUD()
 
     UE_LOGFMT(LogHUD, Log, "PlayerHUD 초기화 시작");
 
-    //@Init
+    //@State Bars
     CreateStateBars();
+    //@Quick Slots
     CreateQuickSlots();
     //@초기화 요청
     RequestStartInitByHUD.Broadcast();
 
     UE_LOGFMT(LogHUD, Log, "PlayerHUD 초기화 완료");
 
+}
+
+void UPlayerHUD::CheckAllUIsInitFinsiehd()
+{
+    if (bStateBarsInitFinished && bQuickSlotsInitFinished)
+    {
+        bStateBarsInitFinished = false;
+        bQuickSlotsInitFinished = false;
+
+        HUDInitFinished.ExecuteIfBound();
+    }
 }
 #pragma endregion
 
@@ -236,7 +248,7 @@ UStateBars* UPlayerHUD::GetStateBarsUI() const
 #pragma endregion
 
 #pragma region Callbacks
-void UPlayerHUD::OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible)
+void UPlayerHUD::OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVisible)
 {
     if (Widget != this)
     {
@@ -263,14 +275,21 @@ void UPlayerHUD::OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible)
 
 void UPlayerHUD::OnStateBarsInitFinished()
 {
+    bStateBarsInitFinished = true;
+
     //@Deelgate
     NotifyStateBarsInitFinished.ExecuteIfBound();
+
+    CheckAllUIsInitFinsiehd();
 }
 
 void UPlayerHUD::OnQuickSlotsInitFinished()
 {
+    bQuickSlotsInitFinished = true;
     //@Delgate
     NotifyQuickSlotsInitFinished.ExecuteIfBound();
+
+    CheckAllUIsInitFinsiehd();
 
 }
 #pragma endregion

@@ -15,8 +15,6 @@ void UMenuUIContent::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
-	//@가시성 변화 이벤트에 바인딩
-	OnVisibilityChanged.AddDynamic(this, &UMenuUIContent::OnUIVisibilityChanged);
 }
 
 void UMenuUIContent::NativePreConstruct()
@@ -37,6 +35,11 @@ void UMenuUIContent::NativeDestruct()
 
 }
 
+void UMenuUIContent::InitializeMenuUIContent()
+{
+
+}
+
 void UMenuUIContent::CheckMenuUIContentInitFinished()
 {
 	//@TODO: Internal Binding 수행 후 Callback들로 부터 체크된 항목들 모두 참인지 확인
@@ -47,9 +50,15 @@ void UMenuUIContent::CheckMenuUIContentInitFinished()
 		UE_LOGFMT(LogMenuUIContent, Warning, "할당 받은 Menu Category가 유효하지 않습니다.");
 		return;
 	}
-
 	//@초기화 완료 이벤트 호출
 	MenuUIContentInitFinished.ExecuteIfBound(MenuCategory);
+}
+#pragma endregion
+
+#pragma region Callbacks
+void UMenuUIContent::OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType)
+{
+	//@가시성 변화 시 수행해야할 동작들 아래에서 작성...
 }
 #pragma endregion
 

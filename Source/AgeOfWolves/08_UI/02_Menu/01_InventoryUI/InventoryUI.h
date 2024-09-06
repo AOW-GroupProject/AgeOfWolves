@@ -17,9 +17,6 @@ DECLARE_MULTICAST_DELEGATE(FRequestStartInitByInventoryUI)
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FInventoryUIInitFinished)
 
-//@Inventory UI의 Opened 이벤트
-DECLARE_DELEGATE_OneParam(FNotifyInventoryUIVisibilityChanged, bool)
-
 UCLASS()
 class AGEOFWOLVES_API UInventoryUI : public UMenuUIContent
 {
@@ -56,7 +53,7 @@ protected:
 #pragma region SubWidgets
 private:
     //@Inventory UI의 상태를 초기 상태로 되돌립니다.
-    void ResetInventoryUI();
+    virtual void ResetMenuUIContent() override;
 
 protected:
     //@Item Slots
@@ -77,11 +74,6 @@ public:
     FRequestStartInitByInventoryUI RequestStartInitByInventoryUI;
     //@초기화 완료 이벤트
     FInventoryUIInitFinished InventoryUIInitFinished;
-
-public:
-    //@가시성 변화 알림 이벤트
-    FNotifyInventoryUIVisibilityChanged NotifyInventoryUIVisibilityChanged;
-
 #pragma endregion
 
 #pragma region Callbacks
@@ -92,7 +84,7 @@ protected:
 
 protected:
     //~UMenuUIContent Interface
-    virtual void OnUIVisibilityChanged(ESlateVisibility VisibilityType) override;
+    virtual void OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType) override;
     //~End UMenuUIContent Interface
 #pragma endregion
 

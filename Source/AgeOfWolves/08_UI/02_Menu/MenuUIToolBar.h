@@ -83,6 +83,13 @@ protected:
         TSubclassOf<UCustomButton> MapButtonClass;
     UPROPERTY(EditDefaultsOnly, Category = "Menu Tool Bar | Buttons")
         TSubclassOf<UCustomButton> SystemButtonClass;
+#pragma endregion
+
+
+#pragma region Callbacks
+protected:
+    UFUNCTION()
+        void MenuUIVisibilityChangedNotified(bool bIsVisible);
 
 public:
     //@메뉴 카테고리를 왼쪽으로 이동
@@ -102,6 +109,9 @@ private:
         void HandleButtonUnhover(EMenuCategory Category);
     //@버튼 취소 이벤트에 대한 처리
     void HandleButtonCanceled(EMenuCategory PreviousCategory);
+#pragma endregion
+
+#pragma region Utility
 protected:
     //@현재 선택된 카테고리의 인덱스를 반환
     int32 GetCurrentCategoryIndex() const;

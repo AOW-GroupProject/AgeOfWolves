@@ -51,6 +51,7 @@ void UInventoryToolBar::InitializeInventoryToolBar()
 {
     //@Create Buttons
     CreateButtons();
+
     //@초기화 완료 이벤트
     InventoryToolBarInitFinished.ExecuteIfBound();
 }

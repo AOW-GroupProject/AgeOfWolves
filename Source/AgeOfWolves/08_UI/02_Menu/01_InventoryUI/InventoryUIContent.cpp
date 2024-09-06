@@ -83,8 +83,6 @@ void UInventoryUIContent::InitializeInventoryUIContent()
     CreateAllItemSlots();
     //@Item Description
     CreateItemDescription();
-    //@Item Slots 가시성 업데이트
-    UpdateAllItemSlotsVisibility();
     //@초기화 요청 이벤트 호출
     RequestStartInitByInventoryUIContent.Broadcast();
 }
@@ -97,8 +95,10 @@ void UInventoryUIContent::CheckInventoryUIContentInitialization()
         bInventoryItemSlotsReady = false;
         bInventoryToolBarReady = false;
         bInventoryItemDescriptionReady = false;
-        //@Item Slots 가시성 업데이트
-        UpdateAllItemSlotsVisibility();
+
+        //@Reset
+        ResetInventoryUIContent();
+
         //@Inventory UI Content 초기화 완료 이벤트 호출
         InventoryUIContentInitFinished.ExecuteIfBound();
     }
@@ -106,6 +106,68 @@ void UInventoryUIContent::CheckInventoryUIContentInitialization()
 #pragma endregion
 
 #pragma region SubWidgets
+void UInventoryUIContent::ResetInventoryUIContent()
+{
+
+    UE_LOGFMT(LogInventoryUIContent, Log, "Inventory UI Content 구성 위젯들을 초기 상태로 리셋합니다.");
+
+    //@Current Item Type
+    if (CurrentItemType != EItemType::MAX)
+    {
+        //@Item Slots
+        UUserWidget* ItemSlotsUI = GetItemSlotsUI(CurrentItemType);
+        if (UItemSlots* ItemSlotsWidget = Cast<UItemSlots>(ItemSlotsUI))
+        {
+            ItemSlotsWidget->ResetItemSlots();
+            UE_LOGFMT(LogInventoryUIContent, Log, "현재 타입({0})의 Item Slots가 초기화되었습니다.", *UEnum::GetValueAsString(CurrentItemType));
+        }
+        else
+        {
+            UE_LOGFMT(LogInventoryUIContent, Warning, "현재 타입({0})의 Item Slots를 찾을 수 없거나 초기화하지 못했습니다.", *UEnum::GetValueAsString(CurrentItemType));
+        }
+
+        //@Item Description
+        bool bItemDescriptionReset = false;
+        for (auto OverlaySlot : ItemDescriptionOverlay->GetAllChildren())
+        {
+            if (UItemDescriptionSlot* ItemSlotWidget = Cast<UItemDescriptionSlot>(OverlaySlot))
+            {
+                ItemSlotWidget->ResetItemDescriptionSlot();
+                bItemDescriptionReset = true;
+                UE_LOGFMT(LogInventoryUIContent, Log, "Item Description Slot이 초기화되었습니다.");
+                break;
+            }
+        }
+        if (!bItemDescriptionReset)
+        {
+            UE_LOGFMT(LogInventoryUIContent, Warning, "Item Description Slot을 찾을 수 없거나 초기화하지 못했습니다.");
+        }
+    }
+
+    //@Inventory Toolbar
+    bool bToolbarReset = false;
+    for (auto OverlaySlot : ToolBarOverlay->GetAllChildren())
+    {
+        UE_LOGFMT(LogInventoryUIContent, Warning, "{0}", *OverlaySlot->GetName());
+
+        if (UInventoryToolBar* ToolBar = Cast<UInventoryToolBar>(OverlaySlot))
+        {
+            ToolBar->ResetToolBar();
+
+            bToolbarReset = true;
+
+            UE_LOGFMT(LogInventoryUIContent, Log, "Inventory Toolbar가 초기화되었습니다.");
+            break;
+        }
+    }
+    if (!bToolbarReset)
+    {
+        UE_LOGFMT(LogInventoryUIContent, Warning, "Inventory Toolbar를 찾을 수 없거나 초기화하지 못했습니다.");
+    }
+
+    UE_LOGFMT(LogInventoryUIContent, Log, "Inventory UI Content 구성 위젯들의 초기화가 완료되었습니다.");
+}
+
 void UInventoryUIContent::CreateToolBar()
 {
     if (!ensureMsgf(InventoryToolBarClass && ToolBarOverlay, TEXT("InventoryToolBarClass 또는 ToolBarOverlay가 유효하지 않습니다.")))
@@ -256,69 +318,10 @@ void UInventoryUIContent::SetItemTypeVisibility(EItemType ItemType, bool bVisibl
 #pragma endregion
 
 #pragma region Callbacks
-void UInventoryUIContent::InventoryUIVisibilityChangedNotified(bool bIsVisible)
-{
-    UE_LOGFMT(LogInventoryUIContent, Log, "Inventory UI 가시성 변경: {0}", bIsVisible ? TEXT("표시") : TEXT("숨김"));
-
-    if (!bIsVisible)
-    {
-        return;
-    }
-
-    UE_LOGFMT(LogInventoryUIContent, Log, "Inventory UI Content 구성 위젯들을 초기 상태로 리셋합니다.");
-
-    //@Inventory Toolbar
-    bool bToolbarReset = false;
-    for (auto OverlaySlot : ToolBarOverlay->GetAllChildren())
-    {
-        if (UInventoryToolBar* ToolBar = Cast<UInventoryToolBar>(OverlaySlot))
-        {
-            ToolBar->ResetToolBar();
-            bToolbarReset = true;
-            UE_LOGFMT(LogInventoryUIContent, Log, "Inventory Toolbar가 초기화되었습니다.");
-            break;
-        }
-    }
-    if (!bToolbarReset)
-    {
-        UE_LOGFMT(LogInventoryUIContent, Warning, "Inventory Toolbar를 찾을 수 없거나 초기화하지 못했습니다.");
-    }
-
-    //@Item Slots
-    UUserWidget* ItemSlotsUI = GetItemSlotsUI(CurrentItemType);
-    if (UItemSlots* ItemSlotsWidget = Cast<UItemSlots>(ItemSlotsUI))
-    {
-        ItemSlotsWidget->ResetItemSlots();
-        UE_LOGFMT(LogInventoryUIContent, Log, "현재 타입({0})의 Item Slots가 초기화되었습니다.", *UEnum::GetValueAsString(CurrentItemType));
-    }
-    else
-    {
-        UE_LOGFMT(LogInventoryUIContent, Warning, "현재 타입({0})의 Item Slots를 찾을 수 없거나 초기화하지 못했습니다.", *UEnum::GetValueAsString(CurrentItemType));
-    }
-
-    //@Item Description
-    bool bItemDescriptionReset = false;
-    for (auto OverlaySlot : ItemDescriptionOverlay->GetAllChildren())
-    {
-        if (UItemDescriptionSlot* ItemSlotWidget = Cast<UItemDescriptionSlot>(OverlaySlot))
-        {
-            ItemSlotWidget->ResetItemDescriptionSlot();
-            bItemDescriptionReset = true;
-            UE_LOGFMT(LogInventoryUIContent, Log, "Item Description Slot이 초기화되었습니다.");
-            break;
-        }
-    }
-    if (!bItemDescriptionReset)
-    {
-        UE_LOGFMT(LogInventoryUIContent, Warning, "Item Description Slot을 찾을 수 없거나 초기화하지 못했습니다.");
-    }
-
-    UE_LOGFMT(LogInventoryUIContent, Log, "Inventory UI Content 구성 위젯들의 초기화가 완료되었습니다.");
-}
-
 void UInventoryUIContent::OnInventoryToolBarInitFinished()
 {
     bInventoryToolBarReady = true;
+
     CheckInventoryUIContentInitialization();
 }
 
