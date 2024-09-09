@@ -5,7 +5,7 @@
 
 #include "01_Character/PlayerCharacter.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
-#include "04_Component/CombatComponent.h"
+
 
 #include "AbilitySystemBlueprintLibrary.h"
 
@@ -32,9 +32,4 @@ void UAttackGameplayAbility::CauseDamageToTarget(AActor* TargetActor)
 APlayerCharacter* UAttackGameplayAbility::GetPlayerCharacterFromActorInfo() const
 {
 	return Cast<APlayerCharacter>(GetAvatarActorFromActorInfo());
-}
-
-UCombatComponent* UAttackGameplayAbility::GetCombatComponentFromPlayerCharacter() const
-{
-	return GetPlayerCharacterFromActorInfo()->FindComponentByClass<UCombatComponent>();
 }

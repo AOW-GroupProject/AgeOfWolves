@@ -47,3 +47,21 @@ const UInputAction* UInputConfig::FindAbilityInputActionForTag(const FGameplayTa
 
     return nullptr;
 }
+
+const UInputAction* UInputConfig::FindUIInputActionForTag(const FGameplayTag& InputTag, bool bLogNotFound) const
+{
+    for (const auto& InputActionStruct : UIInputActions)
+    {
+        if (InputActionStruct.InputAction && (InputActionStruct.InputTag == InputTag))
+        {
+            return InputActionStruct.InputAction;
+        }
+    }
+
+    if (bLogNotFound)
+    {
+        UE_LOGFMT(LogInputConfig, Error, "Can't find UIInputAction for InputTag {0} on InputConfig {1}.", *InputTag.ToString(), *GetNameSafe(this));
+    }
+
+    return nullptr;
+}

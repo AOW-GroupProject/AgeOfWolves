@@ -34,7 +34,7 @@ void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorI
         || ActivationPolicy == EAbilityActivationPolicy::OnGranted_ConditionalPeriodic)
 	{
 		if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
-		{
+        {
 			if (!Spec.IsActive() && IsValid(Spec.Ability))
 			{
 				ASC->TryActivateAbility(Spec.Handle);

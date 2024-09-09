@@ -11,9 +11,9 @@
 #include "PawnData.generated.h"
 
 /**
- * @¸ñÀû : Pawn »ı¼º¿¡ ÇÊ¿äÇÑ Á¤º¸µéÀ» ÇÑµ¥ ¹­¾î ³õÀº Data Asset
- * @¼³¸í : Pawn°ú °ü·ÃµÈ µ¥ÀÌÅÍµéÀ» ÇÑµ¥ ¹­¾î³õÀ½À¸·Î½á, ¼ö¿ùÇÑ °ü¸®¸¦ À§ÇÔÀÔ´Ï´Ù.
- * @ÂüÁ¶ : -
+ * @ëª©ì  : Pawn ìƒì„±ì— í•„ìš”í•œ ì •ë³´ë“¤ì„ í•œë° ë¬¶ì–´ ë†“ì€ Data Asset
+ * @ì„¤ëª… : Pawnê³¼ ê´€ë ¨ëœ ë°ì´í„°ë“¤ì„ í•œë° ë¬¶ì–´ë†“ìŒìœ¼ë¡œì¨, ìˆ˜ì›”í•œ ê´€ë¦¬ë¥¼ ìœ„í•¨ì…ë‹ˆë‹¤.
+ * @ì°¸ì¡° : -
  */
 UCLASS()
 class AGEOFWOLVES_API UPawnData : public UPrimaryDataAsset
@@ -24,23 +24,23 @@ public:
 	UPawnData(const FObjectInitializer& ObjectInitializer);
 
 public:
-	// @¼³¸í : ÇØ´ç DA¿Í °ü·ÃµÈ PawnÀÇ BP Å¬·¡½ºÀÔ´Ï´Ù. (eg. BP_AkaOni)
+	// @ì„¤ëª… : í•´ë‹¹ DAì™€ ê´€ë ¨ëœ Pawnì˜ BP í´ë˜ìŠ¤ì…ë‹ˆë‹¤. (eg. BP_AkaOni)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pawn Data|Pawn")
 		TSubclassOf<APawn> PawnClass;
 
-	// @¼³¸í : ÇØ´ç Pawn°ú °ü·ÃµÈ Ability Set Á¤º¸¸¦ ´ãÀº Data AssetÀÔ´Ï´Ù.
+	// @ì„¤ëª… : í•´ë‹¹ Pawnê³¼ ê´€ë ¨ëœ Ability Set ì •ë³´ë¥¼ ë‹´ì€ Data Assetì…ë‹ˆë‹¤.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pawn Data| Ability Set")
 		TObjectPtr<UBaseAbilitySet> AbilitySet;
 
 	/*
-	* @¸ñÀû: ÇØ´ç GA¿Í ´Ù¸¥ GA °£ÀÇ °ü°è¼ºÀ» Á¤ÀÇÇÏ´Â FGmaeplayTagContainer ¸ñ·ÏÀ» ´ãÀº Data Asset
-	* @¼³¸í: ÇØ´ç GAÀÇ È°¼ºÈ­ Á¶°ÇÀÇ ±â¹İÀÌ µÇ´Â Gameplay Tag °ü°è¼º ¸ñ·ÏÀÔ´Ï´Ù. ÀÌ¸¦ ÅëÇØ, ÇØ´ç GAÀÇ È°¼ºÈ­ È¤Àº ³í¸®Àû °ü°è°¡ ÀÖ´Â ´Ù¸¥ GAÀÇ Ãë¼Ò/ºí¶ô Á¶°ÇÀ» È®ÀÎÇÕ´Ï´Ù.
-	* @ÂüÁ¶: AbilityTagRelationshipMapping.h
+	* @ëª©ì : í•´ë‹¹ GAì™€ ë‹¤ë¥¸ GA ê°„ì˜ ê´€ê³„ì„±ì„ ì •ì˜í•˜ëŠ” FGmaeplayTagContainer ëª©ë¡ì„ ë‹´ì€ Data Asset
+	* @ì„¤ëª…: í•´ë‹¹ GAì˜ í™œì„±í™” ì¡°ê±´ì˜ ê¸°ë°˜ì´ ë˜ëŠ” Gameplay Tag ê´€ê³„ì„± ëª©ë¡ì…ë‹ˆë‹¤. ì´ë¥¼ í†µí•´, í•´ë‹¹ GAì˜ í™œì„±í™” í˜¹ì€ ë…¼ë¦¬ì  ê´€ê³„ê°€ ìˆëŠ” ë‹¤ë¥¸ GAì˜ ì·¨ì†Œ/ë¸”ë½ ì¡°ê±´ì„ í™•ì¸í•©ë‹ˆë‹¤.
+	* @ì°¸ì¡°: AbilityTagRelationshipMapping.h
 	*/
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pawn Data| Ability Tag Relationship Mapping")
 		TObjectPtr<UAbilityTagRelationshipMapping> TagRelationship;
 
-	// @¼³¸í : ÇØ´ç Pawn°ú °ü·ÃµÈ Enhanced Input ½Ã½ºÅÛ Á¤º¸¸¦ ´ãÀº Data AssetÀÔ´Ï´Ù.
+	// @ì„¤ëª… : í•´ë‹¹ Pawnê³¼ ê´€ë ¨ëœ Enhanced Input ì‹œìŠ¤í…œ ì •ë³´ë¥¼ ë‹´ì€ Data Assetì…ë‹ˆë‹¤.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Pawn Data | Input Config")
 		TObjectPtr<UInputConfig> InputConfig;
 

@@ -22,10 +22,6 @@ ABaseMonster::ABaseMonster()
 	PrimaryActorTick.bCanEverTick = true;
 
 	bAbilitiesInitialized = false;
-
-	
-	
-
 	AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
 	
 

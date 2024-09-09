@@ -1,0 +1,131 @@
+// MenuUIToolBar.h
+
+#pragma once
+
+#include "CoreMinimal.h"
+#include "Blueprint/UserWidget.h"
+#include "MenuUI.h"
+
+#include "MenuUIToolBar.generated.h"
+
+DECLARE_LOG_CATEGORY_EXTERN(LogToolBar, Log, All)
+
+//@초기화 완료 이벤트
+DECLARE_DELEGATE(FToolBarInitFinished)
+
+//@Menu Category 버튼 선택 이벤트
+DECLARE_DELEGATE_OneParam(FMenuCategoryButtonClicked, EMenuCategory)
+
+class UHorizontalBox;
+class UCustomButton;
+
+/**
+ * UMenuUIToolBar
+ *
+ * Menu UI 최상단에 위치하는 툴 바를 정의합니다.
+ */
+UCLASS()
+class AGEOFWOLVES_API UMenuUIToolBar : public UUserWidget
+{
+    GENERATED_BODY()
+
+#pragma region Default Setting
+public:
+    UMenuUIToolBar(const FObjectInitializer& ObjectInitializer);
+
+protected:
+    //~ Begin UUserWidget Interfaces
+    virtual void NativeOnInitialized() override;
+    virtual void NativePreConstruct() override;
+    virtual void NativeConstruct() override;
+    virtual void NativeDestruct() override;
+    //~ End UUserWidget Interface
+
+protected:
+    //@내부 바인딩
+    void InternalBindToButton(UCustomButton* Button, EMenuCategory Category);
+
+public:
+    UFUNCTION()
+        void InitializeToolBar();
+#pragma endregion
+
+#pragma region Widgets
+public:
+    //@강제로 Default Setting으로 리셋합니다.
+    UFUNCTION(BlueprintCallable, Category = "Menu Tool Bar")
+        void ResetToolBar();
+
+protected:
+    //@버튼 생성
+    void CreateButtons();
+    //@카테고리별 버튼 생성 및 추가
+    void CreateAndAddButton(EMenuCategory Category, TSubclassOf<UCustomButton> ButtonClass);
+
+protected:
+    //@Tool Bar의 Horizontal Box
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UHorizontalBox* CategoryButtonsBox;
+
+protected:
+    //@Reset 시 설정할 Default 메뉴 카테고리
+    const EMenuCategory DefaultCategory = EMenuCategory::Inventory;
+    //@현재 선택된 카테고리
+    EMenuCategory CurrentCategory = EMenuCategory::MAX;
+    //@MenuCategory별 버튼들을 담고 있는 맵
+    TMap<EMenuCategory, UCustomButton*> MMenuCategoryButtons;
+    //@Menu Category 별 버튼들의 블루프린트 클래스
+    UPROPERTY(EditDefaultsOnly, Category = "Menu Tool Bar | Buttons")
+        TSubclassOf<UCustomButton> InventoryButtonClass;
+    UPROPERTY(EditDefaultsOnly, Category = "Menu Tool Bar | Buttons")
+        TSubclassOf<UCustomButton> LevelButtonClass;
+    UPROPERTY(EditDefaultsOnly, Category = "Menu Tool Bar | Buttons")
+        TSubclassOf<UCustomButton> MapButtonClass;
+    UPROPERTY(EditDefaultsOnly, Category = "Menu Tool Bar | Buttons")
+        TSubclassOf<UCustomButton> SystemButtonClass;
+#pragma endregion
+
+
+#pragma region Callbacks
+protected:
+    UFUNCTION()
+        void MenuUIVisibilityChangedNotified(bool bIsVisible);
+
+public:
+    //@메뉴 카테고리를 왼쪽으로 이동
+    void MoveCategoryLeft();
+    //@메뉴 카테고리를 오른쪽으로 이동
+    void MoveCategoryRight();
+
+private:
+    //@버튼 클릭 이벤트에 대한 처리
+    UFUNCTION()
+        void HandleButtonClick(EMenuCategory Category);
+    //@버튼 호버 이벤트에 대한 처리
+    UFUNCTION()
+        void HandleButtonHover(EMenuCategory Category);
+    //@버튼 언호버 이벤트에 대한 처리
+    UFUNCTION()
+        void HandleButtonUnhover(EMenuCategory Category);
+    //@버튼 취소 이벤트에 대한 처리
+    void HandleButtonCanceled(EMenuCategory PreviousCategory);
+#pragma endregion
+
+#pragma region Utility
+protected:
+    //@현재 선택된 카테고리의 인덱스를 반환
+    int32 GetCurrentCategoryIndex() const;
+    //@인덱스에 해당하는 메뉴 카테고리를 반환
+    EMenuCategory GetMenuCategoryFromIndex(int32 Index) const;
+#pragma endregion
+
+#pragma region Delegates
+public:
+    //@Tool Bar의 초기화 완료 이벤트
+    FToolBarInitFinished ToolBarInitFinished;
+
+public:
+    //@Menu Category Button의 선택 이벤트
+    FMenuCategoryButtonClicked MenuCategoryButtonClicked;
+#pragma endregion
+};

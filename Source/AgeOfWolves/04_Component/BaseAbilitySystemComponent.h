@@ -10,11 +10,9 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 
-
-
-/**
- *
- */
+/**	
+ *	
+ */	
 UCLASS()
 class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemComponent
 {
@@ -27,7 +25,6 @@ class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemCompone
 #pragma endregion
 
 #pragma region Default Setting
-
 public:
 	UBaseAbilitySystemComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
@@ -71,10 +68,8 @@ protected:
 	*	2. Unblock 수행
 	*	3. Unblock된 GA 중 선택적으로 Passive GA에 대하여 재 활성화 동작 수행
 	*/
-	void OnAbilityEnded(UGameplayAbility* Ability);
-
+	virtual void OnAbilityEnded(UGameplayAbility* Ability);
 #pragma endregion
-
 
 #pragma region Active GA
 public:

@@ -34,7 +34,6 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 		UE_LOGFMT(LogASC, Warning, "InternalTryActivateAbility 에서 유효하지 않은 Ability Spec Handle! ASC: {0}. AvatarActor: {1}", GetPathName(), GetNameSafe(GetAvatarActor_Direct()));
 		return false;
 	}
-
 	// @Ability Spec
 	FGameplayAbilitySpec* Spec = FindAbilitySpecFromHandle(AbilityToActivate);
 	if (!Spec)
@@ -57,12 +56,10 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 		UE_LOGFMT(LogASC, Error, "TryActivateAbility는 유효하지 않은 GA를 활용했습니다.");
 		return false;
 	}
-
 	// @ATMR: Ability Tag간 관계성: "Block", "AR", "AB"
 	UBaseGameplayAbility* InstancedAbility = Cast<UBaseGameplayAbility>(Spec->GetPrimaryInstance());
 	UBaseGameplayAbility* const CanActivateAbilitySource = InstancedAbility ? InstancedAbility : Ability;
 	{
-
 		if (AbilityTagRelationshipMapping.IsValid())
 		{
 			const FGameplayTagContainer* SourceTags = nullptr;
@@ -289,12 +286,13 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 						TagsToReactivate.AddTag(Tag);
 					}
 				}
-				ReactivateUnblockedPassiveAbility(TagsToReactivate);
+				if (!TagsToReactivate.IsEmpty()) ReactivateUnblockedPassiveAbility(TagsToReactivate);
 			}
 		}
 	}
 
 	// @TODO: Ability 활성화 종료 시점에 ASC에서 할 일들...
+
 }
 #pragma endregion
 
@@ -332,7 +330,7 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 		{
 			if (UGameplayAbility* Ability = AbilitySpec->Ability)
 			{
-				TryActivateAbility(AbilitySpecHandle);
+				Super::TryActivateAbility(AbilitySpecHandle);
 			}
 		}
 	}
@@ -418,7 +416,7 @@ void UBaseAbilitySystemComponent::GetAbilityRelationshipActivationTags(const FGa
 {
 	//check(AbilityTagRelationship)
 
-	if (AbilityTagRelationshipMapping->IsValidLowLevel())
+	if (AbilityTagRelationshipMapping)
 	{
 		AbilityTagRelationshipMapping->GetRequiredAndBlockedActivationTags(AbilityTags, OutActivationRequired, OutActivationBlocked);
 	}
