@@ -3,15 +3,12 @@
 
 #include "GameFramework/PlayerController.h"
 
-#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
-#include "04_Component/PlayerAbilitySystemComponent.h"
-
 #include "01_Character/PawnData.h"
-
 #include "01_Character/CharacterBase.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
 
-#include "08_UI/StateBars.h"
+#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+#include "04_Component/PlayerAbilitySystemComponent.h"
 
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
@@ -24,8 +21,6 @@ APlayerStateBase::APlayerStateBase()
 	PawnData = nullptr;
 	AbilitySystemComponent = CreateDefaultSubobject<UPlayerAbilitySystemComponent>(TEXT("Ability System Component"));
 
-	HUDClass = nullptr;
-	HUD = nullptr;
 }
 
 void APlayerStateBase::PostInitializeComponents()
@@ -38,32 +33,13 @@ void APlayerStateBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//if (auto PC = CastChecked<ABasePlayerController>(GetPlayerController()))
-	//{
-	//	PC->OnControllerPossessCharacter.BindUFunction(this, "InitializeGameplayAbilitySystem");
-	//}
 }
 
-void APlayerStateBase::InitializeGameplayAbilitySystem()
+void APlayerStateBase::InitializePlayerState()
 {
 	check(PawnData);
 
-	// @TODO: Inventory 초기화, 시작 아이템
-	
-	// #2. HUD 초기화
-	if (HUDClass->IsValidLowLevel())
-	{
-		if (auto PC = GetPlayerController())
-		{
-			HUD = CreateWidget<UUserWidget>(PC, HUDClass);
-			if (IsValid(HUD))
-			{
-				HUD->AddToViewport();
-			}
-		}
-	}
-
-	// #2. GAS 초기화
+	//@AttributeSet, GE, GA
 	if (const auto& Controller = Cast<AController>(GetOwner()))
 	{
 		if (const auto& Pawn = Controller->GetPawn())
@@ -112,11 +88,23 @@ void APlayerStateBase::InitializeGameplayAbilitySystem()
 					}
 
 					// ASC에 Startup GA, GE, AttributeSet의 등록 완료 이벤트 호출, 임시 주석 처리
-					//OnAttributeSetInitialized.Broadcast();
+					OnAttributeSetInitialized.Broadcast();
 				}
 			}
 		}
 	}
+}
+
+void APlayerStateBase::LoadGameAbilitySystem()
+{
+}
+
+void APlayerStateBase::LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame)
+{
+}
+
+void APlayerStateBase::LoadDefaultAbilitySystemFromAbilityManager(UAbilityManagerSubsystem* AbilityManager)
+{
 }
 
 UAbilitySystemComponent* APlayerStateBase::GetAbilitySystemComponent() const
@@ -138,9 +126,6 @@ void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Dat
 {
 	if (OnAnyAttributeValueChanged.IsBound())
 	{
-		if(Data.Attribute == AttributeSet->GetMoveSpeedAttribute())
-			 UE_LOGFMT(LogPlayerStateBase, Log, "{0}:", FString::SanitizeFloat(Data.NewValue));
-
 		OnAnyAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);	
 	}
 
