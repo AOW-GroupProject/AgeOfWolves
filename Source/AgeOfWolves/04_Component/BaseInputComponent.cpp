@@ -390,10 +390,11 @@ void UBaseInputComponent::Input_LeftMousePressed(const FInputActionValue& Value)
 		{
 			if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(PC->GetPawn()))
 			{
+
+				FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Active.Attack.Normal"));
 				APlayerStateBase* PlayerStateBase = Cast<APlayerStateBase>(PlayerCharacter->GetPlayerState());
-				if (PlayerStateBase && PlayerStateBase->GetAbilitySystemComponent())
+				if(PlayerStateBase && PlayerStateBase->GetAbilitySystemComponent())
 				{
-					FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Active.Attack"));
 					PlayerStateBase->GetAbilitySystemComponent()->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag));
 				}
 			}
