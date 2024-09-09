@@ -20,6 +20,23 @@ public:
 protected:
 	virtual void OnPossess(APawn* InPawn) override;
 
+	virtual void BeginPlay() override;
+
+#pragma region TeamAgent
+
+protected:
+	FGenericTeamId TeamId;
+	virtual ETeamAttitude::Type GetTeamAttitudeTowards(const AActor& Other) const override;
+
+public:
+	UPROPERTY(BlueprintReadWrite)
+	class ABaseMonster* Agent;
+
+	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
+
+
+#pragma endregion
+
 #pragma region BehaviorTree
 
 public:
@@ -54,5 +71,7 @@ public:
 
 
 #pragma endregion
+
+
 	
 };

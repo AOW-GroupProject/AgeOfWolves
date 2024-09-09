@@ -9,6 +9,7 @@
 
 #include "01_Character/CharacterBase.h"
 #include "01_Character/BaseMonster.h"
+#include "01_Character/BaseMonster_Spline.h"
 
 ABaseMonsterAIController::ABaseMonsterAIController()
 {
@@ -25,7 +26,7 @@ ABaseMonsterAIController::ABaseMonsterAIController()
 	GetPerceptionComponent()->ConfigureSense(*SightConfig);
 	GetPerceptionComponent()->OnTargetPerceptionUpdated.AddDynamic(this, &ABaseMonsterAIController::OnTargetDetected);
 	GetPerceptionComponent()->OnTargetPerceptionForgotten.AddDynamic(this, &ABaseMonsterAIController::OnTargetForgotten);
-	SightConfig->DetectionByAffiliation.bDetectNeutrals = true;
+	SightConfig->DetectionByAffiliation.bDetectEnemies = true;
 	
 }
 
@@ -34,10 +35,77 @@ void ABaseMonsterAIController::OnPossess(APawn* InPawn)
 	Super::OnPossess(InPawn);
 	//RunBehaviorTree(BTree);
 	Blackboard->InitializeBlackboard(*BTree->BlackboardAsset);
-	if (Cast<ABaseMonster>(InPawn))
+
+	ABaseMonster* Chr = Cast<ABaseMonster>(InPawn);
+	//이거 BeginPlay에서 GetOwner, GetCharacter, GetPawn등으로 캐스팅 해봤는데 안됨. 빙의가 BeginPlay보다 늦게 되는 것 같음.
+
+	if (Chr)
 	{
-		//Cast<ABaseMonster>(InPawn)->InitializeGameplayAbilitySystem();
+		Agent = Chr;
+		TeamId = FGenericTeamId(Agent->ID);
+
 	}
+
+	
+}
+
+void ABaseMonsterAIController::BeginPlay()
+{
+	Super::BeginPlay();
+	
+	
+}
+
+//인터페이스 오버라이딩 함수
+ETeamAttitude::Type ABaseMonsterAIController::GetTeamAttitudeTowards(const AActor& Other) const
+{
+	const APawn* OtherPawn = Cast<APawn>(&Other);
+	if (OtherPawn == nullptr)
+	{
+		return ETeamAttitude::Neutral;
+	}
+
+	//하나의 액터를 확인할 때 플레이어인지 몬스터인지 모르므로 둘 다 캐스팅해보는 과정. 하나는 플레이어(PlayerTI), 하나는 몬스터(BotTI). 
+	auto PlayerTI = Cast<IGenericTeamAgentInterface>(&Other);
+	class IGenericTeamAgentInterface* BotTI = Cast<IGenericTeamAgentInterface>(OtherPawn->GetController());
+
+	//만약 TeamAgent인터페이스가 구현되어있지 않다면 중립
+	if (BotTI == nullptr && PlayerTI == nullptr)
+	{
+		return ETeamAttitude::Neutral;
+	}
+
+
+	FGenericTeamId OtherActorTeamId = NULL;
+	if (BotTI != nullptr) //만약 이 액터가 몬스터라면 몬스터의 TeamID 저장
+	{
+		OtherActorTeamId = BotTI->GetGenericTeamId();
+	}
+	else if (PlayerTI != nullptr) //만약 이 액터가 플레이어라면 플레이어의 TeamID 저장
+	{
+		OtherActorTeamId = PlayerTI->GetGenericTeamId();
+	}
+
+	//현재 본인 TeamID 호출해서 비교.
+	FGenericTeamId ThisId = GetGenericTeamId();
+	if (OtherActorTeamId == 8) //이 숫자는 8일 필요가 없이 아무 숫자나 가능. 8은 무조건 중립 객체라는 뜻.  
+	{
+		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Neutral"));
+		return ETeamAttitude::Neutral;
+	}
+	else if (OtherActorTeamId == ThisId) //같다면 우호적 반환
+	{
+		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Friendly"));
+		return ETeamAttitude::Friendly;
+	}
+	else
+	{
+		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("Hostile"));
+		return ETeamAttitude::Hostile;
+	}
+	
+
+	return ETeamAttitude::Type();
 }
 
 void ABaseMonsterAIController::OnTargetDetected(AActor* InActor, FAIStimulus Stimulus)

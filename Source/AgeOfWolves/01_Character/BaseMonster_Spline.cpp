@@ -68,6 +68,10 @@ void ABaseMonster_Spline::WhenEndState()
 	case EMonsterState::Patrol:
 		SplineVectorBeforeDetectingPlayer = GetActorLocation();
 		break;
+
+	case EMonsterState::Strafe:
+
+		break;
 	case EMonsterState::Attacking:
 		
 		break;

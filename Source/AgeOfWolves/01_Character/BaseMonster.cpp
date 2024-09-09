@@ -9,6 +9,10 @@
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "02_AbilitySystem/BaseAbilitySet.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+#include "10_Monster/BaseMonsterAIController.h"
+//#include "MotionWarpingComponent.h"
+
+
 
 
 // Sets default values
@@ -26,6 +30,8 @@ ABaseMonster::ABaseMonster()
 	//AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
 
 	AttributeSet = CreateDefaultSubobject<UBaseAttributeSet>(TEXT("AttributSet"));
+
+	//MotionWarpingComp = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComp_Monster"));
 	
 	
 	
@@ -40,6 +46,7 @@ void ABaseMonster::PostInitializeComponents()
 
 	if (UGameplayStatics::GetGameInstance(GetWorld()))
 	{
+
 		UMonsterDataSubsystem* MonsterDataSubSystem = UGameplayStatics::GetGameInstance(GetWorld())->GetSubsystem<UMonsterDataSubsystem>();
 
 		if (MonsterDataSubSystem)
@@ -96,6 +103,10 @@ void ABaseMonster::WhenEndState()
 	case EMonsterState::Patrol:
 
 		break;
+	case EMonsterState::Strafe:
+		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("ClearFocus"));
+		Cast<AAIController>(GetController())->ClearFocus(EAIFocusPriority::Gameplay);
+		break;
 	case EMonsterState::Attacking:
 		CurrentState = EMonsterState::DetectingPlayer;
 		GetMesh()->GetAnimInstance()->Montage_Stop(0.5);
@@ -115,6 +126,14 @@ void ABaseMonster::WhenEndState()
 void ABaseMonster::ControllRotation()
 {
 	
+}
+
+void ABaseMonster::OnWarpMontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+}
+
+void ABaseMonster::SetWarpTarget(FName name, FVector vector)
+{
 }
 
 
