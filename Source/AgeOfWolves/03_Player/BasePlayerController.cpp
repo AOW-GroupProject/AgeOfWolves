@@ -1,23 +1,41 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "BasePlayerController.h"
+#include "Logging/StructuredLog.h"
 
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 
+#include "04_Component/UIComponent.h"
+#include "04_Component/BaseInputComponent.h"
+
+#include "01_Character/CharacterBase.h"
+
+DEFINE_LOG_CATEGORY(LogBasePC)
+// UE_LOGFMT(LogBasePC, Log, "");
+
+#pragma region Default Setting
 ABasePlayerController::ABasePlayerController(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
-{}
+{
+	UIComponent = CreateDefaultSubobject<UUIComponent>(TEXT("UI Component"));
+    InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
+}
 
 void ABasePlayerController::PreInitializeComponents()
 {
 	Super::PreInitializeComponents();
+
 }
 
 void ABasePlayerController::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
+    
+    //@Input Mode
+    //FInputModeGameAndUI DefaultInputMode;
+    //bShowMouseCursor = true;
+    //DefaultInputMode.SetHideCursorDuringCapture(false);
+    //DefaultInputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+    //SetInputMode(DefaultInputMode);
 }
 
 void ABasePlayerController::BeginPlay()
@@ -35,18 +53,22 @@ void ABasePlayerController::OnPossess(APawn* InPawn)
 {
 	Super::OnPossess(InPawn);
 
-	// OnPosess 이벤트 호출
-	//OnControllerPossessCharacter.ExecuteIfBound();
-
-	if (auto PS = GetPlayerState<APlayerStateBase>())
-	{
-		PS->InitializeGameplayAbilitySystem();
-	}
 }
 
 void ABasePlayerController::OnUnPossess()
 {
 	Super::OnUnPossess();
+}
+
+void ABasePlayerController::AcknowledgePossession(APawn* P)
+{
+    Super::AcknowledgePossession(P);
+
+    //@초기화 함수
+    InitializePlayerController();
+
+    //@Delegate : 각 컴포넌트의 초기화 작업을 유도하는 Delegate이므로, Binding 이후에 실행
+    RequestStartInitByPC.Broadcast();
 }
 
 void ABasePlayerController::PreProcessInput(const float DeltaTime, const bool bGamePaused)
@@ -56,13 +78,13 @@ void ABasePlayerController::PreProcessInput(const float DeltaTime, const bool bG
 
 void ABasePlayerController::PostProcessInput(const float DeltaTime, const bool bGamePaused)
 {
-	// @목적 : Player State -> ASC 순서로 가져와서, ASC의 ProcessAbilityInput() 함수를 호출합니다.
-	// @설명 : ASC의 ProcessAbilityInput은 매 프레임마다 호출되며, ASC에 등록되어 활성화 혹은 비활성화를 기다리는 Gameplay Ability들에 대한 작업이 이루업니다.
-	// @참조 : BaseAbilitySystemComponent.cpp
+    //@Player State
 	if (PlayerState->IsA<APlayerStateBase>())
 	{
+        //@ASC
 		if (UAbilitySystemComponent* ASC = Cast<APlayerStateBase>(PlayerState)->GetAbilitySystemComponent())
 		{
+            //@Actove GA
 			if (const auto& BaseASC = CastChecked<UBaseAbilitySystemComponent>(ASC))
 			{
 				BaseASC->ProcessAbilityInput(DeltaTime, bGamePaused);
@@ -72,3 +94,83 @@ void ABasePlayerController::PostProcessInput(const float DeltaTime, const bool b
 
 	Super::PostProcessInput(DeltaTime, bGamePaused);
 }
+
+void ABasePlayerController::InitializePlayerController()
+{
+    //@TODO: 초기 입력 모드 설정은 테스트입니다. 이후 수정 작업 진행 아래에서...
+
+    //@Input Mode 설정
+    SetupInputModeOnBeginPlay();
+
+    //@ViewportClient 설정
+    SetupViewportClientOnBeginPlay();
+
+    //@Input Comp
+    if (UBaseInputComponent* BaseInputComp = Cast<UBaseInputComponent>(InputComponent))
+    {
+        //@초기화 작업 동기화
+        RequestStartInitByPC.AddUFunction(BaseInputComp, "InitializeInputComponent");
+    }
+
+    //@UI Comp
+    if (UIComponent)
+    {
+        //@초기화 작업 동기화
+        RequestStartInitByPC.AddUFunction(UIComponent, "InitializeUIComponent");
+    }
+
+    //@PS
+    if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
+    {
+        RequestStartInitByPC.AddUFunction(PS, "InitializePlayerState");
+    }
+}
+#pragma endregion
+
+#pragma region Properties
+void ABasePlayerController::SetupInputModeOnBeginPlay()
+{
+    //@FInputModeGameAndUI
+    FInputModeGameAndUI InputMode;
+    bShowMouseCursor = false;
+    InputMode.SetHideCursorDuringCapture(false);
+    InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
+
+    SetInputMode(InputMode);
+}
+
+void ABasePlayerController::SetupViewportClientOnBeginPlay()
+{
+    //@ViewportClient
+    UGameViewportClient* ViewportClient = GetWorld()->GetGameViewport();
+    if(!ViewportClient)
+    {
+        return;
+    }
+
+    ViewportClient->SetMouseLockMode(EMouseLockMode::LockAlways);
+    ViewportClient->SetMouseCaptureMode(EMouseCaptureMode::CapturePermanently);
+}
+#pragma endregion
+
+#pragma region Utility
+UUIComponent* ABasePlayerController::GetUIComponent() const
+{
+    if (!UIComponent)
+    {
+        return nullptr;
+    }
+
+    return UIComponent;
+}
+
+UBaseInputComponent* ABasePlayerController::GetBaseInputComponent() const
+{
+    if (auto BaseInputComp = Cast<UBaseInputComponent>(InputComponent))
+    {
+        return BaseInputComp;
+    }
+
+    return nullptr;
+}
+#pragma endregion

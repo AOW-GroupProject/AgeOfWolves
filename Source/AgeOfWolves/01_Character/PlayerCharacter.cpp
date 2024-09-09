@@ -5,8 +5,8 @@
 #include "PlayerCharacter.h"
 #include "Logging/StructuredLog.h"
 
-#include "04_Component/BaseInputComponent.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
+#include "04_Component/InventoryComponent.h"
 #include "04_Component/LockOnComponent.h" 
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/CapsuleComponent.h"
@@ -16,36 +16,36 @@
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "05_Animation/BaseAnimInstance.h"
+#include "00_GameInstance/AOWGameInstance.h"
 
 #include "Kismet/KismetMathLibrary.h"
-
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogPlayer)
-// UE_LOGFMT(LogPlayer, LoG, "");
+// UE_LOGFMT(LogPlayer, Log, "");
 
 APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
 	)
 {
+
 	PrimaryActorTick.bCanEverTick = true;
 	// @Input Component 
 	{
-		InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
+		InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
+		LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOn Component"));
 	}
-
 	// @Capsule
 	{
 		GetCapsuleComponent()->InitCapsuleSize(42.f, 96.0f);
 		GetMesh()->SetCollisionProfileName("PlayerMesh");
 	}
-
 	// @Rotation
 	{
 		bUseControllerRotationPitch = false;
 		bUseControllerRotationYaw = false;
 		bUseControllerRotationRoll = false;
 	}
-
 	// @Character Movement
 	{
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
@@ -61,7 +61,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
 		GetCharacterMovement()->GroundFriction = 8.0f;
 	}
-
 	// @Camera
 	{
 		SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
@@ -77,7 +76,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 		FollowCamera->bUsePawnControlRotation = false;
 	}
-
 	// @Anim Instance
 	{
 		static ConstructorHelpers::FClassFinder<UAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/ABP_AkaOni_Base'"));
@@ -85,20 +83,22 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 			GetMesh()->SetAnimInstanceClass(animInstance.Class);
 	}
 
-	// Create Combat Component on Player Character 
-	LockOnComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOn Component"));
-
 }
 
 void APlayerCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
+	if (InventoryComponent)
+	{
+		RequestStartInitByPlayerCharacter.AddUFunction(InventoryComponent, "InitializeInventory");
+	}
 }
 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
+
 }
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -110,9 +110,8 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-	// AdjustCameraTransform(DeltaSeconds);
-}
 
+}
 
 void APlayerCharacter::PossessedBy(AController* NewController)
 {
@@ -120,26 +119,14 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 
 	Super::PossessedBy(NewController);
 
-	// @설명 : Player State로부터 ASC에 대한 참조를 가져옵니다.
-	if (const auto& PlayerController = CastChecked<ABasePlayerController>(NewController))
-	{
-		if (const auto& PS = PlayerController->GetPlayerState<APlayerStateBase>())
-		{
-			if (IsValid(PS->GetAbilitySystemComponent()) && PS->GetAbilitySystemComponent()->IsA<UBaseAbilitySystemComponent>())
-			{
-				AbilitySystemComponent = MakeWeakObjectPtr<UBaseAbilitySystemComponent>(Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()));
-			}
-		}
-	}
+	//@초기화 알림 이벤트
+	RequestStartInitByPlayerCharacter.Broadcast(NewController);
 
 }
 
 void APlayerCharacter::PawnClientRestart()
 {
-
 	Super::PawnClientRestart();
-
-	// @TODO : Event Client Restart
 
 }
 

@@ -15,7 +15,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCharacter, Log, All)
 class UPawnData;
 class UBaseAttributeSet;
 class UBaseAbilitySystemComponent;
-class UInventoryComponent;
 
 UCLASS()
 class AGEOFWOLVES_API ACharacterBase : public ACharacter, public IAbilitySystemInterface
@@ -35,9 +34,6 @@ protected:
 	//~APawn interface
 	virtual void PossessedBy(AController* NewController) override;
 	//~End Of APawn interface
-
-protected:
-	UInventoryComponent* InventoryComponent;
 #pragma endregion
 
 #pragma region Gameplay Ability System
@@ -47,7 +43,7 @@ protected:
 	* @설명 : 이후 ASC관련 내용을 정의할 것을 대비하여, 일단 약한 참조만 들고 있습니다.
 	* @참조 : -
 	*/
-	TWeakObjectPtr<UBaseAbilitySystemComponent> AbilitySystemComponent;
+	TWeakObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
 public:
 	/*
@@ -56,6 +52,7 @@ public:
 	* @참조 : - 
 	*/
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	void SetAbilitySystemComponent(UAbilitySystemComponent* ASC);
 #pragma endregion
 
 };
