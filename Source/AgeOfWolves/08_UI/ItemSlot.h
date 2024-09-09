@@ -14,7 +14,7 @@ DECLARE_DELEGATE(FItemSlotInitFinished);
 class UOverlay;
 class UImage;
 class UVerticalBox;
-class UEditableText;
+class UEditableTextBox;
 
 /**
  * @UItemSlot
@@ -67,7 +67,7 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Item Slot", meta = (BindWidget))
 		UOverlay* SlotItemNumOverlay;
 	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
-		UEditableText* SlotItemNum;
+		UEditableTextBox* SlotItemNum;
 protected:
 	bool bStackable = false;
 	bool bRemovable = false;
