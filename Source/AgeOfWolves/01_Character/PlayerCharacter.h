@@ -110,6 +110,8 @@ protected:
 
 	//virtual UBaseMonsterASC* GetMonsterASC() override;
 
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+	void UpdateFacingTarget();
 
 #pragma endregion
 

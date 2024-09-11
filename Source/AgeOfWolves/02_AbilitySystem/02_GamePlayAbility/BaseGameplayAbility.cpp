@@ -176,6 +176,7 @@ bool UBaseGameplayAbility::CanActivateAbility(
     { 
         UE_LOGFMT(LogGA, Error, "Ability could not be activated due to Blocking Tags or Missing Required Tags: {0}", GetName());
         return false;
+        
     }
 
     // @AbilitySpecHandle
@@ -249,8 +250,8 @@ bool UBaseGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySyste
             static FGameplayTagContainer AbilitySystemComponentTags;
 
             AbilitySystemComponentTags.Reset();
-            BaseASC->GetActivatingAbilityTags(AbilitySystemComponentTags);
-
+            BaseASC->GetOwnedGameplayTags(AbilitySystemComponentTags);
+           // BaseASC->GetActivatingAbilityTags(AbilitySystemComponentTags);
             if (!AbilitySystemComponentTags.HasAll(ActivationRequiredAbilityTags))
             {
 

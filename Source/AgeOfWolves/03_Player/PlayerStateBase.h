@@ -30,7 +30,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGamep
 class ABasePlayerController;
 class UPawnData;
 class UBaseAttributeSet;
-class UBaseAbilitySystemComponent; 
+class UPlayerAbilitySystemComponent; 
 class UUserWidget;
 class UAOWSaveGame;
 class UAbilityManagerSubsystem;
@@ -78,7 +78,7 @@ protected:
 	FBaseAbilitySet_GrantedHandles* SetGrantedHandles;
 
 	UPROPERTY()
-		UBaseAbilitySystemComponent* AbilitySystemComponent;
+		UPlayerAbilitySystemComponent* AbilitySystemComponent;
 	UPROPERTY()
 		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
 
