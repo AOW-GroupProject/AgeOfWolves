@@ -8,6 +8,14 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInteractableItemSlot, Log, All)
 
+#pragma region Forward Declaration
+class UDropDownMenu;
+#pragma endregion
+
+#pragma region Delegates
+//@초기화 요청 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FRequestStartInitByInteractableItemSlot);
+
 //@아이템 슬롯 버튼 호버 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotButtonHovered, const FGuid&)
 //@아이템 슬롯 버튼 언호버 이벤트
@@ -15,9 +23,9 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotButtonUnhovered, const FGuid&)
 //@아이템 슬롯 버튼 클릭 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotButtonClicked, const FGuid&)
 
-
 //@선택된 아이템 슬롯 버튼 선택 취소 이벤트
 DECLARE_MULTICAST_DELEGATE(FNotifyItemSlotButtonCanceled);
+#pragma endregion
 
 /**
  * @UInteractableItemSlot
@@ -47,8 +55,10 @@ protected:
 protected:
     //@내부 바인딩
     void InternalBindToItemSlotButton(UCustomButton* InItemSlotButton);
+    void InternalBindToDropDownMenu(UDropDownMenu* DropDownMenu);
 
 public:
+    //@초기화 함수
     virtual void InitializeItemSlot() override;
 #pragma endregion
 
@@ -72,9 +82,18 @@ protected:
     //@Slot Overlay에 추가할 사용자 상호작용 가능한 CustomButton
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Button", meta = (AllowPrivateAccess = "true"))
         TSubclassOf<UCustomButton> ItemSlotButtonClass;
+
+protected:
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Drop Down Menu", meta = (AllowPrivateAccess = "true"))
+        TSubclassOf<UDropDownMenu> DropDownMenuClass;
+
 #pragma endregion
 
 #pragma region Delegates
+public:
+    //@초기화 요청 이벤트
+    FRequestStartInitByInteractableItemSlot RequestStartInitByInteractableItemSlot;
+
 public:
     //@아이템 슬롯 버튼 호버 이벤트
     FItemSlotButtonHovered ItemSlotButtonHovered;
@@ -90,15 +109,16 @@ public:
 
 #pragma region Callbacks
 protected:
+    UFUNCTION()
+        void OnDropDownMenuInitFinished();
+
+protected:
     //@Button Hovered 이벤트에 등록되는 콜백
     UFUNCTION()
         void OnItemSlotButtonHovered();
     //@Button Unhovered 이벤트에 등록되는 콜백
     UFUNCTION()
         void OnItemSlotButtonUnhovered();
-    //@Button Pressed 이벤트에 등록되는 콜백
-    UFUNCTION()
-        void OnItemSlotButtonPressed();
     //@Button Clicked 이벤트에 등록되는 콜백
     UFUNCTION()
         void OnItemSlotButtonClicked();
@@ -106,7 +126,7 @@ protected:
 protected:
     //@Button의 선택 취소 이벤트 구독
     UFUNCTION()
-        void OnItemSlotButtonCanceled(const FGuid& ItemID);
+        void ItemSlotButtonCanceledNotified(const FGuid& ItemID);
 #pragma endregion
 
 #pragma region Utility

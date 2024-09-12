@@ -176,6 +176,8 @@ void UItemSlots::ResetItemSlots()
         return;
     }
 
+    //@TODO: First Item Slot을 Hover 상태로 강제 상태 변화...
+
     UE_LOGFMT(LogItemSlots, Log, "{0}의 Item Slot 목록이 초기 상태로 리셋되었습니다.",
         *UEnum::GetValueAsString(ItemType));
 
@@ -219,7 +221,7 @@ void UItemSlots::CreateItemSlots()
                 if (ItemSlot)
                 {
                     RequestStartInitByItemSlots.AddUFunction(ItemSlot, "InitializeItemSlot");
-                    CancelItemSlotButton.AddUFunction(ItemSlot, "OnItemSlotButtonCanceled");
+                    CancelItemSlotButton.AddUFunction(ItemSlot, "ItemSlotButtonCanceledNotified");
 
                     if (CurrentSlot == TotalSlots - 1)
                     {

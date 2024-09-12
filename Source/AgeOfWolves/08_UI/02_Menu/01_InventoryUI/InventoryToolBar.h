@@ -8,14 +8,17 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInventoryToolBar, Log, All)
 
+#pragma region Delegates
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FInventoryToolBarInitFinished);
-
 //@Item Type 버튼 선택 이벤트
 DECLARE_DELEGATE_OneParam(FInventoryToolBarButtonClicked, EItemType);
+#pragma endregion
 
+#pragma region Forward Declaration
 class UHorizontalBox;
 class UCustomButton;
+#pragma endregion
 
 UCLASS()
 class AGEOFWOLVES_API UInventoryToolBar : public UUserWidget

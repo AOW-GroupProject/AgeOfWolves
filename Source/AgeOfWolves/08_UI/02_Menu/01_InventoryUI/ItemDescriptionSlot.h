@@ -10,15 +10,18 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogItemDescription, Log, All)
 
+#pragma region Forward Declaration
 class UInventoryUIContent;
 class UItemSlots;
-
 class UVerticalBox;
 class UEditableTextBox;
 class UMultiLineEditableTextBox;
+#pragma endregion
 
+#pragma region Delegates
 //@초기화 완료 이벤트(초기화 작업 비동기화)
 DECLARE_DELEGATE(FItemDescriptionSlotInitFinished);
+#pragma endregion
 
 /**
  * @UItemDescriptionSlot

@@ -7,6 +7,7 @@
 #include "Components/Image.h"
 
 #include "08_UI/CustomButton.h"
+#include "08_UI/DropDownMenu.h"
 
 DEFINE_LOG_CATEGORY(LogInteractableItemSlot)
 
@@ -68,6 +69,16 @@ void UInteractableItemSlot::InternalBindToItemSlotButton(UCustomButton* InItemSl
     UE_LOGFMT(LogInteractableItemSlot, Verbose, "CustomButton 이벤트가 성공적으로 바인딩되었습니다.");
 }
 
+void UInteractableItemSlot::InternalBindToDropDownMenu(UDropDownMenu* DropDownMenu)
+{
+    if (!DropDownMenu)
+    {
+        return;
+    }
+
+    DropDownMenu->DropDownMenuInitFinished.BindUFunction(this, "OnDropDownMenuInitFinished");
+}
+
 void UInteractableItemSlot::InitializeItemSlot()
 {
     //@CustomButton
@@ -75,8 +86,8 @@ void UInteractableItemSlot::InitializeItemSlot()
     //@PopUp UI
     CreateDropDownMenu();
 
-    //Super, 초기화 요청 완료 이벤트 호출
-    Super::InitializeItemSlot();
+    //@초기화 요청 이벤트
+    RequestStartInitByInteractableItemSlot.Broadcast();
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "상호작용 가능한 아이템 슬롯이 초기화되었습니다.");
 }
@@ -126,6 +137,8 @@ void UInteractableItemSlot::CreateButton()
         UE_LOGFMT(LogInteractableItemSlot, Error, "CustomButton을 SlotOverlay에 추가하지 못했습니다.");
         return;
     }
+
+    //@Overlay Slot
     OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
     OverlaySlot->SetVerticalAlignment(VAlign_Fill);
 
@@ -150,8 +163,46 @@ void UInteractableItemSlot::CreateButton()
 
 void UInteractableItemSlot::CreateDropDownMenu()
 {
-    //@TODO: Drop Down Menu의 초기화 작업 수행...
+    //@Drop Down Menu 블루프린트 클래스
+    if (!DropDownMenuClass)
+    {
+        UE_LOGFMT(LogInteractableItemSlot, Error, "DropDownMenuClass가 설정되지 않았습니다. 에디터에서 DropDownMenuClass를 설정해주세요.");
+        return;
+    }
+    //@Drop Down Menu
+    UDropDownMenu* DropDownMenu = CreateWidget<UDropDownMenu>(this, DropDownMenuClass);
+    if (!DropDownMenu)
+    {
+        UE_LOGFMT(LogInteractableItemSlot, Error, "UDropDownMenu 위젯을 생성하지 못했습니다. DropDownMenuClass: {0}", *DropDownMenuClass->GetName());
+        return;
+    }
 
+    //@비동기 초기화
+    RequestStartInitByInteractableItemSlot.AddUFunction(DropDownMenu, "InitializeDropDownMenu");
+
+    //@내부 바인딩
+    InternalBindToDropDownMenu(DropDownMenu);
+
+    //@Add Child To Overlay
+    UOverlaySlot* OverlaySlot = SlotOverlay->AddChildToOverlay(DropDownMenu);
+    if (!OverlaySlot)
+    {
+        UE_LOGFMT(LogInteractableItemSlot, Error, "DropDownMenu를 SlotOverlay에 추가하지 못했습니다.");
+        return;
+    }
+
+    //@Alignment
+    OverlaySlot->SetHorizontalAlignment(HAlign_Left);
+    OverlaySlot->SetVerticalAlignment(VAlign_Top);
+
+    //@Padding
+    float SlotHeight = GetDesiredSize().Y;
+    OverlaySlot->SetPadding(FMargin(0, SlotHeight, 0, 0));
+
+    // DropDownMenu를 초기에는 숨김 상태로 설정
+    DropDownMenu->SetVisibility(ESlateVisibility::Collapsed);
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "DropDownMenu가 생성되고 SlotOverlay에 추가되었습니다.");
 }
 
 void UInteractableItemSlot::ActivateItemSlotInteraction()
@@ -184,6 +235,22 @@ void UInteractableItemSlot::DeactivateItemSlotInteraction()
 #pragma endregion
 
 #pragma region Callbacks
+void UInteractableItemSlot::OnDropDownMenuInitFinished()
+{
+    //@Drop Down Menu 리셋
+    for (auto OverlaySlot : SlotOverlay->GetAllChildren())
+    {
+        if (auto Widget = Cast<UDropDownMenu>(OverlaySlot))
+        {
+            Widget->ResetDropDownMenu();
+            break;
+        }
+    }
+
+    //@초기화 완료 이벤트
+    ItemSlotInitFinished.ExecuteIfBound();
+}
+
 void UInteractableItemSlot::OnItemSlotButtonHovered()
 {
     //@Item Slot Button 호버 이벤트
@@ -200,21 +267,27 @@ void UInteractableItemSlot::OnItemSlotButtonUnhovered()
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에서 마우스가 벗어났습니다. ID: {0}", UniqueItemID.ToString());
 }
 
-void UInteractableItemSlot::OnItemSlotButtonPressed()
-{
-    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 눌렸습니다. ID: {0}", UniqueItemID.ToString());
-
-}
-
 void UInteractableItemSlot::OnItemSlotButtonClicked()
 {
     //@Item Slot Button 선택 이벤트
     ItemSlotButtonClicked.Broadcast(UniqueItemID);
 
+    //@TODO: Drop Down Menu로 Focusing 변경
+
+    //@Drop Down Menu 가시성 활성화
+    for (auto OverlaySlot : SlotOverlay->GetAllChildren())
+    {
+        if (auto Widget = Cast<UDropDownMenu>(OverlaySlot))
+        {
+            
+            break;
+        }
+    }
+
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 클릭되었습니다. ID: {0}", UniqueItemID.ToString());
 }
 
-void UInteractableItemSlot::OnItemSlotButtonCanceled(const FGuid& ItemID)
+void UInteractableItemSlot::ItemSlotButtonCanceledNotified(const FGuid& ItemID)
 {
     if (ItemID != UniqueItemID)
     {

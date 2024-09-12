@@ -8,7 +8,15 @@
 DECLARE_LOG_CATEGORY_EXTERN(LogDropDownMenu, Log, All)
 
 #pragma region Forward Declaration
-class UCustomButton;
+class UVerticalBox;
+class UDropDownMenuOption;
+#pragma endregion
+
+#pragma region Delegates
+//@초기화 요청 이벤트
+DECLARE_MULTICAST_DELEGATE(FRequestStartInitByDropDownMenu)
+//@초기화 완료 이벤트(초기화 작업 비동기화)
+DECLARE_DELEGATE(FDropDownMenuInitFinished);
 #pragma endregion
 
 /**
@@ -19,6 +27,9 @@ class UCustomButton;
 UCLASS()
 class AGEOFWOLVES_API UDropDownMenu : public UUserWidget
 {
+    //@friend class
+    friend class UInteractableItemSlot;
+
 	GENERATED_BODY()
 	
 #pragma region Default Setting
@@ -38,11 +49,50 @@ protected:
 
 protected:
     // 내부 바인딩 함수
-    void InternalBindToItemSlotButton(UCustomButton* InItemSlotButton);
+    void InternalBindToOptions(UDropDownMenuOption* Option);
 
 public:
     //@초기화
     UFUNCTION()
-        void InitializeDropDownMenu();
+        virtual void InitializeDropDownMenu();
 #pragma endregion
+
+#pragma region Subwidgets
+protected:
+    //@Reset
+    void ResetDropDownMenu();
+    //@Drop Down Menu Option 생성
+    void CreateDropDownMenuOptions();
+
+protected:
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UVerticalBox* DropDownMenuOptionBox;
+
+protected:
+    UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu | Options")
+        TArray<FText> OptionNames;
+    UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu | Options")
+        TSubclassOf<UDropDownMenuOption> DropDownMenuOptionClass;
+#pragma endregion
+
+#pragma region Delegates
+public:
+    //@초기화 요청 이벤트
+    FRequestStartInitByDropDownMenu RequestStartInitByDropDownMenu;
+    //@초기화 완료 이벤트
+    FDropDownMenuInitFinished DropDownMenuInitFinished;
+#pragma endregion
+
+#pragma region Callbacks;
+protected:
+    UFUNCTION()
+        void OnDropDownMenuOptionInitFinished();
+
+protected:
+    //@Option 선택 이벤트에 등록되는 콜백
+    UFUNCTION()
+        void OnDropDownMenuOptionSelected(const FText& SelectedOptionText);
+
+#pragma endregion
+
 };

@@ -192,7 +192,6 @@ void UInventoryToolBar::CreateAndAddButton(EItemType ButtonType, float Scale)
 
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 생성되고 추가되었습니다. Scale: {1}", UEnum::GetValueAsString(ButtonType), Scale);
 }
-
 #pragma endregion
 
 #pragma region Callbacks
