@@ -38,6 +38,20 @@ public:
 
     TMap<EMonsterName, FSingleMonsterData> MonsterData;
 
+	/*
+	* @목적 : 상대가 적인지 아군인지 판단해주는 함수입니다.
+	* @설명 : FSingleMonsterData의 EnemyNameList와 FriendNameList를 사용합니다.
+	* @참조 : -
+	*/
+	void DecideEnemyOrElse(EMonsterName OwnerName, EMonsterName TargetName, bool &IsEnemy, bool &IsFriend);
+
+	UFUNCTION(BlueprintCallable, Category = "Data")
+	void AddEnemyName(EMonsterName OwnerName, EMonsterName EnemyName);
+
+	UFUNCTION(BlueprintCallable, Category = "Data")
+	void AddFriendName(EMonsterName OwnerName, EMonsterName FriendName);
+
+
 #pragma endregion
 
 #pragma region Ability

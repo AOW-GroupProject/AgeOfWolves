@@ -5,7 +5,6 @@
 #include "CoreMinimal.h"
 #include "GameFramework/Character.h"
 #include "AbilitySystemInterface.h"
-#include "GenericTeamAgentInterface.h"
 
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 
@@ -51,7 +50,7 @@ enum class EMonsterState : uint8
 
 
 UCLASS()
-class AGEOFWOLVES_API ABaseMonster : public ACharacter, public IAbilitySystemInterface, public IGenericTeamAgentInterface
+class AGEOFWOLVES_API ABaseMonster : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
@@ -73,21 +72,6 @@ public:
 
 	virtual void PossessedBy(AController* NewController) override;
 
-#pragma region TeamAgentInterface
-
-public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-	int32 ID = 1;
-
-	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
-
-protected:
-	FGenericTeamId TeamId;
-
-	//virtual UBaseMonsterASC* GetMonsterASC() override;
-
-
-#pragma endregion
 
 #pragma region State
 
