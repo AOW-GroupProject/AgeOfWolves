@@ -195,12 +195,8 @@ void UInteractableItemSlot::CreateDropDownMenu()
     OverlaySlot->SetHorizontalAlignment(HAlign_Left);
     OverlaySlot->SetVerticalAlignment(VAlign_Top);
 
-    //@Padding
-    float SlotHeight = GetDesiredSize().Y;
-    OverlaySlot->SetPadding(FMargin(0, SlotHeight, 0, 0));
-
     // DropDownMenu를 초기에는 숨김 상태로 설정
-    DropDownMenu->SetVisibility(ESlateVisibility::Collapsed);
+    DropDownMenu->CloseDropDownMenu();
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "DropDownMenu가 생성되고 SlotOverlay에 추가되었습니다.");
 }
@@ -277,9 +273,9 @@ void UInteractableItemSlot::OnItemSlotButtonClicked()
     //@Drop Down Menu 가시성 활성화
     for (auto OverlaySlot : SlotOverlay->GetAllChildren())
     {
-        if (auto Widget = Cast<UDropDownMenu>(OverlaySlot))
+        if (auto DropDownMenu = Cast<UDropDownMenu>(OverlaySlot))
         {
-            
+            DropDownMenu->OpenDropDownMenu();
             break;
         }
     }
@@ -296,6 +292,16 @@ void UInteractableItemSlot::ItemSlotButtonCanceledNotified(const FGuid& ItemID)
 
     //@Item Slot Button 선택 취소 이벤트
     NotifyItemSlotButtonCanceled.Broadcast();
+
+    //@Drop Down Menu 가시성 비 활성화
+    for (auto OverlaySlot : SlotOverlay->GetAllChildren())
+    {
+        if (auto DropDownMenu = Cast<UDropDownMenu>(OverlaySlot))
+        {
+            DropDownMenu->CloseDropDownMenu();
+            break;
+        }
+    }
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼 선택이 취소되었습니다. ID: {0}", ItemID.ToString());
 }
