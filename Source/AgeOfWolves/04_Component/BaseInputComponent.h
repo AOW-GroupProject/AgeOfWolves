@@ -129,8 +129,7 @@ protected:
 	void Input_Look(const FInputActionValue& Value);
 	// @목적 : 사용자의 LockOn IA에 대응되는 Lock On 기능을 정의하는 콜백 함수 
 	void Input_LockOn(const FInputActionValue& Value);
-	// @목적 : 사용자의 LeftMouse IA에 대응되는 Left Mouse 입력 처리를 담당하는 콜백 함수 
-	void Input_LeftMousePressed(const FInputActionValue& Value);
+
 protected:
 	// @목적 : 사용자의 Ability IA관련 키 눌림에 대응되는 콜백 함수
 	void OnAbilityInputTagTriggered(FGameplayTag InputTag);
@@ -147,6 +146,7 @@ protected:
 private:
 	FVector2D InputVector;
 public:
+	UFUNCTION(BlueprintCallable	)
 	FORCEINLINE FVector2D GetInputVector() { return InputVector; }
 #pragma endregion
 

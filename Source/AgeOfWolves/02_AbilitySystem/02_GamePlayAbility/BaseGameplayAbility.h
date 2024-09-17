@@ -88,7 +88,8 @@ protected:
 		const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
 		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, 
 		OUT FGameplayTagContainer* ARTags= nullptr,
-		OUT FGameplayTagContainer* ABTags = nullptr) const;
+		OUT FGameplayTagContainer* ABTags = nullptr
+		) const;
 	/*
 	* @목적: 해당 GA의 관계성을 통해 활성화 조건 만족 여부 확인
 	* @설명
@@ -116,6 +117,7 @@ protected:
 public:
 	FORCEINLINE EAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
 	FORCEINLINE TSubclassOf<UGameplayEffect> GetApplyGameplayEffectClass() { return ApplyGameplayEffectClass; }
+	FORCEINLINE FGameplayTagContainer GetRequiredTags() const { return ActivationRequiredTags;  }
 
 #pragma endregion
 

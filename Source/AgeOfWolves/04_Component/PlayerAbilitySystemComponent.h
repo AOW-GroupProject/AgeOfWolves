@@ -36,9 +36,11 @@ protected:
 private:
 
 	bool bCanSaveBlockedAbility = false;
+	bool bCanSkipMontage = false;
 
 	// @목적 : 선입력 된 어빌리티를 저장하는 변수
 	const UGameplayAbility* SavedAbility = nullptr;
 	// @목적 : 선입력 된 어빌리티를 저장하는 함수
 	void SaveBlockedAbility(const UGameplayAbility* BlockedAbility, const FGameplayTagContainer& TagContainer);
+	bool DoesAvatarActorHasActivationRequiredTagsForAbility(const UGameplayAbility* BlockedAbility);
 };

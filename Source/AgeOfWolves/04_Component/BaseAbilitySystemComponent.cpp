@@ -74,6 +74,8 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 			}
 		}
 	}
+
+	/*
 	 // @Instancing Policy
 	if (Ability->GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerActor)
 	{
@@ -92,8 +94,11 @@ bool UBaseAbilitySystemComponent::TryActivateAbility(FGameplayAbilitySpecHandle 
 			}
 		}
 	}
+	
+	*/ 
+
 	 // @Instancing Policy
-	if (Ability->GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerActor)
+     	if (Ability->GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerActor)
 	{
 		if (Spec->IsActive())
 		{
@@ -286,7 +291,7 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 						TagsToReactivate.AddTag(Tag);
 					}
 				}
-				if (!TagsToReactivate.IsEmpty()) ReactivateUnblockedPassiveAbility(TagsToReactivate);
+				// if (!TagsToReactivate.IsEmpty()) ReactivateUnblockedPassiveAbility(TagsToReactivate);
 			}
 		}
 	}
@@ -330,7 +335,8 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 		{
 			if (UGameplayAbility* Ability = AbilitySpec->Ability)
 			{
-				Super::TryActivateAbility(AbilitySpecHandle);
+				// Super::TryActivateAbility(AbilitySpecHandle);
+				TryActivateAbility(AbilitySpecHandle);
 			}
 		}
 	}
