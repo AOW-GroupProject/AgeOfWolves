@@ -93,15 +93,36 @@ void UDropDownMenuOption::CreateButton()
     //@내부 바인딩
     InternalBindToOptionButton(OptionButton);
 
-    //@Add Child To Overlay
-    UOverlaySlot* OverlaySlot = OptionOverlay->AddChildToOverlay(OptionButton);
-    if (!OverlaySlot)
+    //@Add CustomButton To Overlay
+    UOverlaySlot* ButtonOverlaySlot = OptionOverlay->AddChildToOverlay(OptionButton);
+    if (!ButtonOverlaySlot)
     {
         UE_LOGFMT(LogDropDownMenuOption, Error, "CustomButton을 Overlay에 추가하지 못했습니다.");
         return;
     }
-    OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
-    OverlaySlot->SetVerticalAlignment(VAlign_Fill);
+
+    //@Alignment
+    ButtonOverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+    ButtonOverlaySlot->SetVerticalAlignment(VAlign_Fill);
+
+    //@Add EditableTextBox To Overlay
+    if (!DropDownMenuOptionText)
+    {
+        UE_LOGFMT(LogDropDownMenuOption, Warning, "DropDownMenuOptionText가 null입니다. EditableTextBox를 추가하지 않았습니다.");
+        return;
+    }
+    
+    //@Add Child To Overlay
+    UOverlaySlot* TextOverlaySlot = OptionOverlay->AddChildToOverlay(DropDownMenuOptionText);
+    if (!TextOverlaySlot)
+    {
+        UE_LOGFMT(LogDropDownMenuOption, Error, "EditableTextBox를 Overlay에 추가하지 못했습니다.");
+        return;
+    }
+
+    //@Alignment
+    TextOverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+    TextOverlaySlot->SetVerticalAlignment(VAlign_Center);
 
     UE_LOGFMT(LogDropDownMenuOption, Log, "UCustomButton({0})이 생성되고 이벤트가 바인딩되었습니다.", *DropDownMenuOptionButtonClass->GetName());
 }
@@ -186,14 +207,13 @@ void UDropDownMenuOption::DropDownMenuOptionButtonCanceledNotified(const FText& 
         UE_LOGFMT(LogDropDownMenuOption, Warning, "드롭다운 메뉴 옵션 버튼 선택이 취소되었지만, DropDownMenuOptionText가 유효하지 않습니다.");
         return;
     }
-
     //@FText
     const FText CurrentOptionText = DropDownMenuOptionText->GetText();
     if (!CurrentOptionText.CompareTo(OptionName))
     {
         return;
     }
-
+   
     if (CurrentOptionText.IsEmpty())
     {
         UE_LOGFMT(LogDropDownMenuOption, Warning, "드롭다운 메뉴 옵션 버튼 선택이 취소되었지만, DropDownMenuOptionText가 비어있습니다.");

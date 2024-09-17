@@ -77,14 +77,17 @@ protected:
         void CloseDropDownMenu();
 
 protected:
+    //@BG Image
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UImage* DropDownMenuBGImage;
+    //@Vertical Box
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UVerticalBox* DropDownMenuOptionBox;
 
 protected:
-    UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu | Options")
-        TArray<FText> OptionNames;
+    //@Option 목록
+    TArray<FText> OptionNames;
+    //@Drop Down Menu Option 블루프린트 클래스
     UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu | Options")
         TSubclassOf<UDropDownMenuOption> DropDownMenuOptionClass;
 #pragma endregion
@@ -99,14 +102,14 @@ public:
 
 #pragma region Callbacks;
 protected:
+    //@초기화 완료 이벤트
     UFUNCTION()
-        void OnDropDownMenuOptionInitFinished();
+        virtual void OnDropDownMenuOptionInitFinished();
 
 protected:
     //@Option 선택 이벤트에 등록되는 콜백
     UFUNCTION()
-        void OnDropDownMenuOptionSelected(const FText& SelectedOptionText);
-
+        virtual void OnDropDownMenuOptionSelected(const FText& SelectedOptionText);
 #pragma endregion
 
 };

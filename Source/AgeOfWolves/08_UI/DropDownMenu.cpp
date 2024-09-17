@@ -66,28 +66,34 @@ void UDropDownMenu::InitializeDropDownMenu()
 void UDropDownMenu::ResetDropDownMenu()
 {
     //@TODO: Drop Donw Menu의 초기 설정에 필요한 동작들...
-
+    
 }
 
 void UDropDownMenu::CreateDropDownMenuOptions()
 {
+    //@DropDownMenuOptionBox, DropDownMenuBGImage
     if (!DropDownMenuOptionBox || !DropDownMenuBGImage)
     {
         UE_LOGFMT(LogDropDownMenu, Error, "필요한 위젯 컴포넌트가 null입니다.");
         return;
     }
 
+    //@DropDownMenuOptionClass
     if (!DropDownMenuOptionClass)
     {
         UE_LOGFMT(LogDropDownMenu, Error, "DropDownMenuOptionClass가 설정되지 않았습니다.");
         return;
     }
 
-    // 기존 옵션 제거
+    //@기존 옵션 제거
     DropDownMenuOptionBox->ClearChildren();
 
-    // 옵션 추가
-    for (const FText& OptionText : OptionNames)
+    //@전체 높이 계산을 위한 변수
+    float TotalHeight = 0.f;
+
+    //@옵션 추가
+    int32 OptionCount = OptionNames.Num();
+    for (int32 i = 0; i < OptionCount; ++i)
     {
         UDropDownMenuOption* Option = CreateWidget<UDropDownMenuOption>(this, DropDownMenuOptionClass);
         if (!Option)
@@ -96,32 +102,51 @@ void UDropDownMenu::CreateDropDownMenuOptions()
             continue;
         }
 
-        Option->SetOptionName(OptionText);
+        //@Set Option Name
+        Option->SetOptionName(OptionNames[i]);
 
+        //@비동기 초기화 이벤트
         RequestStartInitByDropDownMenu.AddUFunction(Option, "InitializeDropDownMenuOption");
 
+        //@내부 바인딩
         InternalBindToOptions(Option);
 
+        //@AddChildToVerticalBox
         UVerticalBoxSlot* VerticalBoxSlot = DropDownMenuOptionBox->AddChildToVerticalBox(Option);
         if (VerticalBoxSlot)
         {
-            FSlateChildSize SlateChildSize;
-            SlateChildSize.SizeRule = ESlateSizeRule::Fill;
-            SlateChildSize.Value = 1.f;
-
-            VerticalBoxSlot->SetSize(SlateChildSize);
-
+            //@Alignment
+            VerticalBoxSlot->SetSize(FSlateChildSize(ESlateSizeRule::Fill));
             VerticalBoxSlot->SetHorizontalAlignment(HAlign_Fill);
             VerticalBoxSlot->SetVerticalAlignment(VAlign_Fill);
+
+            //@좌/우 패딩
+            float LeftRightPadding = Option->GetLeftRightPadding();
+
+            //@상하 패딩 설정 (첫 번째와 마지막 옵션에 대해 특별 처리)
+            float TopPadding = (i == 0) ? Option->GetUpUnderPadding() : 0.0f;
+            float BottomPadding = (i == OptionCount - 1) ? Option->GetUpUnderPadding() : 0.0f;
+
+            VerticalBoxSlot->SetPadding(FMargin(LeftRightPadding, TopPadding, LeftRightPadding, BottomPadding));
+
+            //@Vertical Box의 Height 계산
+            TotalHeight += Option->GetOptionHeight() + TopPadding + BottomPadding;
         }
 
-        UE_LOGFMT(LogDropDownMenu, Log, "DropDownMenuOption({0})이 생성되고 이벤트가 바인딩되었습니다.", OptionText.ToString());
+        UE_LOGFMT(LogDropDownMenu, Log, "DropDownMenuOption({0})이 생성되고 이벤트가 바인딩되었습니다.", OptionNames[i].ToString());
     }
 
-    // VerticalBox의 크기에 맞춰 SizeBox 크기 조정
-    FVector2D DesiredSize = DropDownMenuOptionBox->GetDesiredSize();
-    // 배경 이미지 크기 조정
-    DropDownMenuBGImage->SetBrushSize(DesiredSize);
+    //@Brush.X
+    float BrushWidth = DropDownMenuBGImage->GetBrush().GetImageSize().X;
+
+    //@Set Brush Size
+    FVector2D NewSize(BrushWidth, TotalHeight);
+    DropDownMenuBGImage->SetBrushSize(NewSize);
+    
+    //@Set Desired Size In Viewport
+    SetDesiredSizeInViewport(NewSize);
+
+    UE_LOGFMT(LogDropDownMenu, Log, "DropDownMenu 옵션들이 생성되었고, 배경 크기가 조정되었습니다. 크기: {0}", NewSize.ToString());
 }
 
 void UDropDownMenu::OpenDropDownMenu()

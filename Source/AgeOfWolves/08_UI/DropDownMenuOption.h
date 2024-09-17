@@ -75,6 +75,14 @@ protected:
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UEditableTextBox* DropDownMenuOptionText;
 
+    //@각 옵션의 Height 값
+    UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Option Text")
+        float OptionHeight = 0;
+    UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Option Text")
+        float UpUnderPadding = 0;
+    UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Option Text")
+        float LeftRightPadding= 0;
+
 protected:
     //@Button
     UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Button")
@@ -96,7 +104,6 @@ public:
 
 public:
     FNotifyDropDownMenuOptionCanceled NotifyDropDownMenuOptionCanceled;
-
 #pragma endregion
 
 #pragma region Callbacks
@@ -121,5 +128,13 @@ protected:
 public:
     UFUNCTION(BlueprintCallable)
         void SetOptionName(FText Text);
+
+public:
+    UFUNCTION(BlueprintCallable)
+        FORCEINLINE float GetOptionHeight() { return OptionHeight; }
+    UFUNCTION(BlueprintCallable)
+        FORCEINLINE float GetUpUnderPadding() { return UpUnderPadding; }
+    UFUNCTION(BlueprintCallable)
+        FORCEINLINE float GetLeftRightPadding() { return LeftRightPadding; }
 #pragma endregion
 };

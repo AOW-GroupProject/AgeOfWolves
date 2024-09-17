@@ -84,8 +84,7 @@ protected:
 
 protected:
     //@Drop Down Menu Overlay
-    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-        UOverlay* DropDownMenuOverlay;
+    UDropDownMenu* DropDownMenu;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Drop Down Menu", meta = (AllowPrivateAccess = "true"))
         TSubclassOf<UDropDownMenu> DropDownMenuClass;
