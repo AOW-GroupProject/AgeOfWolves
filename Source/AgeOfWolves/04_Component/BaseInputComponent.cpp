@@ -382,26 +382,6 @@ void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 	}
 }
 
-void UBaseInputComponent::Input_LeftMousePressed(const FInputActionValue& Value)
-{
-	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
-	{
-		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
-		{
-			if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(PC->GetPawn()))
-			{
-
-				FGameplayTag AttackTag = FGameplayTag::RequestGameplayTag(FName("Ability.Active.Attack.Normal"));
-				APlayerStateBase* PlayerStateBase = Cast<APlayerStateBase>(PlayerCharacter->GetPlayerState());
-				if(PlayerStateBase && PlayerStateBase->GetAbilitySystemComponent())
-				{
-					PlayerStateBase->GetAbilitySystemComponent()->TryActivateAbilitiesByTag(FGameplayTagContainer(AttackTag));
-				}
-			}
-		}
-	}
-}
-
 void UBaseInputComponent::OnAbilityInputTagTriggered(FGameplayTag InputTag)
 {
 	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))

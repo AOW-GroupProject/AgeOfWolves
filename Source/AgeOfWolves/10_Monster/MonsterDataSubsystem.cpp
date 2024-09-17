@@ -10,7 +10,7 @@
 
 UMonsterDataSubsystem::UMonsterDataSubsystem(const FObjectInitializer& ObjectInitializer)
 {
-	static ConstructorHelpers::FObjectFinder<UPrimaryDataAsset> dataAsset(TEXT("/Script/AgeOfWolves.MonsterData'/Game/Blueprints/09_Monster/MonsterData.MonsterData'"));
+	static ConstructorHelpers::FObjectFinder<UPrimaryDataAsset> dataAsset(TEXT("/Script/AgeOfWolves.MonsterData'/Game/Blueprints/10_Monster/MonsterData.MonsterData'"));
 	if (dataAsset.Object)
 	{
 		MonsterData = Cast<UMonsterData>(dataAsset.Object)->MonsterData;
@@ -33,7 +33,7 @@ void UMonsterDataSubsystem::CustomFunction(EMonsterName name, FSingleMonsterData
 {
 	if (MonsterData.Find((name)))
 	{
-		FSingleMonsterData SingleMonsterDataTemp = *MonsterData.Find(name);
+		FSingleMonsterData &SingleMonsterDataTemp = *MonsterData.Find(name);
 		SingleMonsterData = SingleMonsterDataTemp;
 		GiveStartupAttributeSetToAbilitySystem(ASC, OutGrantedHandles, SingleMonsterDataTemp.AttributeSets);
 		GiveStartupGameplayEffectToAbilitySystem(ASC, OutGrantedHandles, SingleMonsterDataTemp.GameplayEffects);
@@ -41,6 +41,48 @@ void UMonsterDataSubsystem::CustomFunction(EMonsterName name, FSingleMonsterData
 		//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("SingleMonsterData"));
 	}
 
+}
+
+void UMonsterDataSubsystem::DecideEnemyOrElse(EMonsterName OwnerName, EMonsterName TargetName, bool &IsEnemy, bool &IsFriend)
+{
+	if (MonsterData.Find(OwnerName))
+	{
+		FSingleMonsterData& SingleMonsterDataTemp = *MonsterData.Find(OwnerName);
+		for (auto i : SingleMonsterDataTemp.EnemyNameList)
+		{
+			if (i == TargetName)
+			{
+				IsEnemy = true;
+				return;
+			}
+		}
+		for (auto i : SingleMonsterDataTemp.FriendNameList)
+		{
+			if (i == TargetName)
+			{
+				IsFriend = true;
+				return;
+			}
+		}
+	}
+}
+
+void UMonsterDataSubsystem::AddEnemyName(EMonsterName OwnerName, EMonsterName EnemyName)
+{
+	if (MonsterData.Find(OwnerName))
+	{
+		FSingleMonsterData &SingleMonsterDataTemp = *MonsterData.Find(OwnerName);
+		SingleMonsterDataTemp.EnemyNameList.Add(EnemyName);
+	}
+}
+
+void UMonsterDataSubsystem::AddFriendName(EMonsterName OwnerName, EMonsterName FriendName)
+{
+	if (MonsterData.Find(OwnerName))
+	{
+		FSingleMonsterData& SingleMonsterDataTemp = *MonsterData.Find(OwnerName);
+		SingleMonsterDataTemp.FriendNameList.Add(FriendName);
+	}
 }
 
 void UMonsterDataSubsystem::GiveStartupAttributeSetToAbilitySystem(UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles, TArray<FBaseAbilitySet_AttributeSet>& AttributeSets) const

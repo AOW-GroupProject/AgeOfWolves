@@ -10,7 +10,7 @@ public class AgeOfWolves : ModuleRules
 
         PublicIncludePaths.Add(ModuleDirectory);
 
-        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "AIModule" });
+        PublicDependencyModuleNames.AddRange(new string[] { "Core", "CoreUObject", "Engine", "InputCore", "EnhancedInput", "UMG", "AIModule", "MotionWarping" });
 
         PrivateDependencyModuleNames.AddRange(new string[] {
             "Slate",

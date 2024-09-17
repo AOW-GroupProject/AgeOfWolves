@@ -14,7 +14,7 @@ class UDropDownMenu;
 
 #pragma region Delegates
 //@초기화 요청 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FRequestStartInitByInteractableItemSlot);
+DECLARE_MULTICAST_DELEGATE(FRequestStartInitByInteractableItemSlot);
 
 //@아이템 슬롯 버튼 호버 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotButtonHovered, const FGuid&)
@@ -73,7 +73,6 @@ public:
     //@아이템 슬롯 버튼 활성화 함수
     UFUNCTION(BlueprintCallable, Category = "Item Slot | Button")
         void ActivateItemSlotInteraction();
-
     //@아이템 슬롯 버튼 비활성화 함수
     UFUNCTION(BlueprintCallable, Category = "Item Slot | Button")
         void DeactivateItemSlotInteraction();
@@ -84,9 +83,12 @@ protected:
         TSubclassOf<UCustomButton> ItemSlotButtonClass;
 
 protected:
+    //@Drop Down Menu Overlay
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UOverlay* DropDownMenuOverlay;
+
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Drop Down Menu", meta = (AllowPrivateAccess = "true"))
         TSubclassOf<UDropDownMenu> DropDownMenuClass;
-
 #pragma endregion
 
 #pragma region Delegates
