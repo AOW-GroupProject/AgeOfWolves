@@ -1,15 +1,16 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "01_Character/BaseMonster.h"
 
 #include "Kismet/GameplayStatics.h"
-#include "10_Monster/MonsterDataSubsystem.h"
+
+
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
-#include "04_Component/BaseAbilitySystemComponent.h"
 #include "02_AbilitySystem/BaseAbilitySet.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+#include "04_Component/BaseAbilitySystemComponent.h"
 #include "10_Monster/BaseMonsterAIController.h"
+#include "10_Monster/MonsterDataSubsystem.h"
 //#include "MotionWarpingComponent.h"
 
 
@@ -52,6 +53,7 @@ void ABaseMonster::PostInitializeComponents()
 		if (MonsterDataSubSystem)
 		{
 			MonsterDataSubSystem->CustomFunction(MonsterName, SingleMonsterData, AbilitySystemComponent, SetGrantedHandles);
+			//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("CustomFunction"));
 		}
 	}
 	

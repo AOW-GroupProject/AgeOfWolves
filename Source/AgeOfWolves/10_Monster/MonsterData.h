@@ -15,7 +15,8 @@
 UENUM(BlueprintType)
 enum class EMonsterName : uint8
 {
-	Default UMETA(DisplayName = "Default"),
+	Default UMETA(DisplayName = "Default"), 
+	Player UMETA(DisplayName = "Player"), //BaseMonster로 캐스팅이 안됐을 시 이걸로 전달
 	Wolf UMETA(DisplayName = "Wolf"),
 	WolfBoss UMETA(DisplayName = "WolfBoss"),
 	Human UMETA(DisplayName = "Human"),
@@ -134,6 +135,14 @@ public:
 
 	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SingleMonsterData")
 	FPermanentStat PermanentStat;
+
+	
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SingleMonsterData")
+	TArray<EMonsterName> EnemyNameList;
+
+	//EnemyName과 FriendName에도 없다면 중립 반환, Friend는 같은 팀을 돕는 몬스터를 위해 제작해놓음
+	UPROPERTY(BlueprintReadWrite, EditDefaultsOnly, Category = "SingleMonsterData")
+	TArray<EMonsterName> FriendNameList;
 
 
 

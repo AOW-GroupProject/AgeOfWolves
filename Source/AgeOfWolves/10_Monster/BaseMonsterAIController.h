@@ -25,6 +25,8 @@ protected:
 #pragma region TeamAgent
 
 protected:
+
+	
 	FGenericTeamId TeamId;
 	virtual ETeamAttitude::Type GetTeamAttitudeTowards(const AActor& Other) const override;
 
