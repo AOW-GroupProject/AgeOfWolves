@@ -2,16 +2,18 @@
 
 
 #include "ItemSlot_DropDownMenu.h"
+#include "Logging/StructuredLog.h"
+
+#include "08_UI/DropDownMenuOption.h"
+
+#include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
+
+DEFINE_LOG_CATEGORY(LogItemSlot_DropDownMenu)
 
 UItemSlot_DropDownMenu::UItemSlot_DropDownMenu(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
 {
-    //@Option Names
-    OptionNames.Add(FText::FromString("USE"));
-    OptionNames.Add(FText::FromString("LEAVE"));
-    OptionNames.Add(FText::FromString("DISCARD"));
-    OptionNames.Add(FText::FromString("BACK"));
-    OptionNames.Add(FText::FromString("HELP"));
+
 }
 
 void UItemSlot_DropDownMenu::NativeOnInitialized()
@@ -37,4 +39,20 @@ void UItemSlot_DropDownMenu::NativeDestruct()
 void UItemSlot_DropDownMenu::InitializeDropDownMenu()
 {
     Super::InitializeDropDownMenu();
+
+}
+
+void UItemSlot_DropDownMenu::CreateDropDownMenuOptions()
+{
+    Super::CreateDropDownMenuOptions();
+
+
+
+}
+
+void UItemSlot_DropDownMenu::OnDropDownMenuOptionSelected(const FText& SelectedOptionText)
+{
+    Super::OnDropDownMenuOptionSelected(SelectedOptionText);
+
+
 }

@@ -1,8 +1,9 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
-
 #include "DropDownMenuOption.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogDropDownMenuOption, Log, All)
@@ -11,6 +12,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogDropDownMenuOption, Log, All)
 class UOverlay;
 class UCustomButton;
 class UEditableTextBox;
+class UHorizontalBox;
+class UImage;
 #pragma endregion
 
 #pragma region Delegates
@@ -52,18 +55,18 @@ protected:
 
 protected:
     // 내부 바인딩 함수
-    void InternalBindToOptionButton(UCustomButton* DropDownMenuOptionButton);
+    virtual void InternalBindToOptionButton(UCustomButton* DropDownMenuOptionButton);
 
 public:
     // 초기화
     UFUNCTION()
-        void InitializeDropDownMenuOption();
+        virtual void InitializeDropDownMenuOption();
 #pragma endregion
 
 #pragma region Subwidgets
 protected:
     //@CustomButton 생성
-    void CreateButton();
+    virtual void CreateButton();
 
 protected:
     //@Overlay
@@ -71,22 +74,45 @@ protected:
         UOverlay* DropDownMenuOptionOverlay;
 
 protected:
-    //@Editable Text Block
+    //@Overlay
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-        UEditableTextBox* DropDownMenuOptionText;
+        UOverlay* DropDownMenuOptionButtonOverlay;
 
+    //@Button
+    UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Button")
+        TSubclassOf<UCustomButton> DropDownMenuOptionButtonClass;
+
+protected:  
+    //@Option Text를 담을 Horizontal Box
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UHorizontalBox* DropDownMenuOptionTextBox;
+
+protected:
+    //@Option Text와 상호작용 가능한 키 정보 이미지
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UOverlay* DropDownMenuOptionHotKeyInfoOverlay;
+
+    //@Option Text와 상호작용 가능한 키 정보 이미지
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UImage* DropDownMenuOptionHotKeyInfoImage;
+
+    //@Option Text와 상호작용 가능한 키 Text
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UEditableTextBox* DropDownMenuOptionHotKeyText;
+
+protected:
+    //@Option에 나타낼 Text
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UEditableTextBox* DropDownMenuOptionText ;
+
+protected:
     //@각 옵션의 Height 값
     UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Option Text")
         float OptionHeight = 0;
     UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Option Text")
         float UpUnderPadding = 0;
     UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Option Text")
-        float LeftRightPadding= 0;
-
-protected:
-    //@Button
-    UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Button")
-        TSubclassOf<UCustomButton> DropDownMenuOptionButtonClass;
+        float LeftRightPadding = 0;
 #pragma endregion
 
 #pragma region Delegates
@@ -110,7 +136,7 @@ public:
 protected:
     //@Button Clicked 이벤트에 등록되는 콜백
     UFUNCTION()
-        void OnDropDownMenuOptionButtonClicked();
+        virtual void OnDropDownMenuOptionButtonClicked();
     //@Button Hovered 이벤트에 등록되는 콜백
     UFUNCTION()
         void OnDropDownMenuOptionButtonHovered();
@@ -130,11 +156,28 @@ public:
         void SetOptionName(FText Text);
 
 public:
+    UFUNCTION(BlueprintCallable, Category = "Drop Down Menu Option")
+        void SetDropDownMenuOptionHotKeyInfoImage(UTexture2D* Texture);
+
+    UFUNCTION(BlueprintCallable, Category = "Drop Down Menu Option")
+        UImage* GetDropDownMenuOptionHotKeyInfoImage();
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "Drop Down Menu Option")
+        void SetDropDownMenuOptionHotKeyText(const FText& Text);
+
+    UFUNCTION(BlueprintCallable, Category = "Drop Down Menu Option")
+        FText GetDropDownMenuOptionHotKeyText() const;
+
+public:
     UFUNCTION(BlueprintCallable)
         FORCEINLINE float GetOptionHeight() { return OptionHeight; }
+
     UFUNCTION(BlueprintCallable)
         FORCEINLINE float GetUpUnderPadding() { return UpUnderPadding; }
+
     UFUNCTION(BlueprintCallable)
         FORCEINLINE float GetLeftRightPadding() { return LeftRightPadding; }
+
 #pragma endregion
 };

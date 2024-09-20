@@ -47,7 +47,8 @@ void UDropDownMenu::InternalBindToOptions(UDropDownMenuOption* Option)
 
     //@내부 바인딩
     Option->DropDownMenuOptionInitFinished.BindUFunction(this, "OnDropDownMenuOptionInitFinished");
-    Option->DropDownMenuOptionSelected.BindUObject(this, &UDropDownMenu::OnDropDownMenuOptionSelected);
+    Option->DropDownMenuOptionSelected.BindUFunction(this, "OnDropDownMenuOptionSelected");
+
 
     UE_LOGFMT(LogDropDownMenu, Verbose, "Option({0})에 대한 내부 바인딩 완료", *Option->GetName());
 }
@@ -92,7 +93,7 @@ void UDropDownMenu::CreateDropDownMenuOptions()
     float TotalHeight = 0.f;
 
     //@옵션 추가
-    int32 OptionCount = OptionNames.Num();
+    int32 OptionCount = OptionInformations.Num();
     for (int32 i = 0; i < OptionCount; ++i)
     {
         UDropDownMenuOption* Option = CreateWidget<UDropDownMenuOption>(this, DropDownMenuOptionClass);
@@ -103,7 +104,9 @@ void UDropDownMenu::CreateDropDownMenuOptions()
         }
 
         //@Set Option Name
-        Option->SetOptionName(OptionNames[i]);
+        Option->SetOptionName(OptionInformations[i].GetOptionName());
+        //@Set Option Hot Key Text
+        Option->SetDropDownMenuOptionHotKeyText(OptionInformations[i].GetOptionHotKeyText());
 
         //@비동기 초기화 이벤트
         RequestStartInitByDropDownMenu.AddUFunction(Option, "InitializeDropDownMenuOption");
@@ -133,7 +136,7 @@ void UDropDownMenu::CreateDropDownMenuOptions()
             TotalHeight += Option->GetOptionHeight() + TopPadding + BottomPadding;
         }
 
-        UE_LOGFMT(LogDropDownMenu, Log, "DropDownMenuOption({0})이 생성되고 이벤트가 바인딩되었습니다.", OptionNames[i].ToString());
+        UE_LOGFMT(LogDropDownMenu, Log, "DropDownMenuOption({0})이 생성되고 이벤트가 바인딩되었습니다.", OptionInformations[i].GetOptionName().ToString());
     }
 
     //@Brush.X
@@ -179,10 +182,5 @@ void UDropDownMenu::OnDropDownMenuOptionInitFinished()
 
 void UDropDownMenu::OnDropDownMenuOptionSelected(const FText& SelectedOptionText)
 {
-    UE_LOGFMT(LogDropDownMenu, Log, "드롭다운 메뉴 옵션 선택: {0}", SelectedOptionText.ToString());
-
-    //@여기에 선택된 옵션에 대한 처리 로직을 추가할 수 있습니다...
-
-
 }
 #pragma endregion

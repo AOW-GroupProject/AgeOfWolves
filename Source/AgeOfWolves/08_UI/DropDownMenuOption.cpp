@@ -1,9 +1,13 @@
+// Fill out your copyright notice in the Description page of Project Settings.
+
 #include "DropDownMenuOption.h"
 #include "Logging/StructuredLog.h"
 
 #include "Components/EditableTextBox.h"
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
+#include "Components/HorizontalBox.h"
+#include "Components/Image.h"
 #include "08_UI/CustomButton.h"
 
 DEFINE_LOG_CATEGORY(LogDropDownMenuOption)
@@ -11,9 +15,7 @@ DEFINE_LOG_CATEGORY(LogDropDownMenuOption)
 #pragma region Default Setting
 UDropDownMenuOption::UDropDownMenuOption(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
-{
-    DropDownMenuOptionText = nullptr;
-}
+{}
 
 void UDropDownMenuOption::NativeOnInitialized()
 {
@@ -65,15 +67,14 @@ void UDropDownMenuOption::InitializeDropDownMenuOption()
 void UDropDownMenuOption::CreateButton()
 {
     //@Overlay
-    UOverlay* OptionOverlay = Cast<UOverlay>(GetRootWidget());
-    if (!OptionOverlay)
+    if (!DropDownMenuOptionOverlay)
     {
         UE_LOGFMT(LogDropDownMenuOption, Error, "RootWidget이 Overlay가 아니거나 null입니다. 위젯 블루프린트에서 올바르게 설정되었는지 확인하세요.");
         return;
     }
 
     //@DropDownMenuOptionButtonClass
-    if (!DropDownMenuOptionButtonClass)
+    if (!DropDownMenuOptionButtonClass || !DropDownMenuOptionButtonOverlay)
     {
         UE_LOGFMT(LogDropDownMenuOption, Error, "DropDownMenuOptionButtonClass가 설정되지 않았습니다. 에디터에서 DropDownMenuOptionButtonClass를 설정해주세요.");
         return;
@@ -94,7 +95,7 @@ void UDropDownMenuOption::CreateButton()
     InternalBindToOptionButton(OptionButton);
 
     //@Add CustomButton To Overlay
-    UOverlaySlot* ButtonOverlaySlot = OptionOverlay->AddChildToOverlay(OptionButton);
+    UOverlaySlot* ButtonOverlaySlot = DropDownMenuOptionButtonOverlay->AddChildToOverlay(OptionButton);
     if (!ButtonOverlaySlot)
     {
         UE_LOGFMT(LogDropDownMenuOption, Error, "CustomButton을 Overlay에 추가하지 못했습니다.");
@@ -105,26 +106,6 @@ void UDropDownMenuOption::CreateButton()
     ButtonOverlaySlot->SetHorizontalAlignment(HAlign_Fill);
     ButtonOverlaySlot->SetVerticalAlignment(VAlign_Fill);
 
-    //@Add EditableTextBox To Overlay
-    if (!DropDownMenuOptionText)
-    {
-        UE_LOGFMT(LogDropDownMenuOption, Warning, "DropDownMenuOptionText가 null입니다. EditableTextBox를 추가하지 않았습니다.");
-        return;
-    }
-    
-    //@Add Child To Overlay
-    UOverlaySlot* TextOverlaySlot = OptionOverlay->AddChildToOverlay(DropDownMenuOptionText);
-    if (!TextOverlaySlot)
-    {
-        UE_LOGFMT(LogDropDownMenuOption, Error, "EditableTextBox를 Overlay에 추가하지 못했습니다.");
-        return;
-    }
-
-    //@Alignment
-    TextOverlaySlot->SetHorizontalAlignment(HAlign_Fill);
-    TextOverlaySlot->SetVerticalAlignment(VAlign_Center);
-
-    UE_LOGFMT(LogDropDownMenuOption, Log, "UCustomButton({0})이 생성되고 이벤트가 바인딩되었습니다.", *DropDownMenuOptionButtonClass->GetName());
 }
 #pragma endregion
 
@@ -213,7 +194,7 @@ void UDropDownMenuOption::DropDownMenuOptionButtonCanceledNotified(const FText& 
     {
         return;
     }
-   
+
     if (CurrentOptionText.IsEmpty())
     {
         UE_LOGFMT(LogDropDownMenuOption, Warning, "드롭다운 메뉴 옵션 버튼 선택이 취소되었지만, DropDownMenuOptionText가 비어있습니다.");
@@ -237,5 +218,56 @@ void UDropDownMenuOption::SetOptionName(FText Text)
 
     //@Set Text
     DropDownMenuOptionText->SetText(Text);
+}
+
+void UDropDownMenuOption::SetDropDownMenuOptionHotKeyInfoImage(UTexture2D* Texture)
+{
+    if (!Texture || !Texture->IsValidLowLevel())
+    {
+        UE_LOGFMT(LogDropDownMenuOption, Warning, "Texture가 유효하지 않습니다!");
+        return;
+    }
+
+    if (DropDownMenuOptionHotKeyInfoImage)
+    {
+        //@Set Brush From Texture
+        DropDownMenuOptionHotKeyInfoImage->SetBrushFromTexture(Texture);
+    }
+    else
+    {
+        UE_LOGFMT(LogDropDownMenuOption, Warning, "DropDownMenuOptionHotKeyInfoImage가 유효하지 않습니다!");
+    }
+}
+
+UImage* UDropDownMenuOption::GetDropDownMenuOptionHotKeyInfoImage()
+{
+    if (!DropDownMenuOptionHotKeyInfoImage)
+    {
+        UE_LOGFMT(LogDropDownMenuOption, Warning, "DropDownMenuOptionHotKeyInfoImage가 유효하지 않습니다!");
+        return nullptr;
+    }
+
+    return DropDownMenuOptionHotKeyInfoImage;
+}
+
+void UDropDownMenuOption::SetDropDownMenuOptionHotKeyText(const FText& Text)
+{
+    if (DropDownMenuOptionHotKeyText)
+    {
+        DropDownMenuOptionHotKeyText->SetText(Text);
+    }
+    else
+    {
+        UE_LOGFMT(LogDropDownMenuOption, Warning, "DropDownMenuOptionHotKeyText가 유효하지 않습니다!");
+    }
+}
+
+FText UDropDownMenuOption::GetDropDownMenuOptionHotKeyText() const
+{
+    if (DropDownMenuOptionHotKeyText)
+    {
+        return DropDownMenuOptionHotKeyText->GetText();
+    }
+    return FText::GetEmpty();
 }
 #pragma endregion
