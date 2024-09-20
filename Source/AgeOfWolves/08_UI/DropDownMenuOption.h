@@ -21,11 +21,11 @@ class UImage;
 DECLARE_DELEGATE(FDropDownMenuOptionInitFinished);
 
 //@옵션 선택 이벤트
-DECLARE_DELEGATE_OneParam(FDropDownMenuOptionSelected, const FText&);
+DECLARE_MULTICAST_DELEGATE(FDropDownMenuOptionSelected);
 //@옵션 호버 이벤트
-DECLARE_DELEGATE_OneParam(FDropDownMenuOptionHovered, const FText&);
+DECLARE_MULTICAST_DELEGATE(FDropDownMenuOptionHovered);
 //@옵션 언호버 이벤트
-DECLARE_DELEGATE_OneParam(FDropDownMenuOptionUnhovered, const FText&);
+DECLARE_MULTICAST_DELEGATE(FDropDownMenuOptionUnhovered);
 
 //@옵션 취소 이벤트
 DECLARE_MULTICAST_DELEGATE(FNotifyDropDownMenuOptionCanceled);
@@ -135,19 +135,24 @@ public:
 #pragma region Callbacks
 protected:
     //@Button Clicked 이벤트에 등록되는 콜백
-    UFUNCTION()
-        virtual void OnDropDownMenuOptionButtonClicked();
+    UFUNCTION(BlueprintNativeEvent)
+        void OnDropDownMenuOptionButtonClicked();
+    virtual void OnDropDownMenuOptionButtonClicked_Implementation();
     //@Button Hovered 이벤트에 등록되는 콜백
-    UFUNCTION()
+    UFUNCTION(BlueprintNativeEvent)
         void OnDropDownMenuOptionButtonHovered();
+    virtual void OnDropDownMenuOptionButtonHovered_Implementation();
+
     //@Button Unhovered 이벤트에 등록되는 콜백
-    UFUNCTION()
+    UFUNCTION(BlueprintNativeEvent)
         void OnDropDownMenuOptionButtonUnhovered();
+    virtual void OnDropDownMenuOptionButtonUnhovered_Implementation();
 
 protected:
     //@Button의 선택 취소 이벤트에 등록되는 콜백
-    UFUNCTION()
-        void DropDownMenuOptionButtonCanceledNotified(const FText& OptionName);
+    UFUNCTION(BlueprintNativeEvent)
+        void DropDownMenuOptionButtonCanceledNotified(FName OptionName);
+    virtual void DropDownMenuOptionButtonCanceledNotified_Implementation(FName OptionName);
 #pragma endregion
 
 #pragma region Utilities
@@ -178,6 +183,5 @@ public:
 
     UFUNCTION(BlueprintCallable)
         FORCEINLINE float GetLeftRightPadding() { return LeftRightPadding; }
-
 #pragma endregion
 };

@@ -59,6 +59,9 @@ void UMenuUIContent::CheckMenuUIContentInitFinished()
 void UMenuUIContent::OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType)
 {
 	//@가시성 변화 시 수행해야할 동작들 아래에서 작성...
+
+	//@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
+
 }
 #pragma endregion
 

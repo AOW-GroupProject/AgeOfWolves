@@ -61,7 +61,7 @@ protected:
 #pragma region Callbacks
 protected:
     //@Option 선택 이벤트에 등록되는 콜백
-    virtual void OnDropDownMenuOptionSelected(const FText& SelectedOptionText) override;
+    virtual void OnDropDownMenuOptionSelected(FName SelectedOptionName) override;
 #pragma endregion
 
 };

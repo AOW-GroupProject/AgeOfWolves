@@ -236,23 +236,29 @@ void UInteractableItemSlot::OnDropDownMenuInitFinished()
     ItemSlotInitFinished.ExecuteIfBound();
 }
 
-void UInteractableItemSlot::OnItemSlotButtonHovered()
+void UInteractableItemSlot::OnItemSlotButtonHovered_Implementation()
 {
     //@Item Slot Button 호버 이벤트
     ItemSlotButtonHovered.Broadcast(UniqueItemID);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에 마우스가 올라갔습니다. ID: {0}", UniqueItemID.ToString());
+
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
+
 }
 
-void UInteractableItemSlot::OnItemSlotButtonUnhovered()
+void UInteractableItemSlot::OnItemSlotButtonUnhovered_Implementation()
 {
     //@Item Slot Button 언호버 이벤트
     ItemSlotButtonUnhovered.Broadcast(UniqueItemID);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에서 마우스가 벗어났습니다. ID: {0}", UniqueItemID.ToString());
+
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
+
 }
 
-void UInteractableItemSlot::OnItemSlotButtonClicked()
+void UInteractableItemSlot::OnItemSlotButtonClicked_Implementation()
 {
     ItemSlotButtonClicked.Broadcast(UniqueItemID);
 
@@ -274,9 +280,12 @@ void UInteractableItemSlot::OnItemSlotButtonClicked()
     }
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 클릭되었습니다. ID: {0}", UniqueItemID.ToString());
+
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
+
 }
 
-void UInteractableItemSlot::ItemSlotButtonCanceledNotified(const FGuid& ItemID)
+void UInteractableItemSlot::ItemSlotButtonCanceledNotified_Implementation(const FGuid& ItemID)
 {
     if (ItemID != UniqueItemID)
     {
@@ -293,6 +302,9 @@ void UInteractableItemSlot::ItemSlotButtonCanceledNotified(const FGuid& ItemID)
     }
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼 선택이 취소되었습니다. ID: {0}", ItemID.ToString());
+
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
+
 }
 #pragma endregion
 

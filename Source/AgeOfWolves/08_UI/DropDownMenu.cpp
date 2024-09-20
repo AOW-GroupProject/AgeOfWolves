@@ -14,6 +14,7 @@ UDropDownMenu::UDropDownMenu(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
 {
     DropDownMenuOptionBox = nullptr;
+    CurrentSelectedOption = FName();
 }
 
 void UDropDownMenu::NativeOnInitialized()
@@ -37,7 +38,7 @@ void UDropDownMenu::NativeDestruct()
     Super::NativeDestruct();
 }
 
-void UDropDownMenu::InternalBindToOptions(UDropDownMenuOption* Option)
+void UDropDownMenu::InternalBindToOptions(UDropDownMenuOption* Option, const FName& OptionName)
 {
     if (!Option)
     {
@@ -45,12 +46,10 @@ void UDropDownMenu::InternalBindToOptions(UDropDownMenuOption* Option)
         return;
     }
 
-    //@내부 바인딩
     Option->DropDownMenuOptionInitFinished.BindUFunction(this, "OnDropDownMenuOptionInitFinished");
-    Option->DropDownMenuOptionSelected.BindUFunction(this, "OnDropDownMenuOptionSelected");
+    Option->DropDownMenuOptionSelected.AddUObject(this, &UDropDownMenu::OnDropDownMenuOptionSelected, OptionName);
 
-
-    UE_LOGFMT(LogDropDownMenu, Verbose, "Option({0})에 대한 내부 바인딩 완료", *Option->GetName());
+    UE_LOGFMT(LogDropDownMenu, Verbose, "Option({0})에 대한 내부 바인딩 완료", *OptionName.ToString());
 }
 
 void UDropDownMenu::InitializeDropDownMenu()
@@ -68,6 +67,20 @@ void UDropDownMenu::ResetDropDownMenu()
 {
     //@TODO: Drop Donw Menu의 초기 설정에 필요한 동작들...
     
+
+    //@이전에 선택된 옴션 버튼의 선택 취소 이벤트
+    if (!CurrentSelectedOption.IsNone())
+    {
+        //@이전 선택된 옵션의 버튼 선택 취소 이벤트
+        FName PrevSelectedOption = CurrentSelectedOption;
+        CancelDropDownMenuOptionButton.Broadcast(PrevSelectedOption);
+
+        //@Current Selected Option
+        CurrentSelectedOption = FName();
+
+        UE_LOGFMT(LogDropDownMenu, Log, "이전에 선택된 옵션 취소: {0}", PrevSelectedOption.ToString());
+    }
+
 }
 
 void UDropDownMenu::CreateDropDownMenuOptions()
@@ -76,13 +89,6 @@ void UDropDownMenu::CreateDropDownMenuOptions()
     if (!DropDownMenuOptionBox || !DropDownMenuBGImage)
     {
         UE_LOGFMT(LogDropDownMenu, Error, "필요한 위젯 컴포넌트가 null입니다.");
-        return;
-    }
-
-    //@DropDownMenuOptionClass
-    if (!DropDownMenuOptionClass)
-    {
-        UE_LOGFMT(LogDropDownMenu, Error, "DropDownMenuOptionClass가 설정되지 않았습니다.");
         return;
     }
 
@@ -96,23 +102,34 @@ void UDropDownMenu::CreateDropDownMenuOptions()
     int32 OptionCount = OptionInformations.Num();
     for (int32 i = 0; i < OptionCount; ++i)
     {
-        UDropDownMenuOption* Option = CreateWidget<UDropDownMenuOption>(this, DropDownMenuOptionClass);
+        //@Drop Down Menu Option의 블루프린트 클래스
+        TSubclassOf<UDropDownMenuOption> OptionClass = OptionInformations[i].GetOptionClass();
+        if (!OptionClass)
+        {
+            UE_LOGFMT(LogDropDownMenu, Error, "Option {0}의 OptionClass가 설정되지 않았습니다.", i);
+            continue;
+        }
+        //@Drop Down Menu Option
+        UDropDownMenuOption* Option = CreateWidget<UDropDownMenuOption>(this, OptionClass);
         if (!Option)
         {
-            UE_LOGFMT(LogDropDownMenu, Error, "UDropDownMenuOption 위젯을 생성하지 못했습니다.");
+            UE_LOGFMT(LogDropDownMenu, Error, "UDropDownMenuOption 위젯을 생성하지 못했습니다. OptionClass: {0}", *OptionClass->GetName());
             continue;
         }
 
         //@Set Option Name
-        Option->SetOptionName(OptionInformations[i].GetOptionName());
+        Option->SetOptionName(FText::FromName(OptionInformations[i].GetOptionName()));
         //@Set Option Hot Key Text
         Option->SetDropDownMenuOptionHotKeyText(OptionInformations[i].GetOptionHotKeyText());
 
         //@비동기 초기화 이벤트
         RequestStartInitByDropDownMenu.AddUFunction(Option, "InitializeDropDownMenuOption");
 
+        //@Option Button 선택 취소 이벤트
+        CancelDropDownMenuOptionButton.AddUFunction(Option, "DropDownMenuOptionButtonCanceledNotified");
+
         //@내부 바인딩
-        InternalBindToOptions(Option);
+        InternalBindToOptions(Option, OptionInformations[i].GetOptionName());
 
         //@AddChildToVerticalBox
         UVerticalBoxSlot* VerticalBoxSlot = DropDownMenuOptionBox->AddChildToVerticalBox(Option);
@@ -144,7 +161,7 @@ void UDropDownMenu::CreateDropDownMenuOptions()
 
     //@Set Brush Size
     FVector2D NewSize(BrushWidth, TotalHeight);
-    DropDownMenuBGImage->SetBrushSize(NewSize);
+    DropDownMenuBGImage->SetDesiredSizeOverride(NewSize);
     
     //@Set Desired Size In Viewport
     SetDesiredSizeInViewport(NewSize);
@@ -152,16 +169,18 @@ void UDropDownMenu::CreateDropDownMenuOptions()
     UE_LOGFMT(LogDropDownMenu, Log, "DropDownMenu 옵션들이 생성되었고, 배경 크기가 조정되었습니다. 크기: {0}", NewSize.ToString());
 }
 
-void UDropDownMenu::OpenDropDownMenu()
+void UDropDownMenu::OpenDropDownMenu_Implementation()
 {
-
     //@Self Hit Test Invisible
     SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 
-    UE_LOGFMT(LogDropDownMenu, Log, "Drop Down Menu opened");
+    UE_LOGFMT(LogDropDownMenu, Log, "Drop Down Menu 가 열렸습니다.");
+
+    //@TODO: Animation 관련 작업 수행 시 오버라이딩...
+
 }
 
-void UDropDownMenu::CloseDropDownMenu()
+void UDropDownMenu::CloseDropDownMenu_Implementation()
 {
     //@Collapsed
     SetVisibility(ESlateVisibility::Collapsed);
@@ -169,7 +188,10 @@ void UDropDownMenu::CloseDropDownMenu()
     //@Reset
     ResetDropDownMenu();
 
-    UE_LOGFMT(LogDropDownMenu, Log, "Drop Down Menu closed");
+    UE_LOGFMT(LogDropDownMenu, Log, "Drop Down Menu 가 닫혔습니다.");
+
+    //@TODO: Animation 관련 작업 수행 시 오버라이딩...
+
 }
 #pragma endregion
 
@@ -180,7 +202,41 @@ void UDropDownMenu::OnDropDownMenuOptionInitFinished()
     DropDownMenuInitFinished.ExecuteIfBound();
 }
 
-void UDropDownMenu::OnDropDownMenuOptionSelected(const FText& SelectedOptionText)
+void UDropDownMenu::OnDropDownMenuOptionSelected(FName SelectedOptionName)
 {
+    UE_LOGFMT(LogDropDownMenu, Log, "드롭다운 메뉴 옵션 선택됨: {0}", SelectedOptionName.ToString());
+
+    //@이미 선택된 옵션을 한번 더 선택했을 경우, 무시
+    if (CurrentSelectedOption == SelectedOptionName)
+    {
+        UE_LOGFMT(LogDropDownMenu, Log, "이미 선택된 옵션입니다. 처리를 무시합니다: {0}", SelectedOptionName.ToString());
+        return;
+    }
+    
+    //@이전에 선택된 옴션 버튼의 선택 취소 이벤트
+    if (!CurrentSelectedOption.IsNone())
+    {
+        FName PrevSelectedOption = CurrentSelectedOption;
+        CancelDropDownMenuOptionButton.Broadcast(PrevSelectedOption);
+
+        UE_LOGFMT(LogDropDownMenu, Log, "이전에 선택된 옵션 취소: {0}", PrevSelectedOption.ToString());
+    }
+
+    //@Option Informations
+    FDropDownMenuOptionInformation* SelectedOptionInformation = OptionInformations.FindByPredicate([&](const FDropDownMenuOptionInformation& Option) {
+        return Option.GetOptionName() == SelectedOptionName;
+        });
+
+    //@FDropDownMenuOptionInformation
+    if (!SelectedOptionInformation)
+    {
+        UE_LOGFMT(LogDropDownMenu, Error, "선택된 옵션을 찾을 수 없습니다: {0}", SelectedOptionName.ToString());
+        return;
+    }
+
+    //@Current Selected Option
+    CurrentSelectedOption = SelectedOptionName;
+    UE_LOGFMT(LogDropDownMenu, Log, "새로운 옵션이 선택됨: {0}", SelectedOptionName.ToString());
+
 }
 #pragma endregion

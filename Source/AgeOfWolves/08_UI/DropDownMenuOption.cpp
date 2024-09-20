@@ -110,7 +110,7 @@ void UDropDownMenuOption::CreateButton()
 #pragma endregion
 
 #pragma region Callbacks
-void UDropDownMenuOption::OnDropDownMenuOptionButtonClicked()
+void UDropDownMenuOption::OnDropDownMenuOptionButtonClicked_Implementation()
 {
     //@DropDownMenuOptionText
     if (!DropDownMenuOptionText)
@@ -128,12 +128,12 @@ void UDropDownMenuOption::OnDropDownMenuOptionButtonClicked()
     }
 
     //@Selected 이벤트
-    DropDownMenuOptionSelected.ExecuteIfBound(OptionText);
+    DropDownMenuOptionSelected.Broadcast();
 
     UE_LOGFMT(LogDropDownMenuOption, Log, "드롭다운 메뉴 옵션 버튼이 클릭되었습니다. 옵션: {0}", OptionText.ToString());
 }
 
-void UDropDownMenuOption::OnDropDownMenuOptionButtonHovered()
+void UDropDownMenuOption::OnDropDownMenuOptionButtonHovered_Implementation()
 {
     //@DropDownMenuOptionText
     if (!DropDownMenuOptionText)
@@ -151,13 +151,12 @@ void UDropDownMenuOption::OnDropDownMenuOptionButtonHovered()
     }
 
     //@Hover 이벤트
-    DropDownMenuOptionHovered.ExecuteIfBound(OptionText);
+    DropDownMenuOptionHovered.Broadcast();
 
     UE_LOGFMT(LogDropDownMenuOption, Log, "드롭다운 메뉴 옵션 버튼에 마우스가 올라갔습니다. 옵션: {0}", OptionText.ToString());
-
 }
 
-void UDropDownMenuOption::OnDropDownMenuOptionButtonUnhovered()
+void UDropDownMenuOption::OnDropDownMenuOptionButtonUnhovered_Implementation()
 {
     //@DropDownMenuOptionText
     if (!DropDownMenuOptionText)
@@ -175,36 +174,51 @@ void UDropDownMenuOption::OnDropDownMenuOptionButtonUnhovered()
     }
 
     //@Unhover 이벤트
-    DropDownMenuOptionUnhovered.ExecuteIfBound(OptionText);
+    DropDownMenuOptionHovered.Broadcast();
+
 
     UE_LOGFMT(LogDropDownMenuOption, Log, "드롭다운 메뉴 옵션 버튼에서 마우스가 벗어났습니다. 옵션: {0}", OptionText.ToString());
 }
 
-void UDropDownMenuOption::DropDownMenuOptionButtonCanceledNotified(const FText& OptionName)
+void UDropDownMenuOption::DropDownMenuOptionButtonCanceledNotified_Implementation(FName OptionName)
 {
-    //@DropDownMenuOptionText
+    UE_LOGFMT(LogDropDownMenuOption, Log, "옵션 취소 요청 받음: {0}", OptionName.ToString());
+
+    //@Drop Down Menu Option Text
     if (!DropDownMenuOptionText)
     {
-        UE_LOGFMT(LogDropDownMenuOption, Warning, "드롭다운 메뉴 옵션 버튼 선택이 취소되었지만, DropDownMenuOptionText가 유효하지 않습니다.");
-        return;
-    }
-    //@FText
-    const FText CurrentOptionText = DropDownMenuOptionText->GetText();
-    if (!CurrentOptionText.CompareTo(OptionName))
-    {
+        UE_LOGFMT(LogDropDownMenuOption, Error, "DropDownMenuOptionText가 유효하지 않습니다.");
         return;
     }
 
-    if (CurrentOptionText.IsEmpty())
+    //@Current Option Text
+    FText CurrentOptionText = DropDownMenuOptionText->GetText();
+    FName CurrentOptionName = FName(*CurrentOptionText.ToString());
+
+    //@Current Option Name
+    if (CurrentOptionName != OptionName)
     {
-        UE_LOGFMT(LogDropDownMenuOption, Warning, "드롭다운 메뉴 옵션 버튼 선택이 취소되었지만, DropDownMenuOptionText가 비어있습니다.");
+        UE_LOGFMT(LogDropDownMenuOption, Verbose, "현재 옵션({0})과 취소 요청된 옵션({1})이 일치하지 않습니다. 무시합니다.",
+            CurrentOptionName.ToString(), OptionName.ToString());
         return;
     }
 
-    //@옵션 선택 취소 이벤트
+    //@Custom Button
+    UCustomButton* OptionButton = Cast<UCustomButton>(DropDownMenuOptionButtonOverlay->GetChildAt(0));
+    if (!OptionButton)
+    {
+        UE_LOGFMT(LogDropDownMenuOption, Error, "옵션 버튼을 찾을 수 없습니다.");
+        return;
+    }
+    
+    //@Cancel Selected Button
+    OptionButton->CancelSelectedButton();
+    UE_LOGFMT(LogDropDownMenuOption, Log, "옵션 버튼 선택 취소됨: {0}", OptionName.ToString());
+
+    //@선택된 Option의 취소 이벤트
     NotifyDropDownMenuOptionCanceled.Broadcast();
 
-    UE_LOGFMT(LogDropDownMenuOption, Log, "드롭다운 메뉴 옵션 버튼 선택이 취소되었습니다. 옵션: {0}", CurrentOptionText.ToString());
+    UE_LOGFMT(LogDropDownMenuOption, Log, "드롭다운 메뉴 옵션 버튼 선택 취소 처리 완료: {0}", OptionName.ToString());
 }
 #pragma endregion
 

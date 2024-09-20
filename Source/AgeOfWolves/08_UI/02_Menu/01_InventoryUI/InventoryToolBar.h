@@ -86,13 +86,24 @@ public:
 #pragma endregion
 
 #pragma region Callbacks
-private:
-    UFUNCTION()
-        void HandleButtonHover(EItemType ItemType);
-    UFUNCTION()
-        void HandleButtonUnhover(EItemType ItemType);
-    UFUNCTION()
-        void HandleButtonClick(EItemType ItemType);
-    void HandleButtonCanceled(EItemType PreviousItemType);
+protected:
+    //@Inventory Tool Bar 버튼 클릭 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void OnInventoryToolBarButtonClicked(EItemType ItemType);
+    virtual void OnInventoryToolBarButtonClicked_Implementation(EItemType ItemType);
+    //@Inventory Tool Bar 버튼 Hover 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void OnInventoryToolBarButtonHovered(EItemType ItemType);
+    virtual void OnInventoryToolBarButtonHovered_Implementation(EItemType ItemType);
+    //@Inventory Tool Bar 버튼 Unhover 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void OnInventoryToolBarButtonUnhovered(EItemType ItemType);
+    virtual void OnInventoryToolBarButtonUnhovered_Implementation(EItemType ItemType);
+
+protected:
+    //@Inventory Tool Bar 버튼 선택 취소 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void CancelInventoryToolBarButtonSelected(EItemType PreviousItemType);
+    virtual void CancelInventoryToolBarButtonSelected_Implementation(EItemType PreviousItemType);
 #pragma endregion
 };

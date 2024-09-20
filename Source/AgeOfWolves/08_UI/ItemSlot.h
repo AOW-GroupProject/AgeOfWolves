@@ -8,13 +8,17 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogItemSlot, Log, All)
 
+#pragma region Delegates
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FItemSlotInitFinished);
+#pragma endregion
 
+#pragma region Forward Decalration
 class UOverlay;
 class UImage;
 class UVerticalBox;
 class UEditableTextBox;
+#pragma endregion
 
 /**
  * @UItemSlot

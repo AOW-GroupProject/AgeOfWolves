@@ -147,12 +147,13 @@ void UInventoryUI::OnInventoryUIContentInitFinished()
 }
 
 void UInventoryUI::OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType)
-{
+{    
+    Super::OnUIVisibilityChanged_Implementation(VisibilityType);
 
-    //@가시성 변화 이벤트 호출시 수행할 동작들 아래에서 작성...
-    
     //@초기 설정으로 Reset
     ResetMenuUIContent();
+
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 
 }
 #pragma endregion

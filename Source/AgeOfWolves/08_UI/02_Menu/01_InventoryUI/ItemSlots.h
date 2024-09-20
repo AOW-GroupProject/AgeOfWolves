@@ -8,11 +8,14 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogItemSlots, Log, All)
 
+#pragma region Forward Declaration
 class UVerticalBox;
 class UHorizontalBox;
 class UInteractableItemSlot;
 class UCustomButton;
+#pragma endregion
 
+#pragma region Delegates
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByItemSlots)
 //@초기화 완료 이벤트(초기화 작업 비동기화)
@@ -20,6 +23,7 @@ DECLARE_DELEGATE(FItemSlotsInitFinished);
 
 //@이전 선택된 아이템 슬롯 취소 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FCancelItemSlotButton, const FGuid&)
+#pragma endregion
 
 /**
  * @UItemSlots
@@ -76,7 +80,7 @@ public:
         void ResetItemSlots();
 
 protected:
-    //@Item Slot 생성
+    //@생성
     void CreateItemSlots();
 
 protected:

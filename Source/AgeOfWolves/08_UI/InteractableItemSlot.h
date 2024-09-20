@@ -115,19 +115,23 @@ protected:
 
 protected:
     //@Button Hovered 이벤트에 등록되는 콜백
-    UFUNCTION()
+    UFUNCTION(BlueprintNativeEvent)
         void OnItemSlotButtonHovered();
+    virtual void OnItemSlotButtonHovered_Implementation();
     //@Button Unhovered 이벤트에 등록되는 콜백
-    UFUNCTION()
+    UFUNCTION(BlueprintNativeEvent)
         void OnItemSlotButtonUnhovered();
+    virtual void OnItemSlotButtonUnhovered_Implementation();
     //@Button Clicked 이벤트에 등록되는 콜백
-    UFUNCTION()
+    UFUNCTION(BlueprintNativeEvent)
         void OnItemSlotButtonClicked();
+    virtual void OnItemSlotButtonClicked_Implementation();
 
 protected:
     //@Button의 선택 취소 이벤트 구독
-    UFUNCTION()
+    UFUNCTION(BlueprintNativeEvent)
         void ItemSlotButtonCanceledNotified(const FGuid& ItemID);
+    virtual void ItemSlotButtonCanceledNotified_Implementation(const FGuid& ItemID);
 #pragma endregion
 
 #pragma region Utility
