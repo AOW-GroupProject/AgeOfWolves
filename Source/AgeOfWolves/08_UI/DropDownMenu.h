@@ -14,7 +14,7 @@ class UImage;
 class USizeBox;
 class UOverlay;
 class UDropDownMenuOption;
-class UBaseGameplayAbility; 
+class UConfirmationMenu;
 #pragma endregion
 
 #pragma region Delegates
@@ -40,15 +40,12 @@ struct FDropDownMenuOptionInformation : public FTableRowBase
 
 public:
     FDropDownMenuOptionInformation() {}
-    FDropDownMenuOptionInformation(const FName& InOptionName, const FText& InOptionHotKeyText, TSoftObjectPtr<UTexture2D> InOptionHotKeyInfoBGImage, UBaseGameplayAbility* InOptionAbility = nullptr, TSubclassOf<UDropDownMenuOption> InOptionClass = nullptr)
+    FDropDownMenuOptionInformation(TSubclassOf<UDropDownMenuOption> InOptionClass, const FName& InOptionName, const FText& InOptionHotKeyText, TSoftObjectPtr<UTexture2D> InOptionHotKeyInfoBGImage)
         : OptionClass(InOptionClass)
         , OptionName(InOptionName)
         , OptionHotKeyText(InOptionHotKeyText)
         , OptionHotKeyInfoBGImage(InOptionHotKeyInfoBGImage)
-        , OptionAbility(InOptionAbility)
-    {
-        bHavingGA = (OptionAbility != nullptr);
-    }
+    {}
 
     FORCEINLINE bool CompareOptionName(const FName& OtherName) const
     {
@@ -60,8 +57,9 @@ public:
     FORCEINLINE const FName& GetOptionName() const { return OptionName; }
     FORCEINLINE const FText& GetOptionHotKeyText() const { return OptionHotKeyText; }
     FORCEINLINE TSoftObjectPtr<UTexture2D> GetOptionHotKeyInfoBGImage() const { return OptionHotKeyInfoBGImage; }
-    FORCEINLINE UBaseGameplayAbility* GetOptionAbility() const { return OptionAbility; }
-    FORCEINLINE bool IsHavingGA() const { return bHavingGA; }
+    FORCEINLINE TSubclassOf< UConfirmationMenu> GetConfirmationMenuClass() const {return ConfirmationMenuClass;}
+    FORCEINLINE const FText& GetConfirmationMenuDialogueText() const { return ConfirmationMenuDialogueText; }
+
 
 private:
     //@Option 위젯 클래스
@@ -80,13 +78,14 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
         TSoftObjectPtr<UTexture2D> OptionHotKeyInfoBGImage;
 
-    //@Option 클릭 시 활성화되는 GA
+    //@Option 클릭 시 열리는 Confirmation Menu의 Dialogue Box에 나타낼 설명 문
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
-        UBaseGameplayAbility* OptionAbility;
+        FText ConfirmationMenuDialogueText;
 
-    //@Option의 GA 활성화 여부
+    //@Option 클릭 시 열리는 Confirmation Menu의 블루프린트 클래스
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
-        bool bHavingGA;
+        TSubclassOf<UConfirmationMenu> ConfirmationMenuClass;
+    
 };
 #pragma endregion 
 
@@ -98,11 +97,14 @@ private:
 UCLASS()
 class AGEOFWOLVES_API UDropDownMenu : public UUserWidget
 {
-    //@friend class
+//@친추 클래스
+#pragma region Friend Class
     friend class UInteractableItemSlot;
+#pragma endregion
 
     GENERATED_BODY()
 
+ //@Defualt Setting
 #pragma region Default Setting
 public:
     UDropDownMenu(const FObjectInitializer& ObjectInitializer);
@@ -119,22 +121,32 @@ protected:
     //@외부 바인딩
 
 protected:
-    // 내부 바인딩 함수
-    virtual void InternalBindToOptions(UDropDownMenuOption* Option, const FName& OptionName);
-
+    //@내부 바인딩
+    void InternalBindToOptions(UDropDownMenuOption* Option, const FName& OptionName, bool bIsLastOption);
+    void InternalBindToConfirmationMenus(UConfirmationMenu* Menu, bool bLastMenu);
+    
 public:
     //@초기화
     UFUNCTION()
         virtual void InitializeDropDownMenu();
 
+protected:
+protected:
+    //@초기화 완료 체크
+    bool bOptionsInitFinished = false;
+    bool bConfirmationMenuInitFinished = false;
+    void CheckAllUIsInitFinished();
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region Subwidgets
 protected:
     //@Reset
     void ResetDropDownMenu();
     //@Drop Down Menu Option 생성
     virtual void CreateDropDownMenuOptions();
+    //@각 Drop Down Menu Option에 대응되는 Confirmation Menu 생성
+    virtual void CreateConfirmationMenuForOptions();
 
 protected:
     //@Open Drop Down Menu
@@ -165,8 +177,14 @@ protected:
 protected:
     //@현재 선택된 Drop Down Menu Option
     FName CurrentSelectedOption;
+
+protected:
+    //@각 옵션에 대응하는 Confirmation Menu
+    UPROPERTY()
+        TMap<FName, UConfirmationMenu*> OptionConfirmationMenus;
 #pragma endregion
 
+//@Delegates
 #pragma region Delegates
 //@초기화
 public:
@@ -181,16 +199,24 @@ public:
     FCancelDropDownMenuOptionButton CancelDropDownMenuOptionButton;
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks;
 protected:
     //@초기화 완료 이벤트
     UFUNCTION()
         void OnDropDownMenuOptionInitFinished();
+    //@초기화 완료 이벤트
+    UFUNCTION()
+        void OnConfirmationMenuInitFinished();
 
 protected:
     //@Option 선택 이벤트에 등록되는 콜백, 각 Drop Down Menu 에서 제공하는 옵션들에 대한 기능들 오버라이딩 필수!
     UFUNCTION()
         virtual void OnDropDownMenuOptionSelected(FName SelectedOptionName);
+
+protected:
+    UFUNCTION()
+        virtual void OnConfirmationMenuOptionSelected(FName OkOrCancel);
 #pragma endregion
 
 };

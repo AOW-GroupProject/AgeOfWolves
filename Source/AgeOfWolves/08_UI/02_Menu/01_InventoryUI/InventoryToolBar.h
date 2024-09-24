@@ -38,10 +38,14 @@ protected:
     //~ End UUserWidget Interface
 
 protected:
+    //@외부 바인딩
+
+protected:
     //@내부 바인딩
     void InternalBindToButton(UCustomButton* Button, EItemType ItemType);
 
 public:
+    //@초기화
     UFUNCTION()
         void InitializeInventoryToolBar();
 #pragma endregion

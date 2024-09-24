@@ -185,7 +185,6 @@ void UInteractableItemSlot::CreateDropDownMenu()
 
     //@Close Drop Down Menu
     DropDownMenu->AddToViewport(100);
-    DropDownMenu->CloseDropDownMenu();
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "DropDownMenu가 생성되었습니다.");
 }

@@ -37,8 +37,8 @@ DECLARE_MULTICAST_DELEGATE(FNotifyItemSlotButtonCanceled);
 {
     GENERATED_BODY()
 
-        //@Friend Class 설정
-        friend class UItemSlots;
+//@Friend Class 설정
+    friend class UItemSlots;
 
 #pragma region Default Setting
 public:

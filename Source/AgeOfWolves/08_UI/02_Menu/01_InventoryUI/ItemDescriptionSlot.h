@@ -32,9 +32,11 @@ UCLASS()
 class AGEOFWOLVES_API UItemDescriptionSlot : public UItemSlot
 {
         friend class UInventoryUIContent;
+//@친추 클래스
 
     GENERATED_BODY()
 
+//@Defualt Setting
 #pragma region Default Settings
 public:
     UItemDescriptionSlot(const FObjectInitializer& ObjectInitializer);
@@ -58,8 +60,10 @@ public:
     //@초기화
     UFUNCTION()
         void InitializeItemDescriptionSlot();
+    //@Defualt Setting
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region SubWidgets
 protected:
     void ResetItemDescriptionSlot();
@@ -71,8 +75,8 @@ public:
     virtual void ClearAssignedItem(bool bForceClear = false);
 
 protected:
+    //@Multi Line Text Box에서 '.'기준 줄바꿈 정리
     FString ArrangeItemDescriptionStringToText(FString String);
-
 
 protected:
     //@수직 상자
@@ -92,12 +96,14 @@ protected:
     TMap<FGuid, FItemInformation> MItemsInInventoryItemSlots;
 #pragma endregion
 
+//@Delegates
 #pragma region Delegate
 public:
     //@초기화 완료 이벤트
     FItemDescriptionSlotInitFinished ItemDescriptionSlotInitFinished;
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 protected:
     //@Item Slots의 바인딩 준비 완료 이벤트

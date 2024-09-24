@@ -18,7 +18,7 @@
 
 DEFINE_LOG_CATEGORY(LogItemDescription)
 
-
+//@Defualt Setting
 #pragma region Default Settings
 UItemDescriptionSlot::UItemDescriptionSlot(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -91,6 +91,7 @@ void UItemDescriptionSlot::InitializeItemDescriptionSlot()
 }
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region SubWidgets
 void UItemDescriptionSlot::ResetItemDescriptionSlot()
 {
@@ -162,6 +163,7 @@ FString UItemDescriptionSlot::ArrangeItemDescriptionStringToText(FString String)
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UItemDescriptionSlot::OnItemSlotsReadyForBinding(const UInventoryUIContent* InventoryUIContent)
 {
