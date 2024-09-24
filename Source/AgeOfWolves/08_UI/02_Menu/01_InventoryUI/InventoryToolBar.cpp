@@ -42,9 +42,9 @@ void UInventoryToolBar::InternalBindToButton(UCustomButton* Button, EItemType It
         return;
     }
 
-    Button->ButtonSelected.AddUObject(this, &UInventoryToolBar::HandleButtonClick, ItemType);
-    Button->ButtonHovered.AddUObject(this, &UInventoryToolBar::HandleButtonHover, ItemType);
-    Button->ButtonUnhovered.AddUObject(this, &UInventoryToolBar::HandleButtonUnhover, ItemType);
+    Button->ButtonSelected.AddUObject(this, &UInventoryToolBar::OnInventoryToolBarButtonClicked, ItemType);
+    Button->ButtonHovered.AddUObject(this, &UInventoryToolBar::OnInventoryToolBarButtonHovered, ItemType);
+    Button->ButtonUnhovered.AddUObject(this, &UInventoryToolBar::OnInventoryToolBarButtonUnhovered, ItemType);
 }
 
 void UInventoryToolBar::InitializeInventoryToolBar()
@@ -65,7 +65,7 @@ void UInventoryToolBar::ResetToolBar()
 
     if (PreviousType < EItemType::MAX && PreviousType != DefaultItemType)
     {
-        HandleButtonCanceled(PreviousType);
+        CancelInventoryToolBarButtonSelected(PreviousType);
     }
 
     UCustomButton* DefaultButton = MItemTypeButtons[CurrentItemType];
@@ -192,37 +192,39 @@ void UInventoryToolBar::CreateAndAddButton(EItemType ButtonType, float Scale)
 
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 생성되고 추가되었습니다. Scale: {1}", UEnum::GetValueAsString(ButtonType), Scale);
 }
-
 #pragma endregion
 
 #pragma region Callbacks
-void UInventoryToolBar::HandleButtonClick(EItemType ItemType)
+void UInventoryToolBar::OnInventoryToolBarButtonClicked_Implementation(EItemType ItemType)
 {
     if (CurrentItemType == ItemType) return;
 
     //@선택된 버튼 취소
-    HandleButtonCanceled(CurrentItemType);
+    CancelInventoryToolBarButtonSelected(CurrentItemType);
     //@Current Item Type
     CurrentItemType = ItemType;
     //@Type 버튼 클릭 이벤트
     InventoryToolBarButtonClicked.ExecuteIfBound(ItemType);
 
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 클릭되었습니다.", *UEnum::GetValueAsString(ItemType));
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 }
 
-void UInventoryToolBar::HandleButtonHover(EItemType ItemType)
+void UInventoryToolBar::OnInventoryToolBarButtonHovered_Implementation(EItemType ItemType)
 {
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼에 마우스가 올라갔습니다.", *UEnum::GetValueAsString(ItemType));
     // TODO: Hover 상태 처리
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 }
 
-void UInventoryToolBar::HandleButtonUnhover(EItemType ItemType)
+void UInventoryToolBar::OnInventoryToolBarButtonUnhovered_Implementation(EItemType ItemType)
 {
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼에서 마우스가 벗어났습니다.", *UEnum::GetValueAsString(ItemType));
     // TODO: Unhover 상태 처리
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 }
 
-void UInventoryToolBar::HandleButtonCanceled(EItemType PreviousItemType)
+void UInventoryToolBar::CancelInventoryToolBarButtonSelected_Implementation(EItemType PreviousItemType)
 {
     auto PreviousButton = MItemTypeButtons.FindRef(PreviousItemType);
     if (!PreviousButton)
@@ -234,5 +236,6 @@ void UInventoryToolBar::HandleButtonCanceled(EItemType PreviousItemType)
     PreviousButton->CancelSelectedButton();
 
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 취소되었습니다.", *UEnum::GetValueAsString(PreviousItemType));
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 }
 #pragma endregion

@@ -126,6 +126,8 @@ void UInventoryUIContent::ResetInventoryUIContent()
             UE_LOGFMT(LogInventoryUIContent, Warning, "현재 타입({0})의 Item Slots를 찾을 수 없거나 초기화하지 못했습니다.", *UEnum::GetValueAsString(CurrentItemType));
         }
 
+        //@ItemSlot_
+
         //@Item Description
         bool bItemDescriptionReset = false;
         for (auto OverlaySlot : ItemDescriptionOverlay->GetAllChildren())

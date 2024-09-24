@@ -4,7 +4,7 @@
 #include "Components/Overlay.h"
 #include "Components/Image.h"
 #include "Components/VerticalBox.h"
-#include "Components/EditableText.h"
+#include "Components/EditableTextBox.h"
 
 DEFINE_LOG_CATEGORY(LogItemSlot)
 

@@ -10,14 +10,18 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogToolBar, Log, All)
 
+#pragma region Forward Declaration
+class UHorizontalBox;
+class UCustomButton;
+#pragma endregion
+
+#pragma region Delegates
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FToolBarInitFinished)
 
 //@Menu Category 버튼 선택 이벤트
 DECLARE_DELEGATE_OneParam(FMenuCategoryButtonClicked, EMenuCategory)
-
-class UHorizontalBox;
-class UCustomButton;
+#pragma endregion
 
 /**
  * UMenuUIToolBar
@@ -40,6 +44,9 @@ protected:
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
     //~ End UUserWidget Interface
+
+protected:
+    //@외부 바인딩
 
 protected:
     //@내부 바인딩
@@ -85,6 +92,15 @@ protected:
         TSubclassOf<UCustomButton> SystemButtonClass;
 #pragma endregion
 
+#pragma region Delegates
+public:
+    //@Tool Bar의 초기화 완료 이벤트
+    FToolBarInitFinished ToolBarInitFinished;
+
+public:
+    //@Menu Category Button의 선택 이벤트
+    FMenuCategoryButtonClicked MenuCategoryButtonClicked;
+#pragma endregion
 
 #pragma region Callbacks
 protected:
@@ -97,18 +113,25 @@ public:
     //@메뉴 카테고리를 오른쪽으로 이동
     void MoveCategoryRight();
 
-private:
-    //@버튼 클릭 이벤트에 대한 처리
-    UFUNCTION()
-        void HandleButtonClick(EMenuCategory Category);
-    //@버튼 호버 이벤트에 대한 처리
-    UFUNCTION()
-        void HandleButtonHover(EMenuCategory Category);
-    //@버튼 언호버 이벤트에 대한 처리
-    UFUNCTION()
-        void HandleButtonUnhover(EMenuCategory Category);
-    //@버튼 취소 이벤트에 대한 처리
-    void HandleButtonCanceled(EMenuCategory PreviousCategory);
+protected:
+    //@Menu UI Tool Bar 버튼 클릭 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void OnMenuUIToolBarButtonClicked(EMenuCategory Category);
+    virtual void OnMenuUIToolBarButtonClicked_Implementation(EMenuCategory Category);
+    //@Menu UI Tool Bar 버튼 Hover 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void OnMenuUIToolBarButtonHovered(EMenuCategory Category);
+    virtual void OnMenuUIToolBarButtonHovered_Implementation(EMenuCategory Category);
+    //@Menu UI Tool Bar 버튼 Unhover 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void OnMenuUIToolBarButtonUnhovered(EMenuCategory Category);
+    virtual void OnMenuUIToolBarButtonUnhovered_Implementation(EMenuCategory Category);
+
+protected:
+    //@Menu UI Tool Bar 버튼 선택 취소 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void CancelMenuUIToolBarButtonSelected(EMenuCategory PreviousCategory);
+    virtual void CancelMenuUIToolBarButtonSelected_Implementation(EMenuCategory PreviousCategory);
 #pragma endregion
 
 #pragma region Utility
@@ -117,15 +140,5 @@ protected:
     int32 GetCurrentCategoryIndex() const;
     //@인덱스에 해당하는 메뉴 카테고리를 반환
     EMenuCategory GetMenuCategoryFromIndex(int32 Index) const;
-#pragma endregion
-
-#pragma region Delegates
-public:
-    //@Tool Bar의 초기화 완료 이벤트
-    FToolBarInitFinished ToolBarInitFinished;
-
-public:
-    //@Menu Category Button의 선택 이벤트
-    FMenuCategoryButtonClicked MenuCategoryButtonClicked;
 #pragma endregion
 };
