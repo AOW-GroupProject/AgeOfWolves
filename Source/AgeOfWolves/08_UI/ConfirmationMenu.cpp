@@ -5,7 +5,7 @@
 #include "Components/OverlaySlot.h"
 #include "Components/Image.h"
 #include "Components/HorizontalBox.h"
-#include "Components/EditableTextBox.h"
+#include "Components/MultiLineEditableTextBox.h"
 
 #include "08_UI/CustomButton.h"
 
@@ -56,7 +56,7 @@ void UConfirmationMenu::InitializeConfirmationMenu()
     //@Button
     CreateButton();
     //@Reset
-    ResetConfirmationMenu();
+    CloseConfirmationMenu();
     //@초기화 완료 이벤트
     ConfirmationMenuInitFinished.ExecuteIfBound();
 }
@@ -91,19 +91,25 @@ void UConfirmationMenu::ResetConfirmationMenu()
 
 void UConfirmationMenu::CreateButton()
 {
-    //@Overlay
-    if (!ConfirmationMenuOverlay || !ConfirmationMenuButtonBox)
+    //@필수 컴포넌트 확인
+    if (!ConfirmationMenuOverlay || !ConfirmationMenuOkButtonOverlay || !ConfirmationMenuCancelButtonOverlay)
     {
-        UE_LOGFMT(LogConfirmationMenu, Error, "ConfirmationMenuOverlay 또는 ConfirmationMenuButtonBox가 null입니다. 위젯 블루프린트에서 올바르게 설정되었는지 확인하세요.");
+        UE_LOGFMT(LogConfirmationMenu, Error, "필요한 UI 컴포넌트가 null입니다. 위젯 블루프린트에서 올바르게 설정되었는지 확인하세요.");
         return;
     }
 
-    //@ConfirmationMenuButtonClass
-    if (!ConfirmationMenuButtonClass)
+    //@버튼 클래스 확인
+    if (!ConfirmationMenuOkButtonClass || !ConfirmationMenuCancelButtonClass)
     {
         UE_LOGFMT(LogConfirmationMenu, Error, "ConfirmationMenuButtonClass가 설정되지 않았습니다. 에디터에서 ConfirmationMenuButtonClass를 설정해주세요.");
         return;
     }
+
+    //@기존 이미지 제거 및 저장
+    UWidget* OkButtonImage = ConfirmationMenuOkButtonOverlay->GetChildAt(0);
+    UWidget* CancelButtonImage = ConfirmationMenuCancelButtonOverlay->GetChildAt(0);
+    ConfirmationMenuOkButtonOverlay->RemoveChildAt(0);
+    ConfirmationMenuCancelButtonOverlay->RemoveChildAt(0);
 
     //@버튼 키 배열
     TArray<FName> ConfirmationMenuButtonNames = { FName("OK"), FName("CANCEL") };
@@ -112,32 +118,62 @@ void UConfirmationMenu::CreateButton()
     for (const FName& ConfirmationMenuButtonName : ConfirmationMenuButtonNames)
     {
         //@Create Widget
-        UCustomButton* ConfirmationMenuButton = CreateWidget<UCustomButton>(this, ConfirmationMenuButtonClass);
+        UCustomButton* ConfirmationMenuButton = CreateWidget<UCustomButton>(this, ConfirmationMenuButtonName == "OK" ? ConfirmationMenuOkButtonClass : ConfirmationMenuCancelButtonClass);
         if (!ConfirmationMenuButton)
         {
-            UE_LOGFMT(LogConfirmationMenu, Error, "UCustomButton 위젯을 생성하지 못했습니다. ConfirmationMenuButtonClass: {0}", *ConfirmationMenuButtonClass->GetName());
+            UE_LOGFMT(LogConfirmationMenu, Error, "UCustomButton 위젯을 생성하지 못했습니다. ButtonName: {0}", *ConfirmationMenuButtonName.ToString());
             continue;
         }
 
         //@내부 바인딩
         InternalBindToButton(ConfirmationMenuButton, ConfirmationMenuButtonName);
 
-        //@Add CustomButton To HorizontalBox
-        UHorizontalBoxSlot* ButtonSlot = ConfirmationMenuButtonBox->AddChildToHorizontalBox(ConfirmationMenuButton);
-        if (!ButtonSlot)
+        //@Add CustomButton To Overlay
+        UOverlaySlot* ButtonOverlaySlot = ConfirmationMenuButtonName == "OK"
+            ? ConfirmationMenuOkButtonOverlay->AddChildToOverlay(ConfirmationMenuButton)
+            : ConfirmationMenuCancelButtonOverlay->AddChildToOverlay(ConfirmationMenuButton);
+
+        if (!ButtonOverlaySlot)
         {
-            UE_LOGFMT(LogConfirmationMenu, Error, "CustomButton을 HorizontalBox에 추가하지 못했습니다. ConfirmationMenuButton: {0}", *ConfirmationMenuButtonName.ToString());
+            UE_LOGFMT(LogConfirmationMenu, Error, "CustomButton을 Overlay에 추가하지 못했습니다. ConfirmationMenuButton: {0}", *ConfirmationMenuButtonName.ToString());
             continue;
         }
 
-        //@TODO: Alignment 작업 아래에서 수행...
-        
+        //@Alignment
+        if (ButtonOverlaySlot)
+        {
+            ButtonOverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+            ButtonOverlaySlot->SetVerticalAlignment(VAlign_Fill);
+            ButtonOverlaySlot->SetPadding(FMargin(0.0f));
+        }
 
         //@버튼 저장
         MConfirmationMenuButtons.Add(ConfirmationMenuButtonName, ConfirmationMenuButton);
 
         UE_LOGFMT(LogConfirmationMenu, Log, "버튼 생성 및 저장 완료. ConfirmationMenuButton: {0}", *ConfirmationMenuButtonName.ToString());
     }
+
+    //@이미지 다시 추가
+    if (OkButtonImage)
+    {
+        UOverlaySlot* OkImageSlot = ConfirmationMenuOkButtonOverlay->AddChildToOverlay(OkButtonImage);
+        if (OkImageSlot)
+        {
+            OkImageSlot->SetHorizontalAlignment(HAlign_Fill);
+            OkImageSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+    }
+    if (CancelButtonImage)
+    {
+        UOverlaySlot* CancelImageSlot = ConfirmationMenuCancelButtonOverlay->AddChildToOverlay(CancelButtonImage);
+        if (CancelImageSlot)
+        {
+            CancelImageSlot->SetHorizontalAlignment(HAlign_Fill);
+            CancelImageSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+    }
+
+    UE_LOGFMT(LogConfirmationMenu, Log, "버튼 이미지가 다시 추가되었습니다.");
 }
 
 void UConfirmationMenu::OpenConfirmationMenu_Implementation()
@@ -155,6 +191,9 @@ void UConfirmationMenu::CloseConfirmationMenu_Implementation()
 {
     //@화면에서 Confirmation Menu를 제거
     RemoveFromParent();
+
+    //@Reset
+    ResetConfirmationMenu();
 
     //@Animation 작업 등 블루프린트에서 오버라이딩...
 
@@ -241,22 +280,22 @@ void UConfirmationMenu::CancelConfirmationMenuButtonSelected_Implementation(FNam
 #pragma region Utility
 void UConfirmationMenu::SetConfirmationMenuDialogueText(FText Text)
 {
-    if (!ConfirmationMenuDialogueBox)
+    if (!ConfirmationMenuDialogue)
     {
-        UE_LOGFMT(LogConfirmationMenu, Warning, "ConfirmationMenuDialogueBox가 유효하지 않습니다!");
+        UE_LOGFMT(LogConfirmationMenu, Warning, "ConfirmationMenuDialogue가 유효하지 않습니다!");
         return; 
     }
     
     //@Set Text
-    ConfirmationMenuDialogueBox->SetText(ArrangeDialogueText(Text));
+    ConfirmationMenuDialogue->SetText(ArrangeDialogueText(Text));
 
 }
 
 FText UConfirmationMenu::GetConfirmationMenuDialogueText() const
 {
-    if (ConfirmationMenuDialogueBox)
+    if (ConfirmationMenuDialogue)
     {
-        return ConfirmationMenuDialogueBox->GetText();
+        return ConfirmationMenuDialogue->GetText();
     }
     return FText::GetEmpty();
 }

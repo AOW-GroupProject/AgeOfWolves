@@ -216,32 +216,29 @@ void UDropDownMenu::CreateDropDownMenuOptions()
 
 void UDropDownMenu::CreateConfirmationMenuForOptions()
 {
-    //@DropDownMenuOptionBox
     if (!DropDownMenuOptionBox)
     {
         UE_LOGFMT(LogDropDownMenu, Error, "DropDownMenuOptionBox가 null입니다.");
         return;
     }
 
-    //@기존 Confirmation Menu 제거
     OptionConfirmationMenus.Empty();
 
-    //@각 옵션에 대한 Confirmation Menu 생성
+    UConfirmationMenu* LastCreatedMenu = nullptr;
+    int32 CreatedMenuCount = 0;
+
     int32 OptionCount = OptionInformations.Num();
     for (int32 i = 0; i < OptionCount; ++i)
     {
         const FDropDownMenuOptionInformation& OptionInfo = OptionInformations[i];
-        bool bIsLastMenu = (i == OptionCount - 1);
 
-        //@Confirmation Menu 클래스 확인
         TSubclassOf<UConfirmationMenu> ConfirmationMenuClass = OptionInfo.GetConfirmationMenuClass();
         if (!ConfirmationMenuClass)
         {
-            UE_LOGFMT(LogDropDownMenu, Warning, "Option {0}의 ConfirmationMenuClass가 설정되지 않았습니다.", *OptionInfo.GetOptionName().ToString());
+            UE_LOGFMT(LogDropDownMenu, Verbose, "Option {0}의 ConfirmationMenuClass가 설정되지 않았습니다. 이 옵션에 대한 Confirmation Menu는 생성되지 않습니다.", *OptionInfo.GetOptionName().ToString());
             continue;
         }
 
-        //@Confirmation Menu 생성
         UConfirmationMenu* ConfirmationMenu = CreateWidget<UConfirmationMenu>(this, ConfirmationMenuClass);
         if (!ConfirmationMenu)
         {
@@ -249,25 +246,20 @@ void UDropDownMenu::CreateConfirmationMenuForOptions()
             continue;
         }
 
-        //@초기화 이벤트
         RequestStartInitByDropDownMenu.AddUFunction(ConfirmationMenu, "InitializeConfirmationMenu");
-
-        //@내부 바인딩
-        InternalBindToConfirmationMenus(ConfirmationMenu, bIsLastMenu);
-
-        //@Confirmation Menu Dialogue Text
         ConfirmationMenu->SetConfirmationMenuDialogueText(OptionInfo.GetConfirmationMenuDialogueText());
-
-        //@Add To Viewport
-        ConfirmationMenu->AddToViewport(200);
-
-        //@TMap에 추가
         OptionConfirmationMenus.Add(OptionInfo.GetOptionName(), ConfirmationMenu);
+
+        LastCreatedMenu = ConfirmationMenu;
 
         UE_LOGFMT(LogDropDownMenu, Log, "Option {0}에 대한 Confirmation Menu가 생성되었습니다.", *OptionInfo.GetOptionName().ToString());
     }
 
-    UE_LOGFMT(LogDropDownMenu, Log, "모든 옵션에 대한 Confirmation Menu 생성이 완료되었습니다. 총 {0}개의 메뉴가 생성되었습니다.", OptionConfirmationMenus.Num());
+    if (LastCreatedMenu)
+    {
+        InternalBindToConfirmationMenus(LastCreatedMenu, true);
+    }
+
 }
 
 void UDropDownMenu::OpenDropDownMenu_Implementation()

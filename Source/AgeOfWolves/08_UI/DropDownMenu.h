@@ -85,7 +85,6 @@ private:
     //@Option 클릭 시 열리는 Confirmation Menu의 블루프린트 클래스
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
         TSubclassOf<UConfirmationMenu> ConfirmationMenuClass;
-    
 };
 #pragma endregion 
 

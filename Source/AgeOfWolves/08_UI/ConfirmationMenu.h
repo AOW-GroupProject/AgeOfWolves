@@ -13,7 +13,7 @@ class UOverlay;
 class UHorizontalBox;
 class UVerticalBox;
 class UImage;
-class UEditableTextBox;
+class UMultiLineEditableTextBox;
 class UCustomButton;
 #pragma endregion
 
@@ -116,7 +116,7 @@ protected:
 protected:
     //@텍스트 박스
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-        UEditableTextBox* ConfirmationMenuDialogueBox;
+        UMultiLineEditableTextBox* ConfirmationMenuDialogue;
 
 protected:
     //@가로 박스
@@ -124,13 +124,33 @@ protected:
         UHorizontalBox* ConfirmationMenuButtonBox;
 
 protected:
+    //@확정 메뉴의 Ok 버튼 Overlay
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UOverlay* ConfirmationMenuOkButtonOverlay;
+    //@확정 메뉴의 Ok 버튼 이미지
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UImage* ConfirmationMenuOkButtonImage;
+
+
+protected:
+    //@확정 메뉴의 Cancel 버튼 Overlay;
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UOverlay* ConfirmationMenuCancelButtonOverlay;
+    //@확정 메뉴의 Cancel 버튼 이미지
+    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
+        UImage* ConfirmationMenuCancelButtonImage;
+
+protected:
     //@현재 선택된 확정 옵션(OK or CANCEL)
     TWeakObjectPtr<UCustomButton> CurrentSelectedConfirmationButton;
     //@TMap
     TMap<FName, TObjectPtr<UCustomButton>> MConfirmationMenuButtons;
-    //@Custom Button Class
+    //@Custom Button Class-1
     UPROPERTY(EditDefaultsOnly, category = "Coonfirmation Menu | Button")
-        TSubclassOf<UCustomButton> ConfirmationMenuButtonClass;
+        TSubclassOf<UCustomButton> ConfirmationMenuOkButtonClass;
+    //@Custom Button Class-2
+    UPROPERTY(EditDefaultsOnly, category = "Coonfirmation Menu | Button")
+        TSubclassOf<UCustomButton> ConfirmationMenuCancelButtonClass;
 #pragma endregion
 
 //@Delegates

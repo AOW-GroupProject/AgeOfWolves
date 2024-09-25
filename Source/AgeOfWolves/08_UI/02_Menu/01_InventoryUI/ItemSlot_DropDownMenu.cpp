@@ -40,8 +40,24 @@ void UItemSlot_DropDownMenu::InitializeDropDownMenu()
     Super::InitializeDropDownMenu();
 
 }
+void UItemSlot_DropDownMenu::ActivateUseOption()
+{
+}
+void UItemSlot_DropDownMenu::ActivateLeaveOption()
+{
+}
+void UItemSlot_DropDownMenu::ActivateDiscardOption()
+{
+}
+void UItemSlot_DropDownMenu::ActivateBackOption()
+{
+}
+void UItemSlot_DropDownMenu::ActivateHelpOption()
+{
+}
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 #pragma endregion
 
@@ -56,7 +72,6 @@ void UItemSlot_DropDownMenu::OnDropDownMenuOptionSelected(FName SelectedOptionNa
     UConfirmationMenu* SelectedConfirmationMenu = OptionConfirmationMenus.FindRef(SelectedOptionName);
     if (!SelectedConfirmationMenu)
     {
-
         UE_LOGFMT(LogItemSlot_DropDownMenu, Warning, "선택된 옵션 '{0}'에 대한 Confirmation Menu를 찾을 수 없습니다.", *SelectedOptionName.ToString());
         return;
     }
@@ -69,19 +84,34 @@ void UItemSlot_DropDownMenu::OnDropDownMenuOptionSelected(FName SelectedOptionNa
 
 void UItemSlot_DropDownMenu::OnConfirmationMenuOptionSelected(FName OkOrCancel)
 {
+    //@Confirmation Menu
+    UConfirmationMenu* SelectedConfirmationMenu = OptionConfirmationMenus.FindRef(CurrentSelectedOption);
+    if (!SelectedConfirmationMenu)
+    {
+        UE_LOGFMT(LogItemSlot_DropDownMenu, Error, "현재 선택된 옵션 '{0}'에 대한 Confirmation Menu를 찾을 수 없습니다.", *CurrentSelectedOption.ToString());
+        return;
+    }
+
     //@Ok?
     if (OkOrCancel == "OK")
     {
-
+        UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "'{0}' 옵션에 대해 'OK'가 선택되었습니다.", *CurrentSelectedOption.ToString());
+        //@TODO: 'OK' 선택 시 수행할 작업 구현
         return;
     }
     //@Cancel?
     if (OkOrCancel == "CANCEL")
     {
+        UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "'{0}' 옵션에 대해 'CANCEL'이 선택되었습니다.", *CurrentSelectedOption.ToString());
 
+        //@Close Confirmation Menu
+        SelectedConfirmationMenu->CloseConfirmationMenu();
+
+        UE_LOGFMT(LogItemSlot_DropDownMenu, Verbose, "'{0}' 옵션의 Confirmation Menu가 닫혔습니다.", *CurrentSelectedOption.ToString());
         return;
     }
 
+    UE_LOGFMT(LogItemSlot_DropDownMenu, Warning, "알 수 없는 선택: {0}", *OkOrCancel.ToString());
 }
 #pragma endregion
 
