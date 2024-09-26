@@ -14,6 +14,7 @@ void UBaseMonsterAttributeSet::InitializeAttributeValue(struct FSingleMonsterDat
 	InitMaxHealth(SingleMonsterData.PermanentStat.PHealthStat);
 	InitHealth(SingleMonsterData.PermanentStat.PHealthStat);
 	InitDamage(SingleMonsterData.PermanentStat.PDamageStat);
+	InitOffense(10);
 
 }
 
