@@ -30,19 +30,19 @@ class UItemSlots;
 
 /**
  * @UItemSlot_DropDownMenu
- * 
+ *
  * Item Slot 클릭 시 나타낼 Drop Down Menu UI
  */
 UCLASS()
 class AGEOFWOLVES_API UItemSlot_DropDownMenu : public UDropDownMenu
 {
-//@친추 클래스
+    //@친추 클래스
 #pragma region Friend Class
 #pragma endregion
 
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-//@Defualt Setting
+        //@Defualt Setting
 #pragma region Default Setting
 public:
     UItemSlot_DropDownMenu(const FObjectInitializer& ObjectInitializer);
@@ -66,7 +66,7 @@ public:
     virtual void InitializeDropDownMenu() override;
 #pragma endregion
 
-//@Property/Info...etc
+    //@Property/Info...etc
 #pragma region Subwidgets
 #pragma endregion
 

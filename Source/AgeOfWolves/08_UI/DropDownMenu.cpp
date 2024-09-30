@@ -1,3 +1,4 @@
+
 #include "DropDownMenu.h"
 #include "Logging/StructuredLog.h"
 
@@ -86,7 +87,7 @@ void UDropDownMenu::CheckAllUIsInitFinished()
 void UDropDownMenu::ResetDropDownMenu()
 {
     //@TODO: Drop Donw Menu의 초기 설정에 필요한 동작들...
-    
+
 
     //@이전에 선택된 옴션 버튼의 선택 취소 이벤트
     if (!CurrentSelectedOption.IsNone())
@@ -221,7 +222,7 @@ void UDropDownMenu::OnDropDownMenuOptionInitFinished()
 {
 
     bOptionsInitFinished = true;
-    
+
     //@초기화 완료 체크
     CheckAllUIsInitFinished();
 }
@@ -236,7 +237,7 @@ void UDropDownMenu::OnDropDownMenuOptionSelected(FName SelectedOptionName)
         UE_LOGFMT(LogDropDownMenu, Log, "이미 선택된 옵션입니다. 처리를 무시합니다: {0}", SelectedOptionName.ToString());
         return;
     }
-    
+
     //@이전에 선택된 옴션 버튼의 선택 취소 이벤트
     if (!CurrentSelectedOption.IsNone())
     {

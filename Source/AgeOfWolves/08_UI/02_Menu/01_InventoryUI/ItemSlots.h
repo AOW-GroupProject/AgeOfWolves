@@ -40,20 +40,20 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCancelItemSlotButton, const FGuid&)
 
 /**
  * @UItemSlots
- * 
+ *
  * Item Slot 목록을 표시하는 UI입니다.
  */
-UCLASS()
-class AGEOFWOLVES_API UItemSlots : public UUserWidget
+    UCLASS()
+    class AGEOFWOLVES_API UItemSlots : public UUserWidget
 {
-//@친추 클래스
+    //@친추 클래스
 #pragma region Friend Class
     friend class UItemSlot_DropDownMenu;
 #pragma endregion
 
-	GENERATED_BODY()
+    GENERATED_BODY()
 
-//@Defualt Setting
+        //@Defualt Setting
 #pragma region Default Setting
 public:
     UItemSlots(const FObjectInitializer& ObjectInitializer);
@@ -90,7 +90,7 @@ protected:
     void CheckItemSlotInitFinished();
 #pragma endregion
 
-//@Property/Info...etc
+    //@Property/Info...etc
 #pragma region SubWidgets
 public:
     //@주의: 아무 곳에서 호출하면 안됩니다.
@@ -155,7 +155,7 @@ protected:
     TSubclassOf<UConfirmationMenu> ConfirmationMenuClass;
 #pragma endregion
 
-//@Delegates
+    //@Delegates
 #pragma region Delegate
 public:
     //@초기화 요청 이벤트
@@ -168,7 +168,7 @@ public:
     FCancelItemSlotButton CancelItemSlotButton;
 #pragma endregion
 
-//@Callbacks
+    //@Callbacks
 #pragma region Callback
 protected:
     //@가시성 변화 이벤트 구독
@@ -217,14 +217,14 @@ protected:
         void OnInventoryItemUpdated(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag, int32 UpdatedItemCount);
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+    //@Utility(Setter, Getter,...etc)
 #pragma region Utility Functions
 public:
     // 모든 Item Slot을 반환하는 함수
     TArray<UInteractableItemSlot*> GetAllItemSlots() const;
 
 public:
-     FORCEINLINE void SetItemType(const EItemType& Type) { ItemType = Type; }
+    FORCEINLINE void SetItemType(const EItemType& Type) { ItemType = Type; }
 
 protected:
     // 새로운 유틸리티 함수들을 추가합니다.

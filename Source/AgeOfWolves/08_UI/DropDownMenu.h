@@ -60,7 +60,7 @@ public:
     FORCEINLINE const FName& GetOptionName() const { return OptionName; }
     FORCEINLINE const FText& GetOptionHotKeyText() const { return OptionHotKeyText; }
     FORCEINLINE TSoftObjectPtr<UTexture2D> GetOptionHotKeyInfoBGImage() const { return OptionHotKeyInfoBGImage; }
-    FORCEINLINE TSubclassOf< UConfirmationMenu> GetConfirmationMenuClass() const {return ConfirmationMenuClass;}
+    FORCEINLINE TSubclassOf< UConfirmationMenu> GetConfirmationMenuClass() const { return ConfirmationMenuClass; }
     FORCEINLINE const FText& GetConfirmationMenuDialogueText() const { return ConfirmationMenuDialogueText; }
 
 
@@ -99,14 +99,14 @@ private:
 UCLASS()
 class AGEOFWOLVES_API UDropDownMenu : public UUserWidget
 {
-//@친추 클래스
+    //@친추 클래스
 #pragma region Friend Class
     friend class UItemSlots;
 #pragma endregion
 
     GENERATED_BODY()
 
- //@Defualt Setting
+        //@Defualt Setting
 #pragma region Default Setting
 public:
     UDropDownMenu(const FObjectInitializer& ObjectInitializer);
@@ -125,7 +125,7 @@ protected:
 protected:
     //@내부 바인딩
     void InternalBindToOptions(UDropDownMenuOption* Option, const FName& OptionName, bool bIsLastOption);
-    
+
 public:
     //@초기화
     UFUNCTION()
@@ -138,7 +138,7 @@ protected:
     void CheckAllUIsInitFinished();
 #pragma endregion
 
-//@Property/Info...etc
+    //@Property/Info...etc
 #pragma region Subwidgets
 protected:
     //@Reset
@@ -157,13 +157,13 @@ protected:
         void CloseDropDownMenu();
     virtual void CloseDropDownMenu_Implementation();
 
-//@BG
+    //@BG
 protected:
     //@BG Image
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UImage* DropDownMenuBGImage;
 
-//@Drop Down Menu Option
+    //@Drop Down Menu Option
 protected:
     //@Vertical Box
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
@@ -182,7 +182,7 @@ protected:
         TMap<FName, UConfirmationMenu*> OptionConfirmationMenus;
 #pragma endregion
 
-//@Delegates
+    //@Delegates
 #pragma region Delegates
 //@초기화
 public:
@@ -196,13 +196,13 @@ public:
     FDropDownMenuOptionButtonClicked DropDownMenuOptionButtonClicked;
 
 
-//@Option Button
+    //@Option Button
 public:
     //@Drop Down Menu Option 버튼 선택 취소 이벤트
     FCancelDropDownMenuOptionButton CancelDropDownMenuOptionButton;
 #pragma endregion
 
-//@Callbacks
+    //@Callbacks
 #pragma region Callbacks;
 protected:
     //@초기화 완료 이벤트
@@ -215,7 +215,7 @@ protected:
         virtual void OnDropDownMenuOptionSelected(FName SelectedOptionName);
 #pragma endregion
 
- //@Utility(Setter, Getter,...etc)
+    //@Utility(Setter, Getter,...etc)
 #pragma region Utility Functions
 public:
     const FText GetConfirmationMenuDialogueText(const FName& Name) const;
