@@ -206,36 +206,14 @@ void UConfirmationMenu::CloseConfirmationMenu_Implementation()
 #pragma region Callbacks
 void UConfirmationMenu::OnConfirmationMenuButtonClicked_Implementation(FName MenuButtonName)
 {
-    //@키가 존재하는지 체크
+    //@MConfirmationMenuButtons
     if (!MConfirmationMenuButtons.Contains(MenuButtonName))
     {
         UE_LOGFMT(LogConfirmationMenu, Error, "클릭된 버튼 {0}이(가) MConfirmationMenuButtons에 존재하지 않습니다.", *MenuButtonName.ToString());
         return;
     }
 
-    //@Current Selected Confirmation MenuButton
-    if (!CurrentSelectedConfirmationButton.IsValid() || CurrentSelectedConfirmationButton == MConfirmationMenuButtons[MenuButtonName])
-    {
-        UE_LOGFMT(LogConfirmationMenu, Verbose, "이미 선택된 버튼 {0}이(가) 다시 클릭되었습니다.", *MenuButtonName.ToString());
-        return;
-    }
-
-    //@Cancel Confirmation Menu Button Selected
-    if (CurrentSelectedConfirmationButton.IsValid())
-    {
-        FName PreviousMenuButtonName;
-        for (const auto& Pair : MConfirmationMenuButtons)
-        {
-            if (Pair.Value == CurrentSelectedConfirmationButton)
-            {
-                PreviousMenuButtonName = Pair.Key;
-                break;
-            }
-        }
-        CancelConfirmationMenuButtonSelected(PreviousMenuButtonName);
-    }
-
-    //@Current Selected 
+    //@Current Selected Confirmation Button
     CurrentSelectedConfirmationButton = MConfirmationMenuButtons[MenuButtonName];
 
     //@버튼 클릭 이벤트

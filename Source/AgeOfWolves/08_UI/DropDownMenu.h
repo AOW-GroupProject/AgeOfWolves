@@ -60,7 +60,6 @@ public:
     FORCEINLINE const FName& GetOptionName() const { return OptionName; }
     FORCEINLINE const FText& GetOptionHotKeyText() const { return OptionHotKeyText; }
     FORCEINLINE TSoftObjectPtr<UTexture2D> GetOptionHotKeyInfoBGImage() const { return OptionHotKeyInfoBGImage; }
-    FORCEINLINE TSubclassOf< UConfirmationMenu> GetConfirmationMenuClass() const { return ConfirmationMenuClass; }
     FORCEINLINE const FText& GetConfirmationMenuDialogueText() const { return ConfirmationMenuDialogueText; }
 
 
@@ -84,10 +83,6 @@ private:
     //@Option 클릭 시 열리는 Confirmation Menu의 Dialogue Box에 나타낼 설명 문
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
         FText ConfirmationMenuDialogueText;
-
-    //@Option 클릭 시 열리는 Confirmation Menu의 블루프린트 클래스
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
-        TSubclassOf<UConfirmationMenu> ConfirmationMenuClass;
 };
 #pragma endregion 
 
@@ -99,14 +94,14 @@ private:
 UCLASS()
 class AGEOFWOLVES_API UDropDownMenu : public UUserWidget
 {
-    //@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
     friend class UItemSlots;
 #pragma endregion
 
     GENERATED_BODY()
 
-        //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UDropDownMenu(const FObjectInitializer& ObjectInitializer);
@@ -132,13 +127,12 @@ public:
         virtual void InitializeDropDownMenu();
 
 protected:
-protected:
     //@초기화 완료 체크
     bool bOptionsInitFinished = false;
     void CheckAllUIsInitFinished();
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region Subwidgets
 protected:
     //@Reset
@@ -163,7 +157,6 @@ protected:
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UImage* DropDownMenuBGImage;
 
-    //@Drop Down Menu Option
 protected:
     //@Vertical Box
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
@@ -176,13 +169,9 @@ protected:
     //@현재 선택된 Drop Down Menu Option
     FName CurrentSelectedOption;
 
-protected:
-    //@각 옵션에 대응하는 Confirmation Menu
-    UPROPERTY()
-        TMap<FName, UConfirmationMenu*> OptionConfirmationMenus;
 #pragma endregion
 
-    //@Delegates
+//@Delegates
 #pragma region Delegates
 //@초기화
 public:
@@ -202,7 +191,7 @@ public:
     FCancelDropDownMenuOptionButton CancelDropDownMenuOptionButton;
 #pragma endregion
 
-    //@Callbacks
+//@Callbacks
 #pragma region Callbacks;
 protected:
     //@초기화 완료 이벤트
@@ -215,7 +204,7 @@ protected:
         virtual void OnDropDownMenuOptionSelected(FName SelectedOptionName);
 #pragma endregion
 
-    //@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility Functions
 public:
     const FText GetConfirmationMenuDialogueText(const FName& Name) const;
