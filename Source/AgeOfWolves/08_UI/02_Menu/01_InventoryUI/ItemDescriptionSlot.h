@@ -31,7 +31,7 @@ DECLARE_DELEGATE(FItemDescriptionSlotInitFinished);
 UCLASS()
 class AGEOFWOLVES_API UItemDescriptionSlot : public UItemSlot
 {
-        friend class UInventoryUIContent;
+    friend class UInventoryUIContent;
 
     GENERATED_BODY()
 

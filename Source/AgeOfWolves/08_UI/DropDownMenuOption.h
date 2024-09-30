@@ -39,8 +39,13 @@ DECLARE_MULTICAST_DELEGATE(FNotifyDropDownMenuOptionCanceled);
 UCLASS()
 class AGEOFWOLVES_API UDropDownMenuOption : public UUserWidget
 {
+    //@친추 클래스
+#pragma region Friend Class
+#pragma endregion
+
     GENERATED_BODY()
 
+        //@Defualt Setting
 #pragma region Default Setting
 public:
     UDropDownMenuOption(const FObjectInitializer& ObjectInitializer);
@@ -63,6 +68,7 @@ public:
         virtual void InitializeDropDownMenuOption();
 #pragma endregion
 
+    //@Property/Info...etc
 #pragma region Subwidgets
 protected:
     //@CustomButton 생성
@@ -82,7 +88,7 @@ protected:
     UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Button")
         TSubclassOf<UCustomButton> DropDownMenuOptionButtonClass;
 
-protected:  
+protected:
     //@Option Text를 담을 Horizontal Box
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UHorizontalBox* DropDownMenuOptionTextBox;
@@ -103,7 +109,7 @@ protected:
 protected:
     //@Option에 나타낼 Text
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-        UEditableTextBox* DropDownMenuOptionText ;
+        UEditableTextBox* DropDownMenuOptionText;
 
 protected:
     //@각 옵션의 Height 값
@@ -115,6 +121,7 @@ protected:
         float LeftRightPadding = 0;
 #pragma endregion
 
+    //@Delegates
 #pragma region Delegates
 public:
     //@초기화 완료 이벤트
@@ -132,6 +139,7 @@ public:
     FNotifyDropDownMenuOptionCanceled NotifyDropDownMenuOptionCanceled;
 #pragma endregion
 
+    //@Callbacks
 #pragma region Callbacks
 protected:
     //@Button Clicked 이벤트에 등록되는 콜백
@@ -155,6 +163,7 @@ protected:
     virtual void DropDownMenuOptionButtonCanceledNotified_Implementation(FName OptionName);
 #pragma endregion
 
+    //@Utility(Setter, Getter,...etc)
 #pragma region Utilities
 public:
     UFUNCTION(BlueprintCallable)

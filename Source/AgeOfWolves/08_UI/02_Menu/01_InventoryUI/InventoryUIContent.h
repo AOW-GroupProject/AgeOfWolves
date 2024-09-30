@@ -13,20 +13,20 @@ class UInventoryToolBar;
 class UItemSlots;
 class UItemDescriptionSlot;
 
-//@ÃÊ±âÈ­ ¿äÃ» ÀÌº¥Æ®
+//@ì´ˆê¸°í™” ìš”ì²­ ì´ë²¤íŠ¸
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByInventoryUIContent)
-//@ÃÊ±âÈ­ ¿Ï·á ÀÌº¥Æ®
+//@ì´ˆê¸°í™” ì™„ë£Œ ì´ë²¤íŠ¸
 DECLARE_DELEGATE(FInventoryUIContentInitFinished)
-//@Item Slots ¹ÙÀÎµù ÁØºñ ¿Ï·á ÀÌº¥Æ®
+//@Item Slots ë°”ì¸ë”© ì¤€ë¹„ ì™„ë£Œ ì´ë²¤íŠ¸
 DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotsReadyForBinding, const UInventoryUIContent*)
 
-//@Item Slots Á¤º¸ ±¸Á¶Ã¼
+//@Item Slots ì •ë³´ êµ¬ì¡°ì²´
 USTRUCT(BlueprintType)
 struct FItemSlotsInfo
 {
     GENERATED_BODY()
 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite)
+        UPROPERTY(EditAnywhere, BlueprintReadWrite)
         EItemType ItemType;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -54,21 +54,21 @@ protected:
     //~ End UUserWidget Interface
 
 protected:
-    //@¿ÜºÎ ¹ÙÀÎµù
+    //@ì™¸ë¶€ ë°”ì¸ë”©
 
 protected:
-    //@³»ºÎ ¹ÙÀÎµù
+    //@ë‚´ë¶€ ë°”ì¸ë”©
     void InternalBindingToInventoryToolBar(UInventoryToolBar* ToolBar);
     void InternalBindingToItemSlots(UItemSlots* ItemSlotsWidget);
     void InternalBindingToItemDescription(UItemDescriptionSlot* ItemDescription);
 
 public:
-    //@ÃÊ±âÈ­
+    //@ì´ˆê¸°í™”
     UFUNCTION()
         void InitializeInventoryUIContent();
 
 protected:
-    //@ÃÊ±âÈ­ ¿Ï·á Ã¼Å©
+    //@ì´ˆê¸°í™” ì™„ë£Œ ì²´í¬
     bool bInventoryItemSlotsReady = false;
     bool bInventoryToolBarReady = false;
     bool bInventoryItemDescriptionReady = false;
@@ -81,7 +81,7 @@ protected:
     void ResetInventoryUIContent();
 
 protected:
-    //@»ı¼º
+    //@ìƒì„±
     void CreateToolBar();
     void CreateAllItemSlots();
     void CreateItemDescription();
@@ -117,30 +117,30 @@ protected:
 
 #pragma region Delegates
 public:
-    //@ÃÊ±âÈ­ ¿äÃ» ÀÌº¥Æ®(ºñµ¿±â ÃÊ±âÈ­, Áö¿¬ ÃÊ±âÈ­)
+    //@ì´ˆê¸°í™” ìš”ì²­ ì´ë²¤íŠ¸(ë¹„ë™ê¸° ì´ˆê¸°í™”, ì§€ì—° ì´ˆê¸°í™”)
     FRequestStartInitByInventoryUIContent RequestStartInitByInventoryUIContent;
-    //@Inventory UI ContentÀÇ ÃÊ±âÈ­ ¿Ï·á ÀÌº¥Æ®
+    //@Inventory UI Contentì˜ ì´ˆê¸°í™” ì™„ë£Œ ì´ë²¤íŠ¸
     FInventoryUIContentInitFinished InventoryUIContentInitFinished;
 
 public:
-    //@Item SlotsÀÇ ÃÊ±âÈ­ ¿Ï·á ¹× ¹ÙÀÎµùÀ» À§ÇÑ ÁØºñ ¿Ï·á ¾Ë¸² ÀÌº¥Æ®
+    //@Item Slotsì˜ ì´ˆê¸°í™” ì™„ë£Œ ë° ë°”ì¸ë”©ì„ ìœ„í•œ ì¤€ë¹„ ì™„ë£Œ ì•Œë¦¼ ì´ë²¤íŠ¸
     FItemSlotsReadyForBinding ItemSlotsReadyForBinding;
 #pragma endregion
 
 #pragma region Callbacks
 protected:
-    //@Inventory Tool BarÀÇ ÃÊ±âÈ­ ¿Ï·á ÀÌº¥Æ® ±¸µ¶
+    //@Inventory Tool Barì˜ ì´ˆê¸°í™” ì™„ë£Œ ì´ë²¤íŠ¸ êµ¬ë…
     UFUNCTION()
         void OnInventoryToolBarInitFinished();
-    //@Item SlotsÀÇ ÃÊ±âÈ­ ¿Ï·á ÀÌº¥Æ® ±¸µ¶
+    //@Item Slotsì˜ ì´ˆê¸°í™” ì™„ë£Œ ì´ë²¤íŠ¸ êµ¬ë…
     UFUNCTION()
         void OnInventoryItemSlotsInitFinished();
-    //@Item Description ÃÊ±âÈ­ ¿Ï·á ÀÌº¥Æ® ±¸µ¶
+    //@Item Description ì´ˆê¸°í™” ì™„ë£Œ ì´ë²¤íŠ¸ êµ¬ë…
     UFUNCTION()
         void OnInventoryItemDescriptionInitFinished();
 
 protected:
-    //@Inventory Tool BarÀÇ ¹öÆ° Å¬¸¯ ÀÌº¥Æ® ±¸µ¶
+    //@Inventory Tool Barì˜ ë²„íŠ¼ í´ë¦­ ì´ë²¤íŠ¸ êµ¬ë…
     UFUNCTION()
         void OnInventoryToolBarButtonClicked(EItemType ItemType);
 #pragma endregion

@@ -10,25 +10,39 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogItemSlot_DropDownMenu, Log, All)
 
+//@전방 선언
 #pragma region Forward Declaration
 class UHorizontalBox;
-class UBaseGameplayAbility;
+class UItemSlots;
 #pragma endregion
 
-#pragma region Delegates
+//@열거형
+#pragma region Enums
+#pragma endregion
 
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
 #pragma endregion
 
 /**
  * @UItemSlot_DropDownMenu
- * 
+ *
  * Item Slot 클릭 시 나타낼 Drop Down Menu UI
  */
 UCLASS()
 class AGEOFWOLVES_API UItemSlot_DropDownMenu : public UDropDownMenu
 {
-	GENERATED_BODY()
+    //@친추 클래스
+#pragma region Friend Class
+#pragma endregion
 
+    GENERATED_BODY()
+
+        //@Defualt Setting
 #pragma region Default Setting
 public:
     UItemSlot_DropDownMenu(const FObjectInitializer& ObjectInitializer);
@@ -51,17 +65,21 @@ public:
     //@초기화
     virtual void InitializeDropDownMenu() override;
 #pragma endregion
-	
+
+    //@Property/Info...etc
 #pragma region Subwidgets
-protected:
-    //@Drop Down Menu Option 생성 함수
-    virtual void CreateDropDownMenuOptions() override;
 #pragma endregion
 
+    //@Delegates
+#pragma region Delegates
+#pragma endregion
+
+//@Callbacks
 #pragma region Callbacks
-protected:
-    //@Option 선택 이벤트에 등록되는 콜백
-    virtual void OnDropDownMenuOptionSelected(FName SelectedOptionName) override;
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion
 
 };

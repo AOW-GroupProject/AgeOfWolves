@@ -1,3 +1,4 @@
+
 #include "DropDownMenu.h"
 #include "Logging/StructuredLog.h"
 
@@ -9,6 +10,7 @@
 
 DEFINE_LOG_CATEGORY(LogDropDownMenu)
 
+//@Default Settings
 #pragma region Default Setting
 UDropDownMenu::UDropDownMenu(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
@@ -38,7 +40,7 @@ void UDropDownMenu::NativeDestruct()
     Super::NativeDestruct();
 }
 
-void UDropDownMenu::InternalBindToOptions(UDropDownMenuOption* Option, const FName& OptionName)
+void UDropDownMenu::InternalBindToOptions(UDropDownMenuOption* Option, const FName& OptionName, bool bIsLastOption)
 {
     if (!Option)
     {
@@ -46,7 +48,12 @@ void UDropDownMenu::InternalBindToOptions(UDropDownMenuOption* Option, const FNa
         return;
     }
 
-    Option->DropDownMenuOptionInitFinished.BindUFunction(this, "OnDropDownMenuOptionInitFinished");
+    //@마지막 옵션인 경우에만 DropDownMenuOptionInitFinished 이벤트 바인딩
+    if (bIsLastOption)
+    {
+        Option->DropDownMenuOptionInitFinished.BindUFunction(this, "OnDropDownMenuOptionInitFinished");
+    }
+
     Option->DropDownMenuOptionSelected.AddUObject(this, &UDropDownMenu::OnDropDownMenuOptionSelected, OptionName);
 
     UE_LOGFMT(LogDropDownMenu, Verbose, "Option({0})에 대한 내부 바인딩 완료", *OptionName.ToString());
@@ -56,17 +63,31 @@ void UDropDownMenu::InitializeDropDownMenu()
 {
     //@Create Options
     CreateDropDownMenuOptions();
-
+    //@Close, 게임 시작 시점엔 우선 숨겨줍니다.
+    CloseDropDownMenu();
     //@초기화 요청 이벤트
     RequestStartInitByDropDownMenu.Broadcast();
 }
+
+void UDropDownMenu::CheckAllUIsInitFinished()
+{
+    if (bOptionsInitFinished)
+    {
+        bOptionsInitFinished = false;
+
+        //@초기화 완료 이벤트
+        DropDownMenuInitFinished.ExecuteIfBound();
+    }
+}
+
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region Subwidgets
 void UDropDownMenu::ResetDropDownMenu()
 {
     //@TODO: Drop Donw Menu의 초기 설정에 필요한 동작들...
-    
+
 
     //@이전에 선택된 옴션 버튼의 선택 취소 이벤트
     if (!CurrentSelectedOption.IsNone())
@@ -128,8 +149,8 @@ void UDropDownMenu::CreateDropDownMenuOptions()
         //@Option Button 선택 취소 이벤트
         CancelDropDownMenuOptionButton.AddUFunction(Option, "DropDownMenuOptionButtonCanceledNotified");
 
-        //@내부 바인딩
-        InternalBindToOptions(Option, OptionInformations[i].GetOptionName());
+        //@내부 바인딩 (마지막 옵션인 경우에만 DropDownMenuOptionInitFinished 이벤트 바인딩)
+        InternalBindToOptions(Option, OptionInformations[i].GetOptionName(), i == OptionCount - 1);
 
         //@AddChildToVerticalBox
         UVerticalBoxSlot* VerticalBoxSlot = DropDownMenuOptionBox->AddChildToVerticalBox(Option);
@@ -162,7 +183,7 @@ void UDropDownMenu::CreateDropDownMenuOptions()
     //@Set Brush Size
     FVector2D NewSize(BrushWidth, TotalHeight);
     DropDownMenuBGImage->SetDesiredSizeOverride(NewSize);
-    
+
     //@Set Desired Size In Viewport
     SetDesiredSizeInViewport(NewSize);
 
@@ -195,11 +216,15 @@ void UDropDownMenu::CloseDropDownMenu_Implementation()
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UDropDownMenu::OnDropDownMenuOptionInitFinished()
 {
-    //@초기화 완료 이벤트
-    DropDownMenuInitFinished.ExecuteIfBound();
+
+    bOptionsInitFinished = true;
+
+    //@초기화 완료 체크
+    CheckAllUIsInitFinished();
 }
 
 void UDropDownMenu::OnDropDownMenuOptionSelected(FName SelectedOptionName)
@@ -212,7 +237,7 @@ void UDropDownMenu::OnDropDownMenuOptionSelected(FName SelectedOptionName)
         UE_LOGFMT(LogDropDownMenu, Log, "이미 선택된 옵션입니다. 처리를 무시합니다: {0}", SelectedOptionName.ToString());
         return;
     }
-    
+
     //@이전에 선택된 옴션 버튼의 선택 취소 이벤트
     if (!CurrentSelectedOption.IsNone())
     {
@@ -238,5 +263,25 @@ void UDropDownMenu::OnDropDownMenuOptionSelected(FName SelectedOptionName)
     CurrentSelectedOption = SelectedOptionName;
     UE_LOGFMT(LogDropDownMenu, Log, "새로운 옵션이 선택됨: {0}", SelectedOptionName.ToString());
 
+    //@옵션 버튼 선택 이벤트 호출
+    DropDownMenuOptionButtonClicked.Broadcast(SelectedOptionName);
+
+}
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+FORCEINLINE const FText UDropDownMenu::GetConfirmationMenuDialogueText(const FName& Name) const
+{
+    const FDropDownMenuOptionInformation* FoundOption = OptionInformations.FindByPredicate([&Name](const FDropDownMenuOptionInformation& Option) {
+        return Option.CompareOptionName(Name);
+        });
+
+    if (FoundOption)
+    {
+        return FoundOption->GetConfirmationMenuDialogueText();
+    }
+
+    return FText::GetEmpty();
 }
 #pragma endregion
