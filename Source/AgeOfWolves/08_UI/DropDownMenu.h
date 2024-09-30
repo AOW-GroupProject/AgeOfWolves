@@ -168,7 +168,6 @@ protected:
 protected:
     //@현재 선택된 Drop Down Menu Option
     FName CurrentSelectedOption;
-
 #pragma endregion
 
 //@Delegates

@@ -206,6 +206,7 @@ void UConfirmationMenu::CloseConfirmationMenu_Implementation()
 #pragma region Callbacks
 void UConfirmationMenu::OnConfirmationMenuButtonClicked_Implementation(FName MenuButtonName)
 {
+
     //@MConfirmationMenuButtons
     if (!MConfirmationMenuButtons.Contains(MenuButtonName))
     {

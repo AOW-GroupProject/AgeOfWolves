@@ -510,6 +510,7 @@ void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropD
 
 void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
 {
+
     //@Confirmation Menu
     if (!ConfirmationMenu)
     {
