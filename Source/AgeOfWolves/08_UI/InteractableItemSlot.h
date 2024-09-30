@@ -8,10 +8,19 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInteractableItemSlot, Log, All)
 
+//@전방 선언
 #pragma region Forward Declaration
-class UDropDownMenu;
 #pragma endregion
 
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
 #pragma region Delegates
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByInteractableItemSlot);
@@ -35,39 +44,40 @@ DECLARE_MULTICAST_DELEGATE(FNotifyItemSlotButtonCanceled);
     UCLASS()
     class AGEOFWOLVES_API UInteractableItemSlot : public UItemSlot
 {
+//@친추 클래스
+#pragma region Friend Class
+    friend class UItemSlots;
+#pragma endregion
+
     GENERATED_BODY()
 
-//@Friend Class 설정
-    friend class UItemSlots;
-
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UInteractableItemSlot(const FObjectInitializer& ObjectInitializer);
 
 protected:
     //~ Begin UUserWidget Interfaces
-    virtual void NativeOnInitialized() override; // 메모리 할당 완료, 화면에 렌더되기 전에 호출됨
+    virtual void NativeOnInitialized() override; 
     virtual void NativePreConstruct() override;
-    virtual void NativeConstruct() override; // 화면에 렌더되기 직전에 호출됨
+    virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
     //~ End UUserWidget Interface
 
 protected:
     //@내부 바인딩
     void InternalBindToItemSlotButton(UCustomButton* InItemSlotButton);
-    void InternalBindToDropDownMenu(UDropDownMenu* DropDownMenu);
 
 public:
     //@초기화 함수
     virtual void InitializeItemSlot() override;
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region SubWidgets
 protected:
     //@CustomButton 생성
     void CreateButton();
-    //@드롭다운 메뉴 생성
-    void CreateDropDownMenu();
 
 public:
     //@아이템 슬롯 버튼 활성화 함수
@@ -81,15 +91,9 @@ protected:
     //@Slot Overlay에 추가할 사용자 상호작용 가능한 CustomButton
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Button", meta = (AllowPrivateAccess = "true"))
         TSubclassOf<UCustomButton> ItemSlotButtonClass;
-
-protected:
-    //@Drop Down Menu Overlay
-    UDropDownMenu* DropDownMenu;
-
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Drop Down Menu", meta = (AllowPrivateAccess = "true"))
-        TSubclassOf<UDropDownMenu> DropDownMenuClass;
 #pragma endregion
 
+//@Delegates
 #pragma region Delegates
 public:
     //@초기화 요청 이벤트
@@ -108,11 +112,8 @@ public:
     FNotifyItemSlotButtonCanceled NotifyItemSlotButtonCanceled;
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
-protected:
-    UFUNCTION()
-        void OnDropDownMenuInitFinished();
-
 protected:
     //@Button Hovered 이벤트에 등록되는 콜백
     UFUNCTION(BlueprintNativeEvent)
@@ -134,6 +135,7 @@ protected:
     virtual void ItemSlotButtonCanceledNotified_Implementation(const FGuid& ItemID);
 #pragma endregion
 
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
     UFUNCTION(BlueprintCallable, Category = "Item Slot | Button")

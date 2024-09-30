@@ -23,6 +23,9 @@ DECLARE_MULTICAST_DELEGATE(FRequestStartInitByDropDownMenu)
 //@초기화 완료 이벤트(초기화 작업 비동기화)
 DECLARE_DELEGATE(FDropDownMenuInitFinished)
 
+//@옵션 버튼 선택 알림 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FDropDownMenuOptionButtonClicked, const FName&)
+
 //@버튼 취소 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FCancelDropDownMenuOptionButton, FName)
 #pragma endregion
@@ -98,7 +101,7 @@ class AGEOFWOLVES_API UDropDownMenu : public UUserWidget
 {
 //@친추 클래스
 #pragma region Friend Class
-    friend class UInteractableItemSlot;
+    friend class UItemSlots;
 #pragma endregion
 
     GENERATED_BODY()
@@ -122,7 +125,6 @@ protected:
 protected:
     //@내부 바인딩
     void InternalBindToOptions(UDropDownMenuOption* Option, const FName& OptionName, bool bIsLastOption);
-    void InternalBindToConfirmationMenus(UConfirmationMenu* Menu, bool bLastMenu);
     
 public:
     //@초기화
@@ -133,7 +135,6 @@ protected:
 protected:
     //@초기화 완료 체크
     bool bOptionsInitFinished = false;
-    bool bConfirmationMenuInitFinished = false;
     void CheckAllUIsInitFinished();
 #pragma endregion
 
@@ -144,8 +145,6 @@ protected:
     void ResetDropDownMenu();
     //@Drop Down Menu Option 생성
     virtual void CreateDropDownMenuOptions();
-    //@각 Drop Down Menu Option에 대응되는 Confirmation Menu 생성
-    virtual void CreateConfirmationMenuForOptions();
 
 protected:
     //@Open Drop Down Menu
@@ -192,6 +191,11 @@ public:
     //@초기화 완료 이벤트
     FDropDownMenuInitFinished DropDownMenuInitFinished;
 
+public:
+    //@Drop Down Menu Option의 버튼 클릭 이벤트
+    FDropDownMenuOptionButtonClicked DropDownMenuOptionButtonClicked;
+
+
 //@Option Button
 public:
     //@Drop Down Menu Option 버튼 선택 취소 이벤트
@@ -204,18 +208,16 @@ protected:
     //@초기화 완료 이벤트
     UFUNCTION()
         void OnDropDownMenuOptionInitFinished();
-    //@초기화 완료 이벤트
-    UFUNCTION()
-        void OnConfirmationMenuInitFinished();
 
 protected:
     //@Option 선택 이벤트에 등록되는 콜백, 각 Drop Down Menu 에서 제공하는 옵션들에 대한 기능들 오버라이딩 필수!
     UFUNCTION()
         virtual void OnDropDownMenuOptionSelected(FName SelectedOptionName);
-
-protected:
-    UFUNCTION()
-        virtual void OnConfirmationMenuOptionSelected(FName OkOrCancel);
 #pragma endregion
 
+ //@Utility(Setter, Getter,...etc)
+#pragma region Utility Functions
+public:
+    const FText GetConfirmationMenuDialogueText(const FName& Name) const;
+#pragma endregion
 };

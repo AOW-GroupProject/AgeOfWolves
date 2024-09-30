@@ -6,7 +6,6 @@
 #include "Components/VerticalBoxSlot.h"
 
 #include "08_UI/DropDownMenuOption.h"
-#include "08_UI/ConfirmationMenu.h"
 
 DEFINE_LOG_CATEGORY(LogDropDownMenu)
 
@@ -59,33 +58,10 @@ void UDropDownMenu::InternalBindToOptions(UDropDownMenuOption* Option, const FNa
     UE_LOGFMT(LogDropDownMenu, Verbose, "Option({0})에 대한 내부 바인딩 완료", *OptionName.ToString());
 }
 
-void UDropDownMenu::InternalBindToConfirmationMenus(UConfirmationMenu* Menu, bool bLastMenu)
-{
-    //@Confirmation Menu
-    if (!Menu)
-    {
-        UE_LOGFMT(LogDropDownMenu, Error, "Confirmation Menu가 null입니다. 바인딩을 수행할 수 없습니다.");
-        return;
-    }
-
-    //@Confirmation Menu 버튼 클릭 이벤트 바인딩
-    Menu->ConfirmationMenuButtonClicked.BindUObject(this, &UDropDownMenu::OnConfirmationMenuOptionSelected);
-
-    //@마지막 메뉴인 경우에만 ConfirmationMenuInitFinished 이벤트 바인딩
-    if (bLastMenu)
-    {
-        Menu->ConfirmationMenuInitFinished.BindUFunction(this, "OnConfirmationMenuInitFinished");
-    }
-
-    UE_LOGFMT(LogDropDownMenu, Verbose, "Confirmation Menu에 대한 내부 바인딩 완료");
-}
-
 void UDropDownMenu::InitializeDropDownMenu()
 {
     //@Create Options
     CreateDropDownMenuOptions();
-    //@Create Confirmation Menu
-    CreateConfirmationMenuForOptions();
     //@Close, 게임 시작 시점엔 우선 숨겨줍니다.
     CloseDropDownMenu();
     //@초기화 요청 이벤트
@@ -94,10 +70,9 @@ void UDropDownMenu::InitializeDropDownMenu()
 
 void UDropDownMenu::CheckAllUIsInitFinished()
 {
-    if (bOptionsInitFinished && bConfirmationMenuInitFinished)
+    if (bOptionsInitFinished)
     {
         bOptionsInitFinished = false;
-        bConfirmationMenuInitFinished = false;
 
         //@초기화 완료 이벤트
         DropDownMenuInitFinished.ExecuteIfBound();
@@ -214,54 +189,6 @@ void UDropDownMenu::CreateDropDownMenuOptions()
     UE_LOGFMT(LogDropDownMenu, Log, "DropDownMenu 옵션들이 생성되었고, 배경 크기가 조정되었습니다. 크기: {0}", NewSize.ToString());
 }
 
-void UDropDownMenu::CreateConfirmationMenuForOptions()
-{
-    if (!DropDownMenuOptionBox)
-    {
-        UE_LOGFMT(LogDropDownMenu, Error, "DropDownMenuOptionBox가 null입니다.");
-        return;
-    }
-
-    OptionConfirmationMenus.Empty();
-
-    UConfirmationMenu* LastCreatedMenu = nullptr;
-    int32 CreatedMenuCount = 0;
-
-    int32 OptionCount = OptionInformations.Num();
-    for (int32 i = 0; i < OptionCount; ++i)
-    {
-        const FDropDownMenuOptionInformation& OptionInfo = OptionInformations[i];
-
-        TSubclassOf<UConfirmationMenu> ConfirmationMenuClass = OptionInfo.GetConfirmationMenuClass();
-        if (!ConfirmationMenuClass)
-        {
-            UE_LOGFMT(LogDropDownMenu, Verbose, "Option {0}의 ConfirmationMenuClass가 설정되지 않았습니다. 이 옵션에 대한 Confirmation Menu는 생성되지 않습니다.", *OptionInfo.GetOptionName().ToString());
-            continue;
-        }
-
-        UConfirmationMenu* ConfirmationMenu = CreateWidget<UConfirmationMenu>(this, ConfirmationMenuClass);
-        if (!ConfirmationMenu)
-        {
-            UE_LOGFMT(LogDropDownMenu, Error, "UConfirmationMenu 위젯을 생성하지 못했습니다. ConfirmationMenuClass: {0}", *ConfirmationMenuClass->GetName());
-            continue;
-        }
-
-        RequestStartInitByDropDownMenu.AddUFunction(ConfirmationMenu, "InitializeConfirmationMenu");
-        ConfirmationMenu->SetConfirmationMenuDialogueText(OptionInfo.GetConfirmationMenuDialogueText());
-        OptionConfirmationMenus.Add(OptionInfo.GetOptionName(), ConfirmationMenu);
-
-        LastCreatedMenu = ConfirmationMenu;
-
-        UE_LOGFMT(LogDropDownMenu, Log, "Option {0}에 대한 Confirmation Menu가 생성되었습니다.", *OptionInfo.GetOptionName().ToString());
-    }
-
-    if (LastCreatedMenu)
-    {
-        InternalBindToConfirmationMenus(LastCreatedMenu, true);
-    }
-
-}
-
 void UDropDownMenu::OpenDropDownMenu_Implementation()
 {
     //@Self Hit Test Invisible
@@ -295,14 +222,6 @@ void UDropDownMenu::OnDropDownMenuOptionInitFinished()
 
     bOptionsInitFinished = true;
     
-    //@초기화 완료 체크
-    CheckAllUIsInitFinished();
-}
-
-void UDropDownMenu::OnConfirmationMenuInitFinished()
-{
-    bConfirmationMenuInitFinished = true;
-
     //@초기화 완료 체크
     CheckAllUIsInitFinished();
 }
@@ -343,14 +262,25 @@ void UDropDownMenu::OnDropDownMenuOptionSelected(FName SelectedOptionName)
     CurrentSelectedOption = SelectedOptionName;
     UE_LOGFMT(LogDropDownMenu, Log, "새로운 옵션이 선택됨: {0}", SelectedOptionName.ToString());
 
-}
-
-void UDropDownMenu::OnConfirmationMenuOptionSelected(FName OkOrCancel)
-{
+    //@옵션 버튼 선택 이벤트 호출
+    DropDownMenuOptionButtonClicked.Broadcast(SelectedOptionName);
 
 }
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+FORCEINLINE const FText UDropDownMenu::GetConfirmationMenuDialogueText(const FName& Name) const
+{
+    const FDropDownMenuOptionInformation* FoundOption = OptionInformations.FindByPredicate([&Name](const FDropDownMenuOptionInformation& Option) {
+        return Option.CompareOptionName(Name);
+        });
+
+    if (FoundOption)
+    {
+        return FoundOption->GetConfirmationMenuDialogueText();
+    }
+
+    return FText::GetEmpty();
+}
 #pragma endregion

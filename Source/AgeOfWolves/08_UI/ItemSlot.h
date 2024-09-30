@@ -87,7 +87,7 @@ public:
 		void SetSlotItemNum(int32 InNum);
 public:
 	UFUNCTION(BlueprintCallable)
-		FORCEINLINE FGuid GetUniqueItemID() { return UniqueItemID; }
+		FORCEINLINE FGuid GetUniqueItemID() const { return UniqueItemID; } 
 	UFUNCTION(BlueprintCallable)
 		FSlateBrush GetSlotImage() const;
 	UFUNCTION(BlueprintCallable)

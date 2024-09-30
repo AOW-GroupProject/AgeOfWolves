@@ -13,7 +13,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogItemSlot_DropDownMenu, Log, All)
 //@전방 선언
 #pragma region Forward Declaration
 class UHorizontalBox;
-class UBaseGameplayAbility;
+class UItemSlots;
 #pragma endregion
 
 //@열거형
@@ -68,26 +68,14 @@ public:
 
 //@Property/Info...etc
 #pragma region Subwidgets
-protected:
-    //@"USE" Option
-    void ActivateUseOption();
-    //@"LEAVE" Option
-    void ActivateLeaveOption();
-    //@"DISCARD" Option
-    void ActivateDiscardOption();
-    //@"BACK" Option
-    void ActivateBackOption();
-    //@"HELP" Option
-    void ActivateHelpOption();
+#pragma endregion
+
+    //@Delegates
+#pragma region Delegates
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
-protected:
-    //@Option 선택 이벤트 구독
-    virtual void OnDropDownMenuOptionSelected(FName SelectedOptionName) override;
-    //@확정 메뉴의 선택 이벤트 구독
-    virtual void OnConfirmationMenuOptionSelected(FName OkOrCancel) override;
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
