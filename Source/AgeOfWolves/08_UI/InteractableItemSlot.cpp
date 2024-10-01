@@ -10,6 +10,7 @@
 
 DEFINE_LOG_CATEGORY(LogInteractableItemSlot)
 
+//@Default Settings
 #pragma region Default Setting
 UInteractableItemSlot::UInteractableItemSlot(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -72,16 +73,15 @@ void UInteractableItemSlot::InitializeItemSlot()
 {
     //@CustomButton
     CreateButton();
-    //@PopUp UI
-    CreateDropDownMenu();
 
-    //Super, 초기화 요청 완료 이벤트 호출
+    //@초기화 요청 이벤트
     Super::InitializeItemSlot();
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "상호작용 가능한 아이템 슬롯이 초기화되었습니다.");
 }
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region SubWidgets
 void UInteractableItemSlot::CreateButton()
 {
@@ -126,6 +126,8 @@ void UInteractableItemSlot::CreateButton()
         UE_LOGFMT(LogInteractableItemSlot, Error, "CustomButton을 SlotOverlay에 추가하지 못했습니다.");
         return;
     }
+
+    //@Overlay Slot
     OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
     OverlaySlot->SetVerticalAlignment(VAlign_Fill);
 
@@ -146,12 +148,6 @@ void UInteractableItemSlot::CreateButton()
     DeactivateItemSlotInteraction();
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "UCustomButton({0})이 생성되고 이벤트가 바인딩되었습니다.", *ItemSlotButtonClass->GetName());
-}
-
-void UInteractableItemSlot::CreateDropDownMenu()
-{
-    //@TODO: Drop Down Menu의 초기화 작업 수행...
-
 }
 
 void UInteractableItemSlot::ActivateItemSlotInteraction()
@@ -183,38 +179,41 @@ void UInteractableItemSlot::DeactivateItemSlotInteraction()
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
-void UInteractableItemSlot::OnItemSlotButtonHovered()
+void UInteractableItemSlot::OnItemSlotButtonHovered_Implementation()
 {
     //@Item Slot Button 호버 이벤트
     ItemSlotButtonHovered.Broadcast(UniqueItemID);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에 마우스가 올라갔습니다. ID: {0}", UniqueItemID.ToString());
+
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
+
 }
 
-void UInteractableItemSlot::OnItemSlotButtonUnhovered()
+void UInteractableItemSlot::OnItemSlotButtonUnhovered_Implementation()
 {
     //@Item Slot Button 언호버 이벤트
     ItemSlotButtonUnhovered.Broadcast(UniqueItemID);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에서 마우스가 벗어났습니다. ID: {0}", UniqueItemID.ToString());
-}
 
-void UInteractableItemSlot::OnItemSlotButtonPressed()
-{
-    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 눌렸습니다. ID: {0}", UniqueItemID.ToString());
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 
 }
 
-void UInteractableItemSlot::OnItemSlotButtonClicked()
+void UInteractableItemSlot::OnItemSlotButtonClicked_Implementation()
 {
-    //@Item Slot Button 선택 이벤트
     ItemSlotButtonClicked.Broadcast(UniqueItemID);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 클릭되었습니다. ID: {0}", UniqueItemID.ToString());
+
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
+
 }
 
-void UInteractableItemSlot::OnItemSlotButtonCanceled(const FGuid& ItemID)
+void UInteractableItemSlot::ItemSlotButtonCanceledNotified_Implementation(const FGuid& ItemID)
 {
     if (ItemID != UniqueItemID)
     {
@@ -225,9 +224,13 @@ void UInteractableItemSlot::OnItemSlotButtonCanceled(const FGuid& ItemID)
     NotifyItemSlotButtonCanceled.Broadcast();
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼 선택이 취소되었습니다. ID: {0}", ItemID.ToString());
+
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
+
 }
 #pragma endregion
 
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 UCustomButton* UInteractableItemSlot::GetItemSlotButton() const
 {

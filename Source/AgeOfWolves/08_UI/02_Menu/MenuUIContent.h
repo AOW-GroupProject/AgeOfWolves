@@ -8,13 +8,17 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMenuUIContent, Log, All)
 
+#pragma region Forward Declaration
 class UImage;
 class UMenuUI;
+#pragma endregion
 
+#pragma region Delegates
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByMenuUIContent)
 //@초기화 완료 이벤트
 DECLARE_DELEGATE_OneParam(FMenuUIContentInitFinished, EMenuCategory);
+#pragma endregion
 
 /**
  * @UMenuContentUI
@@ -48,11 +52,10 @@ protected:
 
 public:
     //@초기화
-    //@오버라이딩 시 UFUNCTION() 제외
     UFUNCTION()
         virtual void InitializeMenuUIContent();
+
 protected:
-    //@TODO: 각 멤버들의 초기화 완료 여불르 확인하는 boolean 변수 선언
     //@초기화 완료 확인 함수
     virtual void CheckMenuUIContentInitFinished();
 #pragma endregion
@@ -84,11 +87,10 @@ public:
 
 #pragma region Callbacks
 protected:
+    //@가시성 변화 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
         void OnUIVisibilityChanged(ESlateVisibility VisibilityType);
     virtual void OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType);
-
-
 #pragma endregion
 	
 };

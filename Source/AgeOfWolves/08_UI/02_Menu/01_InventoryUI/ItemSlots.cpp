@@ -12,15 +12,26 @@
 
 #include "08_UI/InteractableItemSlot.h"
 #include "08_UI/CustomButton.h"
+#include "08_UI/DropDownMenu.h"
+#include "08_UI/ConfirmationMenu.h"
 
 #include "14_Subsystem/ItemManagerSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogItemSlots)
 
+//@Default Settings
 #pragma region Default Setting
 UItemSlots::UItemSlots(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
-{}
+{
+    ItemSlotDropDownMenu = nullptr;
+    ItemSlotDropDownMenuClass = nullptr;
+    ConfirmationMenu = nullptr;
+    ConfirmationMenuClass = nullptr;
+
+    CurrentSelectedItemSlot = nullptr;
+    CurrentSelectedDropDownMenuOptionName = FName();
+}
 
 void UItemSlots::NativeOnInitialized()
 {
@@ -135,6 +146,33 @@ void UItemSlots::InternalBindingToItemSlot(UInteractableItemSlot* ItemSlot, bool
         ItemSlot->ItemSlotInitFinished.BindUFunction(this, "OnItemSlotInitFinished");
 }
 
+void UItemSlots::InternalBindToItemSlotDropDownMenu(UDropDownMenu* DropDownMenu)
+{
+    if (!DropDownMenu)
+    {
+        return;
+    }
+
+    DropDownMenu->DropDownMenuInitFinished.BindUFunction(this, "OnDropDownMenuInitFinished");
+    DropDownMenu->DropDownMenuOptionButtonClicked.AddUFunction(this, "OnDropDownMenuOptionelected");
+}
+
+void UItemSlots::InternalBindToConfirmationMenu(UConfirmationMenu* Menu)
+{
+    //@Confirmation Menu
+    if (!Menu)
+    {
+        UE_LOGFMT(LogDropDownMenu, Error, "Confirmation Menu가 null입니다. 바인딩을 수행할 수 없습니다.");
+        return;
+    }
+
+    //@Confirmation Menu 버튼 클릭 이벤트 바인딩
+    Menu->ConfirmationMenuButtonClicked.BindUObject(this, &UItemSlots::OnConfirmationMenuOptionSelected);
+    Menu->ConfirmationMenuInitFinished.BindUFunction(this, "OnConfirmationMenuInitFinished");
+
+    UE_LOGFMT(LogDropDownMenu, Verbose, "Confirmation Menu에 대한 내부 바인딩 완료");
+}
+
 void UItemSlots::InitializeItemSlots()
 {
 	//@Item Slots
@@ -146,9 +184,11 @@ void UItemSlots::InitializeItemSlots()
 
 void UItemSlots::CheckItemSlotInitFinished()
 {
-    if (bItemSlotReady)
+    if (bItemSlotReady && bItemSlotDropDownMenuInitFinished && bConfirmationMenuInitFinished)
     {
         bItemSlotReady = false;
+        bItemSlotDropDownMenuInitFinished = false;
+        bConfirmationMenuInitFinished = false;
 
         //@Item Slots 초기화 완료 이벤트
         ItemSlotsInitFinished.ExecuteIfBound();
@@ -158,6 +198,7 @@ void UItemSlots::CheckItemSlotInitFinished()
 }
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region SubWidgets
 void UItemSlots::ResetItemSlots()
 {
@@ -175,6 +216,8 @@ void UItemSlots::ResetItemSlots()
         UE_LOGFMT(LogItemSlots, Warning, "UI가 표시되었지만 첫 번째 아이템 슬롯을 찾을 수 없습니다.");
         return;
     }
+
+    //@TODO: First Item Slot을 Hover 상태로 강제 상태 변화...
 
     UE_LOGFMT(LogItemSlots, Log, "{0}의 Item Slot 목록이 초기 상태로 리셋되었습니다.",
         *UEnum::GetValueAsString(ItemType));
@@ -194,6 +237,9 @@ void UItemSlots::CreateItemSlots()
 
     //@Clear Children
     ItemSlotBox->ClearChildren();
+
+    //@Clear ItemSlots array
+    ItemSlots.Empty();
 
     int32 TotalSlots = DefaultRows * MaxItemSlotsPerRow;
     int32 CurrentSlot = 0;
@@ -219,7 +265,7 @@ void UItemSlots::CreateItemSlots()
                 if (ItemSlot)
                 {
                     RequestStartInitByItemSlots.AddUFunction(ItemSlot, "InitializeItemSlot");
-                    CancelItemSlotButton.AddUFunction(ItemSlot, "OnItemSlotButtonCanceled");
+                    CancelItemSlotButton.AddUFunction(ItemSlot, "ItemSlotButtonCanceledNotified");
 
                     if (CurrentSlot == TotalSlots - 1)
                     {
@@ -244,6 +290,9 @@ void UItemSlots::CreateItemSlots()
                         //@Padding
                         BoxSlot->SetPadding(PaddingBetweenItemSlots);
                     }
+
+                    //@Add to ItemSlots array for direct management
+                    ItemSlots.Add(ItemSlot);
                 }
                 else
                 {
@@ -283,8 +332,66 @@ void UItemSlots::CreateItemSlots()
     UE_LOGFMT(LogItemSlots, Log, "ItemSlots가 성공적으로 생성되었습니다. 총 슬롯 수: {0}, 기본 행 개수: {1}, 최대 행 개수: {2}, 열 개수: {3}",
         TotalSlots, DefaultRows, MaxRows, MaxItemSlotsPerRow);
 }
+
+void UItemSlots::CreateItemSlotDropDownMenu()
+{
+    //@Drop Down Menu 블루프린트 클래스
+    if (!ItemSlotDropDownMenuClass)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "ItemSlotDropDownMenuClass가 설정되지 않았습니다. 에디터에서 ItemSlotDropDownMenuClass를 설정해주세요.");
+        return;
+    }
+    //@Drop Down Menu
+    ItemSlotDropDownMenu = CreateWidget<UDropDownMenu>(this, ItemSlotDropDownMenuClass);
+    if (!ItemSlotDropDownMenu)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "UItemSlotDropDownMenu 위젯을 생성하지 못했습니다. ItemSlotDropDownMenuClass: {0}", *ItemSlotDropDownMenuClass->GetName());
+        return;
+    }
+
+    //@비동기 초기화
+    RequestStartInitByItemSlots.AddUFunction(ItemSlotDropDownMenu, "InitializeDropDownMenu");
+
+    //@내부 바인딩
+    InternalBindToItemSlotDropDownMenu(ItemSlotDropDownMenu);
+
+    //@Close Drop Down Menu
+    ItemSlotDropDownMenu->AddToViewport(100);
+
+    UE_LOGFMT(LogItemSlots, Log, "ItemSlotDropDownMenu가 생성되었습니다.");
+}
+
+void UItemSlots::CreateConfirmationMenu()
+{
+    //@Confirmation Menu 블루프린트 클래스
+    if (!ConfirmationMenuClass)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "ConfirmationMenuClass가 설정되지 않았습니다. 에디터에서 ConfirmationMenuClass를 설정해주세요.");
+        return;
+    }
+
+    //@Confirmation Menu
+    ConfirmationMenu = CreateWidget<UConfirmationMenu>(this, ConfirmationMenuClass);
+    if (!ConfirmationMenu)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "UConfirmationMenu 위젯을 생성하지 못했습니다. ConfirmationMenuClass: {0}", *ConfirmationMenuClass->GetName());
+        return;
+    }
+
+    //@비동기 초기화
+    RequestStartInitByItemSlots.AddUFunction(ConfirmationMenu, "InitializeConfirmationMenu");
+
+    //@내부 바인딩
+    InternalBindToConfirmationMenu(ConfirmationMenu);
+
+    //@Add To Viewport
+    ConfirmationMenu->AddToViewport(100);
+
+    UE_LOGFMT(LogItemSlots, Log, "ConfirmationMenu가 생성되었습니다.");
+}
 #pragma endregion
 
+//@Callbacks
 #pragma region Callback
 void UItemSlots::OnUIVisibilityChanged(ESlateVisibility VisibilityType)
 {
@@ -296,6 +403,21 @@ void UItemSlots::OnItemSlotInitFinished()
 {
     bItemSlotReady = true;
     //@초기화 완료 이벤트 호출
+    CheckItemSlotInitFinished();
+}
+
+void UItemSlots::OnItemSlotDropDownMenuInitFinished()
+{
+    bItemSlotDropDownMenuInitFinished = true;
+
+    //@초기화 완료 체크
+    CheckItemSlotInitFinished();
+}
+
+void UItemSlots::OnConfirmationMenuInitFinished()
+{
+    bConfirmationMenuInitFinished = true;
+    //@초기화 완료 체크
     CheckItemSlotInitFinished();
 }
 
@@ -331,8 +453,66 @@ void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID)
     CurrentSelectedItemSlot = SelectedItemSlot;
     UE_LOGFMT(LogItemSlots, Log, "새로운 아이템 슬롯이 선택됨: ID {0}", UniqueItemID.ToString());
 
+    //@TODO: DropDownMenu 열기
+    //@Player Controller
+    APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+    if (PlayerController)
+    {
+        FVector2D MousePosition;
+        // 마우스 커서의 위치 얻기
+        if (PlayerController->GetMousePosition(MousePosition.X, MousePosition.Y))
+        {
+            //@Set Position In Viewport
+            ItemSlotDropDownMenu->SetPositionInViewport(MousePosition);
+            ItemSlotDropDownMenu->OpenDropDownMenu();
+        }
+    }
+
     // TODO: 필요한 경우 여기에 추가 동작 구현
     // 예: 선택된 아이템 슬롯의 시각적 상태 변경, 아이템 정보 표시 등
+}
+
+void UItemSlots::OnDropDownMenuOptionelected(const FName& ItemSlotDropDownMenuOptionName)
+{
+    //@Drop Down Menu 에서 선택한 Option 명
+    CurrentSelectedDropDownMenuOptionName = ItemSlotDropDownMenuOptionName;
+
+    //@TODO: Confirmation Menu의 Dialogue Box의 Text를 설정하고, 화면에 나타냅니다.
+
+    //@TODO: Current Selected Item Slot에 대하여 관련 작업 처리
+
+}
+
+void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
+{
+    //@TODO: CurrentSelectedDropDownMenuOptionName 확인하고, 이에 대한 처리 작업 수행
+        //@Confirmation Menu
+    //UConfirmationMenu* SelectedConfirmationMenu = OptionConfirmationMenus.FindRef(CurrentSelectedOption);
+    //if (!SelectedConfirmationMenu)
+    //{
+    //    UE_LOGFMT(LogItemSlot_DropDownMenu, Error, "현재 선택된 옵션 '{0}'에 대한 Confirmation Menu를 찾을 수 없습니다.", *CurrentSelectedOption.ToString());
+    //    return;
+    //}
+
+    ////@Ok?
+    //if (OkOrCancel == "OK")
+    //{
+    //    UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "'{0}' 옵션에 대해 'OK'가 선택되었습니다.", *CurrentSelectedOption.ToString());
+    //    //@TODO: 'OK' 선택 시 수행할 작업 구현
+    //    return;
+    //}
+    ////@Cancel?
+    //if (OkOrCancel == "CANCEL")
+    //{
+    //    UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "'{0}' 옵션에 대해 'CANCEL'이 선택되었습니다.", *CurrentSelectedOption.ToString());
+
+    //    //@Close Confirmation Menu
+    //    SelectedConfirmationMenu->CloseConfirmationMenu();
+
+    //    UE_LOGFMT(LogItemSlot_DropDownMenu, Verbose, "'{0}' 옵션의 Confirmation Menu가 닫혔습니다.", *CurrentSelectedOption.ToString());
+    //    return;
+    //}
+
 }
 
 void UItemSlots::OnUIInputTagTriggered(const FGameplayTag& InputTag)
@@ -427,94 +607,55 @@ void UItemSlots::OnInventoryItemUpdated(const FGuid& UniqueItemID, EItemType Typ
         UE_LOGFMT(LogItemSlots, Warning, "업데이트할 아이템을 찾을 수 없습니다: ID {0}", UniqueItemID.ToString());
     }
 }
-
-TArray<UInteractableItemSlot*> UItemSlots::GetAllItemSlots() const
-{
-    TArray<UInteractableItemSlot*> AllItemSlots;
-
-    if (!ItemSlotBox)
-    {
-        UE_LOGFMT(LogItemSlots, Error, "ItemSlotBox가 유효하지 않습니다.");
-        return AllItemSlots;
-    }
-
-    for (UWidget* Child : ItemSlotBox->GetAllChildren())
-    {
-        if (UHorizontalBox* HBox = Cast<UHorizontalBox>(Child))
-        {
-            for (UWidget* SlotChild : HBox->GetAllChildren())
-            {
-                if (UInteractableItemSlot* ItemSlot = Cast<UInteractableItemSlot>(SlotChild))
-                {
-                    AllItemSlots.Add(ItemSlot);
-                }
-            }
-        }
-    }
-
-    UE_LOGFMT(LogItemSlots, Log, "{0}개의 아이템 슬롯을 찾았습니다.", AllItemSlots.Num());
-    return AllItemSlots;
-}
 #pragma endregion
 
-#pragma region Utility Functions
-UInteractableItemSlot* UItemSlots::FindFirstItemSlot()
+//@Utility(Setter, Getter,...etc)
+#pragma region Utilities
+TArray<UInteractableItemSlot*> UItemSlots::GetAllItemSlots() const
 {
-    for (auto* Child : ItemSlotBox->GetAllChildren())
+    return ItemSlots;
+}
+
+int32 UItemSlots::GetSlotIndex(int32 Row, int32 Column) const
+{
+    return Row * MaxItemSlotsPerRow + Column;
+}
+
+void UItemSlots::GetSlotRowAndColumn(int32 Index, int32& OutRow, int32& OutColumn) const
+{
+    OutRow = Index / MaxItemSlotsPerRow;
+    OutColumn = Index % MaxItemSlotsPerRow;
+}
+
+UInteractableItemSlot* UItemSlots::GetSlotAtPosition(int32 Row, int32 Column) const
+{
+    int32 Index = GetSlotIndex(Row, Column);
+    if (ItemSlots.IsValidIndex(Index))
     {
-        if (UHorizontalBox* HBox = Cast<UHorizontalBox>(Child))
-        {
-            for (auto* SlotChild : HBox->GetAllChildren())
-            {
-                if (UInteractableItemSlot* ItemSlot = Cast<UInteractableItemSlot>(SlotChild))
-                {
-                    return ItemSlot;
-                }
-            }
-        }
+        return ItemSlots[Index];
     }
     return nullptr;
+}
+
+UInteractableItemSlot* UItemSlots::FindFirstItemSlot()
+{
+    return ItemSlots.IsValidIndex(0) ? ItemSlots[0] : nullptr;
 }
 
 UInteractableItemSlot* UItemSlots::FindEmptySlot()
 {
-    for (auto* Child : ItemSlotBox->GetAllChildren())
-    {
-        if (UHorizontalBox* HBox = Cast<UHorizontalBox>(Child))
-        {
-            for (auto* SlotChild : HBox->GetAllChildren())
-            {
-                if (UInteractableItemSlot* ItemSlot = Cast<UInteractableItemSlot>(SlotChild))
-                {
-                    if (!ItemSlot->GetUniqueItemID().IsValid())
-                    {
-                        return ItemSlot;
-                    }
-                }
-            }
-        }
-    }
-    return nullptr;
+    auto* FoundSlot = ItemSlots.FindByPredicate([](const UInteractableItemSlot* ItemSlot) {
+        return !ItemSlot->GetUniqueItemID().IsValid();
+        });
+    return FoundSlot ? *FoundSlot : nullptr;
 }
 
 UInteractableItemSlot* UItemSlots::FindSlotByItemID(const FGuid& ItemID)
 {
-    for (auto* Child : ItemSlotBox->GetAllChildren())
-    {
-        if (UHorizontalBox* HBox = Cast<UHorizontalBox>(Child))
-        {
-            for (auto* SlotChild : HBox->GetAllChildren())
-            {
-                if (UInteractableItemSlot* ItemSlot = Cast<UInteractableItemSlot>(SlotChild))
-                {
-                    if (ItemSlot->GetUniqueItemID() == ItemID)
-                    {
-                        return ItemSlot;
-                    }
-                }
-            }
-        }
-    }
-    return nullptr;
+    auto* FoundSlot = ItemSlots.FindByPredicate([ItemID](const UInteractableItemSlot* ItemSlot) {
+        return ItemSlot->GetUniqueItemID() == ItemID;
+        });
+    return FoundSlot ? *FoundSlot : nullptr;
 }
 #pragma endregion
+

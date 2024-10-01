@@ -8,14 +8,17 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInventoryToolBar, Log, All)
 
+#pragma region Delegates
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FInventoryToolBarInitFinished);
-
 //@Item Type 버튼 선택 이벤트
 DECLARE_DELEGATE_OneParam(FInventoryToolBarButtonClicked, EItemType);
+#pragma endregion
 
+#pragma region Forward Declaration
 class UHorizontalBox;
 class UCustomButton;
+#pragma endregion
 
 UCLASS()
 class AGEOFWOLVES_API UInventoryToolBar : public UUserWidget
@@ -35,10 +38,14 @@ protected:
     //~ End UUserWidget Interface
 
 protected:
+    //@외부 바인딩
+
+protected:
     //@내부 바인딩
     void InternalBindToButton(UCustomButton* Button, EItemType ItemType);
 
 public:
+    //@초기화
     UFUNCTION()
         void InitializeInventoryToolBar();
 #pragma endregion
@@ -83,13 +90,24 @@ public:
 #pragma endregion
 
 #pragma region Callbacks
-private:
-    UFUNCTION()
-        void HandleButtonHover(EItemType ItemType);
-    UFUNCTION()
-        void HandleButtonUnhover(EItemType ItemType);
-    UFUNCTION()
-        void HandleButtonClick(EItemType ItemType);
-    void HandleButtonCanceled(EItemType PreviousItemType);
+protected:
+    //@Inventory Tool Bar 버튼 클릭 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void OnInventoryToolBarButtonClicked(EItemType ItemType);
+    virtual void OnInventoryToolBarButtonClicked_Implementation(EItemType ItemType);
+    //@Inventory Tool Bar 버튼 Hover 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void OnInventoryToolBarButtonHovered(EItemType ItemType);
+    virtual void OnInventoryToolBarButtonHovered_Implementation(EItemType ItemType);
+    //@Inventory Tool Bar 버튼 Unhover 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void OnInventoryToolBarButtonUnhovered(EItemType ItemType);
+    virtual void OnInventoryToolBarButtonUnhovered_Implementation(EItemType ItemType);
+
+protected:
+    //@Inventory Tool Bar 버튼 선택 취소 이벤트 구독
+    UFUNCTION(BlueprintNativeEvent)
+        void CancelInventoryToolBarButtonSelected(EItemType PreviousItemType);
+    virtual void CancelInventoryToolBarButtonSelected_Implementation(EItemType PreviousItemType);
 #pragma endregion
 };

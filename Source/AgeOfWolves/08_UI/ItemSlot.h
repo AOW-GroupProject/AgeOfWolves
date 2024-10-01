@@ -8,13 +8,17 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogItemSlot, Log, All)
 
+#pragma region Delegates
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FItemSlotInitFinished);
+#pragma endregion
 
+#pragma region Forward Decalration
 class UOverlay;
 class UImage;
 class UVerticalBox;
-class UEditableText;
+class UEditableTextBox;
+#pragma endregion
 
 /**
  * @UItemSlot
@@ -67,7 +71,7 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Item Slot", meta = (BindWidget))
 		UOverlay* SlotItemNumOverlay;
 	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
-		UEditableText* SlotItemNum;
+		UEditableTextBox* SlotItemNum;
 protected:
 	bool bStackable = false;
 	bool bRemovable = false;
@@ -83,7 +87,7 @@ public:
 		void SetSlotItemNum(int32 InNum);
 public:
 	UFUNCTION(BlueprintCallable)
-		FORCEINLINE FGuid GetUniqueItemID() { return UniqueItemID; }
+		FORCEINLINE FGuid GetUniqueItemID() const { return UniqueItemID; } 
 	UFUNCTION(BlueprintCallable)
 		FSlateBrush GetSlotImage() const;
 	UFUNCTION(BlueprintCallable)
