@@ -116,8 +116,8 @@ protected:
 #pragma region MotionWarping
 public:
 	//MotionWarping
-	/*UPROPERTY(BlueprintReadWrite, Category = "MotionWarping")
-	TObjectPtr<class UMotionWarpingComponent> MotionWarpingComp;*/
+	UPROPERTY(BlueprintReadWrite, Category = "MotionWarping")
+	TObjectPtr<class UMotionWarpingComponent> MotionWarpingComp;
 
 
 	/*
