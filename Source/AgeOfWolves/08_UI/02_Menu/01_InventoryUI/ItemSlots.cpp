@@ -483,6 +483,7 @@ void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID)
 
 void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropDownMenuOptionName)
 {
+
     // Drop Down Menu에서 선택한 Option 명 저장
     CurrentSelectedDropDownMenuOptionName = ItemSlotDropDownMenuOptionName;
 
@@ -490,6 +491,19 @@ void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropD
     if (!ItemSlotDropDownMenu || !ConfirmationMenu)
     {
         UE_LOG(LogItemSlots, Error, TEXT("ItemSlotDropDownMenu 또는 ConfirmationMenu가 유효하지 않습니다."));
+        return;
+    }
+
+    //@BACK일 경우, 메뉴 닫기
+    if (ItemSlotDropDownMenuOptionName == "BACK")
+    {
+        //@Close
+        ItemSlotDropDownMenu->CloseDropDownMenu();
+
+        //@TODO: Item Slot의 선택 -> 호버 상태로 강제 상태 변화 필요
+        //@Reset
+        ResetItemSlots();
+
         return;
     }
 
@@ -540,6 +554,7 @@ void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
         //@Close Confirmation Menu
         ConfirmationMenu->CloseConfirmationMenu();
 
+        //@TODO: Item Slot의 선택 -> 호버 상태로 강제 상태 변화 필요
         //@Drop Down Menu
         ItemSlotDropDownMenu->ResetDropDownMenu();
 

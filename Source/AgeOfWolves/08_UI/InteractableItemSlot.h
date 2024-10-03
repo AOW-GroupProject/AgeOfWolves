@@ -45,14 +45,14 @@ DECLARE_MULTICAST_DELEGATE(FNotifyItemSlotButtonCanceled);
 UCLASS()
 class AGEOFWOLVES_API UInteractableItemSlot : public UItemSlot
 {
-    //@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
     friend class UItemSlots;
 #pragma endregion
 
     GENERATED_BODY()
 
-        //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UInteractableItemSlot(const FObjectInitializer& ObjectInitializer);
@@ -74,7 +74,7 @@ public:
     virtual void InitializeItemSlot() override;
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region SubWidgets
 protected:
     //@CustomButton 생성
@@ -94,7 +94,7 @@ protected:
         TSubclassOf<UCustomButton> ItemSlotButtonClass;
 #pragma endregion
 
-    //@Delegates
+//@Delegates
 #pragma region Delegates
 public:
     //@초기화 요청 이벤트
@@ -113,7 +113,7 @@ public:
     FNotifyItemSlotButtonCanceled NotifyItemSlotButtonCanceled;
 #pragma endregion
 
-    //@Callbacks
+//@Callbacks
 #pragma region Callbacks
 protected:
     //@Button Hovered 이벤트에 등록되는 콜백
@@ -136,10 +136,11 @@ protected:
     virtual void ItemSlotButtonCanceledNotified_Implementation(const FGuid& ItemID);
 #pragma endregion
 
-    //@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
     UFUNCTION(BlueprintCallable, Category = "Item Slot | Button")
         UCustomButton* GetItemSlotButton() const;
 #pragma endregion
+
 };
