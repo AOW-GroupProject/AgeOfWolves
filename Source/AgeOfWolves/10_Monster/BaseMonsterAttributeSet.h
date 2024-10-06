@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "AttributeSet.h"
+#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "BaseMonsterAttributeSet.generated.h"
 
@@ -17,7 +18,7 @@
  * 
  */
 UCLASS()
-class AGEOFWOLVES_API UBaseMonsterAttributeSet : public UAttributeSet
+class AGEOFWOLVES_API UBaseMonsterAttributeSet : public UBaseAttributeSet
 {
 	GENERATED_BODY()
 
@@ -27,17 +28,6 @@ public:
 
 	void InitializeAttributeValue(struct FSingleMonsterData& SingleMonsterData);
 
-		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Health")
-	FGameplayAttributeData Health;
-	ATTRIBUTE_ACCESSORS(UBaseMonsterAttributeSet, Health)
-
-		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Health")
-	FGameplayAttributeData MaxHealth;
-	ATTRIBUTE_ACCESSORS(UBaseMonsterAttributeSet, MaxHealth)
-
-		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Damage")
-	FGameplayAttributeData Damage;
-	ATTRIBUTE_ACCESSORS(UBaseMonsterAttributeSet, Damage)
 	
 	// @목적 : BaseAttributeSet의 모든 Attribute 항목을 반환하는 함수
 	TArray<FGameplayAttribute> GetAllAttributes() const;
