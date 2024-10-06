@@ -11,7 +11,7 @@ DEFINE_LOG_CATEGORY(LogASC)
 UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
-	InputTriggeredSpecHandles.Reset();
+	InputPressedSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
 }
 
@@ -307,8 +307,24 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 	static TArray<FGameplayAbilitySpecHandle> AbilitiesToActivate;
 	AbilitiesToActivate.Reset();
 
-	// @InputTriggered
-	for (const FGameplayAbilitySpecHandle& SpecHandle : InputTriggeredSpecHandles)
+	// @Held 입력 처리
+	for (const FGameplayAbilitySpecHandle& SpecHandle : InputHeldSpecHandles)
+	{
+		if (const FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
+		{
+			if (AbilitySpec->Ability && !AbilitySpec->IsActive())
+			{
+				const UBaseGameplayAbility* BaseAbilityCDO = Cast<UBaseGameplayAbility>(AbilitySpec->Ability);
+				if (BaseAbilityCDO && BaseAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::WhileInputActive)
+				{
+					AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+				}
+			}
+		}
+	}
+
+	// @Press입력 처리
+	for (const FGameplayAbilitySpecHandle& SpecHandle : InputPressedSpecHandles)
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
@@ -323,7 +339,11 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 				// @InputPressed 활성화
 				else
 				{
-					AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+					const UBaseGameplayAbility* BaseAbilityCDO = Cast<UBaseGameplayAbility>(AbilitySpec->Ability);
+					if (BaseAbilityCDO && BaseAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::OnInputTriggered)
+					{
+						AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+					}
 				}
 			}
 		}
@@ -331,14 +351,7 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 
 	for (const FGameplayAbilitySpecHandle& AbilitySpecHandle : AbilitiesToActivate)
 	{
-		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(AbilitySpecHandle))
-		{
-			if (UGameplayAbility* Ability = AbilitySpec->Ability)
-			{
-				// Super::TryActivateAbility(AbilitySpecHandle);
-				TryActivateAbility(AbilitySpecHandle);
-			}
-		}
+		TryActivateAbility(AbilitySpecHandle);
 	}
 
 	// @InputReleased
@@ -357,31 +370,31 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 		}
 	}
 
-	InputTriggeredSpecHandles.Reset();
+	InputPressedSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
 }
 
 void UBaseAbilitySystemComponent::ClearAbilityInput()
 {
-	InputTriggeredSpecHandles.Reset();
+	InputPressedSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
+	InputHeldSpecHandles.Reset();
 }
 
 void UBaseAbilitySystemComponent::AbilityInputTagTriggered(const FGameplayTag& InputTag)
 {
-	// @InputPressed+InputHeld
 	if (InputTag.IsValid())
 	{
 		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 		{
 			if (AbilitySpec.Ability && (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag)))
 			{
-				InputTriggeredSpecHandles.AddUnique(AbilitySpec.Handle);
+				InputPressedSpecHandles.AddUnique(AbilitySpec.Handle);
+				InputHeldSpecHandles.AddUnique(AbilitySpec.Handle);
 			}
 		}
 	}
 }
-
 void UBaseAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
 {
 	if (InputTag.IsValid())
@@ -391,6 +404,7 @@ void UBaseAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& In
 			if (AbilitySpec.Ability && (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag)))
 			{
 				InputReleasedSpecHandles.AddUnique(AbilitySpec.Handle);
+				InputHeldSpecHandles.Remove(AbilitySpec.Handle);
 			}
 		}
 	}
@@ -401,12 +415,12 @@ void UBaseAbilitySystemComponent::AbilitySpecInputPressed(FGameplayAbilitySpec& 
 	// @Spec의 InputPressed 값 변경(참), GA의 InputPressed 호출
 	Super::AbilitySpecInputPressed(Spec);
 }
-
 void UBaseAbilitySystemComponent::AbilitySpecInputReleased(FGameplayAbilitySpec& Spec)
 {
 	// @Spec의 InputPressed 값 변경(거짓), GA의 InputReleased 호출
 	Super::AbilitySpecInputReleased(Spec);
 }
+
 #pragma endregion
 
 #pragma region Gameplay Tag Relationship Mapping

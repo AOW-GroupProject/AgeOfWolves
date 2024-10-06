@@ -83,37 +83,6 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, c
     Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 
 }
-
-void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
-{
-    check(ActorInfo);
-
-    Super::InputPressed(Handle, ActorInfo, ActivationInfo);
-}
-
-void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
-{
-    check(ActorInfo);
-
-    Super::InputReleased(Handle, ActorInfo, ActivationInfo);
-
-    // @Cancel: Activation Policy가 WhileInputActive 일 경우.
-    {
-        if (ActivationPolicy == EAbilityActivationPolicy::WhileInputActive && ActiveApplyGameplayEffectHandle.IsValid())
-        {
-            if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
-            {
-                if (FGameplayAbilitySpec* AbilitySpec = ASC->FindAbilitySpecFromHandle(Handle))
-                {
-                    if (AbilitySpec->IsActive() && IsValid(AbilitySpec->Ability))
-                    {
-                        CancelAbility(Handle, ActorInfo, ActivationInfo, false);
-                    }
-                }
-            }
-        }
-    }
-}
 #pragma endregion
 
 #pragma region Tag Requirements
