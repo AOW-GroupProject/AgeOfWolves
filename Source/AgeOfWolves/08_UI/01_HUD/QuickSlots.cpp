@@ -18,6 +18,7 @@
 DEFINE_LOG_CATEGORY(LogQuickSlots)
 // UE_LOGFMT(LogQuickSlots, Log, "");
 
+//@Default Setting
 #pragma region Default Setting
 UQuickSlots::UQuickSlots(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -177,78 +178,79 @@ void UQuickSlots::InitializeQuickSlots()
 }
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region Quick Slot
 void UQuickSlots::StartActivation(const FGameplayTag& InputTag)
 {
-    //@TODO: Triggered와 Released 각각에 대한 처리
-    //@Slot Index
-    int32 SlotIndex = -1;
-    if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot1")))
-    {
-        SlotIndex = 0;
-    }
-    else if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot2")))
-    {
-        SlotIndex = 1;
-    }
-    else if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot3")))
-    {
-        SlotIndex = 2;
-    }
+    ////@TODO: Triggered와 Released 각각에 대한 처리
+    ////@Slot Index
+    //int32 SlotIndex = -1;
+    //if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot1")))
+    //{
+    //    SlotIndex = 0;
+    //}
+    //else if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot2")))
+    //{
+    //    SlotIndex = 1;
+    //}
+    //else if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.HUD.QuickSlot3")))
+    //{
+    //    SlotIndex = 2;
+    //}
 
-    if (SlotIndex != -1 && SlotIndex < QuickSlots.Num())
-    {
-        //@Quick Slot
-        UItemSlot* TargetQuickSlot = QuickSlots[SlotIndex];
-        if (TargetQuickSlot)
-        {
-            //@FGuid
-            FGuid ItemID = TargetQuickSlot->GetUniqueItemID();
-            //@Item Count
-            int32 CurrentCount = TargetQuickSlot->GetSlotItemNum();
-            if (CurrentCount > 0)
-            {
-                //@TODO: ASC에서 활성화 가능성 여부 검사(공격, 회피, 달리기, 피격 반응, 그로기 반응, 죽음 등)
-                
-                //@Delegate: Inventory에서 Item 활성화 여부를 먼저 확인하고, UI를 업데이트합니다.
-                if (QuickSlotItemActivated.IsBound() && QuickSlotItemActivated.Execute(ItemID, SlotIndex + 1))
-                {
-                    //@Item Count-1
-                    int32 NewCount = CurrentCount - 1;
-                    TargetQuickSlot->UpdateItemCount(NewCount);
+    //if (SlotIndex != -1 && SlotIndex < QuickSlots.Num())
+    //{
+    //    //@Quick Slot
+    //    UItemSlot* TargetQuickSlot = QuickSlots[SlotIndex];
+    //    if (TargetQuickSlot)
+    //    {
+    //        //@FGuid
+    //        FGuid ItemID = TargetQuickSlot->GetUniqueItemID();
+    //        //@Item Count
+    //        int32 CurrentCount = TargetQuickSlot->GetSlotItemNum();
+    //        if (CurrentCount > 0)
+    //        {
+    //            //@TODO: ASC에서 활성화 가능성 여부 검사(공격, 회피, 달리기, 피격 반응, 그로기 반응, 죽음 등)
+    //            
+    //            //@Delegate: Inventory에서 Item 활성화 여부를 먼저 확인하고, UI를 업데이트합니다.
+    //            if (QuickSlotItemActivated.IsBound() && QuickSlotItemActivated.Execute(ItemID, SlotIndex + 1))
+    //            {
+    //                //@Item Count-1
+    //                int32 NewCount = CurrentCount - 1;
+    //                TargetQuickSlot->UpdateItemCount(NewCount);
 
-                    UE_LOGFMT(LogQuickSlots, Log, "퀵슬롯 {0} 아이템 사용. 남은 갯수: {1}", SlotIndex + 1, NewCount);
-                    //@Remove
-                    if (NewCount == 0)
-                    {
-                        //@bRemovable == true
-                        if (TargetQuickSlot->IsRemovable())
-                        {
-                            TargetQuickSlot->ClearAssignedItem();
-                            UE_LOGFMT(LogQuickSlots, Log, "퀵슬롯 {0}의 아이템이 모두 소진되어 슬롯이 초기화되었습니다.", SlotIndex + 1);
-                        }
-                        //bRemovable == false
-                        else
-                        {
-                            UE_LOGFMT(LogQuickSlots, Log, "퀵슬롯 {0}의 아이템이 모두 소진되었지만, 제거 불가능한 아이템이므로 슬롯이 유지됩니다.", SlotIndex + 1);
-                        }
-                    }
-                }
-            }
-            else
-            {
-                UE_LOGFMT(LogQuickSlots, Warning, "퀵슬롯 {0}의 아이템 갯수가 0입니다. 활성화할 수 없습니다.", SlotIndex + 1);
-            }
-        }
-        else
-        {
-            UE_LOGFMT(LogQuickSlots, Error, "퀵슬롯 {0}이 유효하지 않습니다.", SlotIndex + 1);
-        }
-    }
-    else
-    {
-        UE_LOGFMT(LogQuickSlots, Warning, "인식할 수 없는 퀵슬롯 입력입니다: {0}", InputTag.ToString());
-    }
+    //                UE_LOGFMT(LogQuickSlots, Log, "퀵슬롯 {0} 아이템 사용. 남은 갯수: {1}", SlotIndex + 1, NewCount);
+    //                //@Remove
+    //                if (NewCount == 0)
+    //                {
+    //                    //@bRemovable == true
+    //                    if (TargetQuickSlot->IsRemovable())
+    //                    {
+    //                        TargetQuickSlot->ClearAssignedItem();
+    //                        UE_LOGFMT(LogQuickSlots, Log, "퀵슬롯 {0}의 아이템이 모두 소진되어 슬롯이 초기화되었습니다.", SlotIndex + 1);
+    //                    }
+    //                    //bRemovable == false
+    //                    else
+    //                    {
+    //                        UE_LOGFMT(LogQuickSlots, Log, "퀵슬롯 {0}의 아이템이 모두 소진되었지만, 제거 불가능한 아이템이므로 슬롯이 유지됩니다.", SlotIndex + 1);
+    //                    }
+    //                }
+    //            }
+    //        }
+    //        else
+    //        {
+    //            UE_LOGFMT(LogQuickSlots, Warning, "퀵슬롯 {0}의 아이템 갯수가 0입니다. 활성화할 수 없습니다.", SlotIndex + 1);
+    //        }
+    //    }
+    //    else
+    //    {
+    //        UE_LOGFMT(LogQuickSlots, Error, "퀵슬롯 {0}이 유효하지 않습니다.", SlotIndex + 1);
+    //    }
+    //}
+    //else
+    //{
+    //    UE_LOGFMT(LogQuickSlots, Warning, "인식할 수 없는 퀵슬롯 입력입니다: {0}", InputTag.ToString());
+    //}
 }
 
 void UQuickSlots::EndActivation(const FGameplayTag& InputTag)
@@ -257,6 +259,7 @@ void UQuickSlots::EndActivation(const FGameplayTag& InputTag)
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UQuickSlots::QuickSlotInputTriggeredNotified(const FGameplayTag& InputTag)
 {
@@ -356,4 +359,8 @@ void UQuickSlots::OnQuickSlotItemUpdated(int32 SlotNum, const FGuid& UniqueItemI
             SlotNum, UniqueItemID.ToString(), TargetQuickSlot->GetUniqueItemID().ToString());
     }
 }
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utilities
 #pragma endregion

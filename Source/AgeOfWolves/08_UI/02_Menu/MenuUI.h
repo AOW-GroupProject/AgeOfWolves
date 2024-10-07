@@ -133,6 +133,10 @@ protected:
     void CreateAllCategoryUIs();
 
 protected:
+    //@가시성 관리
+    void SetCategoryVisibility(EMenuCategory Category, bool bVisible);
+
+protected:
     //@BG 이미지
     UPROPERTY(BlueprintReadWrite, Category = "Menu", meta = (BindWidget))
         UImage* MenuUI_Outer_BG;
@@ -160,18 +164,6 @@ protected:
         TArray<FMenuUIContentInfo> MenuContent;
     //@카테고리와 위젯을 매핑하는 맵
     TMap<EMenuCategory, TObjectPtr<UUserWidget>> MMenuContents;
-#pragma endregion
-
-#pragma region Utility
-public:
-    //@가시성 관리
-    void SetCategoryVisibility(EMenuCategory Category, bool bVisible);
-    //@ToolBar UI 가져오기
-    UFUNCTION(BlueprintCallable, Category = "Menu")
-        UMenuUIToolBar* GetToolBarUI() const;
-    //@카테고리별 UI 가져오기
-    UFUNCTION(BlueprintCallable, Category = "Menu")
-        UUserWidget* GetCategoryUI(EMenuCategory Category) const;
 #pragma endregion
 
 #pragma region Delegates
@@ -214,5 +206,16 @@ protected:
     UFUNCTION(BlueprintNativeEvent)
         void OnMenuCategoryButtonClikced(EMenuCategory MenuCategory);
     virtual void OnMenuCategoryButtonClikced_Implementation(EMenuCategory MenuCategory);
+#pragma endregion
+
+#pragma region Utility
+public:
+    //@ToolBar UI 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Menu")
+        UMenuUIToolBar* GetToolBarUI() const;
+
+    //@카테고리별 UI 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Menu")
+        UUserWidget* GetCategoryUI(EMenuCategory Category) const;
 #pragma endregion
 };

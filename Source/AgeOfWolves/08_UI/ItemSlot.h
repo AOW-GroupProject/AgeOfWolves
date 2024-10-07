@@ -70,6 +70,7 @@ public:
 	void UpdateItemCount(int32 NewCount);
 	//@퀵슬롯에 할당된 기존 아이템을 제거합니다.
 	virtual void ClearAssignedItem(bool bForceClear = false);
+
 protected:
 	//@Item Slot에 할당된 아이템의 고유 아이디(Inventory Component에서 발급)
 	FGuid UniqueItemID;
@@ -83,11 +84,13 @@ protected:
 		UImage* SlotBGImage;
 	UPROPERTY(BlueprintReadWrite, Category = "Item Slot", meta = (BindWidget))
 		UImage* SlotImage;
+
 protected:
 	UPROPERTY(BlueprintReadWrite, Category = "Item Slot", meta = (BindWidget))
 		UOverlay* SlotItemNumOverlay;
 	UPROPERTY(BlueprintReadWrite, Category = "Quick Slot", meta = (BindWidget))
 		UEditableTextBox* SlotItemNum;
+
 protected:
 	bool bStackable = false;
 	bool bRemovable = false;

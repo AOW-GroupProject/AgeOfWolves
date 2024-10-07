@@ -398,6 +398,127 @@ void UItemSlots::CreateConfirmationMenu()
 
     UE_LOGFMT(LogItemSlots, Log, "ConfirmationMenu가 생성되었습니다.");
 }
+
+bool UItemSlots::UseItem_Implementation(const int32 ItemCount)
+{
+    //@현재 선택된 아이템 슬롯
+    if (!CurrentSelectedItemSlot.IsValid())
+    {
+        UE_LOGFMT(LogItemSlots, Error, "UseItem: 현재 선택된 아이템 슬롯이 유효하지 않습니다.");
+        return false;
+    }
+
+    FGuid ItemID = CurrentSelectedItemSlot->GetUniqueItemID();
+    int32 CurrentCount = CurrentSelectedItemSlot->GetSlotItemNum();
+
+    //@아이템 갯수 유효성 검사
+    if (ItemCount <= 0 || ItemCount > CurrentCount)
+    {
+        UE_LOGFMT(LogItemSlots, Warning, "UseItem: 유효하지 않은 아이템 개수입니다. 요청된 개수: {0}, 현재 개수: {1}", ItemCount, CurrentCount);
+        return false;
+    }
+
+    //@TODO: 아이템 사용 로직 구현
+
+    //@아이템 갯수 업데이트
+    int32 RemainingCount = CurrentCount - ItemCount;
+    CurrentSelectedItemSlot->UpdateItemCount(RemainingCount);
+
+    //@현재 선택된 아이템 슬롯 비울지 여부
+    if (RemainingCount <= 0)
+    {
+        CurrentSelectedItemSlot->ClearAssignedItem();
+    }
+
+    UE_LOGFMT(LogItemSlots, Log, "아이템 사용됨: ID {0}, 사용 개수: {1}, 남은 개수: {2}", ItemID.ToString(), ItemCount, RemainingCount);
+
+    //@아이템 사용 이벤트
+    ItemUsed.Broadcast(ItemID, ItemCount);
+
+    return true;
+}
+
+bool UItemSlots::LeaveItem_Implementation(const int32 ItemCount)
+{
+    //@현재 선택된 아이템 슬롯 체크
+    if (!CurrentSelectedItemSlot.IsValid())
+    {
+        UE_LOGFMT(LogItemSlots, Error, "LeaveItem: 현재 선택된 아이템 슬롯이 유효하지 않습니다.");
+        return false;
+    }
+
+    FGuid ItemID = CurrentSelectedItemSlot->GetUniqueItemID();
+    int32 CurrentCount = CurrentSelectedItemSlot->GetSlotItemNum();
+
+    //@아이템 갯수 유효성 체크
+    if (ItemCount <= 0 || ItemCount > CurrentCount)
+    {
+        UE_LOGFMT(LogItemSlots, Warning, "LeaveItem: 유효하지 않은 아이템 개수입니다. 요청된 개수: {0}, 현재 개수: {1}", ItemCount, CurrentCount);
+        return false;
+    }
+
+    //@아이템 갯수 업데이트
+    int32 RemainingCount = CurrentCount - ItemCount;
+    CurrentSelectedItemSlot->UpdateItemCount(RemainingCount);
+
+    //@Item Slot Clear 여부
+    if (RemainingCount <= 0)
+    {
+        CurrentSelectedItemSlot->ClearAssignedItem();
+    }
+
+    UE_LOGFMT(LogItemSlots, Log, "아이템 드롭됨: ID {0}, 드롭 개수: {1}, 남은 개수: {2}", ItemID.ToString(), ItemCount, RemainingCount);
+
+    //@아이템 드롭 이벤트
+    ItemLeft.Broadcast(ItemID, ItemCount);
+
+    return true;
+}
+
+bool UItemSlots::DiscardItem_Implementation(const int32 ItemCount)
+{
+    //@현재 선택된 아이템 슬롯
+    if (!CurrentSelectedItemSlot.IsValid())
+    {
+        UE_LOGFMT(LogItemSlots, Error, "DiscardItem: 현재 선택된 아이템 슬롯이 유효하지 않습니다.");
+        return false;
+    }
+
+    FGuid ItemID = CurrentSelectedItemSlot->GetUniqueItemID();
+    int32 CurrentCount = CurrentSelectedItemSlot->GetSlotItemNum();
+
+    //@아이템 갯수 체크
+    if (ItemCount <= 0 || ItemCount > CurrentCount)
+    {
+        UE_LOGFMT(LogItemSlots, Warning, "DiscardItem: 유효하지 않은 아이템 개수입니다. 요청된 개수: {0}, 현재 개수: {1}", ItemCount, CurrentCount);
+        return false;
+    }
+
+    //@제거 가능 여부
+    if (!CurrentSelectedItemSlot->IsRemovable())
+    {
+        UE_LOGFMT(LogItemSlots, Warning, "DiscardItem: 이 아이템은 버릴 수 없습니다. ID: {0}", ItemID.ToString());
+        return false;
+    }
+
+    //@TODO: 아이템 버리기 로직 구현
+
+    //@Item Count 업데이트
+    int32 RemainingCount = CurrentCount - ItemCount;
+    CurrentSelectedItemSlot->UpdateItemCount(RemainingCount);
+
+    if (RemainingCount <= 0)
+    {
+        CurrentSelectedItemSlot->ClearAssignedItem();
+    }
+
+    UE_LOGFMT(LogItemSlots, Log, "아이템 버려짐: ID {0}, 버린 개수: {1}, 남은 개수: {2}", ItemID.ToString(), ItemCount, RemainingCount);
+
+    //@아이템 버리기 이벤트
+    ItemDiscarded.Broadcast(ItemID, ItemCount);
+
+    return true;
+}
 #pragma endregion
 
 //@Callbacks
@@ -462,17 +583,17 @@ void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID)
     CurrentSelectedItemSlot = SelectedItemSlot;
     UE_LOGFMT(LogItemSlots, Log, "새로운 아이템 슬롯이 선택됨: ID {0}", UniqueItemID.ToString());
 
-    //@TODO: DropDownMenu 열기
     //@Player Controller
     APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
     if (PlayerController)
     {
         FVector2D MousePosition;
-        // 마우스 커서의 위치 얻기
+        //@Mouse Position
         if (PlayerController->GetMousePosition(MousePosition.X, MousePosition.Y))
         {
             //@Set Position In Viewport
             ItemSlotDropDownMenu->SetPositionInViewport(MousePosition);
+            //@Drop Down Menu 열기
             ItemSlotDropDownMenu->OpenDropDownMenu();
         }
     }
@@ -484,7 +605,7 @@ void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID)
 void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropDownMenuOptionName)
 {
 
-    // Drop Down Menu에서 선택한 Option 명 저장
+    //@CurrentSelectedDropDownMenuOptionName
     CurrentSelectedDropDownMenuOptionName = ItemSlotDropDownMenuOptionName;
 
     // ItemSlotDropDownMenu와 ConfirmationMenu가 유효한지 확인
@@ -497,11 +618,10 @@ void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropD
     //@BACK일 경우, 메뉴 닫기
     if (ItemSlotDropDownMenuOptionName == "BACK")
     {
-        //@Close
+        //@드롭 다운 메뉴 닫기
         ItemSlotDropDownMenu->CloseDropDownMenu();
 
-        //@TODO: Item Slot의 선택 -> 호버 상태로 강제 상태 변화 필요
-        //@Reset
+        //@아이템 슬롯 전체 리셋
         ResetItemSlots();
 
         return;
@@ -524,7 +644,6 @@ void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropD
 
 void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
 {
-
     //@Confirmation Menu
     if (!ConfirmationMenu)
     {
@@ -542,7 +661,42 @@ void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
     if (OkOrCancel == "OK")
     {
         UE_LOGFMT(LogItemSlots, Log, "'{0}' 옵션에 대해 'OK'가 선택되었습니다.", *CurrentSelectedDropDownMenuOptionName.ToString());
-        //@TODO: 'OK' 선택 시 수행할 작업 구현
+
+        //@CurrentSelectedItemSlot 유효성 검사
+        if (!CurrentSelectedItemSlot.IsValid())
+        {
+            UE_LOGFMT(LogItemSlots, Error, "현재 선택된 아이템 슬롯이 유효하지 않습니다.");
+            return;
+        }
+
+        //@TODO: 확정 메뉴로부터 사용할 갯수도 가져오도록 수정, 우선 1로 고정
+        //@아이템 개수 가져오기
+        int32 ItemCount = 1;
+
+        //@선택된 옵션에 따라 해당 함수 호출
+        if (CurrentSelectedDropDownMenuOptionName == "USE")
+        {
+            UseItem(ItemCount);
+        }
+        else if (CurrentSelectedDropDownMenuOptionName == "LEAVE")
+        {
+            LeaveItem(ItemCount);
+        }
+        else if (CurrentSelectedDropDownMenuOptionName == "DISCARD")
+        {
+            DiscardItem(ItemCount);
+        }
+        else
+        {
+            UE_LOGFMT(LogItemSlots, Warning, "알 수 없는 옵션이 선택되었습니다: {0}", *CurrentSelectedDropDownMenuOptionName.ToString());
+        }
+
+        //@확정 메뉴 닫기
+        ConfirmationMenu->CloseConfirmationMenu();
+
+        //@드롭 다운 메뉴 닫기
+        ItemSlotDropDownMenu->CloseDropDownMenu();
+
         return;
     }
 
@@ -551,11 +705,10 @@ void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
     {
         UE_LOGFMT(LogItemSlots, Log, "'{0}' 옵션에 대해 'CANCEL'이 선택되었습니다.", *CurrentSelectedDropDownMenuOptionName.ToString());
 
-        //@Close Confirmation Menu
+        //@확정 메뉴 닫기
         ConfirmationMenu->CloseConfirmationMenu();
 
-        //@TODO: Item Slot의 선택 -> 호버 상태로 강제 상태 변화 필요
-        //@Drop Down Menu
+        //@드롭 다운 메뉴 리셋
         ItemSlotDropDownMenu->ResetDropDownMenu();
 
         UE_LOGFMT(LogItemSlots, Verbose, "'{0}' 옵션의 Confirmation Menu가 닫혔습니다.", *CurrentSelectedDropDownMenuOptionName.ToString());

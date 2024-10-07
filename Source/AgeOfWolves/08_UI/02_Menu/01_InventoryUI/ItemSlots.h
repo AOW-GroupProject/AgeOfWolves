@@ -36,6 +36,13 @@ DECLARE_DELEGATE(FItemSlotsInitFinished);
 
 //@이전 선택된 아이템 슬롯 취소 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FCancelItemSlotButton, const FGuid&)
+
+//@아이템 사용
+DECLARE_MULTICAST_DELEGATE_TwoParams(FItemUsed, const FGuid&, int32)
+//@아이템 드롭
+DECLARE_MULTICAST_DELEGATE_TwoParams(FItemLeft, const FGuid&, int32)
+//@아이템 버리기
+DECLARE_MULTICAST_DELEGATE_TwoParams(FItemDiscarded, const FGuid&, int32)
 #pragma endregion
 
 /**
@@ -46,14 +53,14 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCancelItemSlotButton, const FGuid&)
     UCLASS()
     class AGEOFWOLVES_API UItemSlots : public UUserWidget
 {
-    //@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
     friend class UItemSlot_DropDownMenu;
 #pragma endregion
 
     GENERATED_BODY()
 
-        //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UItemSlots(const FObjectInitializer& ObjectInitializer);
@@ -90,7 +97,7 @@ protected:
     void CheckItemSlotInitFinished();
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region SubWidgets
 public:
     //@주의: 아무 곳에서 호출하면 안됩니다.
@@ -105,6 +112,22 @@ protected:
     void CreateItemSlotDropDownMenu();
     //@Confirmation Menu 생성
     void CreateConfirmationMenu();
+
+protected:
+    //@현재 선택된 아이템을 사용합니다.
+    UFUNCTION(BlueprintNativeEvent)
+        bool UseItem(const int32 ItemCount);
+    virtual bool UseItem_Implementation(const int32 ItemCount);
+
+    //@현재 선택된 아이템을 드롭합니다.
+    UFUNCTION(BlueprintNativeEvent)
+        bool LeaveItem(const int32 ItemCount);
+    virtual bool LeaveItem_Implementation(const int32 ItemCount);
+
+    //@현재 선택된 아이템을 버립니다.
+    UFUNCTION(BlueprintNativeEvent)
+        bool DiscardItem(const int32 ItemCount);
+    virtual bool DiscardItem_Implementation(const int32 ItemCount);
 
 protected:
     //@Item Slot 목록이 나타낼 아이템 유형
@@ -159,7 +182,7 @@ protected:
         TSubclassOf<UConfirmationMenu> ConfirmationMenuClass;
 #pragma endregion
 
-    //@Delegates
+//@Delegates
 #pragma region Delegate
 public:
     //@초기화 요청 이벤트
@@ -170,9 +193,17 @@ public:
 public:
     //@마지막 선택된 아이템 슬롯의 선택 취소 이벤트
     FCancelItemSlotButton CancelItemSlotButton;
+
+public:
+    //@아이템 사용 이벤트
+    FItemUsed ItemUsed;
+    //@아이템 드롭 이벤트
+    FItemLeft ItemLeft;
+    //@아이테 버리기 이벤트
+    FItemDiscarded ItemDiscarded;
 #pragma endregion
 
-    //@Callbacks
+//@Callbacks
 #pragma region Callback
 protected:
     //@가시성 변화 이벤트 구독
@@ -221,7 +252,7 @@ protected:
         void OnInventoryItemUpdated(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag, int32 UpdatedItemCount);
 #pragma endregion
 
-    //@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility Functions
 public:
     // 모든 Item Slot을 반환하는 함수

@@ -52,7 +52,7 @@ void AItem::EndPlay(const EEndPlayReason::Type EndPlayReason)
 
 }
 
-void AItem::InitializeItem(const FGuid& UniqueId)
+void AItem::InitializeItem()
 {
 	UE_LOGFMT(LogItem, Log, "{0}이 Iventory에 추가되었습니다.", GetName());
 
@@ -64,6 +64,12 @@ void AItem::InitializeItem(const FGuid& UniqueId)
 #pragma region Item
 bool AItem::TryActivateItem_Implementation()
 {
+
+	UE_LOGFMT(LogItem, Log, "Item 활성화 시작!");
+
+	//@활성화 종료 이벤트
+	ItemActivationEnded.Broadcast();
+
 	return true;
 }
 #pragma endregion

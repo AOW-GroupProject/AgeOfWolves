@@ -8,6 +8,7 @@
 
 DEFINE_LOG_CATEGORY(LogItemSlot)
 
+//@Default Settings
 #pragma region Default Setting
 UItemSlot::UItemSlot(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
@@ -65,6 +66,7 @@ void UItemSlot::InitializeItemSlot()
 }
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region SubWidgets
 void UItemSlot::AssignNewItem(const FGuid& ID, const FItemInformation* ItemInformation, int32 ItemCount)
 {
@@ -181,4 +183,12 @@ int32 UItemSlot::GetSlotItemNum() const
     UE_LOGFMT(LogItemSlot, Warning, "슬롯 아이템 개수를 가져올 수 없습니다. 0을 반환합니다.");
     return 0;
 }
+#pragma endregion
+
+//@Callbacks
+#pragma region Callback
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utilities
 #pragma endregion

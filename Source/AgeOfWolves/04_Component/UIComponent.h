@@ -11,10 +11,22 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogUI, Log, All)
 
+//@전방 선언
+#pragma region Forward Declaration
 class UUserWidget;
 class UUIManagerSubsystem;
 class UBaseInputComponent;
+#pragma endregion
 
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
 #pragma region Delegates
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestInitializationByUIComp);
@@ -46,8 +58,14 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyInteractionUIInputActivation, const F
 UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
 class AGEOFWOLVES_API UUIComponent : public UActorComponent
 {
+
+//@친추 클래스
+#pragma region Friend Class
+#pragma endregion
+
 	GENERATED_BODY()
 
+//@Defualt Setting
 #pragma region Default Setting
 public:	
 	UUIComponent(const FObjectInitializer& ObjectInitializer);
@@ -91,6 +109,7 @@ protected:
 
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region UI
 private:
 	//@모든 UI 상태를 리셋합니다.
@@ -109,19 +128,6 @@ protected:
 	void SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* NewWidget);
 
 protected:
-	//@HUD
-    UPROPERTY()
-        TObjectPtr<UUserWidget> HUDUI;
-	//@Menu
-	UPROPERTY()
-		TObjectPtr<UUserWidget> MenuUI;
-	//@Interaction
-	UPROPERTY()
-		TMap<FGameplayTag, UUserWidget*> MInteractionUIs;
-#pragma endregion
-
-#pragma region Utility
-protected:
 	//@Widget을 화면에 나타냅니다.
 	UFUNCTION(BlueprintCallable, Category = "UI")
 		void ShowUI(EUICategory UICategory, const FGameplayTag& UITag);
@@ -133,19 +139,19 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "UI")
 		void HideAllUI(EUICategory UICategory);
 
-private:
-	//@Input Tag를 통해 UI를 찾습니다.
-	FString FindUICategoryFromInputTag(const FGameplayTag& InputTag);
-
-public:
-	//@UICategory와 UI Tag를 통해 UI를 반환합니다.
-	UFUNCTION(BlueprintCallable, Category = "UI")
-		UUserWidget* GetUI(EUICategory UICategory, const FGameplayTag& UITag = FGameplayTag()) const;
-	//@UI Category 관련 UI들을 모두 반환합니다.
-	UFUNCTION(BlueprintCallable, Category = "UI")
-		TArray<UUserWidget*> GetCategoryUIs(EUICategory UICategory) const;
+protected:
+	//@HUD
+    UPROPERTY()
+        TObjectPtr<UUserWidget> HUDUI;
+	//@Menu
+	UPROPERTY()
+		TObjectPtr<UUserWidget> MenuUI;
+	//@Interaction
+	UPROPERTY()
+		TMap<FGameplayTag, UUserWidget*> MInteractionUIs;
 #pragma endregion
 
+//@Delegates
 #pragma region Delegates
 public:
 	//@초기화 요청 이벤트
@@ -169,6 +175,7 @@ public:
 	FNotifyMenuUIInputReleased NotifyMenuUIInputReleased;
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 protected:
 	//@Player HUD의 초기화 완료 이벤트 구독
@@ -197,6 +204,21 @@ protected:
 	//@UI Input Tag 해제 이벤트 구독
 	UFUNCTION()
 		void OnUIInputReleased(const FGameplayTag& InputTag);
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+private:
+	//@Input Tag를 통해 UI를 찾습니다.
+	FString FindUICategoryFromInputTag(const FGameplayTag& InputTag);
+
+public:
+	//@UICategory와 UI Tag를 통해 UI를 반환합니다.
+	UFUNCTION(BlueprintCallable, Category = "UI")
+		UUserWidget* GetUI(EUICategory UICategory, const FGameplayTag& UITag = FGameplayTag()) const;
+	//@UI Category 관련 UI들을 모두 반환합니다.
+	UFUNCTION(BlueprintCallable, Category = "UI")
+		TArray<UUserWidget*> GetCategoryUIs(EUICategory UICategory) const;
 #pragma endregion
 
 };

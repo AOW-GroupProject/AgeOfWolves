@@ -19,6 +19,7 @@
 DEFINE_LOG_CATEGORY(LogUI)
 // UE_LOGFMT(LogUI, Log, "");
 
+//@Defualt Setting
 #pragma region Default Setting
 UUIComponent::UUIComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -210,6 +211,7 @@ void UUIComponent::CheckAllUIsForDefaultVisibilitySetting()
 }
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region UI
 void UUIComponent::ResetUIs()
 {
@@ -374,9 +376,7 @@ void UUIComponent::SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* Ne
 	//@MInteractionUIs
 	MInteractionUIs.Add(UITag, NewWidget);
 }
-#pragma endregion
 
-#pragma region Utility
 void UUIComponent::ShowUI(EUICategory UICategory, const FGameplayTag& UITag)
 {
 	UUserWidget* UI = GetUI(UICategory, UITag);
@@ -392,7 +392,7 @@ void UUIComponent::ShowUI(EUICategory UICategory, const FGameplayTag& UITag)
 
 	//@Add To Viewport
 	//UI->AddToViewport();
-	
+
 	UE_LOGFMT(LogUI, Log, "{0} 카테고리의 {1} UI가 뷰포트에 추가되었습니다.",
 		*UEnum::GetValueAsString(UICategory), *UITag.ToString());
 }
@@ -478,67 +478,9 @@ void UUIComponent::HideAllUI(EUICategory UICategory)
 			*UEnum::GetValueAsString(UICategory));
 	}
 }
-
-FString UUIComponent::FindUICategoryFromInputTag(const FGameplayTag& InputTag)
-{
-	FString TagString = InputTag.ToString();
-
-	if (TagString.StartsWith("Input.UI."))
-	{
-		TArray<FString> Parts;
-		TagString.ParseIntoArray(Parts, TEXT("."), true);
-
-		if (Parts.Num() >= 3)
-		{
-			return Parts[2]; // "HUD", "Menu", "Interaction" 등을 반환
-		}
-	}
-
-	return FString(); // 빈 문자열 반환 (카테고리를 찾지 못한 경우)
-}
-
-UUserWidget* UUIComponent::GetUI(EUICategory UICategory, const FGameplayTag& UITag) const
-{
-	switch (UICategory)
-	{
-	case EUICategory::HUD:
-		return HUDUI;
-	case EUICategory::Menu:
-		return MenuUI;
-	case EUICategory::Interaction:
-		if (auto* Widget = MInteractionUIs.Find(UITag))
-		{
-			return *Widget;
-		}
-		UE_LOGFMT(LogUI, Warning, "Interaction UI를 찾을 수 없습니다. Tag: {0}", UITag.ToString());
-		return nullptr;
-	default:
-		UE_LOGFMT(LogUI, Warning, "유효하지 않은 UI Category입니다.");
-		return nullptr;
-	}
-}
-
-TArray<UUserWidget*> UUIComponent::GetCategoryUIs(EUICategory UICategory) const
-{
-	TArray<UUserWidget*> Result;
-	switch (UICategory)
-	{
-	case EUICategory::HUD:
-		if (HUDUI) Result.Add(HUDUI);
-		break;
-	case EUICategory::Menu:
-		if (MenuUI) Result.Add(MenuUI);
-		break;
-	case EUICategory::Interaction:
-		MInteractionUIs.GenerateValueArray(Result);
-		break;
-	default:
-		UE_LOGFMT(LogUI, Warning, "유효하지 않은 UI Category입니다.");
-	}
-	return Result;
-}
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UUIComponent::OnHUDInitFinished()
 {
@@ -669,5 +611,67 @@ void UUIComponent::OnUIInputReleased(const FGameplayTag& InputTag)
 			NotifyMenuUIInputReleased.ExecuteIfBound(InputTag);
 		}
 	}
+}
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+FString UUIComponent::FindUICategoryFromInputTag(const FGameplayTag& InputTag)
+{
+	FString TagString = InputTag.ToString();
+
+	if (TagString.StartsWith("Input.UI."))
+	{
+		TArray<FString> Parts;
+		TagString.ParseIntoArray(Parts, TEXT("."), true);
+
+		if (Parts.Num() >= 3)
+		{
+			return Parts[2]; // "HUD", "Menu", "Interaction" 등을 반환
+		}
+	}
+
+	return FString(); // 빈 문자열 반환 (카테고리를 찾지 못한 경우)
+}
+
+UUserWidget* UUIComponent::GetUI(EUICategory UICategory, const FGameplayTag& UITag) const
+{
+	switch (UICategory)
+	{
+	case EUICategory::HUD:
+		return HUDUI;
+	case EUICategory::Menu:
+		return MenuUI;
+	case EUICategory::Interaction:
+		if (auto* Widget = MInteractionUIs.Find(UITag))
+		{
+			return *Widget;
+		}
+		UE_LOGFMT(LogUI, Warning, "Interaction UI를 찾을 수 없습니다. Tag: {0}", UITag.ToString());
+		return nullptr;
+	default:
+		UE_LOGFMT(LogUI, Warning, "유효하지 않은 UI Category입니다.");
+		return nullptr;
+	}
+}
+
+TArray<UUserWidget*> UUIComponent::GetCategoryUIs(EUICategory UICategory) const
+{
+	TArray<UUserWidget*> Result;
+	switch (UICategory)
+	{
+	case EUICategory::HUD:
+		if (HUDUI) Result.Add(HUDUI);
+		break;
+	case EUICategory::Menu:
+		if (MenuUI) Result.Add(MenuUI);
+		break;
+	case EUICategory::Interaction:
+		MInteractionUIs.GenerateValueArray(Result);
+		break;
+	default:
+		UE_LOGFMT(LogUI, Warning, "유효하지 않은 UI Category입니다.");
+	}
+	return Result;
 }
 #pragma endregion

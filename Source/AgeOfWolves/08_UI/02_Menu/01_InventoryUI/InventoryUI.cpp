@@ -1,10 +1,12 @@
 #include "InventoryUI.h"
 #include "Logging/StructuredLog.h"
 
-#include "08_UI/02_Menu/01_InventoryUI/InventoryUIContent.H"
-
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
+
+#include "08_UI/02_Menu/01_InventoryUI/InventoryUIContent.h"
+#include "08_UI/02_Menu/01_InventoryUI/ItemSlots.h"
+
 
 DEFINE_LOG_CATEGORY(LogInventoryUI)
 
@@ -41,16 +43,16 @@ void UInventoryUI::NativeDestruct()
     Super::NativeDestruct();
 }
 
-void UInventoryUI::InternalBindingToInventoryUIContent(UInventoryUIContent* InventoryUIContent)
+void UInventoryUI::InternalBindingToInventoryUIContent(UInventoryUIContent* Content)
 {
     //@Item Description
-    if (!InventoryUIContent)
+    if (!Content)
     {
         UE_LOGFMT(LogInventoryUI, Error, "InventoryUIContent UI가 유효하지 않습니다.");
         return;
     }
 
-    InventoryUIContent->InventoryUIContentInitFinished.BindUFunction(this, "OnInventoryUIContentInitFinished");
+    Content->InventoryUIContentInitFinished.BindUFunction(this, "OnInventoryUIContentInitFinished");
 }
 
 void UInventoryUI::InitializeMenuUIContent()
@@ -110,28 +112,30 @@ void UInventoryUI::CreateInventoryContent()
         return;
     }
 
-    UInventoryUIContent* InventoryUIContent = CreateWidget<UInventoryUIContent>(this, InventoryUIContentClass);
-    if (InventoryUIContent)
-    {
-        //@비동기 초기화 이벤트
-        RequestStartInitByInventoryUI.AddUFunction(InventoryUIContent, "InitializeInventoryUIContent");
+    InventoryUIContent = CreateWidget<UInventoryUIContent>(this, InventoryUIContentClass);
 
-        //@내부 바인딩
-        InternalBindingToInventoryUIContent(InventoryUIContent);
-
-        UOverlaySlot* OverlaySlot = InventoryUIContentOverlay->AddChildToOverlay(InventoryUIContent);
-        if (OverlaySlot)
-        {
-            OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
-            OverlaySlot->SetVerticalAlignment(VAlign_Fill);
-        }
-
-        UE_LOGFMT(LogInventoryUI, Log, "Inventory Content UI 위젯이 성공적으로 추가되었습니다.");
-    }
-    else
+    if (!InventoryUIContent)
     {
         UE_LOGFMT(LogInventoryUI, Error, "Inventory Content UI 위젯 생성에 실패했습니다.");
+        return;
     }
+
+    //@비동기 초기화 이벤트
+    RequestStartInitByInventoryUI.AddUFunction(InventoryUIContent, "InitializeInventoryUIContent");
+
+    //@내부 바인딩
+    InternalBindingToInventoryUIContent(InventoryUIContent);
+
+    //@Alignment
+    UOverlaySlot* OverlaySlot = InventoryUIContentOverlay->AddChildToOverlay(InventoryUIContent);
+    if (OverlaySlot)
+    {
+        OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+        OverlaySlot->SetVerticalAlignment(VAlign_Fill);
+    }
+
+    UE_LOGFMT(LogInventoryUI, Log, "Inventory Content UI 위젯이 성공적으로 추가되었습니다.");
+
 }
 #pragma endregion
 
@@ -158,3 +162,24 @@ void UInventoryUI::OnUIVisibilityChanged_Implementation(ESlateVisibility Visibil
 }
 #pragma endregion
 
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+UItemSlots* UInventoryUI::GetItemSlotsByType(EItemType ItemType) const
+{
+    if (!InventoryUIContent.Get())
+    {
+        UE_LOGFMT(LogInventoryUI, Error, "Inventory UI 내부 컨텐츠가 유효하지 않습니다.");
+        return nullptr;
+    }
+
+    if (InventoryUIContent)
+    {
+        if (UItemSlots* ItemSlotsWidget = CastChecked<UItemSlots>(InventoryUIContent->GetItemSlotsUI(ItemType)))
+        {
+            return ItemSlotsWidget;
+        }
+    }
+
+    return nullptr;
+}
+#pragma endregion
