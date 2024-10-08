@@ -527,6 +527,16 @@ void UItemSlots::OnUIVisibilityChanged(ESlateVisibility VisibilityType)
 {
     //@Reset Item Slots
     ResetItemSlots();
+
+    ////@TEST: 키보드 입력 테스트
+    //if (VisibilityType == ESlateVisibility::SelfHitTestInvisible)
+    //{
+    //    APlayerController* PC = GetOwningPlayer();
+    //    if (PC)
+    //    {
+    //        PC->SetInputMode(FInputModeGameAndUI());
+    //    }
+    //}
 }
 
 void UItemSlots::OnItemSlotInitFinished()
@@ -859,4 +869,3 @@ UInteractableItemSlot* UItemSlots::FindSlotByItemID(const FGuid& ItemID)
     return FoundSlot ? *FoundSlot : nullptr;
 }
 #pragma endregion
-

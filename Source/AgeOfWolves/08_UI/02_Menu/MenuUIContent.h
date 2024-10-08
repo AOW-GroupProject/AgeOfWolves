@@ -8,11 +8,21 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogMenuUIContent, Log, All)
 
+//@전방 선언
 #pragma region Forward Declaration
 class UImage;
 class UMenuUI;
 #pragma endregion
 
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
 #pragma region Delegates
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByMenuUIContent)
@@ -28,10 +38,15 @@ DECLARE_DELEGATE_OneParam(FMenuUIContentInitFinished, EMenuCategory);
 UCLASS()
 class AGEOFWOLVES_API UMenuUIContent : public UUserWidget
 {
-    //@Friend Class
+
+//@친추 클래스
+#pragma region Friend Class
     friend class UMenuUI;
+#pragma endregion
 
 	GENERATED_BODY()
+
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UMenuUIContent(const FObjectInitializer& ObjectInitializer);
@@ -60,16 +75,15 @@ protected:
     virtual void CheckMenuUIContentInitFinished();
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region Info
+protected:
+    virtual void ResetMenuUIContent() {}
+
 protected:
     //@Menu Content의 Category를 설정합니다.
     //@참조: InitializeMenuUIContent()
     EMenuCategory MenuCategory = EMenuCategory::MAX;
-#pragma endregion
-
-#pragma region SubWidgets
-protected:
-    virtual void ResetMenuUIContent() {}
 
 protected:
     //@Menu Content의 타이틀 이미지
@@ -77,6 +91,7 @@ protected:
         UImage* TitleImage;
 #pragma endregion
 
+//@Delegates
 #pragma region Delegates
 public:
     //@초기화 요청 이벤트
@@ -85,12 +100,17 @@ public:
     FMenuUIContentInitFinished MenuUIContentInitFinished;
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 protected:
     //@가시성 변화 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
         void OnUIVisibilityChanged(ESlateVisibility VisibilityType);
     virtual void OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType);
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion
 	
 };

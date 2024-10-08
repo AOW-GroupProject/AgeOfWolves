@@ -193,6 +193,8 @@ protected:
     UFUNCTION()
         void OnUIInputTagReleased(const FGameplayTag& InputTag);
 
+    virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
+
 protected:
     //@툴바 초기화 완료 이벤트 구독
     UFUNCTION()

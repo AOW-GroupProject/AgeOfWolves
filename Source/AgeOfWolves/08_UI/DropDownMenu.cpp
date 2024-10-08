@@ -102,6 +102,8 @@ void UDropDownMenu::ResetDropDownMenu()
         UE_LOGFMT(LogDropDownMenu, Log, "이전에 선택된 옵션 취소: {0}", PrevSelectedOption.ToString());
     }
 
+    
+
 }
 
 void UDropDownMenu::CreateDropDownMenuOptions()

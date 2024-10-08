@@ -14,6 +14,7 @@
 
 DEFINE_LOG_CATEGORY(LogMenuUI)
 
+//@Defualt Setting
 #pragma region Default Setting
 UMenuUI::UMenuUI(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
@@ -38,6 +39,8 @@ void UMenuUI::NativePreConstruct()
 void UMenuUI::NativeConstruct()
 {
     Super::NativeConstruct();
+
+    SetIsFocusable(true);
 }
 
 void UMenuUI::NativeDestruct()
@@ -202,7 +205,8 @@ void UMenuUI::CheckSystemUIInitFinished()
 }
 #pragma endregion
 
-#pragma region SubWidgets
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UMenuUI::ResetMenuUI()
 {
     UE_LOGFMT(LogMenuUI, Log, "MenuUI 리셋 시작");
@@ -346,49 +350,11 @@ void UMenuUI::CreateAllCategoryUIs()
 }
 #pragma endregion
 
-#pragma region Utility
-void UMenuUI::SetCategoryVisibility(EMenuCategory Category, bool bVisible)
-{
-    //@Widget
-    if (UUserWidget* Widget = GetCategoryUI(Category))
-    {
-        //@Visibility
-        Widget->SetVisibility(bVisible ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
-    }
-}
-
-UMenuUIToolBar* UMenuUI::GetToolBarUI() const
-{
-    if (!ToolBarOverlay)
-    {
-        UE_LOGFMT(LogMenuUI, Error, "ToolBarOverlay가 유효하지 않습니다.");
-        return nullptr;
-    }
-
-    TArray<UWidget*> Children = ToolBarOverlay->GetAllChildren();
-    for (UWidget* Child : Children)
-    {
-        UMenuUIToolBar* ToolBar = Cast<UMenuUIToolBar>(Child);
-        if (ToolBar)
-        {
-            return ToolBar;
-        }
-    }
-
-    UE_LOGFMT(LogMenuUI, Warning, "ToolBarOverlay에서 UMenuUIToolBar를 찾을 수 없습니다.");
-    return nullptr;
-}
-
-UUserWidget* UMenuUI::GetCategoryUI(EMenuCategory Category) const
-{
-    if (auto FoundWidget = MMenuContents.Find(Category))
-    {
-        return *FoundWidget;
-    }
-    return nullptr;
-}
+//@Delegates
+#pragma region Delegates
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UMenuUI::OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVisible)
 {
@@ -418,7 +384,7 @@ void UMenuUI::OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVi
 
         //@Remove From Parent
         RemoveFromParent();
-        
+
         UE_LOGFMT(LogMenuUI, Log, "MenuUI가 뷰포트에서 제거되었습니다.");
 
         // TODO: MenuUI가 숨겨질 때 필요한 추가 로직
@@ -457,6 +423,21 @@ void UMenuUI::OnUIInputTagReleased(const FGameplayTag& InputTag)
 
     // TODO: 여기에 입력 해제 처리 로직을 추가하세요
 
+}
+
+FReply UMenuUI::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+    FKey Key = InKeyEvent.GetKey();
+
+    UE_LOGFMT(LogMenuUI, Log, "키 입력 감지됨: {0}", Key.GetDisplayName().ToString());
+
+    if (Key == EKeys::Up || Key == EKeys::Down || Key == EKeys::Left || Key == EKeys::Right)
+    {
+        //HandleArrowInput(Key);
+        return FReply::Handled();
+    }
+
+    return FReply::Unhandled();
 }
 
 void UMenuUI::OnToolBarInitFinished()
@@ -521,5 +502,49 @@ void UMenuUI::OnMenuCategoryButtonClikced_Implementation(EMenuCategory MenuCateg
     // TODO: 필요한 경우 추가 로직 구현
     // 예: 애니메이션 재생, 포커스 설정 등
 
+}
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+void UMenuUI::SetCategoryVisibility(EMenuCategory Category, bool bVisible)
+{
+    //@Widget
+    if (UUserWidget* Widget = GetCategoryUI(Category))
+    {
+        //@Visibility
+        Widget->SetVisibility(bVisible ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+    }
+}
+
+UMenuUIToolBar* UMenuUI::GetToolBarUI() const
+{
+    if (!ToolBarOverlay)
+    {
+        UE_LOGFMT(LogMenuUI, Error, "ToolBarOverlay가 유효하지 않습니다.");
+        return nullptr;
+    }
+
+    TArray<UWidget*> Children = ToolBarOverlay->GetAllChildren();
+    for (UWidget* Child : Children)
+    {
+        UMenuUIToolBar* ToolBar = Cast<UMenuUIToolBar>(Child);
+        if (ToolBar)
+        {
+            return ToolBar;
+        }
+    }
+
+    UE_LOGFMT(LogMenuUI, Warning, "ToolBarOverlay에서 UMenuUIToolBar를 찾을 수 없습니다.");
+    return nullptr;
+}
+
+UUserWidget* UMenuUI::GetCategoryUI(EMenuCategory Category) const
+{
+    if (auto FoundWidget = MMenuContents.Find(Category))
+    {
+        return *FoundWidget;
+    }
+    return nullptr;
 }
 #pragma endregion

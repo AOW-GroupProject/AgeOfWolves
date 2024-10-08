@@ -3,8 +3,8 @@
 
 DEFINE_LOG_CATEGORY(LogMenuUIContent)
 
+//@Defualt Setting
 #pragma region Default Setting
-
 UMenuUIContent::UMenuUIContent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
@@ -55,6 +55,15 @@ void UMenuUIContent::CheckMenuUIContentInitFinished()
 }
 #pragma endregion
 
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+#pragma endregion
+
+//@Delegates
+#pragma region Delegates
+#pragma endregion
+
+//@Callbacks
 #pragma region Callbacks
 void UMenuUIContent::OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType)
 {
@@ -65,5 +74,6 @@ void UMenuUIContent::OnUIVisibilityChanged_Implementation(ESlateVisibility Visib
 }
 #pragma endregion
 
-
-
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+#pragma endregion

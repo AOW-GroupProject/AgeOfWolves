@@ -15,8 +15,7 @@ DEFINE_LOG_CATEGORY(LogConfirmationMenu)
 #pragma region Default Setting
 UConfirmationMenu::UConfirmationMenu(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
-{
-}
+{}
 
 void UConfirmationMenu::NativeOnInitialized()
 {

@@ -551,9 +551,13 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 				//@Show Mouse Cursor
 				PC->bShowMouseCursor = true;
 				//@FInputModeGameAndUI
-				FInputModeGameAndUI InputMode;
+				FInputModeUIOnly InputMode;
 				InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-				InputMode.SetHideCursorDuringCapture(false);
+				UUserWidget* MenuUIWidget = GetUI(EUICategory::Menu);
+				if (MenuUIWidget)
+				{
+					InputMode.SetWidgetToFocus(MenuUIWidget->TakeWidget());
+				}
 				//@Set Input Mode
 				PC->SetInputMode(InputMode);
 			}
@@ -578,6 +582,7 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 			{
 				//@Hide Mouse Curosr
 				PC->bShowMouseCursor = false;
+				
 				//@Set Input Mode
 				PC->SetInputMode(FInputModeGameAndUI());
 			}
