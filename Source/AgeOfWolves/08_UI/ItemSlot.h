@@ -8,16 +8,26 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogItemSlot, Log, All)
 
-#pragma region Delegates
-//@초기화 완료 이벤트
-DECLARE_DELEGATE(FItemSlotInitFinished);
-#pragma endregion
-
+//@Forward Declaration
 #pragma region Forward Decalration
 class UOverlay;
 class UImage;
 class UVerticalBox;
 class UEditableTextBox;
+#pragma endregion
+
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@Delegates
+#pragma region Delegates
+//@초기화 완료 이벤트
+DECLARE_DELEGATE(FItemSlotInitFinished);
 #pragma endregion
 
 /**
@@ -28,8 +38,13 @@ class UEditableTextBox;
 UCLASS()
 class AGEOFWOLVES_API UItemSlot : public UUserWidget
 {
+//@친추 클래스
+#pragma region Friend Class
+#pragma endregion
+
 	GENERATED_BODY()
 
+//@Default Setting
 #pragma region Default Setting
 public:
 	UItemSlot(const FObjectInitializer& ObjectInitializer);
@@ -46,6 +61,7 @@ public:
 		virtual void InitializeItemSlot();
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region SubWidgets
 public:
 	//@퀵슬롯에 새로운 아이템을 할당합니다.
@@ -97,7 +113,18 @@ public:
 		int32 GetSlotItemNum() const;
 #pragma endregion
 
+//@Delegates
+#pragma region Delegates 
 public:
 	FItemSlotInitFinished ItemSlotInitFinished;
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+#pragma endregion
 
 };

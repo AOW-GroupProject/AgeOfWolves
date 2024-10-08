@@ -153,8 +153,8 @@ void UItemSlots::InternalBindToItemSlotDropDownMenu(UDropDownMenu* DropDownMenu)
         return;
     }
 
-    DropDownMenu->DropDownMenuInitFinished.BindUFunction(this, "OnDropDownMenuInitFinished");
-    DropDownMenu->DropDownMenuOptionButtonClicked.AddUFunction(this, "OnDropDownMenuOptionelected");
+    DropDownMenu->DropDownMenuInitFinished.BindUFunction(this, "OnItemSlotDropDownMenuInitFinished");
+    DropDownMenu->DropDownMenuOptionButtonClicked.AddUFunction(this, "OnItemSlotDropDownMenuOptionSelected");
 }
 
 void UItemSlots::InternalBindToConfirmationMenu(UConfirmationMenu* Menu)
@@ -177,8 +177,11 @@ void UItemSlots::InitializeItemSlots()
 {
 	//@Item Slots
 	CreateItemSlots();
-
-	//@초기화 요청 이벤트
+    //@Drop Down Menu
+    CreateItemSlotDropDownMenu();
+	//@Confirmation Menu
+    CreateConfirmationMenu();
+    //@초기화 요청 이벤트
     RequestStartInitByItemSlots.Broadcast();
 }
 
@@ -207,6 +210,12 @@ void UItemSlots::ResetItemSlots()
     {
         CancelItemSlotButton.Broadcast(CurrentSelectedItemSlot->GetUniqueItemID());
         CurrentSelectedItemSlot = nullptr;
+    }
+
+    //@Close Drop Down Menu
+    if (ItemSlotDropDownMenu && ItemSlotDropDownMenu->GetVisibility() == ESlateVisibility::SelfHitTestInvisible)
+    {
+        ItemSlotDropDownMenu->CloseDropDownMenu();
     }
 
     //@First Item Slot
@@ -472,47 +481,86 @@ void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID)
     // 예: 선택된 아이템 슬롯의 시각적 상태 변경, 아이템 정보 표시 등
 }
 
-void UItemSlots::OnDropDownMenuOptionelected(const FName& ItemSlotDropDownMenuOptionName)
+void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropDownMenuOptionName)
 {
-    //@Drop Down Menu 에서 선택한 Option 명
+
+    // Drop Down Menu에서 선택한 Option 명 저장
     CurrentSelectedDropDownMenuOptionName = ItemSlotDropDownMenuOptionName;
 
-    //@TODO: Confirmation Menu의 Dialogue Box의 Text를 설정하고, 화면에 나타냅니다.
+    // ItemSlotDropDownMenu와 ConfirmationMenu가 유효한지 확인
+    if (!ItemSlotDropDownMenu || !ConfirmationMenu)
+    {
+        UE_LOG(LogItemSlots, Error, TEXT("ItemSlotDropDownMenu 또는 ConfirmationMenu가 유효하지 않습니다."));
+        return;
+    }
 
-    //@TODO: Current Selected Item Slot에 대하여 관련 작업 처리
+    //@BACK일 경우, 메뉴 닫기
+    if (ItemSlotDropDownMenuOptionName == "BACK")
+    {
+        //@Close
+        ItemSlotDropDownMenu->CloseDropDownMenu();
 
+        //@TODO: Item Slot의 선택 -> 호버 상태로 강제 상태 변화 필요
+        //@Reset
+        ResetItemSlots();
+
+        return;
+    }
+
+    // DropDownMenu로부터 ConfirmationMenuDialogueText 가져오기
+    FText DialogueText = ItemSlotDropDownMenu->GetConfirmationMenuDialogueText(CurrentSelectedDropDownMenuOptionName);
+
+    // ConfirmationMenu의 DialogueText 설정
+    ConfirmationMenu->SetConfirmationMenuDialogueText(DialogueText);
+
+    // ConfirmationMenu 열기
+    ConfirmationMenu->OpenConfirmationMenu();
+
+    UE_LOG(LogItemSlots, Log, TEXT("DropDownMenu 옵션 '%s'가 선택되었고, ConfirmationMenu가 열렸습니다."), *CurrentSelectedDropDownMenuOptionName.ToString());
+
+    // TODO: Current Selected Item Slot에 대하여 관련 작업 처리
+    // 예: 선택된 아이템 슬롯의 상태 업데이트, 추가 로직 실행 등
 }
 
 void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
 {
-    //@TODO: CurrentSelectedDropDownMenuOptionName 확인하고, 이에 대한 처리 작업 수행
-        //@Confirmation Menu
-    //UConfirmationMenu* SelectedConfirmationMenu = OptionConfirmationMenus.FindRef(CurrentSelectedOption);
-    //if (!SelectedConfirmationMenu)
-    //{
-    //    UE_LOGFMT(LogItemSlot_DropDownMenu, Error, "현재 선택된 옵션 '{0}'에 대한 Confirmation Menu를 찾을 수 없습니다.", *CurrentSelectedOption.ToString());
-    //    return;
-    //}
 
-    ////@Ok?
-    //if (OkOrCancel == "OK")
-    //{
-    //    UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "'{0}' 옵션에 대해 'OK'가 선택되었습니다.", *CurrentSelectedOption.ToString());
-    //    //@TODO: 'OK' 선택 시 수행할 작업 구현
-    //    return;
-    //}
-    ////@Cancel?
-    //if (OkOrCancel == "CANCEL")
-    //{
-    //    UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "'{0}' 옵션에 대해 'CANCEL'이 선택되었습니다.", *CurrentSelectedOption.ToString());
+    //@Confirmation Menu
+    if (!ConfirmationMenu)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "Confirmation Menu를 찾을 수 없습니다.");
+        return;
+    }
 
-    //    //@Close Confirmation Menu
-    //    SelectedConfirmationMenu->CloseConfirmationMenu();
+    if (!ItemSlotDropDownMenu)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "Drop Down Menu를 찾을 수 없습니다.");
+        return;
+    }
 
-    //    UE_LOGFMT(LogItemSlot_DropDownMenu, Verbose, "'{0}' 옵션의 Confirmation Menu가 닫혔습니다.", *CurrentSelectedOption.ToString());
-    //    return;
-    //}
+    //@Ok?
+    if (OkOrCancel == "OK")
+    {
+        UE_LOGFMT(LogItemSlots, Log, "'{0}' 옵션에 대해 'OK'가 선택되었습니다.", *CurrentSelectedDropDownMenuOptionName.ToString());
+        //@TODO: 'OK' 선택 시 수행할 작업 구현
+        return;
+    }
 
+    //@Cancel?
+    if (OkOrCancel == "CANCEL")
+    {
+        UE_LOGFMT(LogItemSlots, Log, "'{0}' 옵션에 대해 'CANCEL'이 선택되었습니다.", *CurrentSelectedDropDownMenuOptionName.ToString());
+
+        //@Close Confirmation Menu
+        ConfirmationMenu->CloseConfirmationMenu();
+
+        //@TODO: Item Slot의 선택 -> 호버 상태로 강제 상태 변화 필요
+        //@Drop Down Menu
+        ItemSlotDropDownMenu->ResetDropDownMenu();
+
+        UE_LOGFMT(LogItemSlots, Verbose, "'{0}' 옵션의 Confirmation Menu가 닫혔습니다.", *CurrentSelectedDropDownMenuOptionName.ToString());
+        return;
+    }
 }
 
 void UItemSlots::OnUIInputTagTriggered(const FGameplayTag& InputTag)
