@@ -62,7 +62,7 @@ void ABaseMonsterAIController::BeginPlay()
 //인터페이스 오버라이딩 함수
 ETeamAttitude::Type ABaseMonsterAIController::GetTeamAttitudeTowards(const AActor& Other) const
 {
-	GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("GetTeamAttitude"));
+	//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("GetTeamAttitude"));
 	const APawn* OtherPawn = Cast<APawn>(&Other);
 	if (OtherPawn == nullptr)
 	{
