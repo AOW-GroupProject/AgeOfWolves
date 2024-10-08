@@ -654,6 +654,7 @@ void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropD
 
 void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
 {
+
     //@Confirmation Menu
     if (!ConfirmationMenu)
     {
@@ -706,7 +707,6 @@ void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
 
         //@드롭 다운 메뉴 닫기
         ItemSlotDropDownMenu->CloseDropDownMenu();
-
         return;
     }
 
