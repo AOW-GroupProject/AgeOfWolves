@@ -109,12 +109,10 @@ protected:
 protected:
     //@Item Slot 목록이 나타낼 아이템 유형
     EItemType ItemType = EItemType::MAX;
-    //@현재 선택된 Item Slot에 대한 Weak Ptr
-    TWeakObjectPtr<UInteractableItemSlot> CurrentSelectedItemSlot;
-    //@현재 선택한 Drop Down Menu Option 명
-    FName CurrentSelectedDropDownMenuOptionName;
 
 protected:
+    //@현재 선택된 Item Slot에 대한 Weak Ptr
+    TWeakObjectPtr<UInteractableItemSlot> CurrentSelectedItemSlot;
     //@Item Slot
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UVerticalBox* ItemSlotBox;
@@ -143,16 +141,22 @@ protected:
         FMargin PaddingBetweenItemSlots = FMargin(10.f, 10.f);
 
 protected:
+    //@현재 선택한 Drop Down Menu Option 명
+    FName CurrentSelectedDropDownMenuOptionName;
+    //@TODO: Item Type 으로 구분되는 Drop Down Menu
     //@아이템 슬롯 메뉴
     TObjectPtr<UDropDownMenu> ItemSlotDropDownMenu;
     //@아이템 슬롯 메뉴 클래스
-    TSubclassOf<UDropDownMenu> ItemSlotDropDownMenuClass;
+    UPROPERTY(EditDefaultsOnly, category = "Inventory Content UI | Drop Down Menu")
+        TSubclassOf<UDropDownMenu> ItemSlotDropDownMenuClass;
 
 protected:
+    //@TODO: Item Type 으로 구분되는 Confirmation Menu
     //@확정 메뉴
     TObjectPtr<UConfirmationMenu> ConfirmationMenu;
     //@확정 메뉴 클래스
-    TSubclassOf<UConfirmationMenu> ConfirmationMenuClass;
+    UPROPERTY(EditDefaultsOnly, category = "Inventory Content UI | Confirmation Menu")
+        TSubclassOf<UConfirmationMenu> ConfirmationMenuClass;
 #pragma endregion
 
     //@Delegates
@@ -192,7 +196,7 @@ protected:
         void OnItemSlotButtonClicked(const FGuid& UniqueItemID);
     //@아이템 슬롯 메뉴의 옵션 선택 이벤트 구독
     UFUNCTION()
-        void OnDropDownMenuOptionelected(const FName& ItemSlotDropDownMenuOptionName);
+        void OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropDownMenuOptionName);
     //@확정 메뉴의 옵션 선택 이벤트 구독
     UFUNCTION()
         void OnConfirmationMenuOptionSelected(FName OkOrCancel);

@@ -15,6 +15,7 @@ class UVerticalBox;
 class UImage;
 class UMultiLineEditableTextBox;
 class UCustomButton;
+class UItemSlots;
 #pragma endregion
 
 //@열거형
@@ -48,7 +49,7 @@ class AGEOFWOLVES_API UConfirmationMenu : public UUserWidget
 {
 //@친추 클래스
 #pragma region Friend Class
-    friend class UItemSlot_DropDownMenu;
+    friend class UItemSlots;
 #pragma endregion
 
 	GENERATED_BODY()

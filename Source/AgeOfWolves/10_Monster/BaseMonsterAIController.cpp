@@ -22,7 +22,7 @@ ABaseMonsterAIController::ABaseMonsterAIController()
 
 	SightConfig = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("SightConfig"));
 	SightConfig->SightRadius = 500.f; 
-	SightConfig->LoseSightRadius = 550.f; 
+	SightConfig->LoseSightRadius = 1050.f; 
 	SightConfig->SetMaxAge(3.0f);
 	SightConfig->PeripheralVisionAngleDegrees = 180.f;
 	GetPerceptionComponent()->SetDominantSense(*SightConfig->GetSenseImplementation());
@@ -139,7 +139,13 @@ void ABaseMonsterAIController::OnTargetForgotten(AActor* InActor)
 	{
 		GetBlackboardComponent()->SetValueAsObject("Player", nullptr);
 		GetBlackboardComponent()->SetValueAsBool("DetectingPlayer", false);
+		ClearFocus(EAIFocusPriority::Gameplay);
 	}
+}
+
+void ABaseMonsterAIController::SetSightConfigLoseSightRadius(float radius)
+{
+	SightConfig->LoseSightRadius = radius;
 }
 
 void ABaseMonsterAIController::SetIsPossibleDetecting(bool InBool)
