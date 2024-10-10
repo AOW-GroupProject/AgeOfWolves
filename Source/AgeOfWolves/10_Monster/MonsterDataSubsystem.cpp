@@ -33,8 +33,10 @@ void UMonsterDataSubsystem::CustomFunction(EMonsterName name, FSingleMonsterData
 {
 	if (MonsterData.Find((name)))
 	{
-		FSingleMonsterData &SingleMonsterDataTemp = *MonsterData.Find(name);
+		FSingleMonsterData SingleMonsterDataTemp = *MonsterData.Find(name);
 		SingleMonsterData = SingleMonsterDataTemp;
+
+		CurrentMonsterData = SingleMonsterDataTemp;
 		GiveStartupAttributeSetToAbilitySystem(ASC, OutGrantedHandles, SingleMonsterDataTemp.AttributeSets);
 		GiveStartupGameplayEffectToAbilitySystem(ASC, OutGrantedHandles, SingleMonsterDataTemp.GameplayEffects);
 		GiveStartupGameplayAbilityToAbilitySystem(ASC, OutGrantedHandles, SingleMonsterDataTemp.GameplayAbilities);
@@ -88,7 +90,7 @@ void UMonsterDataSubsystem::AddFriendName(EMonsterName OwnerName, EMonsterName F
 void UMonsterDataSubsystem::GiveStartupAttributeSetToAbilitySystem(UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles, TArray<FBaseAbilitySet_AttributeSet>& AttributeSets) const
 {
 	check(ASC);
-
+	
 	// Attribute Set
 	for (int32 SetIndex = 0; SetIndex < AttributeSets.Num(); ++SetIndex)
 	{
@@ -100,8 +102,27 @@ void UMonsterDataSubsystem::GiveStartupAttributeSetToAbilitySystem(UBaseAbilityS
 			continue;
 		}
 		// #1. ASC에 AttributeSet 등록
+		
 		UBaseAttributeSet* NewSet = NewObject<UBaseAttributeSet>(ASC->GetOwner(), SetToGrant.AttributeSet);
+
+		// 왜 안되지
+		NewSet->InitHealth(CurrentMonsterData.PermanentStat.PHealthStat);
+		NewSet->InitMaxHealth(CurrentMonsterData.PermanentStat.PHealthStat);
+		NewSet->InitDamage(CurrentMonsterData.PermanentStat.PDamageStat);
+
+		//UBaseAttributeSet* NewSet2 = Cast<UBaseAttributeSet>(ASC->GetAttributeSet(TSubclassOf<UBaseAttributeSet>()));
+
+		//여기에 방어력, 처치시 추가되는 돈 등 현재는 기획에 없어서 안 넣은 수치들 나중에 초기화 해주기
+		
 		ASC->AddAttributeSetSubobject(NewSet);
+
+		/*bool IsFound;
+		ASC->GetGameplayAttributeValue(NewSet->GetHealthAttribute(), IsFound);
+		if (IsFound)
+		{
+			GEngine->AddOnScreenDebugMessage(-1, 5.f, FColor::Red, FString::Printf(TEXT("Debug %f"), ASC->GetGameplayAttributeValue(NewSet->GetHealthAttribute(), IsFound)));
+		}*/
+
 		// #2. BaseAilitySet에 GrantedHandle 추가
 		if (OutGrantedHandles)
 		{
