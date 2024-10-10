@@ -20,8 +20,6 @@ class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemCompone
 
 #pragma region Friend Class
 
-	friend class UCombatComponent;
-
 #pragma endregion
 
 #pragma region Default Setting
@@ -33,7 +31,6 @@ protected:
 
 protected:
 	//~UAbilitySystemComponent Interfaces
-	bool TryActivateAbility(FGameplayAbilitySpecHandle AbilityToActivate, FPredictionKey InPredictionKey = FPredictionKey(), UGameplayAbility** OutInstancedAbility = nullptr, FOnGameplayAbilityEnded::FDelegate* OnGameplayAbilityEndedDelegate = nullptr, const FGameplayEventData* TriggerEventData = nullptr);
 	virtual void CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore) override;
 	//~End Of Interface
 	/*
@@ -71,26 +68,7 @@ protected:
 	virtual void OnAbilityEnded(UGameplayAbility* Ability);
 #pragma endregion
 
-#pragma region Active GA
-public:
-	void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
-	void ClearAbilityInput();
 
-	void AbilityInputTagTriggered(const FGameplayTag& InputTag);
-	void AbilityInputTagReleased(const FGameplayTag& InputTag);
-
-protected:
-	virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
-	virtual void AbilitySpecInputReleased(FGameplayAbilitySpec& Spec) override;
-
-protected:
-	TArray<FGameplayAbilitySpecHandle> InputTriggeredSpecHandles;
-
-protected:
-	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
-	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
-
-#pragma endregion
 
 #pragma region Gameplay Tag Relationship Mapping
 public:
@@ -112,6 +90,7 @@ public:
 protected:
 	UPROPERTY(EditAnywhere)
 		TSoftObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
+
 public:
 	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM;}
 #pragma endregion

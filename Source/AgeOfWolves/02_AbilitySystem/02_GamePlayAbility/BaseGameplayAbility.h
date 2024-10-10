@@ -66,8 +66,6 @@ protected:
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void PreActivate(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, FOnGameplayAbilityEnded::FDelegate* OnGameplayAbilityEndedDelegate, const FGameplayEventData* TriggerEventData = nullptr) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
-	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
-	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 	//~End of Interface
 #pragma endregion
 
@@ -84,12 +82,7 @@ protected:
 	*	5. 그 외 Null 체크
 	* @참조:UBaseAbilitySystemComponent::TryActivateAbility
 	*/
-	bool CanActivateAbility(
-		const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, 
-		const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, 
-		OUT FGameplayTagContainer* ARTags= nullptr,
-		OUT FGameplayTagContainer* ABTags = nullptr
-		) const;
+	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const override;
 	/*
 	* @목적: 해당 GA의 관계성을 통해 활성화 조건 만족 여부 확인
 	* @설명
@@ -97,10 +90,7 @@ protected:
 	*	2. AR(Activation Required), AB(Activation Blocked) 관계성 확인
 	* @참조: UBaseGameplayAbility::CanActivateAbility
 	*/	
-	bool DoesAbilitySatisfyTagRequirements(
-		const UAbilitySystemComponent& AbilitySystemComponent, 
-		const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, 
-		FGameplayTagContainer* ARTags = nullptr, FGameplayTagContainer* ABTags = nullptr) const;
+	virtual bool DoesAbilitySatisfyTagRequirements(const UAbilitySystemComponent& AbilitySystemComponent, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 	//~End of Interface
 #pragma endregion
 
