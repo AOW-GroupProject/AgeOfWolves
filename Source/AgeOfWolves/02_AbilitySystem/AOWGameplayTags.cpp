@@ -16,6 +16,7 @@ namespace AOWGameplayTags
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Active_Dodge, "Ability.Active.Dodge", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Active_Sprint, "Ability.Active.Sprint", "");
+	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Active_HitReact, "Ability.Active.HitReact", "");
 
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Active_Attack_Next, "Ability.Active.Attack.Next", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Active_Attack_Normal_1, "Ability.Active.Attack.Normal.1", "");
@@ -24,12 +25,12 @@ namespace AOWGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Active_Attack_Normal_4, "Ability.Active.Attack.Normal.4", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Active_Attack_DodgeAttack, "Ability.Active.Attack.DodgeAttack", "");
 
-
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Ready_Attack_Normal_2, "Ability.Ready.Attack.Normal.2", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Ready_Attack_Normal_3, "Ability.Ready.Attack.Normal.3", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Ready_Attack_Normal_4, "Ability.Ready.Attack.Normal.4", "");
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Ready_Attack_DodgeAttack, "Ability.Ready.Attack.DodgeAttack", "");
 
+	UE_DEFINE_GAMEPLAY_TAG(TAG_EventTag_HitReact, "EventTag.HitReact");
 	UE_DEFINE_GAMEPLAY_TAG(TAG_EventTag_Montage_Start, "EventTag.Montage.Start");
 	UE_DEFINE_GAMEPLAY_TAG(TAG_EventTag_Montage_End, "EventTag.Montage.End");
 	
