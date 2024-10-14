@@ -154,49 +154,6 @@ void ABaseMonster::InitializeGameplayAbilitySystem()
 		AbilitySystemComponent->InitAbilityActorInfo(this, this);
 	}
 
-	// #2. GAS 초기화
-	if (Cast<AController>(GetController()))
-	{
-		if (IsValid(AbilitySet))
-		{
-			// 캐릭터의 기본 AttributeSet을 ASC에 최초 등록합니다.
-			{
-				AbilitySet->GiveStartupAttributeSetToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
-
-				// 각 Attribute 항목 수치 변화 이벤트에 콜백함수를 등록합니다.
-				for (auto& AS : AbilitySystemComponent->GetSpawnedAttributes())
-				{
-					if (IsValid(AS))
-					{
-						AttributeSet = AS;
-						TArray<FGameplayAttribute> Attributes = AttributeSet->GetAllAttributes();
-						for (const FGameplayAttribute& Attribute : Attributes)
-						{
-							AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddUObject(this, &ABaseMonster::OnAttributeValueChanged);
-						}
-						break;
-					}
-				}
-			}
-			// 캐릭터의 기본 GA에 대한 Ability Tag Relationpship을 등록합니다.
-			{
-				if (TagRelationship)
-				{
-					AbilitySystemComponent->SetAbilityTagRelationshipMapping(TagRelationship);
-				}
-			}
-			// 캐릭터의 기본 Gameplay Effect를 ASC에 최초 등록/적용합니다.
-			{
-				//AbilitySet->GiveStartupGameplayEffectToAbilitySystem(AbilitySystemComponent, th);
-			}
-			// 캐릭터의 기본 Gameplay Ability를 ASC에 최초 등록/적용합니다.
-			{
-				//AbilitySet->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, this);
-				//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("DoneStartupGameplayAbility"));
-			}
-
-		}
-	}
 }
 
 FSingleMonsterData ABaseMonster::GetSingleMonsterData()
