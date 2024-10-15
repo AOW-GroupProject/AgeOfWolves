@@ -537,28 +537,35 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 		//@Menu UI 열기
 		if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.OpenMenuUI")))
 		{
+
 			//@Hide HUD
 			HideAllUI(EUICategory::HUD);
+			
 			//@Hide Interaction
 			HideAllUI(EUICategory::Interaction);
-			//@Request IMC Swapping(PlayerOnGround -> MenuUI)
-			RequestSwapIMC.ExecuteIfBound(FGameplayTag::RequestGameplayTag(FName("Input.IMC.MenuUI")));
+			
 			//@Show Menu UI
 			ShowAllUI(EUICategory::Menu);
+
 			//@Mouse Cursor Shown and Input Mode Set
 			if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
 			{
 				//@Show Mouse Cursor
 				PC->bShowMouseCursor = true;
-				//@FInputModeGameAndUI
+
+				//@FInputModeUIOnly
 				FInputModeUIOnly InputMode;
 				InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-				UUserWidget* MenuUIWidget = GetUI(EUICategory::Menu);
-				if (MenuUIWidget)
+				//@MenuUI에 포커스 설정
+				UUserWidget* MenuWidget = GetUI(EUICategory::Menu, FGameplayTag::RequestGameplayTag(FName("UI.Menu")));
+				if (!MenuWidget)
 				{
-					InputMode.SetWidgetToFocus(MenuUIWidget->TakeWidget());
+					UE_LOGFMT(LogUI, Warning, "MenuUI를 찾을 수 없습니다.");
+					return;
 				}
-				//@Set Input Mode
+
+				MenuWidget->SetIsFocusable(true);
+				MenuWidget->SetFocus();
 				PC->SetInputMode(InputMode);
 			}
 		}
@@ -571,19 +578,20 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 		{
 			//@Hide Menu UI
 			HideAllUI(EUICategory::Menu);
+
 			//@Request IMC Swapping(PlayerOnGround <- MenuUI)
 			RequestSwapIMC.ExecuteIfBound(FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")));
+			
 			//@Show HUD
 			ShowAllUI(EUICategory::HUD);
+			
 			//@Interaction
 			ShowAllUI(EUICategory::Interaction);
-			//@Hide Mouse Cursor
+
+			//@Input Mode를 UIOnly -> GameAndUI로 변경
 			if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
 			{
-				//@Hide Mouse Curosr
 				PC->bShowMouseCursor = false;
-				
-				//@Set Input Mode
 				PC->SetInputMode(FInputModeGameAndUI());
 			}
 		}

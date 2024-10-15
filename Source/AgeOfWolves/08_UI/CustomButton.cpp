@@ -1,3 +1,4 @@
+
 #include "CustomButton.h"
 #include "Logging/StructuredLog.h"
 
@@ -36,6 +37,7 @@ void UCustomButton::NativePreConstruct()
 {
     Super::NativePreConstruct();
 
+    SetIsFocusable(false);
 }
 
 void UCustomButton::NativeConstruct()
@@ -106,10 +108,13 @@ void UCustomButton::ActivateButton()
         UE_LOGFMT(LogCustomButton, Log, "버튼이 유효하지 않습니다.");
         return;
     }
+
     //@Button의 상호 작용 활성화
     Button->SetIsEnabled(true);
+
     //@Button State
     SetButtonState(EButtonState::Normal);
+    
 }
 
 void UCustomButton::DeactivateButton(bool bIsClicked)
@@ -117,7 +122,7 @@ void UCustomButton::DeactivateButton(bool bIsClicked)
     if (!Button)
     {
         UE_LOGFMT(LogCustomButton, Log, "버튼이 유효하지 않습니다.");
-            return;
+        return;
     }
     //@Button의 상호 작용 비활성화
     Button->SetIsEnabled(false);
@@ -141,15 +146,15 @@ void UCustomButton::DeactivateButton(bool bIsClicked)
 void UCustomButton::OnButtonHovered_Implementation()
 {
     if (CurrentButtonState == EButtonState::Disabled
-        || CurrentButtonState == EButtonState::Selected)
+        || CurrentButtonState == EButtonState::Selected
+        || CurrentButtonState == EButtonState::Hovered)
     {
         UE_LOGFMT(LogCustomButton, Verbose, "버튼이 비활성화 혹은 이미 선택된 상태입니다. Hover 무시.");
         return;
     }
 
-    //@Button State
     SetButtonState(EButtonState::Hovered);
-    //@Delegate
+
     ButtonHovered.Broadcast();
 
     UE_LOGFMT(LogCustomButton, Log, "버튼에 마우스가 올라갔습니다.");
@@ -166,10 +171,11 @@ void UCustomButton::OnButtonUnhovered_Implementation()
         return;
     }
 
-    //@Button State
-    SetButtonState(EButtonState::Normal);
-    //@Unhovered 이벤트
-    ButtonUnhovered.Broadcast();
+    if (!bLockAsHovered)
+    {
+        SetButtonState(EButtonState::Normal);
+        ButtonUnhovered.Broadcast();
+    }
 
     UE_LOGFMT(LogCustomButton, Log, "버튼에서 마우스가 벗어났습니다.");
 
@@ -217,18 +223,36 @@ void UCustomButton::OnButtonClicked_Implementation()
 
 void UCustomButton::CancelSelectedButton_Implementation()
 {
-    if (CurrentButtonState != EButtonState::Selected)
+    if (CurrentButtonState != EButtonState::Hovered
+        && CurrentButtonState != EButtonState::Selected)
     {
-        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 Selected 상태가 아닙니다. Cancel 무시.");
+        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 Hovered 혹은 Selected 상태가 아닙니다. Cancel 무시.");
         return;
     }
 
-    //@Butotn 상호작용 활성화
+    //@Button 상호작용 활성화
     ActivateButton();
 
     UE_LOGFMT(LogCustomButton, Log, "버튼 선택이 취소되었습니다.");
 
     //@블루프린트에서 가져와 오버라이딩 합니다...
     //@eg. 애니메이션
+}
+
+bool UCustomButton::SetKeyboardHovered()
+{
+    if (CurrentButtonState == EButtonState::Disabled)
+    {
+        UE_LOGFMT(LogCustomButton, Error, "버튼의 호버 상태 전환이 불가합니다.");
+        return false;
+    }
+
+    //@Button State를 Hovered 상태로 전환
+    SetButtonState(EButtonState::Hovered);
+
+    //@Button의 호버 이벤트
+    ButtonHovered.Broadcast();
+
+    return true;
 }
 #pragma endregion

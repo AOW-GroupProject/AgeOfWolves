@@ -14,7 +14,7 @@ class UButton;
 #pragma region Enums
 /**
 * EButtonState
-* 
+*
 * Button의 상태를 나타내는 열거형
 */
 UENUM(BlueprintType)
@@ -32,15 +32,15 @@ enum class EButtonState : uint8
 #pragma region Structs
 /**
 * FButtonStateInformation
-* 
+*
 * Button 상태와 이와 관련된 Texture를 담고 있는 구조체
 */
 USTRUCT(BlueprintType)
 struct FButtonStateInformation
 {
     GENERATED_BODY()
-    //@Texture2D에 대응되는 버튼 상태
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
+        //@Texture2D에 대응되는 버튼 상태
+        UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
         EButtonState State;
     //@버튼 상태에 대응되는 Texture
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
@@ -59,8 +59,8 @@ UCLASS()
 class AGEOFWOLVES_API UCustomButton : public UUserWidget
 {
     GENERATED_BODY()
-    //@Friend Class 설정
-    friend class UInteractableItemSlot;
+        //@Friend Class 설정
+        friend class UInteractableItemSlot;
     friend class UInventoryToolBar;
     friend class UMenuUIToolBar;
 
@@ -113,6 +113,25 @@ protected:
     //@버트느이 상호작용 비활성화 함수
     UFUNCTION(BlueprintCallable, Category = "Button")
         void DeactivateButton(bool bIsClicked = false);
+
+protected:
+    //@참일 경우, 마우스가 벗어나도 Unhovered 되지 않습니다.
+    //@오직, CancelSelectedButton 호출을 통해서만 Unhovered 가 수행됩니다.
+    UPROPERTY(EditDefaultsOnly, Category = "Button")
+        bool bLockAsHovered = false;
+#pragma endregion
+
+//@Delegates
+#pragma region
+public:
+    //@Button의 Hover 이벤트
+    FButtonHovered ButtonHovered;
+    //@Button의 Clicked 이벤트
+    FButtonSelected ButtonSelected;
+    //@Button의 Unhovered 이벤트
+    FButtonUnhovered ButtonUnhovered;
+    //@Button의 Disabled 이벤트
+    FButtonDisabled ButtonDisabled;
 #pragma endregion
 
 #pragma region Callbacks
@@ -140,25 +159,16 @@ public:
     virtual void CancelSelectedButton_Implementation();
 #pragma endregion
 
-#pragma region
-public:
-    //@Button의 Hover 이벤트
-    FButtonHovered ButtonHovered;
-    //@Button의 Clicked 이벤트
-    FButtonSelected ButtonSelected;
-    //@Button의 Unhovered 이벤트
-    FButtonUnhovered ButtonUnhovered;
-    //@Button의 Disabled 이벤트
-    FButtonDisabled ButtonDisabled;
-#pragma endregion
-
-#pragma region Callbacks
-
-#pragma endregion
-
 #pragma region Utility
 public:
     FORCEINLINE UButton* GetButton() { return Button; }
+
+public:
+    bool SetKeyboardHovered();
+
+public:
+    bool IsLockAsHovered() const { return bLockAsHovered; }
+    void SetLockAsHovered(bool bAllow) { bLockAsHovered = bAllow; }
 #pragma endregion
 
 };

@@ -7,9 +7,9 @@
 #include "08_UI/02_Menu/01_InventoryUI/InventoryUIContent.h"
 #include "08_UI/02_Menu/01_InventoryUI/ItemSlots.h"
 
-
 DEFINE_LOG_CATEGORY(LogInventoryUI)
 
+//@Defualt Setting
 #pragma region Default Setting
 UInventoryUI::UInventoryUI(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
@@ -43,6 +43,30 @@ void UInventoryUI::NativeDestruct()
     Super::NativeDestruct();
 }
 
+FReply UInventoryUI::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
+{
+    // 부모 클래스의 NativeOnFocusReceived 호출
+    FReply Reply = Super::NativeOnFocusReceived(InGeometry, InFocusEvent);
+
+    // 부모 클래스에서 포커스를 처리했다면 (즉, FReply::Handled()를 반환했다면)
+    if (Reply.IsEventHandled())
+    {
+        //@InventoryUIContent
+        if (!InventoryUIContent)
+        {
+            UE_LOGFMT(LogInventoryUI, Warning, "InventoryUIContent가 유효하지 않습니다. 포커스를 설정할 수 없습니다.");
+            return Reply;
+        }
+
+        //@Set Focus
+        InventoryUIContent->SetIsFocusable(true);
+        InventoryUIContent->SetFocus();
+
+    }
+
+    return Reply;
+}
+
 void UInventoryUI::InternalBindingToInventoryUIContent(UInventoryUIContent* Content)
 {
     //@Item Description
@@ -74,15 +98,33 @@ void UInventoryUI::CheckMenuUIContentInitFinished()
     {
         UE_LOGFMT(LogInventoryUI, Log, "InventoryUI의 모든 서브위젯 초기화가 완료되었습니다.");
 
+        //@키 입력 관련 바인딩
+        if (!InventoryUIContent)
+        {
+            UE_LOGFMT(LogInventoryUI, Error, "InventoryUIContent가 유효하지 않아 ItemSlots 콜백 등록에 실패했습니다.");
+            return;
+        }
+
+        //@Item Slots의 입력 바인딩
+        TArray<UItemSlots*> AllItemSlots = InventoryUIContent->GetAllItemTypesItemSlots();
+        for (UItemSlots* ItemSlots : AllItemSlots)
+        {
+            if (ItemSlots)
+            {
+                DirectionalInputPresssed.AddUObject(ItemSlots, &UItemSlots::OnDirectionalInputPresssed);
+            }
+        }
+
+        //@Inventory UI Content Ready
         bInventoryUIContentReady = false;
 
         //@Super
         Super::CheckMenuUIContentInitFinished();
     }
-
 }
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region SubWidgets
 void UInventoryUI::ResetMenuUIContent()
 {
@@ -101,6 +143,7 @@ void UInventoryUI::ResetMenuUIContent()
 
 void UInventoryUI::CreateInventoryContent()
 {
+    //@Inventory UI Content 오버레이
     if (!InventoryUIContentOverlay)
     {
         UE_LOGFMT(LogInventoryUI, Error, "InventoryUIContentOverlay가 유효하지 않습니다.");
@@ -112,6 +155,7 @@ void UInventoryUI::CreateInventoryContent()
         return;
     }
 
+    //@Inventory UI Content
     InventoryUIContent = CreateWidget<UInventoryUIContent>(this, InventoryUIContentClass);
 
     if (!InventoryUIContent)
@@ -139,6 +183,7 @@ void UInventoryUI::CreateInventoryContent()
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UInventoryUI::OnInventoryUIContentInitFinished()
 {
@@ -154,8 +199,11 @@ void UInventoryUI::OnUIVisibilityChanged_Implementation(ESlateVisibility Visibil
 {    
     Super::OnUIVisibilityChanged_Implementation(VisibilityType);
 
-    //@초기 설정으로 Reset
-    ResetMenuUIContent();
+    if (VisibilityType == ESlateVisibility::SelfHitTestInvisible)
+    {
+        //@초기 설정으로 Reset
+        ResetMenuUIContent();
+    }
 
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 

@@ -1,7 +1,6 @@
 #include "ItemSlots.h"
 #include "Logging/StructuredLog.h"
 
-#include "04_Component/BaseInputComponent.h"
 #include "04_Component/InventoryComponent.h"
 
 #include "Components/VerticalBox.h"
@@ -38,7 +37,6 @@ void UItemSlots::NativeOnInitialized()
 	Super::NativeOnInitialized();
 
 	//@External Binding
-    ExternalBindToInputComp();
     ExternalBindToInventoryComp();
 
     //@UUserWidget 제공 가시성 변화 이벤트 바인딩
@@ -48,6 +46,8 @@ void UItemSlots::NativeOnInitialized()
 void UItemSlots::NativePreConstruct()
 {
 	Super::NativePreConstruct();
+
+    SetIsFocusable(false);
 
 }
 
@@ -63,33 +63,69 @@ void UItemSlots::NativeDestruct()
 
 }
 
-void UItemSlots::ExternalBindToInputComp()
+FNavigationReply UItemSlots::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
 {
-    //@World
-    UWorld* World = GetWorld();
-    if (!World)
+
+    return FNavigationReply::Explicit(nullptr);
+}
+
+FReply UItemSlots::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
+{
+   
+    UE_LOGFMT(LogItemSlots, Log, "포커스 시도: 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+
+    //@Set Directily(SetFocus())를 통한 Focus 만 가능
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
     {
-        UE_LOGFMT(LogItemSlots, Error, "{0}: World is null", __FUNCTION__);
-        return;
+        return FReply::Unhandled();
     }
-    //@PC
-    APlayerController* PC = World->GetFirstPlayerController();
-    if (!PC)
+
+    return FReply::Handled();
+}
+
+void UItemSlots::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
+{	
+    //@Set Directly(SetFocus())를 통한 Focus 해제만 가능
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
     {
-        UE_LOGFMT(LogItemSlots, Error, "{0}: PlayerController is null", __FUNCTION__);
-        return;
-    }
-    //@Input Comp
-    UBaseInputComponent* BaseInputComp = Cast<UBaseInputComponent>(PC->InputComponent);
-    if (!BaseInputComp)
-    {
-        UE_LOGFMT(LogItemSlots, Error, "{0}: Input Component를 찾을 수 없습니다", __FUNCTION__);
+        UE_LOGFMT(LogItemSlots, Log, "포커스 유지: 위젯: {0}, 원인: {1}",
+            *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
         return;
     }
 
-    //@TODO: Binding
-    BaseInputComp->UIInputTagTriggered.AddUFunction(this, "OnUIInputTagTriggered");
-    BaseInputComp->UIInputTagReleased.AddUFunction(this, "OnUIInputTagReleased");
+    Super::NativeOnFocusLost(InFocusEvent);
+
+    UE_LOGFMT(LogItemSlots, Log, "포커스 종료: 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+}
+
+FReply UItemSlots::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+    return FReply::Handled().PreventThrottling();
+
+}
+
+FReply UItemSlots::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+
+    FKey Key = InKeyEvent.GetKey();
+
+    UE_LOGFMT(LogItemSlots, Log, "키 입력 감지됨: {0}", *Key.ToString());
+
+    //@좌, 우 방향키 조작
+    if (Key == EKeys::Left)
+    {
+        return FReply::Handled();
+    }
+    else if (Key == EKeys::Right)
+    {
+        return FReply::Handled();
+    }
+
+
+    UE_LOGFMT(LogItemSlots, Log, "Item Slots UI에서 처리하지 않는 키 입력: {0}", *Key.ToString());
+    return FReply::Unhandled();
 
 }
 
@@ -141,6 +177,8 @@ void UItemSlots::InternalBindingToItemSlot(UInteractableItemSlot* ItemSlot, bool
 
     //@내부 바인딩
     ItemSlot->ItemSlotButtonClicked.AddUFunction(this, "OnItemSlotButtonClicked");
+    ItemSlot->ItemSlotButtonHovered.AddUFunction(this, "OnItemSlotButtonHovered");
+    ItemSlot->ItemSlotButtonUnhovered.AddUFunction(this, "OnItemSlotButtonUnhovered");
     //@마지막 Item Slot에만 초기화 완료 이벤트 구독
     if (bLastItemSlot)
         ItemSlot->ItemSlotInitFinished.BindUFunction(this, "OnItemSlotInitFinished");
@@ -181,6 +219,7 @@ void UItemSlots::InitializeItemSlots()
     CreateItemSlotDropDownMenu();
 	//@Confirmation Menu
     CreateConfirmationMenu();
+
     //@초기화 요청 이벤트
     RequestStartInitByItemSlots.Broadcast();
 }
@@ -212,21 +251,18 @@ void UItemSlots::ResetItemSlots()
         CurrentSelectedItemSlot = nullptr;
     }
 
+    //@선택 취소 이벤트 호출
+    if (CurrentHoveredItemSlot.IsValid())
+    {
+        CancelItemSlotButton.Broadcast(CurrentHoveredItemSlot->GetUniqueItemID());
+        CurrentHoveredItemSlot = nullptr;
+    }
+
     //@Close Drop Down Menu
     if (ItemSlotDropDownMenu && ItemSlotDropDownMenu->GetVisibility() == ESlateVisibility::SelfHitTestInvisible)
     {
         ItemSlotDropDownMenu->CloseDropDownMenu();
     }
-
-    //@First Item Slot
-    UInteractableItemSlot* FirstItemSlot = FindFirstItemSlot();
-    if (!FirstItemSlot)
-    {
-        UE_LOGFMT(LogItemSlots, Warning, "UI가 표시되었지만 첫 번째 아이템 슬롯을 찾을 수 없습니다.");
-        return;
-    }
-
-    //@TODO: First Item Slot을 Hover 상태로 강제 상태 변화...
 
     UE_LOGFMT(LogItemSlots, Log, "{0}의 Item Slot 목록이 초기 상태로 리셋되었습니다.",
         *UEnum::GetValueAsString(ItemType));
@@ -525,18 +561,12 @@ bool UItemSlots::DiscardItem_Implementation(const int32 ItemCount)
 #pragma region Callback
 void UItemSlots::OnUIVisibilityChanged(ESlateVisibility VisibilityType)
 {
-    //@Reset Item Slots
-    ResetItemSlots();
+    if (VisibilityType == ESlateVisibility::Collapsed)
+    {
+        //@Reset Item Slots
+        ResetItemSlots();
+    }
 
-    ////@TEST: 키보드 입력 테스트
-    //if (VisibilityType == ESlateVisibility::SelfHitTestInvisible)
-    //{
-    //    APlayerController* PC = GetOwningPlayer();
-    //    if (PC)
-    //    {
-    //        PC->SetInputMode(FInputModeGameAndUI());
-    //    }
-    //}
 }
 
 void UItemSlots::OnItemSlotInitFinished()
@@ -559,6 +589,66 @@ void UItemSlots::OnConfirmationMenuInitFinished()
     bConfirmationMenuInitFinished = true;
     //@초기화 완료 체크
     CheckItemSlotInitFinished();
+}
+
+void UItemSlots::OnItemSlotButtonHovered(const FGuid& UniqueItemID)
+{
+    UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 버튼 호버됨: ID {0}", UniqueItemID.ToString());
+
+    //@Find Slot By FGuid
+    UInteractableItemSlot* HoveredItemSlot = FindSlotByItemID(UniqueItemID);
+    if (!HoveredItemSlot)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "호버된 아이템 슬롯을 찾을 수 없습니다: ID {0}", UniqueItemID.ToString());
+        return;
+    }
+
+    //@Current Hovered Item Slot
+    if (CurrentHoveredItemSlot.IsValid() && CurrentHoveredItemSlot->GetUniqueItemID() == UniqueItemID)
+    {
+        UE_LOGFMT(LogItemSlots, Log, "이미 호버된 아이템 슬롯입니다. 처리를 무시합니다: ID {0}", UniqueItemID.ToString());
+        return;
+    }
+
+    //@이전 호버 상태 취소
+    if (CurrentHoveredItemSlot.IsValid())
+    {
+        FGuid PreviousItemID = CurrentHoveredItemSlot->GetUniqueItemID();
+        CancelItemSlotButton.Broadcast(PreviousItemID);
+
+        UE_LOGFMT(LogItemSlots, Log, "이전에 호버된 아이템 슬롯 호버 취소: ID {0}", PreviousItemID.ToString());
+    }
+
+    //@Current Hovered Item Slot 업데이트
+    CurrentHoveredItemSlot = HoveredItemSlot;
+    UE_LOGFMT(LogItemSlots, Log, "새로운 아이템 슬롯이 호버됨: ID {0}", UniqueItemID.ToString());
+
+    //@SetFocus
+    //SetFocus();
+
+    // TODO: 필요한 경우 여기에 추가 동작 구현
+    // 예: 호버된 아이템 슬롯의 시각적 상태 변경, 아이템 정보 표시 등
+}
+
+void UItemSlots::OnItemSlotButtonUnhovered(const FGuid& UniqueItemID)
+{
+    UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 버튼 언호버됨: ID {0}", UniqueItemID.ToString());
+
+    //@Current Hovered Item Slot
+    if (CurrentHoveredItemSlot.IsValid() && CurrentHoveredItemSlot->GetUniqueItemID() != UniqueItemID)
+    {
+        UE_LOGFMT(LogItemSlots, Verbose, "언호버된 아이템 슬롯이 현재 호버된 슬롯과 일치하지 않음: ID {0}", UniqueItemID.ToString());
+
+        return;
+    }
+
+    if (CurrentHoveredItemSlot.IsValid() && CurrentHoveredItemSlot->GetUniqueItemID() == UniqueItemID)
+    {
+        CurrentHoveredItemSlot.Reset();
+
+        UE_LOGFMT(LogItemSlots, Verbose, "현재 호버된 아이템 슬롯 리셋됨: ID {0}", UniqueItemID.ToString());
+    }
+
 }
 
 void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID)
@@ -726,17 +816,54 @@ void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
     }
 }
 
-void UItemSlots::OnUIInputTagTriggered(const FGameplayTag& InputTag)
+void UItemSlots::OnRequestFirstItemSlotHover(EItemType RequestedItemType)
 {
-    UE_LOGFMT(LogItemSlots, Log, "UI 입력 태그 트리거됨: {0}", InputTag.ToString());
-    //@TODO: InputTag 가 Input.UI.MenuUI.InventoryUI.~ 일 경우에 대한 처리 아래에서 진행...
+    if (ItemType != RequestedItemType)
+    {
+        return;  
+    }
+
+    //@First Item Slot
+    UInteractableItemSlot* FirstItemSlot = FindFirstItemSlot();
+    if (!FirstItemSlot)
+    {
+        return;
+    }
+
+    UCustomButton* Button = FirstItemSlot->GetItemSlotButton();
+    if (!Button)
+    {
+        return;
+    }
+
+    //@Keyboard 조작에 의한 Hover 상태로 전환
+    if (Button->SetKeyboardHovered())
+    {
+        UE_LOGFMT(LogItemSlots, Log, "{0} 타입의 첫 번째 Item Slot이 Hover 상태로 설정되었습니다.", *UEnum::GetValueAsString(ItemType));
+        return;
+    }
+
+    UE_LOGFMT(LogItemSlots, Log, "{0} 타입의 첫 번째 Item Slot이 Hover 상태 설정에 실패했습니다.", *UEnum::GetValueAsString(ItemType));
+
 }
 
-void UItemSlots::OnUIInputTagReleased(const FGameplayTag& InputTag)
+void UItemSlots::OnDirectionalInputPresssed(EItemType Type, EUINavigation NavigationInput)
 {
-    UE_LOGFMT(LogItemSlots, Log, "UI 입력 태그 해제됨: {0}", InputTag.ToString());
-    //@TODO: InputTag 가 Input.UI.MenuUI.InventoryUI.~ 일 경우에 대한 처리 아래에서 진행...
+    //@입력된 ItemType이 자신의 ItemType과 일치하지 않으면 처리 종료
+    if (Type != ItemType)
+    {
+        return;
+    }
 
+    //@방향키 입력 감지
+    UE_LOGFMT(LogItemSlots, Log, "{0} 타입의 ItemSlots에서 방향키 입력 감지: {1}",
+        *UEnum::GetValueAsString(ItemType),
+        *UEnum::GetValueAsString(NavigationInput));
+
+    //@TODO: Focus를 옮겨갈 다음 Item Slot을 결정해줍니다.
+
+    UE_LOGFMT(LogItemSlots, Log, "{0} 타입의 ItemSlots에서 방향키 입력 처리 완료",
+        *UEnum::GetValueAsString(ItemType));
 }
 
 void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag)

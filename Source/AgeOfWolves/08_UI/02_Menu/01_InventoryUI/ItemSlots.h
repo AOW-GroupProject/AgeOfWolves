@@ -55,6 +55,7 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FItemDiscarded, const FGuid&, int32)
 {
 //@친추 클래스
 #pragma region Friend Class
+    friend class UInventoryUIContent;
     friend class UItemSlot_DropDownMenu;
 #pragma endregion
 
@@ -71,6 +72,11 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
+    virtual FReply NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent) override;
+    virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
+    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+    virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
     //~ End UUserWidget Interface
 
 protected:
@@ -134,7 +140,9 @@ protected:
     EItemType ItemType = EItemType::MAX;
 
 protected:
-    //@현재 선택된 Item Slot에 대한 Weak Ptr
+    //@현재 호버된 Item Slot에 대한 Weak Object Ptr
+    TWeakObjectPtr<UInteractableItemSlot> CurrentHoveredItemSlot;
+    //@현재 선택된 Item Slot에 대한 Weak Object Ptr
     TWeakObjectPtr<UInteractableItemSlot> CurrentSelectedItemSlot;
     //@Item Slot
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
@@ -166,7 +174,6 @@ protected:
 protected:
     //@현재 선택한 Drop Down Menu Option 명
     FName CurrentSelectedDropDownMenuOptionName;
-    //@TODO: Item Type 으로 구분되는 Drop Down Menu
     //@아이템 슬롯 메뉴
     TObjectPtr<UDropDownMenu> ItemSlotDropDownMenu;
     //@아이템 슬롯 메뉴 클래스
@@ -174,12 +181,15 @@ protected:
         TSubclassOf<UDropDownMenu> ItemSlotDropDownMenuClass;
 
 protected:
-    //@TODO: Item Type 으로 구분되는 Confirmation Menu
     //@확정 메뉴
     TObjectPtr<UConfirmationMenu> ConfirmationMenu;
     //@확정 메뉴 클래스
     UPROPERTY(EditDefaultsOnly, category = "Inventory Content UI | Confirmation Menu")
         TSubclassOf<UConfirmationMenu> ConfirmationMenuClass;
+
+protected:
+    //@현재 Item Slots의 포커스 여부
+    bool bIsFocused = false;
 #pragma endregion
 
 //@Delegates
@@ -222,23 +232,32 @@ protected:
         void OnConfirmationMenuInitFinished();
 
 protected:
+    //@Item Slot Button 호버 이벤트 구독
+    UFUNCTION()
+        void OnItemSlotButtonHovered(const FGuid& UniqueItemID);
+    UFUNCTION()
+        void OnItemSlotButtonUnhovered(const FGuid& UniqueItemID);
     //@Item Slot Button 클릭 이벤트 구독
     UFUNCTION()
         void OnItemSlotButtonClicked(const FGuid& UniqueItemID);
+
+protected:
     //@아이템 슬롯 메뉴의 옵션 선택 이벤트 구독
     UFUNCTION()
         void OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropDownMenuOptionName);
+
+protected:
     //@확정 메뉴의 옵션 선택 이벤트 구독
     UFUNCTION()
         void OnConfirmationMenuOptionSelected(FName OkOrCancel);
 
-protected:
-    //@Input Tag 활성화 이벤트에 등록하는 콜백
+public:
+    //@Item Slot의 첫 번째 아이템 슬롯의 강제 Hover 상태 전환 이벤트 구독 
     UFUNCTION()
-        void OnUIInputTagTriggered(const FGameplayTag& InputTag);
-    //@Input Tag 해제 이벤트에 등록되는 콜백
+        void OnRequestFirstItemSlotHover(EItemType RequestedItemType);
+    //@Item Slot 관련 사용자 입력 처리
     UFUNCTION()
-        void OnUIInputTagReleased(const FGameplayTag& InputTag);
+        void OnDirectionalInputPresssed(EItemType Type, EUINavigation NavigationInput);
 
 protected:
     //@Inventory Comp의 아이템 할당 이벤트에 등록되는 콜백
@@ -259,6 +278,7 @@ public:
     TArray<UInteractableItemSlot*> GetAllItemSlots() const;
 
 public:
+    FORCEINLINE EItemType GetItemType() const { return ItemType; }
     FORCEINLINE void SetItemType(const EItemType& Type) { ItemType = Type; }
 
 protected:

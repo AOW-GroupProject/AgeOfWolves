@@ -28,6 +28,8 @@ void UInteractableItemSlot::NativePreConstruct()
 {
     Super::NativePreConstruct();
 
+    //@포커스 가능 여부
+    SetIsFocusable(true);
 }
 
 void UInteractableItemSlot::NativeConstruct()
@@ -52,6 +54,57 @@ void UInteractableItemSlot::NativeDestruct()
     Super::NativeDestruct();
 }
 
+FNavigationReply UInteractableItemSlot::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+    return FNavigationReply::Explicit(nullptr);
+
+}
+
+FReply UInteractableItemSlot::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
+{
+    // 모든 포커스 시도를 로깅
+    UE_LOGFMT(LogInteractableItemSlot, Log, "포커스 시도: 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+
+    // SetDirectly만 허용하고 나머지는 거부
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+    {
+        return FReply::Unhandled();
+    }
+
+    return FReply::Handled();
+}
+
+void UInteractableItemSlot::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
+{	
+    // SetDirectly가 아닌 경우 포커스 유지
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+    {
+        UE_LOGFMT(LogInteractableItemSlot, Log, "포커스 유지: 위젯: {0}, 원인: {1}",
+            *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+        return;
+    }
+
+    Super::NativeOnFocusLost(InFocusEvent);
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "포커스 종료: 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+}
+
+FReply UInteractableItemSlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+    return FReply::Handled().PreventThrottling();
+}
+
+FReply UInteractableItemSlot::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+    FKey Key = InKeyEvent.GetKey();
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "키 입력 감지됨: {0}", *Key.ToString());
+
+    return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+}
+
 void UInteractableItemSlot::InternalBindToItemSlotButton(UCustomButton* InItemSlotButton)
 {
     if (!InItemSlotButton)
@@ -63,8 +116,8 @@ void UInteractableItemSlot::InternalBindToItemSlotButton(UCustomButton* InItemSl
     //@Button의 상태 별 이벤트에 바인딩 아래에서 수행...
     //@내부 바인딩
     InItemSlotButton->ButtonHovered.AddUObject(this, &UInteractableItemSlot::OnItemSlotButtonHovered);
-    InItemSlotButton->ButtonSelected.AddUObject(this, &UInteractableItemSlot::OnItemSlotButtonClicked);
     InItemSlotButton->ButtonUnhovered.AddUObject(this, &UInteractableItemSlot::OnItemSlotButtonUnhovered);
+    InItemSlotButton->ButtonSelected.AddUObject(this, &UInteractableItemSlot::OnItemSlotButtonClicked);
 
     UE_LOGFMT(LogInteractableItemSlot, Verbose, "CustomButton 이벤트가 성공적으로 바인딩되었습니다.");
 }

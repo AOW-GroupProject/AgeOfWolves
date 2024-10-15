@@ -8,21 +8,41 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogInventoryToolBar, Log, All)
 
-#pragma region Delegates
-//@초기화 완료 이벤트
-DECLARE_DELEGATE(FInventoryToolBarInitFinished);
-//@Item Type 버튼 선택 이벤트
-DECLARE_DELEGATE_OneParam(FInventoryToolBarButtonClicked, EItemType);
-#pragma endregion
-
+//@전방 선언
 #pragma region Forward Declaration
 class UHorizontalBox;
 class UCustomButton;
+class UInventoryUIContent;
 #pragma endregion
+
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+//@초기화 완료 이벤트
+DECLARE_DELEGATE(FInventoryToolBarInitFinished)
+
+//@Item Type 버튼 호버 이벤트
+DECLARE_DELEGATE_OneParam(FInventoryToolBarButtonHovered, EItemType);
+//@Item Type 버튼 선택 이벤트
+DECLARE_DELEGATE_OneParam(FInventoryToolBarButtonClicked, EItemType)
+#pragma endregion
+
 
 UCLASS()
 class AGEOFWOLVES_API UInventoryToolBar : public UUserWidget
 {
+//@친추 클래스
+#pragma region Friend Class
+    friend class UInventoryUIContent;
+#pragma endregion
+
     GENERATED_BODY()
 
 #pragma region Default Setting
@@ -35,6 +55,11 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
+    virtual FReply NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent) override;
+    virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
+    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+    virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
     //~ End UUserWidget Interface
 
 protected:
@@ -61,11 +86,19 @@ protected:
     void CreateAndAddButton(EItemType ButtonType, float Scale);
 
 protected:
+    void MoveLeft();
+    void MoveRight();
+
+private:
+    void MoveSelection(int32 Direction);
+
+protected:
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
         UHorizontalBox* ItemTypeButtonBox;
 
     const EItemType DefaultItemType = EItemType::Tool;
     EItemType CurrentItemType = EItemType::MAX;
+    EItemType CurrentHoveredItemType= EItemType::MAX;
     TMap<EItemType, UCustomButton*> MItemTypeButtons;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Button", meta = (AllowPrivateAccess = "true"))
@@ -77,6 +110,9 @@ protected:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Button", meta = (AllowPrivateAccess = "true"))
         TSubclassOf<UCustomButton> EquipmentTypeButtonClass;
 
+protected:
+    //@키보드 조작 여부
+    bool bIsKeyboardMode = false;
 #pragma endregion
 
 #pragma region Delegates
@@ -85,6 +121,8 @@ public:
     FInventoryToolBarInitFinished InventoryToolBarInitFinished;
 
 public:
+    //@버튼 호버 이벤트
+    FInventoryToolBarButtonHovered InventoryToolBarButtonHovered;
     //@버튼 클릭 이벤트
     FInventoryToolBarButtonClicked InventoryToolBarButtonClicked;
 #pragma endregion
@@ -109,5 +147,10 @@ protected:
     UFUNCTION(BlueprintNativeEvent)
         void CancelInventoryToolBarButtonSelected(EItemType PreviousItemType);
     virtual void CancelInventoryToolBarButtonSelected_Implementation(EItemType PreviousItemType);
+#pragma endregion
+
+#pragma region Utility
+public:
+    int32 GetCurrentButtonIndex() const;
 #pragma endregion
 };

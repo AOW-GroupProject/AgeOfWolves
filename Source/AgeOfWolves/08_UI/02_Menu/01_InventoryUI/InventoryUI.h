@@ -31,8 +31,10 @@ class UItemSlots;
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByInventoryUI)
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FInventoryUIInitFinished)
-#pragma endregion
 
+//@방향키 조작 
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDirectionalInputPresssed, EItemType, EUINavigation);
+#pragma endregion
 
 UCLASS()
 class AGEOFWOLVES_API UInventoryUI : public UMenuUIContent
@@ -43,7 +45,7 @@ class AGEOFWOLVES_API UInventoryUI : public UMenuUIContent
 
     GENERATED_BODY()
 
-        //@Defualt Setting        
+//@Defualt Setting        
 #pragma region Default Setting
 public:
     UInventoryUI(const FObjectInitializer& ObjectInitializer);
@@ -54,6 +56,7 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FReply NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent) override;
     //~End UUserWidget
 
 protected:
@@ -73,7 +76,7 @@ protected:
     virtual void CheckMenuUIContentInitFinished() override;
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region SubWidgets
 private:
     //@Inventory UI의 상태를 초기 상태로 되돌립니다.
@@ -96,16 +99,21 @@ protected:
         TSubclassOf<UInventoryUIContent> InventoryUIContentClass;
 #pragma endregion
 
-    //@Delegates
+//@Delegates
 #pragma region Delegates
 public:
     //@초기화 요청 이벤트
     FRequestStartInitByInventoryUI RequestStartInitByInventoryUI;
     //@초기화 완료 이벤트
     FInventoryUIInitFinished InventoryUIInitFinished;
+
+public:
+    //@방향키 조작 이벤트
+    FDirectionalInputPresssed DirectionalInputPresssed;
+
 #pragma endregion
 
-    //@Callbacks
+//@Callbacks
 #pragma region Callbacks
 protected:
     //@Inventory UI Content의 초기화 완료 이벤트 구독
@@ -117,7 +125,7 @@ protected:
     virtual void OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType) override;
 #pragma endregion
 
-    //@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
     UItemSlots* GetItemSlotsByType(EItemType ItemType) const;

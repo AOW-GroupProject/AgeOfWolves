@@ -82,11 +82,17 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
+
+    virtual FReply NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent) override;
+    virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
+    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+
+    virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
     //~ End UUserWidget Interface
 
 protected:
     //@외부 바인딩
-    void ExternalBindToInputComponent();
     void ExternalBindToUIComponent();
 
 protected:
@@ -157,11 +163,14 @@ protected:
 
     //@초기 Menu UI가 나타낼 Menu Category
     EMenuCategory DefaultCategory = EMenuCategory::Inventory;
+
     //@현재 보여지고 있는 Menu UI의 자식 UI
     EMenuCategory CurrentCategory = EMenuCategory::MAX;
+
     //@Menu UI 내부 컨텐츠를 표시할 UI
     UPROPERTY(EditDefaultsOnly, Category = "Menu | Content")
         TArray<FMenuUIContentInfo> MenuContent;
+
     //@카테고리와 위젯을 매핑하는 맵
     TMap<EMenuCategory, TObjectPtr<UUserWidget>> MMenuContents;
 #pragma endregion
@@ -184,16 +193,6 @@ protected:
     UFUNCTION(BlueprintNativeEvent)
         void OnUIVisibilityChanged(UUserWidget* Widget, bool bVisible);
     virtual void OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVisible);
-
-protected:
-    //@Input Tag 활성화 이벤트에 등록하는 콜백
-    UFUNCTION()
-        void OnUIInputTagTriggered(const FGameplayTag& InputTag);
-    //@Input Tag 해제 이벤트에 등록되는 콜백
-    UFUNCTION()
-        void OnUIInputTagReleased(const FGameplayTag& InputTag);
-
-    virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
 
 protected:
     //@툴바 초기화 완료 이벤트 구독
