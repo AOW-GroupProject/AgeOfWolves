@@ -110,7 +110,7 @@ void UDropDownMenuOption::CreateButton()
 #pragma endregion
 
 #pragma region Callbacks
-void UDropDownMenuOption::OnDropDownMenuOptionButtonClicked_Implementation()
+void UDropDownMenuOption::OnDropDownMenuOptionButtonClicked_Implementation(EInteractionMethod InteractionMethodType)
 {
     //@DropDownMenuOptionText
     if (!DropDownMenuOptionText)
@@ -133,7 +133,7 @@ void UDropDownMenuOption::OnDropDownMenuOptionButtonClicked_Implementation()
     UE_LOGFMT(LogDropDownMenuOption, Log, "드롭다운 메뉴 옵션 버튼이 클릭되었습니다. 옵션: {0}", OptionText.ToString());
 }
 
-void UDropDownMenuOption::OnDropDownMenuOptionButtonHovered_Implementation()
+void UDropDownMenuOption::OnDropDownMenuOptionButtonHovered_Implementation(EInteractionMethod InteractionMethodType)
 {
     //@DropDownMenuOptionText
     if (!DropDownMenuOptionText)

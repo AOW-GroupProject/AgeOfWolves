@@ -115,13 +115,13 @@ protected:
 
 protected:
     UFUNCTION(BlueprintNativeEvent)
-        void OnItemSlotButtonHovered(const FGuid& ID);
-    virtual void OnItemSlotButtonHovered_Implementation(const FGuid& ID);
+        void OnItemSlotButtonHovered(const FGuid& ID, EInteractionMethod InteractionMethodType);
+    virtual void OnItemSlotButtonHovered_Implementation(const FGuid& ID, EInteractionMethod InteractionMethodType);
     UFUNCTION(BlueprintNativeEvent)
         void OnItemSlotButtonUnhovered(const FGuid& ID);
     virtual void OnItemSlotButtonUnhovered_Implementation(const FGuid& ID);
     UFUNCTION(BlueprintNativeEvent)
-        void OnItemSlotButtonCanceled(const FGuid& ID);
-    virtual void OnItemSlotButtonCanceled_Implementation(const FGuid& ID);
+        void OnItemSlotButtonCanceled(const FGuid& ID, EInteractionMethod InteractionMethodType);
+    virtual void OnItemSlotButtonCanceled_Implementation(const FGuid& ID, EInteractionMethod InteractionMethodType);
 #pragma endregion
 };

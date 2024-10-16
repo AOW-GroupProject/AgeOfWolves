@@ -263,7 +263,7 @@ void UInventoryToolBar::MoveSelection(int32 Direction)
 
 //@Callbacks
 #pragma region Callbacks
-void UInventoryToolBar::OnInventoryToolBarButtonClicked_Implementation(EItemType ItemType)
+void UInventoryToolBar::OnInventoryToolBarButtonClicked_Implementation(EInteractionMethod InteractionMethodType, EItemType ItemType)
 {
     if (CurrentSelectedItemType == ItemType) return;
 
@@ -278,7 +278,7 @@ void UInventoryToolBar::OnInventoryToolBarButtonClicked_Implementation(EItemType
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 }
 
-void UInventoryToolBar::OnInventoryToolBarButtonHovered_Implementation(EItemType ItemType)
+void UInventoryToolBar::OnInventoryToolBarButtonHovered_Implementation(EInteractionMethod InteractionMethodType, EItemType ItemType)
 {
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼에 마우스가 올라갔습니다.", *UEnum::GetValueAsString(ItemType));
 

@@ -174,12 +174,12 @@ public:
 protected:
     //@Inventory Tool Bar 버튼 클릭 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
-        void OnConfirmationMenuButtonClicked(FName OptionName);
-    virtual void OnConfirmationMenuButtonClicked_Implementation(FName OptionName);
+        void OnConfirmationMenuButtonClicked(EInteractionMethod InteractionMethodType, FName OptionName);
+    virtual void OnConfirmationMenuButtonClicked_Implementation(EInteractionMethod InteractionMethodType, FName OptionName);
     //@Inventory Tool Bar 버튼 Hover 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
-        void OnConfirmationMenuButtonHovered(FName OptionName);
-    virtual void OnConfirmationMenuButtonHovered_Implementation(FName OptionName);
+        void OnConfirmationMenuButtonHovered(EInteractionMethod InteractionMethodType, FName OptionName);
+    virtual void OnConfirmationMenuButtonHovered_Implementation(EInteractionMethod InteractionMethodType, FName OptionName);
     //@Inventory Tool Bar 버튼 Unhover 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
         void OnConfirmationMenuButtonUnhovered(FName OptionName);

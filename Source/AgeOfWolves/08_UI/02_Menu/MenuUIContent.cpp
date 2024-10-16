@@ -59,7 +59,6 @@ FReply UMenuUIContent::NativeOnFocusReceived(const FGeometry& InGeometry, const 
 
 void UMenuUIContent::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
 {
-
 	//@SetDirectly(SetFocus())를 통한 포커스 소실 외에 다른 시도는 허용하지 않습니다.
 	if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
 	{
@@ -72,12 +71,6 @@ void UMenuUIContent::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
 
 	UE_LOGFMT(LogMenuUIContent, Log, "포커스 종료: 위젯: {0}, 원인: {1}",
 		*GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
-}
-
-
-FReply UMenuUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
-{
-	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 void UMenuUIContent::CheckMenuUIContentInitFinished()

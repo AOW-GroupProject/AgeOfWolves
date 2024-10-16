@@ -289,7 +289,7 @@ void UItemDescriptionSlot::OnItemRemovedFromInventory(const FGuid& ID)
     }
 }
 
-void UItemDescriptionSlot::OnItemSlotButtonHovered_Implementation(const FGuid& ID)
+void UItemDescriptionSlot::OnItemSlotButtonHovered_Implementation(const FGuid& ID, EInteractionMethod InteractionMethodType)
 {
     UE_LOGFMT(LogItemDescription, Log, "아이템 슬롯 호버: ID {0}", ID.ToString());
 
@@ -323,7 +323,7 @@ void UItemDescriptionSlot::OnItemSlotButtonUnhovered_Implementation(const FGuid&
 
 }
 
-void UItemDescriptionSlot::OnItemSlotButtonCanceled_Implementation(const FGuid& ID)
+void UItemDescriptionSlot::OnItemSlotButtonCanceled_Implementation(const FGuid& ID, EInteractionMethod InteractionMethodType)
 {
     //@Unique Item ID
     if (UniqueItemID != ID)

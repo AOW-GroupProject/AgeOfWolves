@@ -436,10 +436,6 @@ void UMenuUI::SetCategoryVisibility(EMenuCategory Category, bool bVisible)
 }
 #pragma endregion
 
-//@Delegates
-#pragma region Delegates
-#pragma endregion
-
 //@Callbacks
 #pragma region Callbacks
 void UMenuUI::OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVisible)

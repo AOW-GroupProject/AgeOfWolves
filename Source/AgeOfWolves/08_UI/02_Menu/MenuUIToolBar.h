@@ -136,12 +136,12 @@ protected:
 protected:
     //@Menu UI Tool Bar 버튼 클릭 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
-        void OnMenuUIToolBarButtonClicked(EMenuCategory Category);
-    virtual void OnMenuUIToolBarButtonClicked_Implementation(EMenuCategory Category);
+        void OnMenuUIToolBarButtonClicked(EInteractionMethod InteractionMethodType, EMenuCategory Category);
+    virtual void OnMenuUIToolBarButtonClicked_Implementation(EInteractionMethod InteractionMethodType, EMenuCategory Category);
     //@Menu UI Tool Bar 버튼 Hover 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
-        void OnMenuUIToolBarButtonHovered(EMenuCategory Category);
-    virtual void OnMenuUIToolBarButtonHovered_Implementation(EMenuCategory Category);
+        void OnMenuUIToolBarButtonHovered(EInteractionMethod InteractionMethodType, EMenuCategory Category);
+    virtual void OnMenuUIToolBarButtonHovered_Implementation(EInteractionMethod InteractionMethodType, EMenuCategory Category);
     //@Menu UI Tool Bar 버튼 Unhover 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
         void OnMenuUIToolBarButtonUnhovered(EMenuCategory Category);

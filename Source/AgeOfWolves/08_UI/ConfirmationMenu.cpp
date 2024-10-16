@@ -203,7 +203,7 @@ void UConfirmationMenu::CloseConfirmationMenu_Implementation()
 
 //@Callbacks
 #pragma region Callbacks
-void UConfirmationMenu::OnConfirmationMenuButtonClicked_Implementation(FName MenuButtonName)
+void UConfirmationMenu::OnConfirmationMenuButtonClicked_Implementation(EInteractionMethod InteractionMethodType, FName MenuButtonName)
 {
 
     //@MConfirmationMenuButtons
@@ -223,7 +223,7 @@ void UConfirmationMenu::OnConfirmationMenuButtonClicked_Implementation(FName Men
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 }
 
-void UConfirmationMenu::OnConfirmationMenuButtonHovered_Implementation(FName MenuButtonName)
+void UConfirmationMenu::OnConfirmationMenuButtonHovered_Implementation(EInteractionMethod InteractionMethodType, FName MenuButtonName)
 {
     UE_LOGFMT(LogConfirmationMenu, Log, "{0} 버튼에 마우스가 올라갔습니다.", *MenuButtonName.ToString());
     // TODO: Hover 상태 처리

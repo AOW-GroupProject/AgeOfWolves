@@ -106,10 +106,6 @@ protected:
         TSubclassOf<UCustomButton> MemoryTypeButtonClass;
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Button", meta = (AllowPrivateAccess = "true"))
         TSubclassOf<UCustomButton> EquipmentTypeButtonClass;
-
-protected:
-    //@키보드 조작 여부
-    bool bIsKeyboardMode = false;
 #pragma endregion
 
 //@Delegates
@@ -130,12 +126,12 @@ public:
 protected:
     //@Inventory Tool Bar 버튼 클릭 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
-        void OnInventoryToolBarButtonClicked(EItemType ItemType);
-    virtual void OnInventoryToolBarButtonClicked_Implementation(EItemType ItemType);
+        void OnInventoryToolBarButtonClicked(EInteractionMethod InteractionMethodType, EItemType ItemType);
+    virtual void OnInventoryToolBarButtonClicked_Implementation(EInteractionMethod InteractionMethodType, EItemType ItemType);
     //@Inventory Tool Bar 버튼 Hover 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
-        void OnInventoryToolBarButtonHovered(EItemType ItemType);
-    virtual void OnInventoryToolBarButtonHovered_Implementation(EItemType ItemType);
+        void OnInventoryToolBarButtonHovered(EInteractionMethod InteractionMethodType, EItemType ItemType);
+    virtual void OnInventoryToolBarButtonHovered_Implementation(EInteractionMethod InteractionMethodType, EItemType ItemType);
     //@Inventory Tool Bar 버튼 Unhover 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
         void OnInventoryToolBarButtonUnhovered(EItemType ItemType);

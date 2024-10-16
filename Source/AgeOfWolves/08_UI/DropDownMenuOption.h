@@ -144,12 +144,12 @@ public:
 protected:
     //@Button Clicked 이벤트에 등록되는 콜백
     UFUNCTION(BlueprintNativeEvent)
-        void OnDropDownMenuOptionButtonClicked();
-    virtual void OnDropDownMenuOptionButtonClicked_Implementation();
+        void OnDropDownMenuOptionButtonClicked(EInteractionMethod InteractionMethodType);
+    virtual void OnDropDownMenuOptionButtonClicked_Implementation(EInteractionMethod InteractionMethodType);
     //@Button Hovered 이벤트에 등록되는 콜백
     UFUNCTION(BlueprintNativeEvent)
-        void OnDropDownMenuOptionButtonHovered();
-    virtual void OnDropDownMenuOptionButtonHovered_Implementation();
+        void OnDropDownMenuOptionButtonHovered(EInteractionMethod InteractionMethodType);
+    virtual void OnDropDownMenuOptionButtonHovered_Implementation(EInteractionMethod InteractionMethodType);
 
     //@Button Unhovered 이벤트에 등록되는 콜백
     UFUNCTION(BlueprintNativeEvent)

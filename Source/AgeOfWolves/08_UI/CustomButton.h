@@ -31,6 +31,14 @@ enum class EButtonState : uint8
     Disabled        UMETA(DisplayName = "Disabled"),
     MAX,
 };
+
+UENUM(BlueprintType)
+enum class EInteractionMethod
+{
+    Mouse = 0      UMETA(DisplayName = "Mouse"),
+    Keyboard         UMETA(DisplayName = "Keyboard"),
+    MAX,
+};
 #pragma endregion
 
 //@구조체
@@ -55,9 +63,9 @@ struct FButtonStateInformation
 
 //@이벤트/델리게이트
 #pragma region Delegates
-DECLARE_MULTICAST_DELEGATE(FButtonHovered);
+DECLARE_MULTICAST_DELEGATE_OneParam(FButtonHovered, EInteractionMethod);
 DECLARE_MULTICAST_DELEGATE(FButtonUnhovered);
-DECLARE_MULTICAST_DELEGATE(FButtonSelected);
+DECLARE_MULTICAST_DELEGATE_OneParam(FButtonSelected, EInteractionMethod);
 DECLARE_MULTICAST_DELEGATE(FButtonDisabled);
 #pragma endregion
 
@@ -134,7 +142,7 @@ protected:
 #pragma endregion
 
 //@Delegates
-#pragma region
+#pragma region Delegates
 public:
     //@Button의 Hover 이벤트
     FButtonHovered ButtonHovered;

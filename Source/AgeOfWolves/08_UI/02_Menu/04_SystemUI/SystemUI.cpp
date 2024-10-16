@@ -21,8 +21,6 @@ void USystemUI::NativeOnInitialized()
 void USystemUI::NativePreConstruct()
 {
     Super::NativePreConstruct();
-
-    SetIsFocusable(false);
 }
 
 void USystemUI::NativeConstruct()

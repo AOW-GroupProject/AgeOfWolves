@@ -22,7 +22,6 @@ void ULevelUI::NativePreConstruct()
 {
     Super::NativePreConstruct();
 
-    SetIsFocusable(false);
 }
 
 void ULevelUI::NativeConstruct()

@@ -28,13 +28,13 @@ void UInventoryUIContent::NativePreConstruct()
 {
     Super::NativePreConstruct();
 
-    SetIsFocusable(true);
-
 }
 
 void UInventoryUIContent::NativeConstruct()
 {
     Super::NativeConstruct();
+
+    SetIsFocusable(true);
 
 }
 
@@ -143,10 +143,7 @@ FReply UInventoryUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const F
     }
 
     UE_LOGFMT(LogInventoryUIContent, Log, "Inventory UI에서 처리하지 않는 키 입력: {0}", *Key.ToString());
-
     return FReply::Unhandled();
-
-    //return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 void UInventoryUIContent::InternalBindingToInventoryToolBar(UInventoryToolBar* ToolBar)

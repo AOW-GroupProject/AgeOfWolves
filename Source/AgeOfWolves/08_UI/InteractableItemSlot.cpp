@@ -233,10 +233,10 @@ void UInteractableItemSlot::DeactivateItemSlotInteraction()
 
 //@Callbacks
 #pragma region Callbacks
-void UInteractableItemSlot::OnItemSlotButtonHovered_Implementation()
+void UInteractableItemSlot::OnItemSlotButtonHovered_Implementation(EInteractionMethod InteractionMethodType)
 {
     //@Item Slot Button 호버 이벤트
-    ItemSlotButtonHovered.Broadcast(UniqueItemID);
+    ItemSlotButtonHovered.Broadcast(UniqueItemID, InteractionMethodType);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에 마우스가 올라갔습니다. ID: {0}", UniqueItemID.ToString());
 
@@ -255,9 +255,9 @@ void UInteractableItemSlot::OnItemSlotButtonUnhovered_Implementation()
 
 }
 
-void UInteractableItemSlot::OnItemSlotButtonClicked_Implementation()
+void UInteractableItemSlot::OnItemSlotButtonClicked_Implementation(EInteractionMethod InteractionMethodType)
 {
-    ItemSlotButtonClicked.Broadcast(UniqueItemID);
+    ItemSlotButtonClicked.Broadcast(UniqueItemID, InteractionMethodType);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 클릭되었습니다. ID: {0}", UniqueItemID.ToString());
 

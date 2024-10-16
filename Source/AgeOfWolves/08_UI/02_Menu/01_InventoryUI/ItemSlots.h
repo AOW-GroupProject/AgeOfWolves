@@ -240,12 +240,12 @@ protected:
 protected:
     //@Item Slot Button 호버 이벤트 구독
     UFUNCTION()
-        void OnItemSlotButtonHovered(const FGuid& UniqueItemID);
+        void OnItemSlotButtonHovered(const FGuid& UniqueItemID, EInteractionMethod InteractionMethodType);
     UFUNCTION()
         void OnItemSlotButtonUnhovered(const FGuid& UniqueItemID);
     //@Item Slot Button 클릭 이벤트 구독
     UFUNCTION()
-        void OnItemSlotButtonClicked(const FGuid& UniqueItemID);
+        void OnItemSlotButtonClicked(const FGuid& UniqueItemID, EInteractionMethod InteractionMethodType);
 
 protected:
     //@아이템 슬롯 메뉴의 옵션 선택 이벤트 구독

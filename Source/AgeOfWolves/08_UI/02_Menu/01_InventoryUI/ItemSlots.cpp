@@ -114,6 +114,7 @@ FReply UItemSlots::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent&
     {
         //@좌로 이동
         HandleDirectionalInput(EUINavigation::Left);
+
         return FReply::Handled();
     }
     else if (Key == EKeys::Right)
@@ -140,7 +141,29 @@ FReply UItemSlots::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent&
     else if (Key == EKeys::Enter)
     {
         //@Current Hovered Item Slot을 Select 해줍니다.
-        
+        if (!CurrentHoveredItemSlot.IsValid())
+        {
+            UE_LOGFMT(LogItemSlots, Warning, "현재 호버된 아이템 슬롯이 없습니다.");
+            return FReply::Handled();
+        }
+
+        //@아이템 슬롯 버튼 가져오기
+        UCustomButton* HoveredButton = CurrentHoveredItemSlot->GetItemSlotButton();
+        if (!HoveredButton)
+        {
+            UE_LOGFMT(LogItemSlots, Error, "현재 호버된 아이템 슬롯의 버튼을 찾을 수 없습니다.");
+            return FReply::Handled();
+        }
+
+        //@버튼 선택 상태로 설정
+        bool bSuccess = HoveredButton->SetButtonSelectedByKeyboard();
+        if (!bSuccess)
+        {
+            return FReply::Handled();
+        }
+
+        //@성공 로그 출력
+        UE_LOGFMT(LogItemSlots, Log, "Enter 키로 아이템 슬롯 선택됨: ID {0}", CurrentHoveredItemSlot->GetUniqueItemID().ToString());
 
         return FReply::Handled();
     }
@@ -668,7 +691,7 @@ void UItemSlots::OnConfirmationMenuInitFinished()
     CheckItemSlotInitFinished();
 }
 
-void UItemSlots::OnItemSlotButtonHovered(const FGuid& UniqueItemID)
+void UItemSlots::OnItemSlotButtonHovered(const FGuid& UniqueItemID, EInteractionMethod InteractionMethodType)
 {
     UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 버튼 호버됨: ID {0}", UniqueItemID.ToString());
 
@@ -728,7 +751,7 @@ void UItemSlots::OnItemSlotButtonUnhovered(const FGuid& UniqueItemID)
 
 }
 
-void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID)
+void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID, EInteractionMethod InteractionMethodType)
 {
     UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 버튼 클릭됨: ID {0}", UniqueItemID.ToString());
 
