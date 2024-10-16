@@ -21,11 +21,11 @@ class UImage;
 DECLARE_DELEGATE(FDropDownMenuOptionInitFinished);
 
 //@옵션 선택 이벤트
-DECLARE_MULTICAST_DELEGATE(FDropDownMenuOptionSelected);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDropDownMenuOptionSelected, FName, EInteractionMethod);
 //@옵션 호버 이벤트
-DECLARE_MULTICAST_DELEGATE(FDropDownMenuOptionHovered);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDropDownMenuOptionHovered, FName, EInteractionMethod);
 //@옵션 언호버 이벤트
-DECLARE_MULTICAST_DELEGATE(FDropDownMenuOptionUnhovered);
+DECLARE_MULTICAST_DELEGATE_OneParam(FDropDownMenuOptionUnhovered, FName);
 
 //@옵션 취소 이벤트
 DECLARE_MULTICAST_DELEGATE(FNotifyDropDownMenuOptionCanceled);
@@ -112,6 +112,10 @@ protected:
         UEditableTextBox* DropDownMenuOptionText;
 
 protected:
+    //@Option 버튼
+    TWeakObjectPtr<UCustomButton> Button;
+
+protected:
     //@각 옵션의 Height 값
     UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Option Text")
         float OptionHeight = 0;
@@ -167,6 +171,8 @@ protected:
 #pragma region Utilities
 public:
     UFUNCTION(BlueprintCallable)
+        FName GetOptionName() const;
+    UFUNCTION(BlueprintCallable)
         void SetOptionName(FText Text);
 
 public:
@@ -192,5 +198,9 @@ public:
 
     UFUNCTION(BlueprintCallable)
         FORCEINLINE float GetLeftRightPadding() { return LeftRightPadding; }
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "Item Slot | Button")
+        UCustomButton* GetDropDownMenuOptionButton() const;
 #pragma endregion
 };

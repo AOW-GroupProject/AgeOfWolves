@@ -23,11 +23,15 @@ void UDropDownMenu::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
+    //OnVisibilityChanged.AddDynamic(this, &UDropDownMenu::OnUIVisibilityChanged);
+
 }
 
 void UDropDownMenu::NativePreConstruct()
 {
     Super::NativePreConstruct();
+
+    SetIsFocusable(true);
 }
 
 void UDropDownMenu::NativeConstruct()
@@ -38,6 +42,54 @@ void UDropDownMenu::NativeConstruct()
 void UDropDownMenu::NativeDestruct()
 {
     Super::NativeDestruct();
+}
+
+FNavigationReply UDropDownMenu::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+    return FNavigationReply::Explicit(nullptr);
+
+}
+
+FReply UDropDownMenu::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
+{
+
+    //@Set Directly(SetFocus())를 통한 포커스 시도 외에 다른 시도는 허용하지 않습니다.
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+    {
+        return FReply::Handled().ClearUserFocus();
+    }
+
+    UE_LOGFMT(LogDropDownMenu, Log, "포커스 : 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+
+    return FReply::Handled();
+}
+
+void UDropDownMenu::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
+{   
+    //@Mouse를 통한 포커스 소실은 Drop Down Menu를 닫습니다.
+    if (InFocusEvent.GetCause() == EFocusCause::Mouse)
+    {
+        //@Close Drop Down Menu
+        CloseDropDownMenu();
+
+        return;
+    }
+
+    //@SetDirectly(SetFocus()) 혹은 Mouse를 통한 포커스 소실 외에 다른 시도는 허용하지 않습니다.
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+    {
+        //@Set Focus
+        SetFocus();
+
+        return;
+    }
+
+    Super::NativeOnFocusLost(InFocusEvent);
+
+    UE_LOGFMT(LogDropDownMenu, Log, "포커스 종료: 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+
 }
 
 void UDropDownMenu::InternalBindToOptions(UDropDownMenuOption* Option, const FName& OptionName, bool bIsLastOption)
@@ -54,7 +106,7 @@ void UDropDownMenu::InternalBindToOptions(UDropDownMenuOption* Option, const FNa
         Option->DropDownMenuOptionInitFinished.BindUFunction(this, "OnDropDownMenuOptionInitFinished");
     }
 
-    Option->DropDownMenuOptionSelected.AddUObject(this, &UDropDownMenu::OnDropDownMenuOptionSelected, OptionName);
+    Option->DropDownMenuOptionSelected.AddUFunction(this, "OnDropDownMenuOptionSelected");
 
     UE_LOGFMT(LogDropDownMenu, Verbose, "Option({0})에 대한 내부 바인딩 완료", *OptionName.ToString());
 }
@@ -101,8 +153,6 @@ void UDropDownMenu::ResetDropDownMenu()
 
         UE_LOGFMT(LogDropDownMenu, Log, "이전에 선택된 옵션 취소: {0}", PrevSelectedOption.ToString());
     }
-
-    
 
 }
 
@@ -176,6 +226,9 @@ void UDropDownMenu::CreateDropDownMenuOptions()
             TotalHeight += Option->GetOptionHeight() + TopPadding + BottomPadding;
         }
 
+        //@DropDownMenuOptions
+        DropDownMenuOptions.Add(Option);
+
         UE_LOGFMT(LogDropDownMenu, Log, "DropDownMenuOption({0})이 생성되고 이벤트가 바인딩되었습니다.", OptionInformations[i].GetOptionName().ToString());
     }
 
@@ -220,6 +273,9 @@ void UDropDownMenu::CloseDropDownMenu_Implementation()
 
 //@Callbacks
 #pragma region Callbacks
+void UDropDownMenu::OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType)
+{}
+
 void UDropDownMenu::OnDropDownMenuOptionInitFinished()
 {
 
@@ -229,7 +285,7 @@ void UDropDownMenu::OnDropDownMenuOptionInitFinished()
     CheckAllUIsInitFinished();
 }
 
-void UDropDownMenu::OnDropDownMenuOptionSelected(FName SelectedOptionName)
+void UDropDownMenu::OnDropDownMenuOptionSelected_Implementation(FName SelectedOptionName, EInteractionMethod InteractionMethodType)
 {
     UE_LOGFMT(LogDropDownMenu, Log, "드롭다운 메뉴 옵션 선택됨: {0}", SelectedOptionName.ToString());
 
@@ -273,7 +329,26 @@ void UDropDownMenu::OnDropDownMenuOptionSelected(FName SelectedOptionName)
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
-FORCEINLINE const FText UDropDownMenu::GetConfirmationMenuDialogueText(const FName& Name) const
+UDropDownMenuOption* UDropDownMenu::GetFirstDropDownMenuOption() const
+{
+    return DropDownMenuOptions.IsValidIndex(0) ? DropDownMenuOptions[0] : nullptr;
+}
+
+UDropDownMenuOption* UDropDownMenu::GetDropDownMenuOptionByName(const FName& OptionName) const
+{
+    const UDropDownMenuOption* const* FoundOptionPtr = DropDownMenuOptions.FindByPredicate([&OptionName](const UDropDownMenuOption* Option) {
+        return Option && Option->GetOptionName() == OptionName;
+        });
+
+    return FoundOptionPtr ? const_cast<UDropDownMenuOption*>(*FoundOptionPtr) : nullptr;
+}
+
+FName UDropDownMenu::GetOptionName() const
+{
+    return CurrentSelectedOption;
+}
+
+const FText UDropDownMenu::GetConfirmationMenuDialogueText(const FName& Name) const
 {
     const FDropDownMenuOptionInformation* FoundOption = OptionInformations.FindByPredicate([&Name](const FDropDownMenuOptionInformation& Option) {
         return Option.CompareOptionName(Name);

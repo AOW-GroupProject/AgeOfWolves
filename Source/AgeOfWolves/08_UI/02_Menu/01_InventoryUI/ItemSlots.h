@@ -14,7 +14,6 @@ class UVerticalBox;
 class UHorizontalBox;
 class UInteractableItemSlot;
 class UItemSlot_DropDownMenu;
-class UDropDownMenu;
 class UConfirmationMenu;
 class UCustomButton;
 #pragma endregion
@@ -86,7 +85,7 @@ protected:
 protected:
     //@내부 바인딩
     void InternalBindingToItemSlot(UInteractableItemSlot* ItemSlot, bool bLastItemSlot = false);
-    void InternalBindToItemSlotDropDownMenu(UDropDownMenu* DropDownMenu);
+    void InternalBindToItemSlotDropDownMenu(UItemSlot_DropDownMenu* DropDownMenu);
     void InternalBindToConfirmationMenu(UConfirmationMenu* Menu);
 
 public:
@@ -135,11 +134,14 @@ protected:
     virtual bool DiscardItem_Implementation(const int32 ItemCount);
 
 protected:
+    //@Drop Down Menu 열기 함수
+    void OpenDropDownMenu(const FVector2D& Position, EInteractionMethod InteractionMethod);
+
+protected:
         //@방향키 입력 처리
     UFUNCTION(BlueprintNativeEvent, Category = "Item Slots")
         void HandleDirectionalInput(EUINavigation NavigationInput);
     virtual void HandleDirectionalInput_Implementation(EUINavigation NavigationInput);
-
 
 protected:
     //@Item Slot 목록이 나타낼 아이템 유형
@@ -181,10 +183,10 @@ protected:
     //@현재 선택한 Drop Down Menu Option 명
     FName CurrentSelectedDropDownMenuOptionName;
     //@아이템 슬롯 메뉴
-    TObjectPtr<UDropDownMenu> ItemSlotDropDownMenu;
+    TObjectPtr<UItemSlot_DropDownMenu> ItemSlotDropDownMenu;
     //@아이템 슬롯 메뉴 클래스
     UPROPERTY(EditDefaultsOnly, category = "Inventory Content UI | Drop Down Menu")
-        TSubclassOf<UDropDownMenu> ItemSlotDropDownMenuClass;
+        TSubclassOf<UItemSlot_DropDownMenu> ItemSlotDropDownMenuClass;
 
 protected:
     //@확정 메뉴
@@ -248,6 +250,9 @@ protected:
         void OnItemSlotButtonClicked(const FGuid& UniqueItemID, EInteractionMethod InteractionMethodType);
 
 protected:
+    UFUNCTION()
+        void OnItemSlotDropDownMenuClosed(ESlateVisibility VisibilityType);
+
     //@아이템 슬롯 메뉴의 옵션 선택 이벤트 구독
     UFUNCTION()
         void OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropDownMenuOptionName);

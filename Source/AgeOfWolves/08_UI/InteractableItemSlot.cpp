@@ -244,22 +244,22 @@ void UInteractableItemSlot::OnItemSlotButtonHovered_Implementation(EInteractionM
 
 }
 
+void UInteractableItemSlot::OnItemSlotButtonClicked_Implementation(EInteractionMethod InteractionMethodType)
+{
+    ItemSlotButtonClicked.Broadcast(UniqueItemID, InteractionMethodType);
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 클릭되었습니다. ID: {0}", UniqueItemID.ToString());
+
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
+
+}
+
 void UInteractableItemSlot::OnItemSlotButtonUnhovered_Implementation()
 {
     //@Item Slot Button 언호버 이벤트
     ItemSlotButtonUnhovered.Broadcast(UniqueItemID);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에서 마우스가 벗어났습니다. ID: {0}", UniqueItemID.ToString());
-
-    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
-
-}
-
-void UInteractableItemSlot::OnItemSlotButtonClicked_Implementation(EInteractionMethod InteractionMethodType)
-{
-    ItemSlotButtonClicked.Broadcast(UniqueItemID, InteractionMethodType);
-
-    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 클릭되었습니다. ID: {0}", UniqueItemID.ToString());
 
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 

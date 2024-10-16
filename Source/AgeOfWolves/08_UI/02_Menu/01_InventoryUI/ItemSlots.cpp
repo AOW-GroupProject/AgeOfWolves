@@ -11,7 +11,7 @@
 
 #include "08_UI/InteractableItemSlot.h"
 #include "08_UI/CustomButton.h"
-#include "08_UI/DropDownMenu.h"
+#include "08_UI/02_Menu/01_InventoryUI/ItemSlot_DropDownMenu.h"
 #include "08_UI/ConfirmationMenu.h"
 
 #include "14_Subsystem/ItemManagerSubsystem.h"
@@ -107,7 +107,7 @@ FReply UItemSlots::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent&
 
     FKey Key = InKeyEvent.GetKey();
 
-    UE_LOGFMT(LogItemSlots, Log, "키 입력 감지됨: {0}", *Key.ToString());
+    UE_LOGFMT(LogItemSlots, Log, "키 입력 감지됨: {0}", Key.ToString());
 
     //@방향키 조작
     if (Key == EKeys::Left)
@@ -229,15 +229,18 @@ void UItemSlots::InternalBindingToItemSlot(UInteractableItemSlot* ItemSlot, bool
         ItemSlot->ItemSlotInitFinished.BindUFunction(this, "OnItemSlotInitFinished");
 }
 
-void UItemSlots::InternalBindToItemSlotDropDownMenu(UDropDownMenu* DropDownMenu)
+void UItemSlots::InternalBindToItemSlotDropDownMenu(UItemSlot_DropDownMenu* DropDownMenu)
 {
     if (!DropDownMenu)
     {
         return;
     }
 
+    //@내부 바인딩
     DropDownMenu->DropDownMenuInitFinished.BindUFunction(this, "OnItemSlotDropDownMenuInitFinished");
     DropDownMenu->DropDownMenuOptionButtonClicked.AddUFunction(this, "OnItemSlotDropDownMenuOptionSelected");
+
+    DropDownMenu->OnVisibilityChanged.AddDynamic(this, &UItemSlots::OnItemSlotDropDownMenuClosed);
 }
 
 void UItemSlots::InternalBindToConfirmationMenu(UConfirmationMenu* Menu)
@@ -432,7 +435,7 @@ void UItemSlots::CreateItemSlotDropDownMenu()
         return;
     }
     //@Drop Down Menu
-    ItemSlotDropDownMenu = CreateWidget<UDropDownMenu>(this, ItemSlotDropDownMenuClass);
+    ItemSlotDropDownMenu = CreateWidget<UItemSlot_DropDownMenu>(this, ItemSlotDropDownMenuClass);
     if (!ItemSlotDropDownMenu)
     {
         UE_LOGFMT(LogItemSlots, Error, "UItemSlotDropDownMenu 위젯을 생성하지 못했습니다. ItemSlotDropDownMenuClass: {0}", *ItemSlotDropDownMenuClass->GetName());
@@ -599,6 +602,24 @@ bool UItemSlots::DiscardItem_Implementation(const int32 ItemCount)
     ItemDiscarded.Broadcast(ItemID, ItemCount);
 
     return true;
+}
+
+void UItemSlots::OpenDropDownMenu(const FVector2D& Position, EInteractionMethod InteractionMethod)
+{
+    if (!ItemSlotDropDownMenu)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "ItemSlotDropDownMenu가 유효하지 않습니다.");
+        return;
+    }
+
+    //@Set Position In Viewport
+    ItemSlotDropDownMenu->SetPositionInViewport(Position);
+
+    //@Drop Down Menu 열기
+    ItemSlotDropDownMenu->OpenDropDownMenu();
+
+    UE_LOGFMT(LogItemSlots, Log, "DropDownMenu가 열렸습니다. 위치: ({0}, {1}), 상호작용 방식: {2}",
+        Position.X, Position.Y, UEnum::GetValueAsString(InteractionMethod));
 }
 
 void UItemSlots::HandleDirectionalInput_Implementation(EUINavigation NavigationInput)
@@ -783,23 +804,99 @@ void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID, EInteraction
     CurrentSelectedItemSlot = SelectedItemSlot;
     UE_LOGFMT(LogItemSlots, Log, "새로운 아이템 슬롯이 선택됨: ID {0}", UniqueItemID.ToString());
 
-    //@Player Controller
-    APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
-    if (PlayerController)
+    //@Drop Down Menu의 위치
+    FVector2D MenuPosition;
+
+    //@Interaction Method Type
+    switch (InteractionMethodType)
     {
-        FVector2D MousePosition;
-        //@Mouse Position
-        if (PlayerController->GetMousePosition(MousePosition.X, MousePosition.Y))
+        //@Mouse : 마우스 커서 위치에 Drop Down Menu를 위치시킵니다.
+        case EInteractionMethod::Mouse:
         {
-            //@Set Position In Viewport
-            ItemSlotDropDownMenu->SetPositionInViewport(MousePosition);
-            //@Drop Down Menu 열기
-            ItemSlotDropDownMenu->OpenDropDownMenu();
+            //@Player Controller
+            APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+            if (PlayerController)
+            {
+                //@Mouse Position
+                PlayerController->GetMousePosition(MenuPosition.X, MenuPosition.Y);
+            }
+            break;
+        }
+        //@Keyboard : 아이템 슬롯 위치에 Drop Down Menu를 위치시킵니다.
+        case EInteractionMethod::Keyboard:
+        {
+            //@Paint Geometry
+            FGeometry Geometry = CurrentSelectedItemSlot->GetPaintSpaceGeometry();
+            //@Absolute Position
+            FVector2D SlotScreenPosition = Geometry.GetAbsolutePosition();
+            //@Local Size
+            FVector2D SlotSize = Geometry.GetLocalSize();
+
+            //@아이템 슬롯의 중심 위치 계산
+            FVector2D SlotCenter;
+            SlotCenter.X = SlotScreenPosition.X + (SlotSize.X / 2.0f);
+            SlotCenter.Y = SlotScreenPosition.Y + (SlotSize.Y / 2.0f);
+
+            //@Drop Down Menu 위치 업데이트
+            MenuPosition = SlotCenter;
+
+            break;
+        }
+        default:
+        {
+            UE_LOGFMT(LogItemSlots, Warning, "알 수 없는 상호작용 방식입니다: {0}", UEnum::GetValueAsString(InteractionMethodType));
+            return;
         }
     }
 
+    //@DropDownMenu 열기
+    OpenDropDownMenu(MenuPosition, InteractionMethodType);
+
     // TODO: 필요한 경우 여기에 추가 동작 구현
     // 예: 선택된 아이템 슬롯의 시각적 상태 변경, 아이템 정보 표시 등
+}
+
+void UItemSlots::OnItemSlotDropDownMenuClosed(ESlateVisibility VisibilityType)
+{
+    if (VisibilityType != ESlateVisibility::Collapsed)
+    {
+        return;
+    }
+    
+    UE_LOGFMT(LogItemSlots, Warning, "Drop Down Menu가 닫혔습니다.");
+
+    //@Set Focus
+    SetFocus();
+
+    //@Current Selected Item Slot
+    if (!CurrentSelectedItemSlot.IsValid())
+    {
+        UE_LOGFMT(LogItemSlots, Warning, "현재 선택된 아이템 슬롯이 없습니다.");
+        return;
+    }
+
+    //@Button
+    UCustomButton* ItemSlotButton = CurrentSelectedItemSlot->GetItemSlotButton();
+    if (!ItemSlotButton)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "선택된 아이템 슬롯 (ID: {0})의 버튼을 찾을 수 없습니다.",
+            CurrentSelectedItemSlot->GetUniqueItemID().ToString());
+        return;
+    }
+
+    //@Cancel Selected Button
+    ItemSlotButton->CancelSelectedButton();
+
+    //@Set Button Hovered By Keyboard
+    if (ItemSlotButton->SetButtonHoveredByKeyboard())
+    {
+        UE_LOGFMT(LogItemSlots, Log, "선택된 아이템 슬롯 (ID: {0})의 상태가 Hovered로 변경되었습니다.",
+            CurrentSelectedItemSlot->GetUniqueItemID().ToString());
+    }
+
+    //@Current Hovered Item Slot
+    CurrentHoveredItemSlot = CurrentSelectedItemSlot;
+    CurrentSelectedItemSlot.Reset();
 }
 
 void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropDownMenuOptionName)
@@ -820,9 +917,6 @@ void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropD
     {
         //@드롭 다운 메뉴 닫기
         ItemSlotDropDownMenu->CloseDropDownMenu();
-
-        //@아이템 슬롯 전체 리셋
-        ResetItemSlots();
 
         return;
     }
@@ -953,7 +1047,7 @@ void UItemSlots::OnRequestCancelCurrentHoveredItemSlot(EItemType RequestedItemTy
 {
     UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 호버 취소 요청: 타입 {0}", *UEnum::GetValueAsString(RequestedItemType));
 
-    // 요청된 아이템 타입이 현재 ItemSlots의 타입과 일치하지 않으면 early return
+    //@요청된 아이템 타입이 현재 ItemSlots의 타입과 일치하지 않으면 early return
     if (RequestedItemType != ItemType)
     {
         return;
