@@ -54,31 +54,34 @@ FNavigationReply UMenuUI::NativeOnNavigation(const FGeometry& MyGeometry, const 
 
 FReply UMenuUI::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
 {
-    // 모든 포커스 시도를 로깅
-    UE_LOGFMT(LogMenuUI, Log, "포커스 시도: 위젯: {0}, 원인: {1}",
-        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
 
-    // SetDirectly만 허용하고 나머지는 거부
+    //@Set Directly(SetFocus())를 통한 포커스 시도 외에 다른 시도는 허용하지 않습니다.
     if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
     {
-        return FReply::Unhandled();
+        return FReply::Handled().ClearUserFocus();
     }
+
+    UE_LOGFMT(LogMenuUI, Log, "포커스 : 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
 
     return FReply::Handled();
 }
 
 void UMenuUI::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
 {
+
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+    {
+        SetFocus();
+
+        return;
+    }
+
     Super::NativeOnFocusLost(InFocusEvent);
 
-    UE_LOGFMT(LogMenuUIContent, Log, "포커스 종료: 위젯: {0}, 원인: {1}",
+    UE_LOGFMT(LogMenuUI, Log, "포커스 종료: 위젯: {0}, 원인: {1}",
         *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
 
-}
-
-FReply UMenuUI::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
-{
-    return FReply::Handled().PreventThrottling();
 }
 
 FReply UMenuUI::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
@@ -423,12 +426,7 @@ void UMenuUI::SetCategoryVisibility(EMenuCategory Category, bool bVisible)
     //@Focus
     if (bVisible)
     {
-        Widget->SetIsFocusable(true);
         Widget->SetFocus();
-    }
-    else
-    {
-        Widget->SetIsFocusable(false);
     }
 
     UE_LOGFMT(LogMenuUI, Log, "{0} 카테고리의 가시성을 {1}(으)로 설정했습니다.",
@@ -456,6 +454,9 @@ void UMenuUI::OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVi
     {
         //@Add To Viewport
         AddToViewport();
+        //@Focus
+        SetIsFocusable(true);
+        SetFocus();
         //@Reset Menu UI
         ResetMenuUI();
 

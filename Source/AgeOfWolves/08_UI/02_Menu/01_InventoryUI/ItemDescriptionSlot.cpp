@@ -46,6 +46,12 @@ void UItemDescriptionSlot::NativeDestruct()
     Super::NativeDestruct();
 }
 
+FNavigationReply UItemDescriptionSlot::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+    return FNavigationReply::Explicit(nullptr);
+
+}
+
 void UItemDescriptionSlot::ExternalBindToInventoryComp()
 {
     //@World
@@ -167,6 +173,7 @@ FString UItemDescriptionSlot::ArrangeItemDescriptionStringToText(FString String)
 #pragma region Callbacks
 void UItemDescriptionSlot::OnItemSlotsReadyForBinding(const UInventoryUIContent* InventoryUIContent)
 {
+    //@Inventory UI Content
     if (!InventoryUIContent)
     {
         UE_LOGFMT(LogItemDescription, Error, "InventoryUIContent가 유효하지 않습니다.");
@@ -177,11 +184,12 @@ void UItemDescriptionSlot::OnItemSlotsReadyForBinding(const UInventoryUIContent*
     int32 TotalSlots = 0;
     int32 TotalBindCount = 0;
 
-    // 기존 바인딩을 저장할 집합
+    //@TSet
     TSet<UInteractableItemSlot*> BoundSlots;
 
     for (EItemType ItemType : ItemTypes)
     {
+        //@Item Slots
         UUserWidget* ItemSlotsWidget = InventoryUIContent->GetItemSlotsUI(ItemType);
         if (!ItemSlotsWidget)
         {
@@ -196,6 +204,9 @@ void UItemDescriptionSlot::OnItemSlotsReadyForBinding(const UInventoryUIContent*
             continue;
         }
 
+        //@바인딩 작업
+        ItemSlots->CancelItemSlotButton.AddUFunction(this, "OnItemSlotButtonCanceled");
+
         TArray<UInteractableItemSlot*> TypeItemSlots = ItemSlots->GetAllItemSlots();
         TotalSlots += TypeItemSlots.Num();
 
@@ -204,15 +215,14 @@ void UItemDescriptionSlot::OnItemSlotsReadyForBinding(const UInventoryUIContent*
         {
             if (ItemSlot && !BoundSlots.Contains(ItemSlot))
             {
-                // 기존 바인딩 제거
+                //@Remove All
                 ItemSlot->ItemSlotButtonHovered.RemoveAll(this);
                 ItemSlot->ItemSlotButtonUnhovered.RemoveAll(this);
                 ItemSlot->NotifyItemSlotButtonCanceled.RemoveAll(this);
 
-                // 새로운 바인딩 추가
+                //@외부 바인딩
                 ItemSlot->ItemSlotButtonHovered.AddUObject(this, &UItemDescriptionSlot::OnItemSlotButtonHovered);
                 ItemSlot->ItemSlotButtonUnhovered.AddUObject(this, &UItemDescriptionSlot::OnItemSlotButtonUnhovered);
-                //ItemSlot->NotifyItemSlotButtonCanceled.AddUObject(this, &UItemDescriptionSlot::OnItemSlotButtonCanceled);
 
                 BoundSlots.Add(ItemSlot);
                 TypeBindCount++;
@@ -313,13 +323,22 @@ void UItemDescriptionSlot::OnItemSlotButtonUnhovered_Implementation(const FGuid&
 
 }
 
-void UItemDescriptionSlot::OnItemSlotButtonCanceled_Implementation()
+void UItemDescriptionSlot::OnItemSlotButtonCanceled_Implementation(const FGuid& ID)
 {
+    //@Unique Item ID
+    if (UniqueItemID != ID)
+    {
+        return;
+    }
+
     //@필요 시 BP에서 해당 함수 오버라이딩...
     UE_LOGFMT(LogItemDescription, Log, "아이템 슬롯 호버 혹은 선택 취소");
-
 
     //@가시성 비활성화
     SetVisibility(ESlateVisibility::Collapsed);
 }
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion

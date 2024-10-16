@@ -10,6 +10,7 @@
 
 DEFINE_LOG_CATEGORY(LogToolBar)
 
+//@Defualt Setting
 #pragma region Default Setting
 UMenuUIToolBar::UMenuUIToolBar(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
@@ -26,6 +27,8 @@ void UMenuUIToolBar::NativeOnInitialized()
 void UMenuUIToolBar::NativePreConstruct()
 {
     Super::NativePreConstruct();
+
+    SetIsFocusable(false);
 }
 
 void UMenuUIToolBar::NativeConstruct()
@@ -36,6 +39,12 @@ void UMenuUIToolBar::NativeConstruct()
 void UMenuUIToolBar::NativeDestruct()
 {
     Super::NativeDestruct();
+}
+
+FNavigationReply UMenuUIToolBar::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+    return FNavigationReply::Explicit(nullptr);
+
 }
 
 void UMenuUIToolBar::InternalBindToButton(UCustomButton* Button, EMenuCategory Category)
@@ -58,9 +67,11 @@ void UMenuUIToolBar::InitializeToolBar()
     //@Delegate: 초기화 완료 이벤트
     ToolBarInitFinished.ExecuteIfBound();
 }
+
 #pragma endregion
 
-#pragma region Widgets
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UMenuUIToolBar::ResetToolBar()
 {
     //@Previous Category
@@ -151,20 +162,6 @@ void UMenuUIToolBar::CreateAndAddButton(EMenuCategory Category, TSubclassOf<UCus
     MMenuCategoryButtons.Add(Category, NewButton);
 }
 
-void UMenuUIToolBar::MenuUIVisibilityChangedNotified(bool bIsVisible)
-{
-    //@Menu UI가 열리면 하는 동작
-    if (bIsVisible)
-    {
-
-    }
-    //@Menu UI가 닫히면 하는 동작
-    else
-    {
-
-    }
-}
-
 void UMenuUIToolBar::MoveCategoryLeft()
 {
     //@Current Index
@@ -184,7 +181,7 @@ void UMenuUIToolBar::MoveCategoryLeft()
         //@TODO: Button 상태를 Selected로 변경합니다.
         NewButton->OnButtonClicked();
     }
-    
+
     UE_LOGFMT(LogToolBar, Log, "메뉴 카테고리가 왼쪽으로 이동했습니다. 새 카테고리: {0}", *UEnum::GetValueAsString(NewCategory));
 }
 
@@ -207,8 +204,25 @@ void UMenuUIToolBar::MoveCategoryRight()
         //@TODO: Button 상태를 Selected로 변경합니다.
         NewButton->OnButtonClicked();
     }
-    
+
     UE_LOGFMT(LogToolBar, Log, "메뉴 카테고리가 오른쪽으로 이동했습니다. 새 카테고리: {0}", *UEnum::GetValueAsString(NewCategory));
+}
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+void UMenuUIToolBar::MenuUIVisibilityChangedNotified(bool bIsVisible)
+{
+    //@Menu UI가 열리면 하는 동작
+    if (bIsVisible)
+    {
+
+    }
+    //@Menu UI가 닫히면 하는 동작
+    else
+    {
+
+    }
 }
 
 void UMenuUIToolBar::OnMenuUIToolBarButtonClicked_Implementation(EMenuCategory Category)
@@ -260,6 +274,7 @@ void UMenuUIToolBar::CancelMenuUIToolBarButtonSelected_Implementation(EMenuCateg
 }
 #pragma endregion
 
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 int32 UMenuUIToolBar::GetCurrentCategoryIndex() const
 {

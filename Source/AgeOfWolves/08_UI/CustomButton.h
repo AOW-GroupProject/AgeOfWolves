@@ -7,10 +7,14 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCustomButton, Log, All);
 
+//@전방 선언
+#pragma region Forward Declaration
 class UOverlay;
 class UImage;
 class UButton;
+#pragma endregion
 
+//@열거형
 #pragma region Enums
 /**
 * EButtonState
@@ -29,6 +33,7 @@ enum class EButtonState : uint8
 };
 #pragma endregion
 
+//@구조체
 #pragma region Structs
 /**
 * FButtonStateInformation
@@ -48,6 +53,7 @@ struct FButtonStateInformation
 };
 #pragma endregion
 
+//@이벤트/델리게이트
 #pragma region Delegates
 DECLARE_MULTICAST_DELEGATE(FButtonHovered);
 DECLARE_MULTICAST_DELEGATE(FButtonUnhovered);
@@ -58,12 +64,16 @@ DECLARE_MULTICAST_DELEGATE(FButtonDisabled);
 UCLASS()
 class AGEOFWOLVES_API UCustomButton : public UUserWidget
 {
-    GENERATED_BODY()
-        //@Friend Class 설정
-        friend class UInteractableItemSlot;
+//@친추 클래스
+#pragma region Friend Class
+    friend class UInteractableItemSlot;
     friend class UInventoryToolBar;
     friend class UMenuUIToolBar;
+#pragma endregion
 
+    GENERATED_BODY()
+
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UCustomButton(const FObjectInitializer& ObjectInitializer);
@@ -74,10 +84,12 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
     //~End Of UUserWidget
 #pragma endregion
 
-#pragma region SubWidgets
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 protected:
     //@Overlay
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
@@ -134,6 +146,7 @@ public:
     FButtonDisabled ButtonDisabled;
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 public:
     //@버튼의 Hovered 이벤트 구독
@@ -159,12 +172,19 @@ public:
     virtual void CancelSelectedButton_Implementation();
 #pragma endregion
 
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
     FORCEINLINE UButton* GetButton() { return Button; }
 
 public:
-    bool SetKeyboardHovered();
+    UFUNCTION(BlueprintNativeEvent, Category = "Button")
+        bool SetButtonHoveredByKeyboard();
+    virtual bool SetButtonHoveredByKeyboard_Implementation();
+
+    UFUNCTION(BlueprintNativeEvent, Category = "Button")
+        bool SetButtonSelectedByKeyboard();
+    virtual bool SetButtonSelectedByKeyboard_Implementation();
 
 public:
     bool IsLockAsHovered() const { return bLockAsHovered; }

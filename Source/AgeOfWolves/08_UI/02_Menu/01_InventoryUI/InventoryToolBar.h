@@ -45,6 +45,7 @@ class AGEOFWOLVES_API UInventoryToolBar : public UUserWidget
 
     GENERATED_BODY()
 
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UInventoryToolBar(const FObjectInitializer& ObjectInitializer);
@@ -56,10 +57,6 @@ protected:
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
     virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
-    virtual FReply NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent) override;
-    virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
-    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-    virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
     //~ End UUserWidget Interface
 
 protected:
@@ -75,6 +72,7 @@ public:
         void InitializeInventoryToolBar();
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region Widgets
 public:
     //@강제로 Default Setting으로 리셋합니다.
@@ -97,8 +95,7 @@ protected:
         UHorizontalBox* ItemTypeButtonBox;
 
     const EItemType DefaultItemType = EItemType::Tool;
-    EItemType CurrentItemType = EItemType::MAX;
-    EItemType CurrentHoveredItemType= EItemType::MAX;
+    EItemType CurrentSelectedItemType = EItemType::MAX;
     TMap<EItemType, UCustomButton*> MItemTypeButtons;
 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Button", meta = (AllowPrivateAccess = "true"))
@@ -115,6 +112,7 @@ protected:
     bool bIsKeyboardMode = false;
 #pragma endregion
 
+//@Delegates
 #pragma region Delegates
 public:
     //@초기화 완료 이벤트
@@ -127,6 +125,7 @@ public:
     FInventoryToolBarButtonClicked InventoryToolBarButtonClicked;
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 protected:
     //@Inventory Tool Bar 버튼 클릭 이벤트 구독
@@ -149,8 +148,10 @@ protected:
     virtual void CancelInventoryToolBarButtonSelected_Implementation(EItemType PreviousItemType);
 #pragma endregion
 
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
     int32 GetCurrentButtonIndex() const;
 #pragma endregion
+
 };

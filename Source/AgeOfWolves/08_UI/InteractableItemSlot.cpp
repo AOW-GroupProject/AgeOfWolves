@@ -28,8 +28,7 @@ void UInteractableItemSlot::NativePreConstruct()
 {
     Super::NativePreConstruct();
 
-    //@포커스 가능 여부
-    SetIsFocusable(true);
+    SetIsFocusable(false);
 }
 
 void UInteractableItemSlot::NativeConstruct()

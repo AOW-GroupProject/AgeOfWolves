@@ -45,6 +45,7 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
     //~ End UUserWidget Interface
 
 protected:
@@ -120,7 +121,7 @@ protected:
         void OnItemSlotButtonUnhovered(const FGuid& ID);
     virtual void OnItemSlotButtonUnhovered_Implementation(const FGuid& ID);
     UFUNCTION(BlueprintNativeEvent)
-        void OnItemSlotButtonCanceled();
-    virtual void OnItemSlotButtonCanceled_Implementation();
+        void OnItemSlotButtonCanceled(const FGuid& ID);
+    virtual void OnItemSlotButtonCanceled_Implementation(const FGuid& ID);
 #pragma endregion
 };

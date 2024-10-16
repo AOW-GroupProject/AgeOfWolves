@@ -45,13 +45,16 @@ void UInventoryUI::NativeDestruct()
 
 FReply UInventoryUI::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
 {
-    // 부모 클래스의 NativeOnFocusReceived 호출
     FReply Reply = Super::NativeOnFocusReceived(InGeometry, InFocusEvent);
 
-    // 부모 클래스에서 포커스를 처리했다면 (즉, FReply::Handled()를 반환했다면)
-    if (Reply.IsEventHandled())
+    //@SetDirectly(SetFocus())에 의한 포커스가 아닐 경우, 포커스를 해제합니다.
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
     {
-        //@InventoryUIContent
+        return Reply.Handled().ClearUserFocus();
+    }
+
+    if (InFocusEvent.GetCause() == EFocusCause::SetDirectly && Reply.IsEventHandled())
+    {
         if (!InventoryUIContent)
         {
             UE_LOGFMT(LogInventoryUI, Warning, "InventoryUIContent가 유효하지 않습니다. 포커스를 설정할 수 없습니다.");
@@ -59,9 +62,7 @@ FReply UInventoryUI::NativeOnFocusReceived(const FGeometry& InGeometry, const FF
         }
 
         //@Set Focus
-        InventoryUIContent->SetIsFocusable(true);
         InventoryUIContent->SetFocus();
-
     }
 
     return Reply;
@@ -97,23 +98,6 @@ void UInventoryUI::CheckMenuUIContentInitFinished()
     if (bInventoryUIContentReady)
     {
         UE_LOGFMT(LogInventoryUI, Log, "InventoryUI의 모든 서브위젯 초기화가 완료되었습니다.");
-
-        //@키 입력 관련 바인딩
-        if (!InventoryUIContent)
-        {
-            UE_LOGFMT(LogInventoryUI, Error, "InventoryUIContent가 유효하지 않아 ItemSlots 콜백 등록에 실패했습니다.");
-            return;
-        }
-
-        //@Item Slots의 입력 바인딩
-        TArray<UItemSlots*> AllItemSlots = InventoryUIContent->GetAllItemTypesItemSlots();
-        for (UItemSlots* ItemSlots : AllItemSlots)
-        {
-            if (ItemSlots)
-            {
-                DirectionalInputPresssed.AddUObject(ItemSlots, &UItemSlots::OnDirectionalInputPresssed);
-            }
-        }
 
         //@Inventory UI Content Ready
         bInventoryUIContentReady = false;

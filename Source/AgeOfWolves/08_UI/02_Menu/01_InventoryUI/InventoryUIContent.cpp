@@ -4,6 +4,7 @@
 #include "08_UI/02_Menu/01_InventoryUI/InventoryToolBar.h"
 #include "08_UI/02_Menu/01_InventoryUI/ItemSlots.h"
 #include "08_UI/02_Menu/01_InventoryUI/ItemDescriptionSlot.h"
+#include "08_UI/InteractableItemSlot.h"
 
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
@@ -27,7 +28,7 @@ void UInventoryUIContent::NativePreConstruct()
 {
     Super::NativePreConstruct();
 
-    SetIsFocusable(false);
+    SetIsFocusable(true);
 
 }
 
@@ -49,29 +50,26 @@ FNavigationReply UInventoryUIContent::NativeOnNavigation(const FGeometry& MyGeom
 
 FReply UInventoryUIContent::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
 {
-    // 모든 포커스 시도를 로깅
-    UE_LOGFMT(LogInventoryUIContent, Log, "포커스 시도: 위젯: {0}, 원인: {1}",
-        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
-
-    //@SetDirectly를 통한 포커싱만 가능하며, 마우스 클릭으로 인한 포커스는 방지합니다.
-    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly || InFocusEvent.GetCause() == EFocusCause::Mouse)
+    
+    //@Set Directly(SetFocus())를 통한 포커스 시도 외에 다른 시도는 허용하지 않습니다.
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
     {
-        UE_LOGFMT(LogInventoryUIContent, Verbose, "포커스 수신 거부: 위젯: {0}, 원인: {1}",
-            *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
-
-        return FReply::Unhandled();
+        return FReply::Handled().ClearUserFocus();
     }
+
+    UE_LOGFMT(LogInventoryUIContent, Log, "포커스 : 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
 
     return FReply::Handled();
 }
 
 void UInventoryUIContent::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
 {
-    //@SetDirectly(SetFocus)를 통한 Focus Lost 외에 다른 원인은 무시합니다.
+    //@SetDirectly(SetFocus())를 통한 포커스 소실 외에 다른 시도는 허용하지 않습니다.
     if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
     {
-        UE_LOGFMT(LogInventoryUIContent, Log, "포커스 유지: 위젯: {0}, 원인: {1}",
-            *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+        SetFocus();
+
         return;
     }
 
@@ -79,12 +77,6 @@ void UInventoryUIContent::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
 
     UE_LOGFMT(LogInventoryUIContent, Log, "포커스 종료: 위젯: {0}, 원인: {1}",
         *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
-}
-
-FReply UInventoryUIContent::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
-{
-    // 마우스 클릭에 의한 포커스 변경을 방지합니다.
-    return FReply::Handled().PreventThrottling();
 }
 
 FReply UInventoryUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
@@ -113,15 +105,48 @@ FReply UInventoryUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const F
     }
     else if (Key == EKeys::Enter)
     {
+        //@Current Item Slots
+        UItemSlots* CurrentItemSlots = Cast<UItemSlots>(GetItemSlotsUI(CurrentItemType));
+        if (!CurrentItemSlots)
+        {
+            UE_LOGFMT(LogInventoryUIContent, Error, "{0} 타입의 ItemSlots를 찾을 수 없습니다.", *UEnum::GetValueAsString(CurrentItemType));
+            return FReply::Handled();
+        }
+
+        //@첫 번째 아이템 슬롯 유효한가?
+        UInteractableItemSlot* FirstItemSlot = CurrentItemSlots->FindFirstItemSlot();
+        if (!FirstItemSlot || !FirstItemSlot->GetUniqueItemID().IsValid())
+        {
+            UE_LOGFMT(LogInventoryUIContent, Warning, "{0} 타입의 첫 번째 Item Slot이 유효하지 않습니다.", *UEnum::GetValueAsString(CurrentItemType));
+            return FReply::Handled();
+        }
+
         //@첫 번째 아이템 슬롯의 강제 호버 상태 전환 요청 이벤트
         RequestFirstItemSlotHover.Broadcast(CurrentItemType);
+
+        //@SetFocus
+        CurrentItemSlots->SetFocus();
+
+        UE_LOGFMT(LogInventoryUIContent, Log, "포커스가 {0} 타입의 ItemSlots로 이동했습니다.", *UEnum::GetValueAsString(CurrentItemType));
+
+        return FReply::Handled();
+    }
+    else if (Key == EKeys::Escape)
+    {
+        //@Set Focus
+        SetFocus();
+
+        //@Request Cancel Current Hovered Item Slot or Current Selected Item Slot
+        RequestCancelCurrentHoveredItemSlot.Broadcast(CurrentItemType);
 
         return FReply::Handled();
     }
 
     UE_LOGFMT(LogInventoryUIContent, Log, "Inventory UI에서 처리하지 않는 키 입력: {0}", *Key.ToString());
 
-    return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+    return FReply::Unhandled();
+
+    //return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 void UInventoryUIContent::InternalBindingToInventoryToolBar(UInventoryToolBar* ToolBar)
@@ -189,6 +214,7 @@ void UInventoryUIContent::CheckInventoryUIContentInitialization()
             if (UItemSlots* ItemSlotsWidget = Cast<UItemSlots>(Pair.Value))
             {
                 RequestFirstItemSlotHover.AddUObject(ItemSlotsWidget, &UItemSlots::OnRequestFirstItemSlotHover);
+                RequestCancelCurrentHoveredItemSlot.AddUObject(ItemSlotsWidget, &UItemSlots::OnRequestCancelCurrentHoveredItemSlot);
             }
         }
 
@@ -376,8 +402,10 @@ void UInventoryUIContent::CreateItemDescription()
 
     //@비동기 초기화 이벤트에 바인딩
     RequestStartInitByInventoryUIContent.AddUFunction(ItemDescription, "InitializeItemDescriptionSlot");
+
     //@Item Slots의 바인딩 준비 완료 이벤트에 바인딩(Item Description에서 직접적으로 가져오기가 빡셈)
     ItemSlotsReadyForBinding.AddUFunction(ItemDescription, "OnItemSlotsReadyForBinding");
+
     //@내부 바인딩
     InternalBindingToItemDescription(ItemDescription);
 

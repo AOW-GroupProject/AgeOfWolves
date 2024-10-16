@@ -8,6 +8,7 @@
 
 DEFINE_LOG_CATEGORY(LogCustomButton);
 
+//@Defualt Setting
 #pragma region Default Setting
 UCustomButton::UCustomButton(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -49,9 +50,16 @@ void UCustomButton::NativeDestruct()
 {
     Super::NativeDestruct();
 }
+
+FNavigationReply UCustomButton::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+    return FNavigationReply::Explicit(nullptr);
+
+}
 #pragma endregion
 
-#pragma region SubWidgets
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UCustomButton::SetButtonState(EButtonState NewState)
 {
     if (CurrentButtonState != NewState)
@@ -119,13 +127,16 @@ void UCustomButton::ActivateButton()
 
 void UCustomButton::DeactivateButton(bool bIsClicked)
 {
+    //@Button
     if (!Button)
     {
         UE_LOGFMT(LogCustomButton, Log, "버튼이 유효하지 않습니다.");
         return;
     }
+
     //@Button의 상호 작용 비활성화
     Button->SetIsEnabled(false);
+
     //@bClick
     if (!bIsClicked)
     {
@@ -137,11 +148,13 @@ void UCustomButton::DeactivateButton(bool bIsClicked)
         //@Button State
         SetButtonState(EButtonState::Selected);
     }
+
     //@Disabled 이벤트
     ButtonDisabled.Broadcast();
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UCustomButton::OnButtonHovered_Implementation()
 {
@@ -173,7 +186,10 @@ void UCustomButton::OnButtonUnhovered_Implementation()
 
     if (!bLockAsHovered)
     {
+        //@Set Button State
         SetButtonState(EButtonState::Normal);
+
+        //@Unhover 이벤트
         ButtonUnhovered.Broadcast();
     }
 
@@ -209,11 +225,11 @@ void UCustomButton::OnButtonClicked_Implementation()
         return;
     }
 
-    //@Clicke에 의한 비활성화
-    DeactivateButton(true);
-
     //@Clicked/Selected 이벤트
     ButtonSelected.Broadcast();
+
+    //@Clicke에 의한 비활성화
+    DeactivateButton(true);
 
     UE_LOGFMT(LogCustomButton, Log, "버튼이 선택되었습니다.");
 
@@ -239,11 +255,12 @@ void UCustomButton::CancelSelectedButton_Implementation()
     //@eg. 애니메이션
 }
 
-bool UCustomButton::SetKeyboardHovered()
+bool UCustomButton::SetButtonHoveredByKeyboard_Implementation()
 {
-    if (CurrentButtonState == EButtonState::Disabled)
+    if (CurrentButtonState == EButtonState::Disabled
+        || CurrentButtonState == EButtonState::Selected
+        || CurrentButtonState == EButtonState::Hovered)
     {
-        UE_LOGFMT(LogCustomButton, Error, "버튼의 호버 상태 전환이 불가합니다.");
         return false;
     }
 
@@ -255,4 +272,31 @@ bool UCustomButton::SetKeyboardHovered()
 
     return true;
 }
+
+bool UCustomButton::SetButtonSelectedByKeyboard_Implementation()
+{
+    if (CurrentButtonState == EButtonState::Disabled)
+    {
+        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 비활성화 상태입니다. Click 무시.");
+        return false;
+    }
+
+    //@Clicked/Selected 이벤트
+    ButtonSelected.Broadcast();
+
+    //@Clicke에 의한 비활성화
+    DeactivateButton(true);
+
+    UE_LOGFMT(LogCustomButton, Log, "버튼이 선택되었습니다.");
+
+    //@블루프린트에서 가져와 오버라이딩 합니다...
+    //@eg. 애니메이션
+    return true;
+
+}
+
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion

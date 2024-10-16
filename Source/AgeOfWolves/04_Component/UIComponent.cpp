@@ -537,6 +537,17 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 		//@Menu UI 열기
 		if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.OpenMenuUI")))
 		{
+			//@Mouse Cursor Shown and Input Mode Set
+			if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
+			{
+				//@Show Mouse Cursor
+				PC->bShowMouseCursor = true;
+
+				//@FInputModeUIOnly
+				FInputModeUIOnly InputMode;
+				InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
+				PC->SetInputMode(InputMode);
+			}
 
 			//@Hide HUD
 			HideAllUI(EUICategory::HUD);
@@ -547,27 +558,6 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 			//@Show Menu UI
 			ShowAllUI(EUICategory::Menu);
 
-			//@Mouse Cursor Shown and Input Mode Set
-			if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
-			{
-				//@Show Mouse Cursor
-				PC->bShowMouseCursor = true;
-
-				//@FInputModeUIOnly
-				FInputModeUIOnly InputMode;
-				InputMode.SetLockMouseToViewportBehavior(EMouseLockMode::DoNotLock);
-				//@MenuUI에 포커스 설정
-				UUserWidget* MenuWidget = GetUI(EUICategory::Menu, FGameplayTag::RequestGameplayTag(FName("UI.Menu")));
-				if (!MenuWidget)
-				{
-					UE_LOGFMT(LogUI, Warning, "MenuUI를 찾을 수 없습니다.");
-					return;
-				}
-
-				MenuWidget->SetIsFocusable(true);
-				MenuWidget->SetFocus();
-				PC->SetInputMode(InputMode);
-			}
 		}
 	}
 	//@MenuUI IMC

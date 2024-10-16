@@ -22,6 +22,8 @@ void UMapUI::NativeOnInitialized()
 void UMapUI::NativePreConstruct()
 {
     Super::NativePreConstruct();
+
+    SetIsFocusable(false);
 }
 
 void UMapUI::NativeConstruct()

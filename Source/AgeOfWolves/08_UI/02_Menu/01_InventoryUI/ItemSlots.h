@@ -75,7 +75,6 @@ protected:
     virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
     virtual FReply NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent) override;
     virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
-    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
     virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
     //~ End UUserWidget Interface
 
@@ -121,19 +120,26 @@ protected:
 
 protected:
     //@현재 선택된 아이템을 사용합니다.
-    UFUNCTION(BlueprintNativeEvent)
+    UFUNCTION(BlueprintNativeEvent, Category = "Item Slots")
         bool UseItem(const int32 ItemCount);
     virtual bool UseItem_Implementation(const int32 ItemCount);
 
     //@현재 선택된 아이템을 드롭합니다.
-    UFUNCTION(BlueprintNativeEvent)
+    UFUNCTION(BlueprintNativeEvent, Category = "Item Slots")
         bool LeaveItem(const int32 ItemCount);
     virtual bool LeaveItem_Implementation(const int32 ItemCount);
 
     //@현재 선택된 아이템을 버립니다.
-    UFUNCTION(BlueprintNativeEvent)
+    UFUNCTION(BlueprintNativeEvent, Category = "Item Slots")
         bool DiscardItem(const int32 ItemCount);
     virtual bool DiscardItem_Implementation(const int32 ItemCount);
+
+protected:
+        //@방향키 입력 처리
+    UFUNCTION(BlueprintNativeEvent, Category = "Item Slots")
+        void HandleDirectionalInput(EUINavigation NavigationInput);
+    virtual void HandleDirectionalInput_Implementation(EUINavigation NavigationInput);
+
 
 protected:
     //@Item Slot 목록이 나타낼 아이템 유형
@@ -252,12 +258,12 @@ protected:
         void OnConfirmationMenuOptionSelected(FName OkOrCancel);
 
 public:
-    //@Item Slot의 첫 번째 아이템 슬롯의 강제 Hover 상태 전환 이벤트 구독 
+    //@Item Slots의 첫 번째 아이템 슬롯의 강제 Hover 상태 전환 이벤트 구독 
     UFUNCTION()
         void OnRequestFirstItemSlotHover(EItemType RequestedItemType);
-    //@Item Slot 관련 사용자 입력 처리
+    //@Item Slots의 현재 Hovered 아이템 슬롯의 취소 이벤트 구독
     UFUNCTION()
-        void OnDirectionalInputPresssed(EItemType Type, EUINavigation NavigationInput);
+        void OnRequestCancelCurrentHoveredItemSlot(EItemType RequestedItemType);
 
 protected:
     //@Inventory Comp의 아이템 할당 이벤트에 등록되는 콜백
@@ -295,4 +301,5 @@ protected:
     //@아이템 ID로 슬롯 찾기
     UInteractableItemSlot* FindSlotByItemID(const FGuid& ItemID);
 #pragma endregion
+
 };

@@ -32,6 +32,8 @@ void UItemSlot::NativePreConstruct()
 {
     Super::NativePreConstruct();
 
+    SetIsFocusable(false);
+
 }
 
 void UItemSlot::NativeConstruct()

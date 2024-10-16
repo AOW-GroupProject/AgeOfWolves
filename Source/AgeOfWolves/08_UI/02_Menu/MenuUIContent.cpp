@@ -21,7 +21,7 @@ void UMenuUIContent::NativePreConstruct()
 {
 	Super::NativePreConstruct();
 
-	SetIsFocusable(false);
+	SetIsFocusable(true);
 
 }
 
@@ -44,26 +44,27 @@ FNavigationReply UMenuUIContent::NativeOnNavigation(const FGeometry& MyGeometry,
 
 FReply UMenuUIContent::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
 {
-	// 모든 포커스 시도를 로깅
-	UE_LOGFMT(LogMenuUIContent, Log, "포커스 시도: 위젯: {0}, 원인: {1}",
-		*GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
 
-	// SetDirectly만 허용하고 나머지는 거부
+	//@Set Directly(SetFocus())를 통한 포커스 시도 외에 다른 시도는 허용하지 않습니다.
 	if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
 	{
-		return FReply::Unhandled();
+		return FReply::Handled().ClearUserFocus();
 	}
+
+	UE_LOGFMT(LogMenuUIContent, Log, "포커스 : 위젯: {0}, 원인: {1}",
+		*GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
 
 	return FReply::Handled();
 }
 
 void UMenuUIContent::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
 {
-	// SetDirectly가 아닌 경우 포커스 유지
+
+	//@SetDirectly(SetFocus())를 통한 포커스 소실 외에 다른 시도는 허용하지 않습니다.
 	if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
 	{
-		UE_LOGFMT(LogMenuUIContent, Log, "포커스 유지: 위젯: {0}, 원인: {1}",
-			*GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+		SetFocus();
+
 		return;
 	}
 
@@ -73,19 +74,10 @@ void UMenuUIContent::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
 		*GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
 }
 
-FReply UMenuUIContent::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
-{
-	return FReply::Unhandled();
-}
 
 FReply UMenuUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
 	return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
-}
-
-void UMenuUIContent::InitializeMenuUIContent()
-{
-
 }
 
 void UMenuUIContent::CheckMenuUIContentInitFinished()

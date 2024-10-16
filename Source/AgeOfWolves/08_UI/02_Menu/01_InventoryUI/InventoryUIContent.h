@@ -30,10 +30,14 @@ class UItemDescriptionSlot;
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByInventoryUIContent)
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FInventoryUIContentInitFinished)
+
 //@Item Slots 바인딩 준비 완료 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotsReadyForBinding, const UInventoryUIContent*)
 
+//@Item Slots의 첫 번째 아이템 슬롯의 Hover 상태 설정 요청
 DECLARE_MULTICAST_DELEGATE_OneParam(FRequestFirstItemSlotHover, EItemType)
+//@Item Slots의 마지막 Hovered Item Slot의 Cancel 요청
+DECLARE_MULTICAST_DELEGATE_OneParam(FRequestCancelCurrentHoveredItemSlot, EItemType)
 #pragma endregion
 
 //@Item Slots 정보 구조체
@@ -74,7 +78,6 @@ protected:
     virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
     virtual FReply NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent) override;
     virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
-    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
     virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
     //~ End UUserWidget Interface
 
@@ -156,7 +159,8 @@ public:
 public:
     //@첫 번째 아이템 슬롯의 강제 Hover 상태 전환 요청 이벤트
     FRequestFirstItemSlotHover RequestFirstItemSlotHover;
-
+    //@마지막 Hovered 된 아이템 슬롯의 Cancel 요청 이벤트
+    FRequestCancelCurrentHoveredItemSlot RequestCancelCurrentHoveredItemSlot;
 #pragma endregion
 
 //@Callbacks

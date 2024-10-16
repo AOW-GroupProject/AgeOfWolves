@@ -31,9 +31,6 @@ class UItemSlots;
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByInventoryUI)
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FInventoryUIInitFinished)
-
-//@방향키 조작 
-DECLARE_MULTICAST_DELEGATE_TwoParams(FDirectionalInputPresssed, EItemType, EUINavigation);
 #pragma endregion
 
 UCLASS()
@@ -106,11 +103,6 @@ public:
     FRequestStartInitByInventoryUI RequestStartInitByInventoryUI;
     //@초기화 완료 이벤트
     FInventoryUIInitFinished InventoryUIInitFinished;
-
-public:
-    //@방향키 조작 이벤트
-    FDirectionalInputPresssed DirectionalInputPresssed;
-
 #pragma endregion
 
 //@Callbacks
