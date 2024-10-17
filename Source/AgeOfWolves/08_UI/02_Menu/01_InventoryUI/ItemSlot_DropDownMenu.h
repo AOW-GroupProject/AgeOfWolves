@@ -38,14 +38,15 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCancelOptionButton, const FName&)
 UCLASS()
 class AGEOFWOLVES_API UItemSlot_DropDownMenu : public UDropDownMenu
 {
-    //@친추 클래스
+
+//@친추 클래스
 #pragma region Friend Class
     friend class UItemSlots;
 #pragma endregion
 
     GENERATED_BODY()
 
-        //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UItemSlot_DropDownMenu(const FObjectInitializer& ObjectInitializer);
@@ -56,6 +57,9 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
+    virtual FReply NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent) override;
+    virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
     virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
     //~ End UUserWidget Interface
 
@@ -74,13 +78,25 @@ public:
 //@Property/Info...etc
 #pragma region Subwidgets
 protected:
+    //@Reset, 오버라이딩
     virtual void ResetDropDownMenu() override;
 
 protected:
+    //@Drop Down Menu Option 생성, 오버라이딩
     virtual void CreateDropDownMenuOptions() override;
 
+protected:
+    //@방향키 조작에 대한 처리
+    void HandleVerticalDirectionalInput(int32 Direction);
+
+    //@단축키 입력에 대한 처리
+    void SelectOptionByHotKey(const FName& OptionName);
+
+    //@Selected -> Hovered
+    void ResetSelectedOptionToHovered();
 
 protected:
+    //@현재 Hovered 된 Option의 이름
     FName CurrentHoveredOptionName;
 #pragma endregion
 
@@ -114,6 +130,8 @@ protected:
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+    //@EKey 와 EHotKey 비교
+    bool CompareKeyWithHotKey(const FKey& Key, EHotKey HotKey);
 #pragma endregion
 
 };

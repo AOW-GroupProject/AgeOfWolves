@@ -301,12 +301,12 @@ FText UDropDownMenuOption::GetDropDownMenuOptionHotKeyText() const
 
 UCustomButton* UDropDownMenuOption::GetDropDownMenuOptionButton() const
 {
-    if (!Button.IsValid())
+    if (!Button)
     {
         return nullptr;
     }
 
-    return Button.Get();
+    return Button;
 }
 
 #pragma endregion

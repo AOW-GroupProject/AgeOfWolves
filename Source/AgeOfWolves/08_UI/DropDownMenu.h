@@ -20,6 +20,21 @@ class UConfirmationMenu;
 
 //@열거형
 #pragma region Enums
+/*
+* @EHotKey
+* 
+* Drop Down Menu 옵션 선택 시 활용 가능한 단축키 목록
+*/
+UENUM(BlueprintType)
+enum class EHotKey : uint8
+{
+    None    UMETA(DisplayName = "None"),
+    Q       UMETA(DisplayName = "Q"),
+    W       UMETA(DisplayName = "W"),
+    E       UMETA(DisplayName = "E"),
+    R       UMETA(DisplayName = "R"),
+    T       UMETA(DisplayName = "T"),
+};
 #pragma endregion
 
 //@구조체
@@ -36,10 +51,10 @@ struct FDropDownMenuOptionInformation : public FTableRowBase
 
 public:
     FDropDownMenuOptionInformation() {}
-    FDropDownMenuOptionInformation(TSubclassOf<UDropDownMenuOption> InOptionClass, const FName& InOptionName, const FText& InOptionHotKeyText, TSoftObjectPtr<UTexture2D> InOptionHotKeyInfoBGImage)
+    FDropDownMenuOptionInformation(TSubclassOf<UDropDownMenuOption> InOptionClass, const FName& InOptionName, EHotKey InHotKey, TSoftObjectPtr<UTexture2D> InOptionHotKeyInfoBGImage)
         : OptionClass(InOptionClass)
         , OptionName(InOptionName)
-        , OptionHotKeyText(InOptionHotKeyText)
+        , HotKey(InHotKey)
         , OptionHotKeyInfoBGImage(InOptionHotKeyInfoBGImage)
     {}
 
@@ -51,10 +66,10 @@ public:
 public:
     FORCEINLINE TSubclassOf<UDropDownMenuOption> GetOptionClass() const { return OptionClass; }
     FORCEINLINE const FName& GetOptionName() const { return OptionName; }
-    FORCEINLINE const FText& GetOptionHotKeyText() const { return OptionHotKeyText; }
+    FORCEINLINE EHotKey GetHotKey() const { return HotKey; }
+    FORCEINLINE FText GetOptionHotKeyText() const { return GetHotKeyAsText(HotKey); }
     FORCEINLINE TSoftObjectPtr<UTexture2D> GetOptionHotKeyInfoBGImage() const { return OptionHotKeyInfoBGImage; }
     FORCEINLINE const FText& GetConfirmationMenuDialogueText() const { return ConfirmationMenuDialogueText; }
-
 
 private:
     //@Option 위젯 클래스
@@ -65,9 +80,9 @@ private:
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
         FName OptionName;
 
-    //@Option의 단축키 텍스트
+    //@Option의 단축키
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
-        FText OptionHotKeyText;
+        EHotKey HotKey;
 
     //@Option과 상호작용 가능한 키를 나타내는 배경 이미지
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
@@ -76,6 +91,20 @@ private:
     //@Option 클릭 시 열리는 Confirmation Menu의 Dialogue Box에 나타낼 설명 문
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
         FText ConfirmationMenuDialogueText;
+
+    //@EHotKey -> FText
+    static FText GetHotKeyAsText(EHotKey Key)
+    {
+        switch (Key)
+        {
+        case EHotKey::Q: return FText::FromString("Q");
+        case EHotKey::W: return FText::FromString("W");
+        case EHotKey::E: return FText::FromString("E");
+        case EHotKey::R: return FText::FromString("R");
+        case EHotKey::T: return FText::FromString("T");
+        default: return FText::FromString("None");
+        }
+    }
 };
 #pragma endregion
 
@@ -88,8 +117,7 @@ DECLARE_MULTICAST_DELEGATE(FRequestStartInitByDropDownMenu)
 DECLARE_DELEGATE(FDropDownMenuInitFinished)
 
 //@옵션 버튼 선택 알림 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FDropDownMenuOptionButtonClicked, const FName&)
-DECLARE_MULTICAST_DELEGATE_OneParam(FDropDownMenuOptionButtonClicked, const FName&)
+DECLARE_MULTICAST_DELEGATE_OneParam(FDropDownMenuOptionButtonClicked, FName)
 
 //@버튼 취소 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FCancelDropDownMenuOptionButton, FName)
@@ -185,7 +213,7 @@ protected:
 
 protected:
     //@현재 선택된 Drop Down Menu Option
-    FName CurrentSelectedOption;
+    FName CurrentSelectedOptionName;
 #pragma endregion
 
 //@Delegates
@@ -199,7 +227,6 @@ public:
 public:
     //@Drop Down Menu Option의 버튼 클릭 이벤트
     FDropDownMenuOptionButtonClicked DropDownMenuOptionButtonClicked;
-
 
 public:
     //@Drop Down Menu Option 버튼 선택 취소 이벤트

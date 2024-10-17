@@ -45,7 +45,7 @@ class AGEOFWOLVES_API UDropDownMenuOption : public UUserWidget
 
     GENERATED_BODY()
 
-        //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UDropDownMenuOption(const FObjectInitializer& ObjectInitializer);
@@ -68,7 +68,7 @@ public:
         virtual void InitializeDropDownMenuOption();
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region Subwidgets
 protected:
     //@CustomButton 생성
@@ -113,7 +113,7 @@ protected:
 
 protected:
     //@Option 버튼
-    TWeakObjectPtr<UCustomButton> Button;
+    TObjectPtr<UCustomButton> Button;
 
 protected:
     //@각 옵션의 Height 값
@@ -125,7 +125,7 @@ protected:
         float LeftRightPadding = 0;
 #pragma endregion
 
-    //@Delegates
+//@Delegates
 #pragma region Delegates
 public:
     //@초기화 완료 이벤트
@@ -143,7 +143,7 @@ public:
     FNotifyDropDownMenuOptionCanceled NotifyDropDownMenuOptionCanceled;
 #pragma endregion
 
-    //@Callbacks
+//@Callbacks
 #pragma region Callbacks
 protected:
     //@Button Clicked 이벤트에 등록되는 콜백
@@ -167,7 +167,7 @@ protected:
     virtual void DropDownMenuOptionButtonCanceledNotified_Implementation(FName OptionName);
 #pragma endregion
 
-    //@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utilities
 public:
     UFUNCTION(BlueprintCallable)

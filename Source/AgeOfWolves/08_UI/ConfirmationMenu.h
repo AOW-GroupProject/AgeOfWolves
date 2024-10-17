@@ -65,6 +65,10 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
+    virtual FReply NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent) override;
+    virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
+    virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
     //~ End UUserWidget Interface
 
 protected:
@@ -98,6 +102,12 @@ protected:
     UFUNCTION(BlueprintNativeEvent, Category = "Confirmation Menu")
         void CloseConfirmationMenu();
     virtual void CloseConfirmationMenu_Implementation();
+
+protected:
+    //@좌, 우 방향키 조작 처리
+    void HandleHorizontalDirectionalInput(int32 Direction);
+    //@Enter 키를 통해 현재 Hovered 된 옵션을 선택합니다.
+    void SelectCurrentHoveredOptionByKeyboard();
 
 protected:
     //@Overlay
@@ -142,8 +152,12 @@ protected:
         UImage* ConfirmationMenuCancelButtonImage;
 
 protected:
+    //@현재 호버된 확정 옵션(OK or CANCEL)
+    TWeakObjectPtr<UCustomButton> CurrentHoveredConfirmationButton;
     //@현재 선택된 확정 옵션(OK or CANCEL)
     TWeakObjectPtr<UCustomButton> CurrentSelectedConfirmationButton;
+
+protected:
     //@TMap
     TMap<FName, TObjectPtr<UCustomButton>> MConfirmationMenuButtons;
     //@Custom Button Class-1
@@ -176,10 +190,12 @@ protected:
     UFUNCTION(BlueprintNativeEvent)
         void OnConfirmationMenuButtonClicked(EInteractionMethod InteractionMethodType, FName OptionName);
     virtual void OnConfirmationMenuButtonClicked_Implementation(EInteractionMethod InteractionMethodType, FName OptionName);
+
     //@Inventory Tool Bar 버튼 Hover 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
         void OnConfirmationMenuButtonHovered(EInteractionMethod InteractionMethodType, FName OptionName);
     virtual void OnConfirmationMenuButtonHovered_Implementation(EInteractionMethod InteractionMethodType, FName OptionName);
+
     //@Inventory Tool Bar 버튼 Unhover 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
         void OnConfirmationMenuButtonUnhovered(FName OptionName);

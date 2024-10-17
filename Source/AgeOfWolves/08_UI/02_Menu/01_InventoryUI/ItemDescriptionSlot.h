@@ -67,9 +67,9 @@ protected:
 
 public:
     //@퀵슬롯에 새로운 아이템을 할당합니다.
-    virtual void AssignNewItem(const FGuid& ID, const FItemInformation* ItemInformation, int32 ItemCount = -1) override;
+    virtual void AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount = -1) override;
     //@퀵슬롯에 할당된 기존 아이템을 제거합니다.
-    virtual void ClearAssignedItem(bool bForceClear = false);
+    void ClearAssignedItem(bool bForceClear = false);
 
 protected:
     FString ArrangeItemDescriptionStringToText(FString String);

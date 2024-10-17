@@ -202,6 +202,29 @@ void UInteractableItemSlot::CreateButton()
     UE_LOGFMT(LogInteractableItemSlot, Log, "UCustomButton({0})이 생성되고 이벤트가 바인딩되었습니다.", *ItemSlotButtonClass->GetName());
 }
 
+void UInteractableItemSlot::AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount)
+{
+    Super::AssignNewItem_Implementation(
+        ID, ItemInformation, ItemCount
+    );
+}
+
+void UInteractableItemSlot::UpdateItemCount_Implementation(int32 NewCount)
+{
+    Super::UpdateItemCount_Implementation(
+        NewCount
+    );
+}
+
+void UInteractableItemSlot::ClearAssignedItem_Implementation(bool bForceClear)
+{
+    Super::ClearAssignedItem_Implementation(
+        bForceClear
+    );
+
+
+}
+
 void UInteractableItemSlot::ActivateItemSlotInteraction()
 {
     UCustomButton* CustomButton = GetItemSlotButton();

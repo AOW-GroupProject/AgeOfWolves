@@ -280,6 +280,9 @@ void UItemSlots::CheckItemSlotInitFinished()
         bItemSlotDropDownMenuInitFinished = false;
         bConfirmationMenuInitFinished = false;
 
+        //@초기 상태로 설정
+        ResetItemSlots();
+
         //@Item Slots 초기화 완료 이벤트
         ItemSlotsInitFinished.ExecuteIfBound();
 
@@ -418,9 +421,6 @@ void UItemSlots::CreateItemSlots()
             UE_LOGFMT(LogItemSlots, Verbose, "추가 행 {0}에 Spacer 추가 완료", Row + 1);
         }
     }
-
-    //@초기 상태로 설정
-    ResetItemSlots();
 
     UE_LOGFMT(LogItemSlots, Log, "ItemSlots가 성공적으로 생성되었습니다. 총 슬롯 수: {0}, 기본 행 개수: {1}, 최대 행 개수: {2}, 열 개수: {3}",
         TotalSlots, DefaultRows, MaxRows, MaxItemSlotsPerRow);
@@ -899,7 +899,7 @@ void UItemSlots::OnItemSlotDropDownMenuClosed(ESlateVisibility VisibilityType)
     CurrentSelectedItemSlot.Reset();
 }
 
-void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropDownMenuOptionName)
+void UItemSlots::OnItemSlotDropDownMenuOptionSelected(FName ItemSlotDropDownMenuOptionName)
 {
 
     //@CurrentSelectedDropDownMenuOptionName
@@ -908,7 +908,7 @@ void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropD
     // ItemSlotDropDownMenu와 ConfirmationMenu가 유효한지 확인
     if (!ItemSlotDropDownMenu || !ConfirmationMenu)
     {
-        UE_LOG(LogItemSlots, Error, TEXT("ItemSlotDropDownMenu 또는 ConfirmationMenu가 유효하지 않습니다."));
+        UE_LOGFMT(LogItemSlots, Error, "ItemSlotDropDownMenu 또는 ConfirmationMenu가 유효하지 않습니다.");
         return;
     }
 
@@ -921,16 +921,26 @@ void UItemSlots::OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropD
         return;
     }
 
-    // DropDownMenu로부터 ConfirmationMenuDialogueText 가져오기
+    //@HELP일 경우, 도움 창 열기
+    if (ItemSlotDropDownMenuOptionName == "HELP")
+    {
+
+        //@TODO: 도움창 제작 후 여기서 열기
+        ItemSlotDropDownMenu->CloseDropDownMenu();
+
+        return;
+    }
+
+    //@DropDownMenu로부터 ConfirmationMenuDialogueText 가져오기
     FText DialogueText = ItemSlotDropDownMenu->GetConfirmationMenuDialogueText(CurrentSelectedDropDownMenuOptionName);
 
-    // ConfirmationMenu의 DialogueText 설정
+    //@ConfirmationMenu의 DialogueText 설정
     ConfirmationMenu->SetConfirmationMenuDialogueText(DialogueText);
 
-    // ConfirmationMenu 열기
+    //@ConfirmationMenu 열기
     ConfirmationMenu->OpenConfirmationMenu();
 
-    UE_LOG(LogItemSlots, Log, TEXT("DropDownMenu 옵션 '%s'가 선택되었고, ConfirmationMenu가 열렸습니다."), *CurrentSelectedDropDownMenuOptionName.ToString());
+    UE_LOGFMT(LogItemSlots, Log, "DropDownMenu 옵션 '{0}'가 선택되었고, ConfirmationMenu가 열렸습니다.", CurrentSelectedDropDownMenuOptionName.ToString());
 
     // TODO: Current Selected Item Slot에 대하여 관련 작업 처리
     // 예: 선택된 아이템 슬롯의 상태 업데이트, 추가 로직 실행 등
@@ -971,7 +981,8 @@ void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
         //@선택된 옵션에 따라 해당 함수 호출
         if (CurrentSelectedDropDownMenuOptionName == "USE")
         {
-            UseItem(ItemCount);
+            //@TODO: Item 사용 작업 처리 예정
+            //UseItem(ItemCount);
         }
         else if (CurrentSelectedDropDownMenuOptionName == "LEAVE")
         {
@@ -1002,8 +1013,12 @@ void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
         //@확정 메뉴 닫기
         ConfirmationMenu->CloseConfirmationMenu();
 
-        //@드롭 다운 메뉴 리셋
-        ItemSlotDropDownMenu->ResetDropDownMenu();
+        //@드롭다운 메뉴 현재 선택된 Option의 상태를 Selected -> Hovered로 전환
+        ItemSlotDropDownMenu->ResetSelectedOptionToHovered();
+
+        //@드롭다운 메뉴 Set Focus
+        ItemSlotDropDownMenu->SetFocus();
+
 
         UE_LOGFMT(LogItemSlots, Verbose, "'{0}' 옵션의 Confirmation Menu가 닫혔습니다.", *CurrentSelectedDropDownMenuOptionName.ToString());
         return;
@@ -1103,14 +1118,18 @@ void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType 
         return;
     }
     //@FItemInformation
-    const FItemInformation* ItemInfo = ItemManager->GetItemInformation<FItemInformation>(Type, ItemTag);
-    if (!ItemInfo)
+    const FItemInformation* ItemInfoPtr = ItemManager->GetItemInformation<FItemInformation>(Type, ItemTag);
+    if (!ItemInfoPtr)
     {
         UE_LOGFMT(LogItemSlots, Error, "아이템 정보를 찾을 수 없습니다: {0}", ItemTag.ToString());
         return;
     }
+
+    // FItemInformation의 복사본 생성
+    FItemInformation ItemInfo = *ItemInfoPtr;
+
     //@Item Images
-    UTexture2D* ItemTexture = ItemInfo->ItemSlotImage.LoadSynchronous();
+    UTexture2D* ItemTexture = ItemInfo.ItemSlotImage.LoadSynchronous();
     //@Assign New Item
     EmptySlot->AssignNewItem(UniqueItemID, ItemInfo, 1);
     //@Enabled

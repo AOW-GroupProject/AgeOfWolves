@@ -65,11 +65,19 @@ public:
 #pragma region SubWidgets
 public:
 	//@퀵슬롯에 새로운 아이템을 할당합니다.
-	virtual void AssignNewItem(const FGuid& ID, const FItemInformation* ItemInformation, int32 ItemCount=-1);
+	UFUNCTION(BlueprintNativeEvent)
+		void AssignNewItem(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount = -1);
+	virtual void AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount=-1);
+
 	//@퀵슬롯에 할당된 기존 아이템 정보를 업데이트 합니다.
-	void UpdateItemCount(int32 NewCount);
+	UFUNCTION(BlueprintNativeEvent)
+		void UpdateItemCount(int32 NewCount);
+	virtual void UpdateItemCount_Implementation(int32 NewCount);
+
 	//@퀵슬롯에 할당된 기존 아이템을 제거합니다.
-	virtual void ClearAssignedItem(bool bForceClear = false);
+	UFUNCTION(BlueprintNativeEvent)
+		void ClearAssignedItem(bool bForceClear = false);
+	virtual void ClearAssignedItem_Implementation(bool bForceClear = false);
 
 protected:
 	//@Item Slot에 할당된 아이템의 고유 아이디(Inventory Component에서 발급)

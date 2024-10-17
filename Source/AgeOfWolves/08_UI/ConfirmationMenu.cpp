@@ -15,7 +15,10 @@ DEFINE_LOG_CATEGORY(LogConfirmationMenu)
 #pragma region Default Setting
 UConfirmationMenu::UConfirmationMenu(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
-{}
+{
+    CurrentHoveredConfirmationButton = nullptr;
+    CurrentSelectedConfirmationButton = nullptr;
+}
 
 void UConfirmationMenu::NativeOnInitialized()
 {
@@ -25,6 +28,9 @@ void UConfirmationMenu::NativeOnInitialized()
 void UConfirmationMenu::NativePreConstruct()
 {
     Super::NativePreConstruct();
+
+    //@Keyboard Focus 가능 여부
+    SetIsFocusable(true);
 }
 
 void UConfirmationMenu::NativeConstruct()
@@ -35,6 +41,70 @@ void UConfirmationMenu::NativeConstruct()
 void UConfirmationMenu::NativeDestruct()
 {
     Super::NativeDestruct();
+}
+
+FNavigationReply UConfirmationMenu::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+    return FNavigationReply::Explicit(nullptr);
+}
+
+FReply UConfirmationMenu::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
+{
+    //@Set Directly(SetFocus())를 통한 포커스 시도 외에 다른 시도는 허용하지 않습니다.
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+    {
+        return FReply::Handled().ClearUserFocus();
+    }
+
+    UE_LOGFMT(LogConfirmationMenu, Log, "포커스 : 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+
+    return FReply::Handled();
+}
+
+void UConfirmationMenu::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
+{
+    //@SetDirectly(SetFocus()) 혹은 Mouse를 통한 포커스 소실 외에 다른 시도는 허용하지 않습니다.
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+    {
+        //@Set Focus
+        SetFocus();
+
+        return;
+    }
+
+    Super::NativeOnFocusLost(InFocusEvent);
+
+    UE_LOGFMT(LogConfirmationMenu, Log, "포커스 종료: 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+}
+
+FReply UConfirmationMenu::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+    FKey Key = InKeyEvent.GetKey();
+
+    UE_LOGFMT(LogConfirmationMenu, Log, "키 입력 감지됨: {0}", Key.ToString());
+
+    //@방향키 조작
+    if (Key == EKeys::Left || Key == EKeys::Right)
+    {
+        //@좌우 방향키 조작 처리
+        HandleHorizontalDirectionalInput(Key == EKeys::Left ? -1 : 1);
+
+        return FReply::Handled();
+    }
+    else if (Key == EKeys::Enter)
+    {
+        //@Current Hovered Option 선택
+        SelectCurrentHoveredOptionByKeyboard();
+
+        return FReply::Handled();
+    }
+
+    UE_LOGFMT(LogConfirmationMenu, Log, "확정 메뉴에서 처리하지 않는 키 입력: {0}", Key.ToString());
+
+    //@이외 키 입력은 처리되지 않았고, 다른 UI에서 키 입력 처리를 막습니다.
+    return FReply::Handled();
 }
 
 void UConfirmationMenu::InternalBindToButton(UCustomButton* Button, FName MenuButtonName)
@@ -59,7 +129,6 @@ void UConfirmationMenu::InitializeConfirmationMenu()
     //@초기화 완료 이벤트
     ConfirmationMenuInitFinished.ExecuteIfBound();
 }
-
 #pragma endregion
 
 //@Property/Info...etc
@@ -67,13 +136,7 @@ void UConfirmationMenu::InitializeConfirmationMenu()
 void UConfirmationMenu::ResetConfirmationMenu()
 {
     //@Current Selected Confirmation Button
-    if (!CurrentSelectedConfirmationButton.Get())
-    {
-        return;
-    }
-
-    //@Cancel Confirmation Menu Button Selected
-    if (CurrentSelectedConfirmationButton.IsValid())
+    if (CurrentSelectedConfirmationButton.Get())
     {
         FName PreviousMenuButtonName;
         for (const auto& Pair : MConfirmationMenuButtons)
@@ -86,6 +149,24 @@ void UConfirmationMenu::ResetConfirmationMenu()
         }
         CancelConfirmationMenuButtonSelected(PreviousMenuButtonName);
     }
+
+    //@Current Hovered Confirmation Button
+    if (CurrentHoveredConfirmationButton.Get())
+    {
+        //@Cancel Hovered Menu Button Selected
+        FName PreviousMenuButtonName;
+        for (const auto& Pair : MConfirmationMenuButtons)
+        {
+            if (Pair.Value == CurrentHoveredConfirmationButton)
+            {
+                PreviousMenuButtonName = Pair.Key;
+                break;
+            }
+        }
+        CancelConfirmationMenuButtonSelected(PreviousMenuButtonName);
+        
+    }
+
 }
 
 void UConfirmationMenu::CreateButton()
@@ -177,13 +258,34 @@ void UConfirmationMenu::CreateButton()
 
 void UConfirmationMenu::OpenConfirmationMenu_Implementation()
 {
+
+    UE_LOGFMT(LogConfirmationMenu, Verbose, "Confirmation Menu 열기 완료");
+
+    //@첫 번째 버튼(OK 버튼)의 Hover 상태 전환
+    UCustomButton* OkButton = MConfirmationMenuButtons.FindRef(FName("OK"));
+    if (!OkButton)
+    {
+        UE_LOGFMT(LogConfirmationMenu, Error, "OK 버튼을 찾을 수 없습니다.");
+        return;
+    }
+
+    //@Keyboard 조작에 의한 Hover 상태로 전환
+    if (!OkButton->SetButtonHoveredByKeyboard())
+    {
+        UE_LOGFMT(LogConfirmationMenu, Warning, "OK 버튼을 Hover 상태로 설정하는 데 실패했습니다.");
+    }
+
     //@화면에 Confirmation Menu를 표시
     AddToViewport(200);
 
+    //@Set Foucs
+    SetFocus();
+
+    UE_LOGFMT(LogConfirmationMenu, Log, "OK 버튼이 Hover 상태로 설정되었습니다.");
+
     //@Animation 작업 등 블루프린트에서 오버라이딩...
 
-    UE_LOGFMT(LogConfirmationMenu, Verbose, "Confirmation Menu 열기 완료. 추가 애니메이션은 블루프린트에서 처리될 수 있습니다.");
-
+    UE_LOGFMT(LogConfirmationMenu, Verbose, "Confirmation Menu 열기 및 초기 설정 완료. 추가 애니메이션은 블루프린트에서 처리될 수 있습니다.");
 }
 
 void UConfirmationMenu::CloseConfirmationMenu_Implementation()
@@ -198,6 +300,53 @@ void UConfirmationMenu::CloseConfirmationMenu_Implementation()
 
     UE_LOGFMT(LogConfirmationMenu, Verbose, "Confirmation Menu 닫기 완료. 추가 애니메이션은 블루프린트에서 처리될 수 있습니다.");
 
+}
+
+void UConfirmationMenu::HandleHorizontalDirectionalInput(int32 Direction)
+{
+    TArray<FName> ButtonNames = { FName("OK"), FName("CANCEL") };
+    int32 CurrentIndex = ButtonNames.IndexOfByPredicate([this](const FName& Name) {
+        return MConfirmationMenuButtons[Name] == CurrentHoveredConfirmationButton.Get();
+        });
+
+    int32 NewIndex = (CurrentIndex + Direction + ButtonNames.Num()) % ButtonNames.Num();
+    FName NewButtonName = ButtonNames[NewIndex];
+
+    //@이전 Hover 상태 취소
+    if (CurrentHoveredConfirmationButton.IsValid())
+    {
+        CurrentHoveredConfirmationButton->CancelSelectedButton();
+    }
+
+    //@새로운 버튼 Hover 상태로 설정
+    UCustomButton* NewButton = MConfirmationMenuButtons[NewButtonName];
+    if (!NewButton)
+    {
+
+        return;
+    }
+
+    if (!NewButton->SetButtonHoveredByKeyboard())
+    {
+
+        return;
+    }
+
+    //@Current Hovered Confirmation Button 업데이트
+    CurrentHoveredConfirmationButton = NewButton;
+}
+
+void UConfirmationMenu::SelectCurrentHoveredOptionByKeyboard()
+{
+    if (!CurrentHoveredConfirmationButton.IsValid())
+    {
+        return;
+    }
+
+    if (!CurrentHoveredConfirmationButton->SetButtonSelectedByKeyboard())
+    {
+        return;
+    }
 }
 #pragma endregion
 
@@ -225,15 +374,77 @@ void UConfirmationMenu::OnConfirmationMenuButtonClicked_Implementation(EInteract
 
 void UConfirmationMenu::OnConfirmationMenuButtonHovered_Implementation(EInteractionMethod InteractionMethodType, FName MenuButtonName)
 {
-    UE_LOGFMT(LogConfirmationMenu, Log, "{0} 버튼에 마우스가 올라갔습니다.", *MenuButtonName.ToString());
-    // TODO: Hover 상태 처리
+    //@호버된 Confirmation Menu Button 가져오기
+    UCustomButton* HoveredButton = MConfirmationMenuButtons.FindRef(MenuButtonName);
+    if (!HoveredButton)
+    {
+        UE_LOGFMT(LogConfirmationMenu, Warning, "호버된 버튼을 찾을 수 없습니다: {0}", MenuButtonName.ToString());
+        return;
+    }
+
+    //@현재 호버된 버튼과 새로 호버된 버튼이 같은 경우 처리 중단
+    if (CurrentHoveredConfirmationButton.IsValid() && CurrentHoveredConfirmationButton.Get() == HoveredButton)
+    {
+        UE_LOGFMT(LogConfirmationMenu, Verbose, "이미 호버된 버튼입니다. 처리를 무시합니다: {0}", MenuButtonName.ToString());
+        return;
+    }
+
+    //@이전 호버 상태 취소
+    if (CurrentHoveredConfirmationButton.IsValid())
+    {
+        FName PreviousButtonName;
+        for (const auto& Pair : MConfirmationMenuButtons)
+        {
+            if (Pair.Value == CurrentHoveredConfirmationButton)
+            {
+                PreviousButtonName = Pair.Key;
+                break;
+            }
+        }
+        CancelConfirmationMenuButtonSelected(PreviousButtonName);
+        UE_LOGFMT(LogConfirmationMenu, Log, "이전에 호버된 버튼 취소: {0}", PreviousButtonName.ToString());
+    }
+
+    //@새로운 호버 버튼 설정
+    CurrentHoveredConfirmationButton = HoveredButton;
+
+    UE_LOGFMT(LogConfirmationMenu, Log, "새로운 버튼이 호버됨: {0}", MenuButtonName.ToString());
+
+    //@TODO: 필요한 경우 여기에 추가 동작 구현
+    // 예: 호버된 버튼의 시각적 상태 변경, 버튼 정보 표시 등
+
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 }
 
 void UConfirmationMenu::OnConfirmationMenuButtonUnhovered_Implementation(FName MenuButtonName)
 {
-    UE_LOGFMT(LogConfirmationMenu, Log, "{0} 버튼에서 마우스가 벗어났습니다.", *MenuButtonName.ToString());
-    // TODO: Unhover 상태 처리
+    UE_LOGFMT(LogConfirmationMenu, Log, "확정 메뉴 버튼 언호버됨: 버튼 {0}", MenuButtonName.ToString());
+
+    //@Current Hovered Button
+    if (CurrentHoveredConfirmationButton.IsValid())
+    {
+        FName CurrentHoveredButtonName;
+        for (const auto& Pair : MConfirmationMenuButtons)
+        {
+            if (Pair.Value == CurrentHoveredConfirmationButton)
+            {
+                CurrentHoveredButtonName = Pair.Key;
+                break;
+            }
+        }
+
+        if (CurrentHoveredButtonName != MenuButtonName)
+        {
+            UE_LOGFMT(LogConfirmationMenu, Verbose, "언호버된 버튼이 현재 호버된 버튼과 일치하지 않음: 버튼 {0}", MenuButtonName.ToString());
+            return;
+        }
+
+        CurrentHoveredConfirmationButton.Reset();
+
+        UE_LOGFMT(LogConfirmationMenu, Verbose, "현재 호버된 버튼 리셋됨: 버튼 {0}", MenuButtonName.ToString());
+    }
+
+    //@TODO: Unhover 상태 처리
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 }
 
@@ -260,50 +471,55 @@ void UConfirmationMenu::SetConfirmationMenuDialogueText(FText Text)
 {
     if (!ConfirmationMenuDialogue)
     {
-        UE_LOGFMT(LogConfirmationMenu, Warning, "ConfirmationMenuDialogue가 유효하지 않습니다!");
-        return; 
+        UE_LOGFMT(LogConfirmationMenu, Error, "ConfirmationMenuDialogue가 유효하지 않습니다!");
+        return;
     }
-    
-    //@Set Text
-    ConfirmationMenuDialogue->SetText(ArrangeDialogueText(Text));
 
+    FText ArrangedText = ArrangeDialogueText(Text);
+    ConfirmationMenuDialogue->SetText(ArrangedText);
+
+    UE_LOGFMT(LogConfirmationMenu, Verbose, "ConfirmationMenu 대화 텍스트가 설정되었습니다.");
 }
 
 FText UConfirmationMenu::GetConfirmationMenuDialogueText() const
 {
-    if (ConfirmationMenuDialogue)
+    if (!ConfirmationMenuDialogue)
     {
-        return ConfirmationMenuDialogue->GetText();
+        UE_LOGFMT(LogConfirmationMenu, Error, "ConfirmationMenuDialogue가 유효하지 않습니다!");
+        return FText::GetEmpty();
     }
-    return FText::GetEmpty();
+
+    return ConfirmationMenuDialogue->GetText();
 }
 
 FText UConfirmationMenu::ArrangeDialogueText(FText Text)
 {
-    //@FText를 FString으로 변환
     FString String = Text.ToString();
 
-    //@'.'을 기준으로 문자열 분리
+    UE_LOGFMT(LogConfirmationMenu, Log, "새로운 Dialogue Text : {0}", String);
+
     TArray<FString> Sentences;
     String.ParseIntoArray(Sentences, TEXT("."), true);
 
-    //@각 문장에 개행 추가 및 재결합
     FString FormattedDescription;
     for (int32 i = 0; i < Sentences.Num(); ++i)
     {
         FormattedDescription += Sentences[i].TrimStart().TrimEnd();
-        if (i < Sentences.Num() - 1)  // 마지막 문장이 아니면 '.'과 개행 추가
+        if (i < Sentences.Num() - 1)
         {
             FormattedDescription += TEXT(".\n");
         }
-        else if (i == Sentences.Num() - 1 && !Sentences[i].IsEmpty())  // 마지막 문장이면서 비어있지 않으면 '.'만 추가
+        else if (i == Sentences.Num() - 1 && !Sentences[i].IsEmpty())
         {
             FormattedDescription += TEXT(".");
         }
     }
 
-    //@FString을 FText로 변환하여 반환
+    if (FormattedDescription.IsEmpty())
+    {
+        UE_LOGFMT(LogConfirmationMenu, Warning, "ArrangeDialogueText: 포맷된 설명이 비어있습니다.");
+    }
+
     return FText::FromString(FormattedDescription);
 }
 #pragma endregion
-

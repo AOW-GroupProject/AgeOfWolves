@@ -115,16 +115,16 @@ void UItemDescriptionSlot::ResetItemDescriptionSlot()
     }
 }
 
-void UItemDescriptionSlot::AssignNewItem(const FGuid& ID, const FItemInformation* ItemInformation, int32 ItemCount)
+void UItemDescriptionSlot::AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount)
 {
     //@Unique Item ID
     UniqueItemID = ID;
     //@Slot Itme Image
-    SetSlotImage(ItemInformation->ItemImage);
+    SetSlotImage(ItemInformation.ItemImage);
     //@Item Name Text Block
-    ItemNameTextBox->SetText(FText::FromString(ItemInformation->ItemName));
+    ItemNameTextBox->SetText(FText::FromString(ItemInformation.ItemName));
     //@Item Descrption Text Block
-    ItemDescriptionTextBox->SetText(FText::FromString(ArrangeItemDescriptionStringToText(ItemInformation->ItemDescription)));
+    ItemDescriptionTextBox->SetText(FText::FromString(ArrangeItemDescriptionStringToText(ItemInformation.ItemDescription)));
 
     UE_LOGFMT(LogItemSlot, Log, "새 아이템이 아이템 슬롯에 할당되었습니다. ID: {0}", UniqueItemID.ToString());
 }
@@ -293,9 +293,12 @@ void UItemDescriptionSlot::OnItemSlotButtonHovered_Implementation(const FGuid& I
 {
     UE_LOGFMT(LogItemDescription, Log, "아이템 슬롯 호버: ID {0}", ID.ToString());
 
-    const FItemInformation* ItemInfo = MItemsInInventoryItemSlots.Find(ID);
-    if (ItemInfo)
+    const FItemInformation* ItemInfoPtr = MItemsInInventoryItemSlots.Find(ID);
+    if (ItemInfoPtr)
     {
+        // FItemInformation의 복사본 생성
+        FItemInformation ItemInfo = *ItemInfoPtr;
+
         // 새 아이템 할당
         AssignNewItem(ID, ItemInfo);
 
@@ -303,7 +306,7 @@ void UItemDescriptionSlot::OnItemSlotButtonHovered_Implementation(const FGuid& I
         SetVisibility(ESlateVisibility::HitTestInvisible);
 
         UE_LOGFMT(LogItemDescription, Log, "아이템 설명 UI에 새 아이템 할당: ID {0}, 이름 {1}, 등급 {2}",
-            ID.ToString(), *ItemInfo->ItemName, *UEnum::GetValueAsString(ItemInfo->ItemRank));
+            ID.ToString(), *ItemInfo.ItemName, *UEnum::GetValueAsString(ItemInfo.ItemRank));
     }
     else
     {

@@ -194,10 +194,6 @@ protected:
     //@확정 메뉴 클래스
     UPROPERTY(EditDefaultsOnly, category = "Inventory Content UI | Confirmation Menu")
         TSubclassOf<UConfirmationMenu> ConfirmationMenuClass;
-
-protected:
-    //@현재 Item Slots의 포커스 여부
-    bool bIsFocused = false;
 #pragma endregion
 
 //@Delegates
@@ -255,7 +251,7 @@ protected:
 
     //@아이템 슬롯 메뉴의 옵션 선택 이벤트 구독
     UFUNCTION()
-        void OnItemSlotDropDownMenuOptionSelected(const FName& ItemSlotDropDownMenuOptionName);
+        void OnItemSlotDropDownMenuOptionSelected(FName ItemSlotDropDownMenuOptionName);
 
 protected:
     //@확정 메뉴의 옵션 선택 이벤트 구독

@@ -85,6 +85,11 @@ protected:
     //@CustomButton 생성
     void CreateButton();
 
+protected:
+    virtual void AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount = -1) override;
+    virtual void UpdateItemCount_Implementation(int32 NewCount) override;
+    virtual void ClearAssignedItem_Implementation(bool bForceClear = false) override;
+
 public:
     //@아이템 슬롯 버튼 활성화 함수
     UFUNCTION(BlueprintCallable, Category = "Item Slot | Button")

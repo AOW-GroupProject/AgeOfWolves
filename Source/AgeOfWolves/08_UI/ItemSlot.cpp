@@ -70,24 +70,24 @@ void UItemSlot::InitializeItemSlot()
 
 //@Property/Info...etc
 #pragma region SubWidgets
-void UItemSlot::AssignNewItem(const FGuid& ID, const FItemInformation* ItemInformation, int32 ItemCount)
+void UItemSlot::AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount)
 {
     //@Unique Item ID
     UniqueItemID = ID;
     //@bRemovable
-    bRemovable = ItemInformation->bRemovable;
+    bRemovable = ItemInformation.bRemovable;
     //@Slot Itme Image
-    SetSlotImage(ItemInformation->ItemSlotImage);
+    SetSlotImage(ItemInformation.ItemSlotImage);
     //@bStackable
-    SetIsStackable(ItemInformation->bStackable);
+    SetIsStackable(ItemInformation.bStackable);
     //@ItemCount
     UpdateItemCount(ItemCount);
 
     UE_LOGFMT(LogItemSlot, Log, "새 아이템이 아이템 슬롯에 할당되었습니다. ID: {0}, 갯수: {1}, 제거가능: {2}, 스택가능: {3}",
-        UniqueItemID.ToString(), ItemCount, ItemInformation->bRemovable ? TEXT("Yes") : TEXT("No"), ItemInformation->bStackable ? TEXT("Yes") : TEXT("No"));
+        UniqueItemID.ToString(), ItemCount, ItemInformation.bRemovable ? TEXT("Yes") : TEXT("No"), ItemInformation.bStackable ? TEXT("Yes") : TEXT("No"));
 }
 
-void UItemSlot::UpdateItemCount(int32 NewCount)
+void UItemSlot::UpdateItemCount_Implementation(int32 NewCount)
 {
     //@Item Count
     SetSlotItemNum(NewCount);
@@ -96,7 +96,7 @@ void UItemSlot::UpdateItemCount(int32 NewCount)
         UniqueItemID.ToString(), NewCount);
 }
 
-void UItemSlot::ClearAssignedItem(bool bForceClear)
+void UItemSlot::ClearAssignedItem_Implementation(bool bForceClear)
 {
     if (bForceClear || bRemovable)
     {

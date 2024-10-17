@@ -308,23 +308,26 @@ void UQuickSlots::OnQuickSlotItemsLoaded(int32 SlotNum, const FGuid& UniqueItemI
     UItemManagerSubsystem* ItemManager = GetWorld()->GetGameInstance()->GetSubsystem<UItemManagerSubsystem>();
     if (ItemManager)
     {
-        const FItemInformation* ItemInfo = ItemManager->GetItemInformation<FItemInformation>(ItemType, ItemTag);
-        if (!ItemInfo)
+        const FItemInformation* ItemInfoPtr = ItemManager->GetItemInformation<FItemInformation>(ItemType, ItemTag);
+        if (!ItemInfoPtr)
         {
             UE_LOGFMT(LogQuickSlots, Error, "아이템 정보를 찾을 수 없습니다: {0}", ItemTag.ToString());
             return;
         }
 
-        UTexture2D* ItemTexture = ItemInfo->ItemSlotImage.LoadSynchronous();
+
+        UTexture2D* ItemTexture = ItemInfoPtr->ItemSlotImage.LoadSynchronous();
         if (!ItemTexture)
         {
             UE_LOGFMT(LogQuickSlots, Warning, "아이템 이미지를 로드할 수 없습니다: {0}", ItemTag.ToString());
         }
 
+        FItemInformation ItemInfo = *ItemInfoPtr;
+
         // QuickSlot에 새 아이템 할당
         TargetQuickSlot->AssignNewItem(UniqueItemID, ItemInfo, ItemCount);
 
-        UE_LOGFMT(LogQuickSlots, Log, "퀵슬롯 {0}번에 아이템이 성공적으로 할당되었습니다: {1}", SlotNum, ItemInfo->ItemName);
+        UE_LOGFMT(LogQuickSlots, Log, "퀵슬롯 {0}번에 아이템이 성공적으로 할당되었습니다: {1}", SlotNum, ItemInfo.ItemName);
     }
 }
 

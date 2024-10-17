@@ -16,7 +16,7 @@ UDropDownMenu::UDropDownMenu(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
 {
     DropDownMenuOptionBox = nullptr;
-    CurrentSelectedOption = FName();
+    CurrentSelectedOptionName = FName();
 }
 
 void UDropDownMenu::NativeOnInitialized()
@@ -106,8 +106,6 @@ void UDropDownMenu::InternalBindToOptions(UDropDownMenuOption* Option, const FNa
         Option->DropDownMenuOptionInitFinished.BindUFunction(this, "OnDropDownMenuOptionInitFinished");
     }
 
-    Option->DropDownMenuOptionSelected.AddUFunction(this, "OnDropDownMenuOptionSelected");
-
     UE_LOGFMT(LogDropDownMenu, Verbose, "Option({0})에 대한 내부 바인딩 완료", *OptionName.ToString());
 }
 
@@ -115,8 +113,6 @@ void UDropDownMenu::InitializeDropDownMenu()
 {
     //@Create Options
     CreateDropDownMenuOptions();
-    //@Close, 게임 시작 시점엔 우선 숨겨줍니다.
-    CloseDropDownMenu();
     //@초기화 요청 이벤트
     RequestStartInitByDropDownMenu.Broadcast();
 }
@@ -140,16 +136,15 @@ void UDropDownMenu::ResetDropDownMenu()
 {
     //@TODO: Drop Donw Menu의 초기 설정에 필요한 동작들...
 
-
     //@이전에 선택된 옴션 버튼의 선택 취소 이벤트
-    if (!CurrentSelectedOption.IsNone())
+    if (!CurrentSelectedOptionName.IsNone())
     {
         //@이전 선택된 옵션의 버튼 선택 취소 이벤트
-        FName PrevSelectedOption = CurrentSelectedOption;
+        FName PrevSelectedOption = CurrentSelectedOptionName;
         CancelDropDownMenuOptionButton.Broadcast(PrevSelectedOption);
 
         //@Current Selected Option
-        CurrentSelectedOption = FName();
+        CurrentSelectedOptionName = FName();
 
         UE_LOGFMT(LogDropDownMenu, Log, "이전에 선택된 옵션 취소: {0}", PrevSelectedOption.ToString());
     }
@@ -290,16 +285,16 @@ void UDropDownMenu::OnDropDownMenuOptionSelected_Implementation(FName SelectedOp
     UE_LOGFMT(LogDropDownMenu, Log, "드롭다운 메뉴 옵션 선택됨: {0}", SelectedOptionName.ToString());
 
     //@이미 선택된 옵션을 한번 더 선택했을 경우, 무시
-    if (CurrentSelectedOption == SelectedOptionName)
+    if (CurrentSelectedOptionName == SelectedOptionName)
     {
         UE_LOGFMT(LogDropDownMenu, Log, "이미 선택된 옵션입니다. 처리를 무시합니다: {0}", SelectedOptionName.ToString());
         return;
     }
 
     //@이전에 선택된 옴션 버튼의 선택 취소 이벤트
-    if (!CurrentSelectedOption.IsNone())
+    if (!CurrentSelectedOptionName.IsNone())
     {
-        FName PrevSelectedOption = CurrentSelectedOption;
+        FName PrevSelectedOption = CurrentSelectedOptionName;
         CancelDropDownMenuOptionButton.Broadcast(PrevSelectedOption);
 
         UE_LOGFMT(LogDropDownMenu, Log, "이전에 선택된 옵션 취소: {0}", PrevSelectedOption.ToString());
@@ -318,7 +313,7 @@ void UDropDownMenu::OnDropDownMenuOptionSelected_Implementation(FName SelectedOp
     }
 
     //@Current Selected Option
-    CurrentSelectedOption = SelectedOptionName;
+    CurrentSelectedOptionName = SelectedOptionName;
     UE_LOGFMT(LogDropDownMenu, Log, "새로운 옵션이 선택됨: {0}", SelectedOptionName.ToString());
 
     //@옵션 버튼 선택 이벤트 호출
@@ -345,7 +340,7 @@ UDropDownMenuOption* UDropDownMenu::GetDropDownMenuOptionByName(const FName& Opt
 
 FName UDropDownMenu::GetOptionName() const
 {
-    return CurrentSelectedOption;
+    return CurrentSelectedOptionName;
 }
 
 const FText UDropDownMenu::GetConfirmationMenuDialogueText(const FName& Name) const
