@@ -25,6 +25,9 @@ DECLARE_DELEGATE(FMenuUIInitFinished)
 
 //@Inventory UI 초기화 완료 알림 이벤트
 DECLARE_DELEGATE(FNotifyInventoryUIInitFinished);
+
+//@Menu UI 닫기 요청 이벤트
+DECLARE_DELEGATE(FRequestCloseMenuUI);
 #pragma endregion
 
 #pragma region Enums
@@ -182,6 +185,10 @@ public:
 public:
     //@Inventory UI의 초기화 완료 이벤트
     FNotifyInventoryUIInitFinished NotifyInventoryUIInitFinished;
+
+public:
+    //@Menu UI 닫기 요청 이벤트
+    FRequestCloseMenuUI RequestCloseMenuUI;
 #pragma endregion
 
 #pragma region Callbacks

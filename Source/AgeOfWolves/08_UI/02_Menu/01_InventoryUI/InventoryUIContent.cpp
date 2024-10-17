@@ -133,13 +133,23 @@ FReply UInventoryUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const F
     }
     else if (Key == EKeys::Escape)
     {
-        //@Set Focus
-        SetFocus();
+        //@Current Item Slots
+        UItemSlots* CurrentItemSlots = Cast<UItemSlots>(GetItemSlotsUI(CurrentItemType));
+        if (CurrentItemSlots && CurrentItemSlots->HasKeyboardFocus())
+        {
+            //@Set Focus
+            SetFocus();
 
-        //@Request Cancel Current Hovered Item Slot or Current Selected Item Slot
-        RequestCancelCurrentHoveredItemSlot.Broadcast(CurrentItemType);
+            //@Request Cancel Current Hovered Item Slot or Current Selected Item Slot
+            RequestCancelCurrentHoveredItemSlot.Broadcast(CurrentItemType);
 
-        return FReply::Handled();
+            return FReply::Handled();
+        }
+        else
+        {
+            // ItemSlots에 포커스가 없으면 상위 위젯에서 처리하도록 Unhandled 반환
+            return FReply::Unhandled();
+        }
     }
 
     UE_LOGFMT(LogInventoryUIContent, Log, "Inventory UI에서 처리하지 않는 키 입력: {0}", *Key.ToString());

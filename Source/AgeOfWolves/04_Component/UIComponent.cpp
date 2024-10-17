@@ -113,8 +113,10 @@ void UUIComponent::InternalBindToMenuUI()
 
 	//@TODO: LevelUI, MapUI, SystemUI의 초기화 완료 이벤트에 바인딩 수행...
 
+	//@내부 바인딩
 	MenuUIRef->MenuUIInitFinished.BindUFunction(this, "OnMenuUIInitFinished");
 	MenuUIRef->NotifyInventoryUIInitFinished.BindUFunction(this, "InventoryUIInitFinishedNotified");
+	MenuUIRef->RequestCloseMenuUI.BindUFunction(this, "OnRequestCloseMenuUI");
 }
 
 void UUIComponent::InitializeUIComponent()
@@ -560,32 +562,6 @@ void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
 
 		}
 	}
-	//@MenuUI IMC
-	else if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.MenuUI")))
-	{
-		//@Close Menu UI
-		if (InputTag == FGameplayTag::RequestGameplayTag(FName("Input.UI.CloseMenuUI")))
-		{
-			//@Hide Menu UI
-			HideAllUI(EUICategory::Menu);
-
-			//@Request IMC Swapping(PlayerOnGround <- MenuUI)
-			RequestSwapIMC.ExecuteIfBound(FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")));
-			
-			//@Show HUD
-			ShowAllUI(EUICategory::HUD);
-			
-			//@Interaction
-			ShowAllUI(EUICategory::Interaction);
-
-			//@Input Mode를 UIOnly -> GameAndUI로 변경
-			if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
-			{
-				PC->bShowMouseCursor = false;
-				PC->SetInputMode(FInputModeGameAndUI());
-			}
-		}
-	}
 }
 
 void UUIComponent::OnUIInputReleased(const FGameplayTag& InputTag)
@@ -613,6 +589,28 @@ void UUIComponent::OnUIInputReleased(const FGameplayTag& InputTag)
 		{
 			NotifyMenuUIInputReleased.ExecuteIfBound(InputTag);
 		}
+	}
+}
+
+void UUIComponent::OnRequestCloseMenuUI()
+{
+	//@Hide Menu UI
+	HideAllUI(EUICategory::Menu);
+
+	//@Request IMC Swapping(PlayerOnGround <- MenuUI)
+	RequestSwapIMC.ExecuteIfBound(FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")));
+
+	//@Show HUD
+	ShowAllUI(EUICategory::HUD);
+
+	//@Interaction
+	ShowAllUI(EUICategory::Interaction);
+
+	//@Input Mode를 UIOnly -> GameAndUI로 변경
+	if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
+	{
+		PC->bShowMouseCursor = false;
+		PC->SetInputMode(FInputModeGameAndUI());
 	}
 }
 #pragma endregion

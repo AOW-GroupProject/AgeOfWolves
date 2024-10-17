@@ -115,9 +115,11 @@ FReply UMenuUI::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& In
 
         return FReply::Handled();
     }
-    else if (KeyName == "esc")
+    else if (KeyName == "escape")
     {
         //@TODO: Menu UI 닫기
+        RequestCloseMenuUI.ExecuteIfBound();
+
         return FReply::Handled();
     }
     else if (KeyName == "i")

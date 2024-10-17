@@ -204,6 +204,11 @@ protected:
 	//@UI Input Tag 해제 이벤트 구독
 	UFUNCTION()
 		void OnUIInputReleased(const FGameplayTag& InputTag);
+
+protected:
+	UFUNCTION()
+		void OnRequestCloseMenuUI();
+
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
