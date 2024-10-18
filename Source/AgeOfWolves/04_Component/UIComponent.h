@@ -206,9 +206,9 @@ protected:
 		void OnUIInputReleased(const FGameplayTag& InputTag);
 
 protected:
+	//@Menu UI 키 입력을 통한 Menu UI 닫기 요청 이벤트 구독
 	UFUNCTION()
 		void OnRequestCloseMenuUI();
-
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

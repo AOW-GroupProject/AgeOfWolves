@@ -103,7 +103,7 @@ FReply UInventoryUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const F
         InventoryToolBar->MoveRight();
         return FReply::Handled();
     }
-    else if (Key == EKeys::Enter)
+    else if (Key == EKeys::Enter || Key == EKeys::Down)
     {
         //@Current Item Slots
         UItemSlots* CurrentItemSlots = Cast<UItemSlots>(GetItemSlotsUI(CurrentItemType));

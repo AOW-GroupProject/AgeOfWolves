@@ -17,8 +17,24 @@ DEFINE_LOG_CATEGORY(LogMenuUI)
 //@Defualt Setting
 #pragma region Default Setting
 UMenuUI::UMenuUI(const FObjectInitializer& ObjectInitializer)
-    :Super(ObjectInitializer)
-{}
+    : Super(ObjectInitializer)
+    , DefaultCategory(EMenuCategory::Inventory)
+    , CurrentCategory(EMenuCategory::MAX)
+    , bMenuToolBarInitFinished(false)
+    , bInventoryUIInitFinished(false)
+    , bLevelUIInitFinished(false)
+    , bMapUIInitFinished(false)
+    , bSystemUIInitFinished(false)
+{
+    //@ToolBar 초기화
+    ToolBarRef = nullptr;
+
+    //@MMenuContents 맵 초기화
+    for (uint8 i = 0; i < static_cast<uint8>(EMenuCategory::MAX); ++i)
+    {
+        MMenuContents.Add(static_cast<EMenuCategory>(i), nullptr);
+    }
+}
 
 void UMenuUI::NativeOnInitialized()
 {
@@ -33,13 +49,13 @@ void UMenuUI::NativeOnInitialized()
 void UMenuUI::NativePreConstruct()
 {
     Super::NativePreConstruct();
+
+    SetIsFocusable(true);
 }
 
 void UMenuUI::NativeConstruct()
 {
     Super::NativeConstruct();
-
-    SetIsFocusable(true);
 }
 
 void UMenuUI::NativeDestruct()
@@ -69,7 +85,7 @@ FReply UMenuUI::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusE
 
 void UMenuUI::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
 {
-
+    //@SetDirectly(다른 UI에 대한 SetFocus() 호출)에 의한 포커스 소실 외에 다른 소실 원인은 거부합니다.
     if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
     {
         SetFocus();
@@ -117,7 +133,7 @@ FReply UMenuUI::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& In
     }
     else if (KeyName == "escape")
     {
-        //@TODO: Menu UI 닫기
+        //@Menu UI 닫기 요청 이벤트
         RequestCloseMenuUI.ExecuteIfBound();
 
         return FReply::Handled();
@@ -203,7 +219,6 @@ void UMenuUI::InitializeMenuUI()
     //@초기화 요청 이벤트 호
     RequestStartInitByMenuUI.Broadcast();
 }
-
 void UMenuUI::CheckAllUIsInitFinsiehd()
 {
     if (bMenuToolBarInitFinished
@@ -262,6 +277,7 @@ void UMenuUI::CheckSystemUIInitFinished()
         //@이벤트 호출...
     }
 }
+
 #pragma endregion
 
 //@Property/Info...etc
@@ -332,14 +348,19 @@ void UMenuUI::CreateToolBar()
     }
     //@초기화 요청 이벤트
     RequestStartInitByMenuUI.AddUFunction(ToolBar, "InitializeToolBar");
+
     //@내부 바인딩
     InternalBindingToToolBar(ToolBar);
+
     //@Alignment
     if(UOverlaySlot* OverlaySlot = ToolBarOverlay->AddChildToOverlay(ToolBar))
     {
         OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
         OverlaySlot->SetVerticalAlignment(VAlign_Fill);
     }
+
+    //@TWeakObjectPtr
+    ToolBarRef = ToolBar;
 
     UE_LOGFMT(LogMenuUI, Log, "ToolBar가 성공적으로 생성되고 ToolBarOverlay에 추가되었습니다.");
 }
@@ -352,23 +373,18 @@ void UMenuUI::CreateAllCategoryUIs()
         UE_LOGFMT(LogMenuUI, Error, "MenuUIContentOverlay가 유효하지 않습니다.");
         return;
     }
-    //@TSet
-    TSet<EMenuCategory> CreatedCategories;
+
     //@Menu Content
-    for (const FMenuUIContentInfo& ContentUI : MenuContent)
+    for (const FMenuUIContentInfo& ContentUI : MenuContents)
     {
-        //@Contains
-        if (CreatedCategories.Contains(ContentUI.MenuCategory))
-        {
-            UE_LOGFMT(LogMenuUI, Warning, "{0} 카테고리의 MenuUIContent가 이미 생성되었습니다. 중복 생성을 건너뜁니다.", *UEnum::GetValueAsString(ContentUI.MenuCategory));
-            continue;
-        }
+
         //@MenuUIContentClass
         if (!ContentUI.MenuUIContentClass)
         {
             UE_LOGFMT(LogMenuUI, Warning, "{0} 카테고리의 MenuUIContentClass가 설정되지 않았습니다.", *UEnum::GetValueAsString(ContentUI.MenuCategory));
             continue;
         }
+
         //@MenuUIContent
         UMenuUIContent* NewContent = CreateWidget<UMenuUIContent>(this, ContentUI.MenuUIContentClass);
         if (!NewContent)
@@ -393,22 +409,10 @@ void UMenuUI::CreateAllCategoryUIs()
             OverlaySlot->SetVerticalAlignment(VAlign_Fill);
         }
 
-        //@TSet
-        CreatedCategories.Add(ContentUI.MenuCategory);
-
         UE_LOGFMT(LogMenuUI, Log, "{0} 카테고리의 MenuUIContent가 성공적으로 생성되고 MenuUIContentOverlay에 추가되었습니다.",
             *UEnum::GetValueAsString(ContentUI.MenuCategory));
     }
 
-    //@생성에 실패한 Category의 콘텐츠
-    for (uint8 i = 0; i < static_cast<uint8>(EMenuCategory::MAX); ++i)
-    {
-        EMenuCategory Category = static_cast<EMenuCategory>(i);
-        if (!CreatedCategories.Contains(Category))
-        {
-            UE_LOGFMT(LogMenuUI, Warning, "{0} 카테고리의 MenuUIContent가 생성되지 않았습니다.", *UEnum::GetValueAsString(Category));
-        }
-    }
 }
 
 void UMenuUI::SetCategoryVisibility(EMenuCategory Category, bool bVisible)

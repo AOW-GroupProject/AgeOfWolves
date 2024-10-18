@@ -71,25 +71,60 @@ void UInventoryToolBar::InitializeInventoryToolBar()
 void UInventoryToolBar::ResetToolBar()
 {
     EItemType PreviousType = CurrentSelectedItemType;
-    CurrentSelectedItemType = DefaultItemType;
 
-    if (PreviousType < EItemType::MAX && PreviousType != DefaultItemType)
+    //@최소 Reset 호출 시
+    if (CurrentSelectedItemType == EItemType::MAX)
     {
-        CancelInventoryToolBarButtonSelected(PreviousType);
+        //@Current Item Type
+        CurrentSelectedItemType = DefaultItemType;
+
+        //@Button
+        UCustomButton* DefaultButton = MItemTypeButtons.FindRef(DefaultItemType);
+        if (!DefaultButton)
+        {
+            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
+            return;
+        }
+
+        //@Set Button Selected By Keyboard
+        if (!DefaultButton->SetButtonSelectedByKeyboard())
+        {
+            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 Selected로 초기화하는데 실패했습니다.");
+            return;
+        }
+
+        //@버튼 클릭 이벤트
+        InventoryToolBarButtonClicked.ExecuteIfBound(CurrentSelectedItemType);
+    }
+    else
+    {
+        //@Current Item Type != Default Item Type
+        if (PreviousType != DefaultItemType)
+        {
+            CancelInventoryToolBarButtonSelected(PreviousType);
+        }
+
+        //@Current Selected Item Type
+        CurrentSelectedItemType = DefaultItemType;
+
+        //@Button
+        UCustomButton* DefaultButton = MItemTypeButtons.FindRef(CurrentSelectedItemType);
+        if (!DefaultButton)
+        {
+            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
+            return;
+        }
+
+        //@Set Button Selected By Keyboard
+        if (!DefaultButton->SetButtonSelectedByKeyboard())
+        {
+            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 Selected로 초기화하는데 실패했습니다.");
+            return;
+        }
     }
 
-    UCustomButton* DefaultButton = MItemTypeButtons[CurrentSelectedItemType];
-    if (!DefaultButton)
-    {
-        UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
-        return;
-    }
-
-    DefaultButton->SetButtonState(EButtonState::Selected);
-
-    InventoryToolBarButtonClicked.ExecuteIfBound(CurrentSelectedItemType);
-
-    UE_LOGFMT(LogInventoryToolBar, Log, "Inventory Tool Bar가 초기 상태로 리셋되었습니다.");
+    UE_LOGFMT(LogInventoryToolBar, Log, "Inventory Tool Bar가 초기 상태로 리셋되었습니다. 현재 아이템 타입: {0}",
+        *UEnum::GetValueAsString(CurrentSelectedItemType));
 }
 
 void UInventoryToolBar::CreateButtons()
@@ -269,8 +304,10 @@ void UInventoryToolBar::OnInventoryToolBarButtonClicked_Implementation(EInteract
 
     //@선택된 버튼 취소
     CancelInventoryToolBarButtonSelected(CurrentSelectedItemType);
+
     //@Current Item Type
     CurrentSelectedItemType = ItemType;
+
     //@Type 버튼 클릭 이벤트
     InventoryToolBarButtonClicked.ExecuteIfBound(ItemType);
 

@@ -1,10 +1,5 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "04_Component/UIComponent.h"
 #include "Logging/StructuredLog.h"
-
-#include "GameFramework/PlayerController.h"
 
 #include "14_Subsystem/UIManagerSubsystem.h"
 #include "08_UI/01_HUD/PlayerHUD.h"
@@ -12,7 +7,6 @@
 
 #include "03_Player/BasePlayerController.h"
 #include "04_Component/BaseInputComponent.h"
-#include "04_Component/InventoryComponent.h"
 
 #include "Kismet/GameplayStatics.h"
 
@@ -26,6 +20,11 @@ UUIComponent::UUIComponent(const FObjectInitializer& ObjectInitializer)
 { 
 	PrimaryComponentTick.bCanEverTick = false; 
 	bWantsInitializeComponent = true;//Initialize Component 활용에 필요 
+
+	HUDUI = nullptr;
+	MenuUI = nullptr;
+	MInteractionUIs.Empty();
+
 }
 
 void UUIComponent::OnRegister()
@@ -81,7 +80,7 @@ void UUIComponent::ExternalBindingToInputComponent(const APlayerController* Play
 		return;
 	}
 
-	//@External Binding
+	//@외부 바인딩
 	BaseInputComp->UIInputTagTriggered.AddUFunction(this, "OnUIInputTriggered");
 	BaseInputComp->UIInputTagReleased.AddUFunction(this, "OnUIInputReleased");
 
@@ -90,6 +89,7 @@ void UUIComponent::ExternalBindingToInputComponent(const APlayerController* Play
 
 void UUIComponent::InternalBindToHUDUI()
 {
+	//@HUD
 	UPlayerHUD* PlayerHUD = Cast<UPlayerHUD>(HUDUI);
 	if (!PlayerHUD)
 	{
@@ -97,6 +97,7 @@ void UUIComponent::InternalBindToHUDUI()
 		return;
 	}
 
+	//@내부 바인딩
 	PlayerHUD->HUDInitFinished.BindUFunction(this, "OnHUDInitFinished");
 	PlayerHUD->NotifyQuickSlotsInitFinished.BindUFunction(this, "QuickSlotsInitFinishedNotified");
 	PlayerHUD->NotifyStateBarsInitFinished.BindUFunction(this, "StateBarsInitFinishedNotified");
@@ -104,14 +105,13 @@ void UUIComponent::InternalBindToHUDUI()
 
 void UUIComponent::InternalBindToMenuUI()
 {
+	//Menu UI
 	UMenuUI* MenuUIRef = Cast<UMenuUI>(MenuUI);
 	if (!MenuUIRef)
 	{
 		UE_LOGFMT(LogUI, Error, "HUDUI를 UPlayerHUD로 캐스팅할 수 없습니다.");
 		return;
 	}
-
-	//@TODO: LevelUI, MapUI, SystemUI의 초기화 완료 이벤트에 바인딩 수행...
 
 	//@내부 바인딩
 	MenuUIRef->MenuUIInitFinished.BindUFunction(this, "OnMenuUIInitFinished");
@@ -121,7 +121,7 @@ void UUIComponent::InternalBindToMenuUI()
 
 void UUIComponent::InitializeUIComponent()
 {
-	//@PlayerController 가져오기
+	//@Player Controller
 	APlayerController* PC = Cast<APlayerController>(GetOwner());
 	if (!PC)
 	{
@@ -132,15 +132,15 @@ void UUIComponent::InitializeUIComponent()
 	//@External Binding
 	ExternalBindingToInputComponent(PC);
 
-	//@GameInstance 가져오기
-	UGameInstance* GameInstance = PC->GetGameInstance();
+	//@GameInstance
+	UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
 	if (!GameInstance)
 	{
 		UE_LOGFMT(LogUI, Error, "GameInstance를 가져올 수 없습니다.");
 		return;
 	}
 
-	//@UIManagerSubsystem 가져오기
+	//@UI Manager Subsystem
 	UUIManagerSubsystem* UIManagerSubsystem = GameInstance->GetSubsystem<UUIManagerSubsystem>();
 	if (!UIManagerSubsystem)
 	{
@@ -150,6 +150,12 @@ void UUIComponent::InitializeUIComponent()
 
 	//@EUICategory 열거형 정보 가져오기
 	UEnum* EnumPtr = StaticEnum<EUICategory>();
+	if (!EnumPtr)
+	{
+		UE_LOGFMT(LogUI, Error, "EUICategory 열거형 정보를 가져올 수 없습니다.");
+		return;
+	}
+
 	int32 EnumCount = EnumPtr->GetMaxEnumValue();
 
 	//@각 UI 카테고리에 대한 처리
@@ -181,10 +187,10 @@ void UUIComponent::CheckAllUIsForInventoryReady()
 	//@Delgate, Iventory 로딩 이전에 초기화 완료 확인할 UI들 추가
 	if (bQuickSlotsReadyForLoading && bInventoryUIReadyForLoading)
 	{
-		UIsForInventoryReady.ExecuteIfBound();
-
 		bQuickSlotsReadyForLoading = false;
 		bInventoryUIReadyForLoading = false;
+
+		UIsForInventoryReady.ExecuteIfBound();
 	}
 }
 
@@ -193,9 +199,9 @@ void UUIComponent::CheckAllUIsForAttributeSetReady()
 	//@Delegate, Attribute Set 로딩 이전에 초기화 완료 확인할 UI들 추가
 	if (bStateBarsReadyForLoading)
 	{
-		UIsForAttributeSetReady.ExecuteIfBound();
-
 		bStateBarsReadyForLoading = false;
+
+		UIsForAttributeSetReady.ExecuteIfBound();
 	}
 }
 
@@ -287,6 +293,7 @@ void UUIComponent::ResetCategoryUI(EUICategory UICategory, UUIManagerSubsystem* 
 
 void UUIComponent::CreateAndSetupWidget(APlayerController* PC, EUICategory UICategory, const FUIInformation& UIInfo, UEnum* EnumPtr)
 {
+	//@PC, Enum
 	if (!PC || !EnumPtr)
 	{
 		UE_LOGFMT(LogUI, Error, "Invalid PlayerController or EnumPtr in {0}", __FUNCTION__);
@@ -319,17 +326,6 @@ void UUIComponent::CreateAndSetupWidget(APlayerController* PC, EUICategory UICat
 		return;
 	}
 
-	//@기본 가시성 설정
-	//if (UIInfo.bShownOnBeginPlay)
-	//{
-	//	ShowUI(UICategory, UIInfo.UITag);
-	//	NewWidget->AddToViewport();
-	//}
-	//else
-	//{
-	//	HideUI(UICategory, UIInfo.UITag);
-	//}
-
 	// UI 생성 로그
 	UE_LOGFMT(LogUI, Log, "Created {0} UI in category {1}",
 		*UIInfo.UITag.ToString(), EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)));
@@ -355,7 +351,7 @@ void UUIComponent::SetupHUDUI(UUserWidget* NewWidget)
 
 void UUIComponent::SetupMenuUI(UUserWidget* NewWidget)
 {
-	// MenuUI 설정
+	//@Menu UI
 	MenuUI = NewWidget;
 	UMenuUI* Menu = Cast<UMenuUI>(MenuUI);
 	if (!Menu)
@@ -381,6 +377,7 @@ void UUIComponent::SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* Ne
 
 void UUIComponent::ShowUI(EUICategory UICategory, const FGameplayTag& UITag)
 {
+	//@UI
 	UUserWidget* UI = GetUI(UICategory, UITag);
 	if (!UI)
 	{
@@ -392,15 +389,13 @@ void UUIComponent::ShowUI(EUICategory UICategory, const FGameplayTag& UITag)
 	//@가시성 변화 이벤트
 	WidgetVisibilityChanged.Broadcast(UI, true);
 
-	//@Add To Viewport
-	//UI->AddToViewport();
-
 	UE_LOGFMT(LogUI, Log, "{0} 카테고리의 {1} UI가 뷰포트에 추가되었습니다.",
 		*UEnum::GetValueAsString(UICategory), *UITag.ToString());
 }
 
 void UUIComponent::HideUI(EUICategory UICategory, const FGameplayTag& UITag)
 {
+	//@UI
 	UUserWidget* UI = GetUI(UICategory, UITag);
 	if (!UI)
 	{
@@ -412,15 +407,13 @@ void UUIComponent::HideUI(EUICategory UICategory, const FGameplayTag& UITag)
 	//@가시성 변화 이벤트
 	WidgetVisibilityChanged.Broadcast(UI, false);
 
-	//@Remove From Parent
-	//UI->RemoveFromParent();
-
 	UE_LOGFMT(LogUI, Log, "{0} 카테고리의 {1} UI가 부모로부터 제거되었습니다.",
 		*UEnum::GetValueAsString(UICategory), *UITag.ToString());
 }
 
 void UUIComponent::ShowAllUI(EUICategory UICategory)
 {
+	//@UIs
 	TArray<UUserWidget*> Widgets = GetCategoryUIs(UICategory);
 	if (Widgets.Num() > 0)
 	{
@@ -452,6 +445,7 @@ void UUIComponent::ShowAllUI(EUICategory UICategory)
 
 void UUIComponent::HideAllUI(EUICategory UICategory)
 {
+	//@UIs
 	TArray<UUserWidget*> Widgets = GetCategoryUIs(UICategory);
 	if (Widgets.Num() > 0)
 	{
@@ -594,11 +588,24 @@ void UUIComponent::OnUIInputReleased(const FGameplayTag& InputTag)
 
 void UUIComponent::OnRequestCloseMenuUI()
 {
+	//@Input Mode를 UIOnly -> GameAndUI로 변경
+	APlayerController* PC = Cast<APlayerController>(GetOwner());
+	if (PC)
+	{
+		FInputModeGameAndUI InputMode;
+		InputMode.SetHideCursorDuringCapture(false);
+		PC->SetInputMode(InputMode);
+
+		//@bShowMouseCursor
+		PC->bShowMouseCursor = false;
+	}
+	else
+	{
+		UE_LOGFMT(LogUI, Warning, "{0}: PlayerController를 찾을 수 없습니다.", __FUNCTION__);
+	}
+
 	//@Hide Menu UI
 	HideAllUI(EUICategory::Menu);
-
-	//@Request IMC Swapping(PlayerOnGround <- MenuUI)
-	RequestSwapIMC.ExecuteIfBound(FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")));
 
 	//@Show HUD
 	ShowAllUI(EUICategory::HUD);
@@ -606,12 +613,6 @@ void UUIComponent::OnRequestCloseMenuUI()
 	//@Interaction
 	ShowAllUI(EUICategory::Interaction);
 
-	//@Input Mode를 UIOnly -> GameAndUI로 변경
-	if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
-	{
-		PC->bShowMouseCursor = false;
-		PC->SetInputMode(FInputModeGameAndUI());
-	}
 }
 #pragma endregion
 
@@ -628,11 +629,11 @@ FString UUIComponent::FindUICategoryFromInputTag(const FGameplayTag& InputTag)
 
 		if (Parts.Num() >= 3)
 		{
-			return Parts[2]; // "HUD", "Menu", "Interaction" 등을 반환
+			return Parts[2];
 		}
 	}
 
-	return FString(); // 빈 문자열 반환 (카테고리를 찾지 못한 경우)
+	return FString();
 }
 
 UUserWidget* UUIComponent::GetUI(EUICategory UICategory, const FGameplayTag& UITag) const
