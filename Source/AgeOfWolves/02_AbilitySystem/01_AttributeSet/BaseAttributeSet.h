@@ -144,6 +144,7 @@ public:
 public:
 	UBaseAttributeSet();
 
+
 protected:
 	/*
 	* @목적 : Attribute 수치 변화 이벤트 발생 시 항상 호출되는 함수

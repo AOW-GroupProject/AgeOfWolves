@@ -156,7 +156,7 @@ protected:
 
 protected:
 	// @목적 : 사용자의 Ability IA관련 키 눌림에 대응되는 콜백 함수
-	void OnAbilityInputTagTriggered(FGameplayTag InputTag);
+	void OnAbilityInputTagPressed(FGameplayTag InputTag);
 	// @목적 : 사용자의 Ability IA관련 키 해제에 대응되는 콜백 함수
 	void OnAbilityInputTagReleased(FGameplayTag InputTag);
 

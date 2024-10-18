@@ -67,6 +67,9 @@ private:
 	// @설명: 타겟이 감지 범위를 나갔을 때 실행해줄 함수
 	UFUNCTION(BlueprintCallable, Category = "Perception")
 	void OnTargetForgotten(AActor* InActor);
+
+	UFUNCTION(BlueprintCallable, Category = "Perception")
+	void SetSightConfigLoseSightRadius(float radius);
 public:
 	// @설명: BaseMonster_Spline에서 캐릭터를 쫓다가 너무 멀어졌을 시 제자리로 돌아가는 동안 몇초간은 캐릭터를 쫓지 않아야 하므로 잠깐동안 false로 해준다.
 	void SetIsPossibleDetecting(bool InBool);

@@ -38,6 +38,8 @@ public:
 
     TMap<EMonsterName, FSingleMonsterData> MonsterData;
 
+	FSingleMonsterData CurrentMonsterData;
+
 	/*
 	* @목적 : 상대가 적인지 아군인지 판단해주는 함수입니다.
 	* @설명 : FSingleMonsterData의 EnemyNameList와 FriendNameList를 사용합니다.
