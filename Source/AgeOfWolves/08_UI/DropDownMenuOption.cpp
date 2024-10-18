@@ -15,7 +15,9 @@ DEFINE_LOG_CATEGORY(LogDropDownMenuOption)
 #pragma region Default Setting
 UDropDownMenuOption::UDropDownMenuOption(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
-{}
+{
+    Button = nullptr;
+}
 
 void UDropDownMenuOption::NativeOnInitialized()
 {
@@ -45,9 +47,9 @@ void UDropDownMenuOption::InternalBindToOptionButton(UCustomButton* DropDownMenu
         return;
     }
     //@내부 바인딩
-    DropDownMenuOptionButton->ButtonSelected.AddUObject(this, &UDropDownMenuOption::OnDropDownMenuOptionButtonClicked);
     DropDownMenuOptionButton->ButtonHovered.AddUObject(this, &UDropDownMenuOption::OnDropDownMenuOptionButtonHovered);
     DropDownMenuOptionButton->ButtonUnhovered.AddUObject(this, &UDropDownMenuOption::OnDropDownMenuOptionButtonUnhovered);
+    DropDownMenuOptionButton->ButtonSelected.AddUObject(this, &UDropDownMenuOption::OnDropDownMenuOptionButtonClicked);
 
     UE_LOGFMT(LogDropDownMenuOption, Verbose, "CustomButton 이벤트가 성공적으로 바인딩되었습니다.");
 }
@@ -94,6 +96,8 @@ void UDropDownMenuOption::CreateButton()
     //@내부 바인딩
     InternalBindToOptionButton(OptionButton);
 
+    Button = OptionButton;
+
     //@Add CustomButton To Overlay
     UOverlaySlot* ButtonOverlaySlot = DropDownMenuOptionButtonOverlay->AddChildToOverlay(OptionButton);
     if (!ButtonOverlaySlot)
@@ -110,7 +114,7 @@ void UDropDownMenuOption::CreateButton()
 #pragma endregion
 
 #pragma region Callbacks
-void UDropDownMenuOption::OnDropDownMenuOptionButtonClicked_Implementation()
+void UDropDownMenuOption::OnDropDownMenuOptionButtonClicked_Implementation(EInteractionMethod InteractionMethodType)
 {
     //@DropDownMenuOptionText
     if (!DropDownMenuOptionText)
@@ -128,12 +132,12 @@ void UDropDownMenuOption::OnDropDownMenuOptionButtonClicked_Implementation()
     }
 
     //@Selected 이벤트
-    DropDownMenuOptionSelected.Broadcast();
+    DropDownMenuOptionSelected.Broadcast(GetOptionName(), InteractionMethodType);
 
     UE_LOGFMT(LogDropDownMenuOption, Log, "드롭다운 메뉴 옵션 버튼이 클릭되었습니다. 옵션: {0}", OptionText.ToString());
 }
 
-void UDropDownMenuOption::OnDropDownMenuOptionButtonHovered_Implementation()
+void UDropDownMenuOption::OnDropDownMenuOptionButtonHovered_Implementation(EInteractionMethod InteractionMethodType)
 {
     //@DropDownMenuOptionText
     if (!DropDownMenuOptionText)
@@ -151,7 +155,7 @@ void UDropDownMenuOption::OnDropDownMenuOptionButtonHovered_Implementation()
     }
 
     //@Hover 이벤트
-    DropDownMenuOptionHovered.Broadcast();
+    DropDownMenuOptionHovered.Broadcast(GetOptionName(), InteractionMethodType);
 
     UE_LOGFMT(LogDropDownMenuOption, Log, "드롭다운 메뉴 옵션 버튼에 마우스가 올라갔습니다. 옵션: {0}", OptionText.ToString());
 }
@@ -174,7 +178,7 @@ void UDropDownMenuOption::OnDropDownMenuOptionButtonUnhovered_Implementation()
     }
 
     //@Unhover 이벤트
-    DropDownMenuOptionHovered.Broadcast();
+    DropDownMenuOptionUnhovered.Broadcast(GetOptionName());
 
 
     UE_LOGFMT(LogDropDownMenuOption, Log, "드롭다운 메뉴 옵션 버튼에서 마우스가 벗어났습니다. 옵션: {0}", OptionText.ToString());
@@ -223,6 +227,16 @@ void UDropDownMenuOption::DropDownMenuOptionButtonCanceledNotified_Implementatio
 #pragma endregion
 
 #pragma region Utilities
+FName UDropDownMenuOption::GetOptionName() const
+{
+    if (DropDownMenuOptionText)
+    {
+        return FName(*DropDownMenuOptionText->GetText().ToString());
+    }
+
+    return NAME_None;
+}
+
 void UDropDownMenuOption::SetOptionName(FText Text)
 {
     if (!DropDownMenuOptionText)
@@ -284,4 +298,15 @@ FText UDropDownMenuOption::GetDropDownMenuOptionHotKeyText() const
     }
     return FText::GetEmpty();
 }
+
+UCustomButton* UDropDownMenuOption::GetDropDownMenuOptionButton() const
+{
+    if (!Button)
+    {
+        return nullptr;
+    }
+
+    return Button;
+}
+
 #pragma endregion

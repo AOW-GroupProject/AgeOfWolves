@@ -3,8 +3,8 @@
 
 DEFINE_LOG_CATEGORY(LogMenuUIContent)
 
+//@Defualt Setting
 #pragma region Default Setting
-
 UMenuUIContent::UMenuUIContent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
@@ -21,6 +21,8 @@ void UMenuUIContent::NativePreConstruct()
 {
 	Super::NativePreConstruct();
 
+	SetIsFocusable(true);
+
 }
 
 void UMenuUIContent::NativeConstruct()
@@ -35,9 +37,40 @@ void UMenuUIContent::NativeDestruct()
 
 }
 
-void UMenuUIContent::InitializeMenuUIContent()
+FNavigationReply UMenuUIContent::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+	return FNavigationReply::Explicit(nullptr);
+}
+
+FReply UMenuUIContent::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
 {
 
+	//@Set Directly(SetFocus())를 통한 포커스 시도 외에 다른 시도는 허용하지 않습니다.
+	if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+	{
+		return FReply::Handled().ClearUserFocus();
+	}
+
+	UE_LOGFMT(LogMenuUIContent, Log, "포커스 : 위젯: {0}, 원인: {1}",
+		*GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+
+	return FReply::Handled();
+}
+
+void UMenuUIContent::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
+{
+	//@SetDirectly(SetFocus())를 통한 포커스 소실 외에 다른 시도는 허용하지 않습니다.
+	if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+	{
+		SetFocus();
+
+		return;
+	}
+
+	Super::NativeOnFocusLost(InFocusEvent);
+
+	UE_LOGFMT(LogMenuUIContent, Log, "포커스 종료: 위젯: {0}, 원인: {1}",
+		*GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
 }
 
 void UMenuUIContent::CheckMenuUIContentInitFinished()
@@ -55,6 +88,15 @@ void UMenuUIContent::CheckMenuUIContentInitFinished()
 }
 #pragma endregion
 
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+#pragma endregion
+
+//@Delegates
+#pragma region Delegates
+#pragma endregion
+
+//@Callbacks
 #pragma region Callbacks
 void UMenuUIContent::OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType)
 {
@@ -65,5 +107,6 @@ void UMenuUIContent::OnUIVisibilityChanged_Implementation(ESlateVisibility Visib
 }
 #pragma endregion
 
-
-
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+#pragma endregion
