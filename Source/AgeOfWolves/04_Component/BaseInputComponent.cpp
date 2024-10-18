@@ -4,19 +4,21 @@
 #include "BaseInputComponent.h"
 #include "Logging/StructuredLog.h"
 
-#include "GameplayTagContainer.h"
 #include "01_Character/PawnData.h"
-#include "EnhancedInputSubsystems.h"
-#include "14_Subsystem/InputManagerSubsystem.h"
+#include "01_Character/PlayerCharacter.h"
 
+#include "03_Player/PlayerStateBase.h"
 #include "03_Player/BasePlayerController.h"
 
-#include "01_Character/PlayerCharacter.h"
-#include "03_Player/PlayerStateBase.h"
-#include "04_Component/BaseAbilitySystemComponent.h"
+#include "04_Component/PlayerAbilitySystemComponent.h"
 #include "04_Component/LockOnComponent.h"
-
 #include "04_Component/UIComponent.h"
+
+#include "14_Subsystem/InputManagerSubsystem.h"
+
+
+#include "GameplayTagContainer.h"
+#include "EnhancedInputSubsystems.h"
 
 #include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInputComponent)
 
@@ -181,7 +183,7 @@ void UBaseInputComponent::BindAbilityInputActions(const UInputConfig* InputConfi
 	if (!InputConfig->AbilityInputActions.IsEmpty())
 	{
 		UE_LOGFMT(LogInputComponent, Log, "어빌리티 입력 액션을 바인딩합니다.");
-		BindInputActions(InputConfig->AbilityInputActions, this, &ThisClass::OnAbilityInputTagTriggered, &ThisClass::OnAbilityInputTagReleased);
+		BindInputActions(InputConfig->AbilityInputActions, this, &ThisClass::OnAbilityInputTagPressed, &ThisClass::OnAbilityInputTagReleased);
 	}
 	else
 	{
@@ -382,7 +384,7 @@ void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 	}
 }
 
-void UBaseInputComponent::OnAbilityInputTagTriggered(FGameplayTag InputTag)
+void UBaseInputComponent::OnAbilityInputTagPressed(FGameplayTag InputTag)
 {
 	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
@@ -390,9 +392,9 @@ void UBaseInputComponent::OnAbilityInputTagTriggered(FGameplayTag InputTag)
 		{
 			if (APlayerStateBase* PS = Cast<APlayerStateBase>(PC->PlayerState))
 			{
-				if (UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
+				if (UPlayerAbilitySystemComponent* ASC = Cast<UPlayerAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
 				{
-					ASC->AbilityInputTagTriggered(InputTag);
+					ASC->AbilityInputTagPressed(InputTag);
 				}
 			}
 		}
@@ -407,7 +409,7 @@ void UBaseInputComponent::OnAbilityInputTagReleased(FGameplayTag InputTag)
 		{
 			if (APlayerStateBase* PS = Cast<APlayerStateBase>(PC->PlayerState))
 			{
-				if (UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
+				if (UPlayerAbilitySystemComponent* ASC = Cast<UPlayerAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
 				{
 					ASC->AbilityInputTagReleased(InputTag);
 				}

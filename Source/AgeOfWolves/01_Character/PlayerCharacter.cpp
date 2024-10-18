@@ -98,7 +98,7 @@ void APlayerCharacter::PostInitializeComponents()
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-
+	SetAbilitySystemComponent(Cast<APlayerStateBase>(GetPlayerState())->GetAbilitySystemComponent());
 }
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
