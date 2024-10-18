@@ -7,14 +7,18 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCustomButton, Log, All);
 
+//@전방 선언
+#pragma region Forward Declaration
 class UOverlay;
 class UImage;
 class UButton;
+#pragma endregion
 
+//@열거형
 #pragma region Enums
 /**
 * EButtonState
-* 
+*
 * Button의 상태를 나타내는 열거형
 */
 UENUM(BlueprintType)
@@ -27,20 +31,29 @@ enum class EButtonState : uint8
     Disabled        UMETA(DisplayName = "Disabled"),
     MAX,
 };
+
+UENUM(BlueprintType)
+enum class EInteractionMethod
+{
+    Mouse = 0      UMETA(DisplayName = "Mouse"),
+    Keyboard         UMETA(DisplayName = "Keyboard"),
+    MAX,
+};
 #pragma endregion
 
+//@구조체
 #pragma region Structs
 /**
 * FButtonStateInformation
-* 
+*
 * Button 상태와 이와 관련된 Texture를 담고 있는 구조체
 */
 USTRUCT(BlueprintType)
 struct FButtonStateInformation
 {
     GENERATED_BODY()
-    //@Texture2D에 대응되는 버튼 상태
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
+        //@Texture2D에 대응되는 버튼 상태
+        UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
         EButtonState State;
     //@버튼 상태에 대응되는 Texture
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
@@ -48,22 +61,27 @@ struct FButtonStateInformation
 };
 #pragma endregion
 
+//@이벤트/델리게이트
 #pragma region Delegates
-DECLARE_MULTICAST_DELEGATE(FButtonHovered);
+DECLARE_MULTICAST_DELEGATE_OneParam(FButtonHovered, EInteractionMethod);
 DECLARE_MULTICAST_DELEGATE(FButtonUnhovered);
-DECLARE_MULTICAST_DELEGATE(FButtonSelected);
+DECLARE_MULTICAST_DELEGATE_OneParam(FButtonSelected, EInteractionMethod);
 DECLARE_MULTICAST_DELEGATE(FButtonDisabled);
 #pragma endregion
 
 UCLASS()
 class AGEOFWOLVES_API UCustomButton : public UUserWidget
 {
-    GENERATED_BODY()
-    //@Friend Class 설정
+//@친추 클래스
+#pragma region Friend Class
     friend class UInteractableItemSlot;
     friend class UInventoryToolBar;
     friend class UMenuUIToolBar;
+#pragma endregion
 
+    GENERATED_BODY()
+
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UCustomButton(const FObjectInitializer& ObjectInitializer);
@@ -74,10 +92,12 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
     //~End Of UUserWidget
 #pragma endregion
 
-#pragma region SubWidgets
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 protected:
     //@Overlay
     UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
@@ -113,8 +133,28 @@ protected:
     //@버트느이 상호작용 비활성화 함수
     UFUNCTION(BlueprintCallable, Category = "Button")
         void DeactivateButton(bool bIsClicked = false);
+
+protected:
+    //@참일 경우, 마우스가 벗어나도 Unhovered 되지 않습니다.
+    //@오직, CancelSelectedButton 호출을 통해서만 Unhovered 가 수행됩니다.
+    UPROPERTY(EditDefaultsOnly, Category = "Button")
+        bool bLockAsHovered = false;
 #pragma endregion
 
+//@Delegates
+#pragma region Delegates
+public:
+    //@Button의 Hover 이벤트
+    FButtonHovered ButtonHovered;
+    //@Button의 Clicked 이벤트
+    FButtonSelected ButtonSelected;
+    //@Button의 Unhovered 이벤트
+    FButtonUnhovered ButtonUnhovered;
+    //@Button의 Disabled 이벤트
+    FButtonDisabled ButtonDisabled;
+#pragma endregion
+
+//@Callbacks
 #pragma region Callbacks
 public:
     //@버튼의 Hovered 이벤트 구독
@@ -140,25 +180,23 @@ public:
     virtual void CancelSelectedButton_Implementation();
 #pragma endregion
 
-#pragma region
-public:
-    //@Button의 Hover 이벤트
-    FButtonHovered ButtonHovered;
-    //@Button의 Clicked 이벤트
-    FButtonSelected ButtonSelected;
-    //@Button의 Unhovered 이벤트
-    FButtonUnhovered ButtonUnhovered;
-    //@Button의 Disabled 이벤트
-    FButtonDisabled ButtonDisabled;
-#pragma endregion
-
-#pragma region Callbacks
-
-#pragma endregion
-
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
     FORCEINLINE UButton* GetButton() { return Button; }
+
+public:
+    UFUNCTION(BlueprintNativeEvent, Category = "Button")
+        bool SetButtonHoveredByKeyboard();
+    virtual bool SetButtonHoveredByKeyboard_Implementation();
+
+    UFUNCTION(BlueprintNativeEvent, Category = "Button")
+        bool SetButtonSelectedByKeyboard();
+    virtual bool SetButtonSelectedByKeyboard_Implementation();
+
+public:
+    bool IsLockAsHovered() const { return bLockAsHovered; }
+    void SetLockAsHovered(bool bAllow) { bLockAsHovered = bAllow; }
 #pragma endregion
 
 };

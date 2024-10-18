@@ -27,11 +27,11 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInteractableItemSlot, Log, All)
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByInteractableItemSlot);
 
 //@아이템 슬롯 버튼 호버 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotButtonHovered, const FGuid&)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FItemSlotButtonHovered, const FGuid&, EInteractionMethod)
 //@아이템 슬롯 버튼 언호버 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotButtonUnhovered, const FGuid&)
 //@아이템 슬롯 버튼 클릭 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FItemSlotButtonClicked, const FGuid&)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FItemSlotButtonClicked, const FGuid&, EInteractionMethod)
 
 //@선택된 아이템 슬롯 버튼 선택 취소 이벤트
 DECLARE_MULTICAST_DELEGATE(FNotifyItemSlotButtonCanceled);
@@ -63,6 +63,11 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
+    virtual FReply NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent) override;
+    virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
+    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
+    virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
     //~ End UUserWidget Interface
 
 protected:
@@ -79,6 +84,11 @@ public:
 protected:
     //@CustomButton 생성
     void CreateButton();
+
+protected:
+    virtual void AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount = -1) override;
+    virtual void UpdateItemCount_Implementation(int32 NewCount) override;
+    virtual void ClearAssignedItem_Implementation(bool bForceClear = false) override;
 
 public:
     //@아이템 슬롯 버튼 활성화 함수
@@ -118,16 +128,16 @@ public:
 protected:
     //@Button Hovered 이벤트에 등록되는 콜백
     UFUNCTION(BlueprintNativeEvent)
-        void OnItemSlotButtonHovered();
-    virtual void OnItemSlotButtonHovered_Implementation();
+        void OnItemSlotButtonHovered(EInteractionMethod InteractionMethodType);
+    virtual void OnItemSlotButtonHovered_Implementation(EInteractionMethod InteractionMethodType);
     //@Button Unhovered 이벤트에 등록되는 콜백
     UFUNCTION(BlueprintNativeEvent)
         void OnItemSlotButtonUnhovered();
     virtual void OnItemSlotButtonUnhovered_Implementation();
     //@Button Clicked 이벤트에 등록되는 콜백
     UFUNCTION(BlueprintNativeEvent)
-        void OnItemSlotButtonClicked();
-    virtual void OnItemSlotButtonClicked_Implementation();
+        void OnItemSlotButtonClicked(EInteractionMethod InteractionMethodType);
+    virtual void OnItemSlotButtonClicked_Implementation(EInteractionMethod InteractionMethodType);
 
 protected:
     //@Button의 선택 취소 이벤트 구독

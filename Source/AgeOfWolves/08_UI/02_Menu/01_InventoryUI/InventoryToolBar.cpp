@@ -9,6 +9,7 @@
 
 DEFINE_LOG_CATEGORY(LogInventoryToolBar)
 
+//@Defualt Setting
 #pragma region Default Setting
 UInventoryToolBar::UInventoryToolBar(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
@@ -22,6 +23,8 @@ void UInventoryToolBar::NativeOnInitialized()
 void UInventoryToolBar::NativePreConstruct()
 {
     Super::NativePreConstruct();
+
+    SetIsFocusable(false);
 }
 
 void UInventoryToolBar::NativeConstruct()
@@ -32,6 +35,12 @@ void UInventoryToolBar::NativeConstruct()
 void UInventoryToolBar::NativeDestruct()
 {
     Super::NativeDestruct();
+}
+
+FNavigationReply UInventoryToolBar::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+    return FNavigationReply::Explicit(nullptr);
+
 }
 
 void UInventoryToolBar::InternalBindToButton(UCustomButton* Button, EItemType ItemType)
@@ -57,28 +66,65 @@ void UInventoryToolBar::InitializeInventoryToolBar()
 }
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region Widgets
 void UInventoryToolBar::ResetToolBar()
 {
-    EItemType PreviousType = CurrentItemType;
-    CurrentItemType = DefaultItemType;
+    EItemType PreviousType = CurrentSelectedItemType;
 
-    if (PreviousType < EItemType::MAX && PreviousType != DefaultItemType)
+    //@최소 Reset 호출 시
+    if (CurrentSelectedItemType == EItemType::MAX)
     {
-        CancelInventoryToolBarButtonSelected(PreviousType);
+        //@Current Item Type
+        CurrentSelectedItemType = DefaultItemType;
+
+        //@Button
+        UCustomButton* DefaultButton = MItemTypeButtons.FindRef(DefaultItemType);
+        if (!DefaultButton)
+        {
+            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
+            return;
+        }
+
+        //@Set Button Selected By Keyboard
+        if (!DefaultButton->SetButtonSelectedByKeyboard())
+        {
+            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 Selected로 초기화하는데 실패했습니다.");
+            return;
+        }
+
+        //@버튼 클릭 이벤트
+        InventoryToolBarButtonClicked.ExecuteIfBound(CurrentSelectedItemType);
+    }
+    else
+    {
+        //@Current Item Type != Default Item Type
+        if (PreviousType != DefaultItemType)
+        {
+            CancelInventoryToolBarButtonSelected(PreviousType);
+        }
+
+        //@Current Selected Item Type
+        CurrentSelectedItemType = DefaultItemType;
+
+        //@Button
+        UCustomButton* DefaultButton = MItemTypeButtons.FindRef(CurrentSelectedItemType);
+        if (!DefaultButton)
+        {
+            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
+            return;
+        }
+
+        //@Set Button Selected By Keyboard
+        if (!DefaultButton->SetButtonSelectedByKeyboard())
+        {
+            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 Selected로 초기화하는데 실패했습니다.");
+            return;
+        }
     }
 
-    UCustomButton* DefaultButton = MItemTypeButtons[CurrentItemType];
-    if (!DefaultButton)
-    {
-        UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
-        return;
-    }
-
-    DefaultButton->SetButtonState(EButtonState::Selected);
-    InventoryToolBarButtonClicked.ExecuteIfBound(CurrentItemType);
-
-    UE_LOGFMT(LogInventoryToolBar, Log, "Inventory Tool Bar가 초기 상태로 리셋되었습니다.");
+    UE_LOGFMT(LogInventoryToolBar, Log, "Inventory Tool Bar가 초기 상태로 리셋되었습니다. 현재 아이템 타입: {0}",
+        *UEnum::GetValueAsString(CurrentSelectedItemType));
 }
 
 void UInventoryToolBar::CreateButtons()
@@ -192,17 +238,76 @@ void UInventoryToolBar::CreateAndAddButton(EItemType ButtonType, float Scale)
 
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 생성되고 추가되었습니다. Scale: {1}", UEnum::GetValueAsString(ButtonType), Scale);
 }
+
+void UInventoryToolBar::MoveLeft()
+{
+    MoveSelection(-1);
+}
+
+void UInventoryToolBar::MoveRight()
+{
+    MoveSelection(1);
+}
+
+void UInventoryToolBar::MoveSelection(int32 Direction)
+{
+    //@Item Types
+    TArray<EItemType> ItemTypes;
+    MItemTypeButtons.GetKeys(ItemTypes);
+
+    //@Current Item Type Button의 인덱스
+    int32 CurrentIndex = GetCurrentButtonIndex();
+    int32 NewIndex;
+
+    //@오른쪽 방향키 눌림
+    if (Direction > 0)
+    {
+        NewIndex = (CurrentIndex + 1) % ItemTypes.Num();
+    }
+    //@왼쪽 방향키 눌림
+    else
+    {
+        NewIndex = (CurrentIndex - 1 + ItemTypes.Num()) % ItemTypes.Num();
+    }
+     
+    if (NewIndex != CurrentIndex)
+    {
+        //@Previous Item Type Button
+        if (UCustomButton* PreviousButton = MItemTypeButtons[CurrentSelectedItemType])
+        {
+            PreviousButton->SetButtonState(EButtonState::Normal);
+        }
+
+        //@Current Item Type Button                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                         
+        EItemType NewType = ItemTypes[NewIndex];
+        CurrentSelectedItemType = NewType;
+
+        //@Button의 상태를 Selected로 변경
+        if (UCustomButton* NewButton = MItemTypeButtons[NewType])
+        {
+            NewButton->SetButtonState(EButtonState::Selected);
+        }
+
+        //@Item Type 버튼 클릭 이벤트
+        InventoryToolBarButtonClicked.ExecuteIfBound(NewType);
+
+        UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 선택되었습니다.", *UEnum::GetValueAsString(NewType));
+    }
+}
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
-void UInventoryToolBar::OnInventoryToolBarButtonClicked_Implementation(EItemType ItemType)
+void UInventoryToolBar::OnInventoryToolBarButtonClicked_Implementation(EInteractionMethod InteractionMethodType, EItemType ItemType)
 {
-    if (CurrentItemType == ItemType) return;
+    if (CurrentSelectedItemType == ItemType) return;
 
     //@선택된 버튼 취소
-    CancelInventoryToolBarButtonSelected(CurrentItemType);
+    CancelInventoryToolBarButtonSelected(CurrentSelectedItemType);
+
     //@Current Item Type
-    CurrentItemType = ItemType;
+    CurrentSelectedItemType = ItemType;
+
     //@Type 버튼 클릭 이벤트
     InventoryToolBarButtonClicked.ExecuteIfBound(ItemType);
 
@@ -210,17 +315,17 @@ void UInventoryToolBar::OnInventoryToolBarButtonClicked_Implementation(EItemType
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 }
 
-void UInventoryToolBar::OnInventoryToolBarButtonHovered_Implementation(EItemType ItemType)
+void UInventoryToolBar::OnInventoryToolBarButtonHovered_Implementation(EInteractionMethod InteractionMethodType, EItemType ItemType)
 {
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼에 마우스가 올라갔습니다.", *UEnum::GetValueAsString(ItemType));
-    // TODO: Hover 상태 처리
+
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 }
 
 void UInventoryToolBar::OnInventoryToolBarButtonUnhovered_Implementation(EItemType ItemType)
 {
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼에서 마우스가 벗어났습니다.", *UEnum::GetValueAsString(ItemType));
-    // TODO: Unhover 상태 처리
+
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 }
 
@@ -237,5 +342,15 @@ void UInventoryToolBar::CancelInventoryToolBarButtonSelected_Implementation(EIte
 
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 취소되었습니다.", *UEnum::GetValueAsString(PreviousItemType));
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
+}
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+int32 UInventoryToolBar::GetCurrentButtonIndex() const
+{
+    TArray<EItemType> ItemTypes;
+    MItemTypeButtons.GetKeys(ItemTypes);
+    return ItemTypes.IndexOfByKey(CurrentSelectedItemType);
 }
 #pragma endregion

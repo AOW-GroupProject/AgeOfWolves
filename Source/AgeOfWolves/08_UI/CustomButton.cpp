@@ -1,3 +1,4 @@
+
 #include "CustomButton.h"
 #include "Logging/StructuredLog.h"
 
@@ -7,6 +8,7 @@
 
 DEFINE_LOG_CATEGORY(LogCustomButton);
 
+//@Defualt Setting
 #pragma region Default Setting
 UCustomButton::UCustomButton(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
@@ -36,6 +38,7 @@ void UCustomButton::NativePreConstruct()
 {
     Super::NativePreConstruct();
 
+    SetIsFocusable(true);
 }
 
 void UCustomButton::NativeConstruct()
@@ -47,9 +50,16 @@ void UCustomButton::NativeDestruct()
 {
     Super::NativeDestruct();
 }
+
+FNavigationReply UCustomButton::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+    return FNavigationReply::Explicit(nullptr);
+
+}
 #pragma endregion
 
-#pragma region SubWidgets
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UCustomButton::SetButtonState(EButtonState NewState)
 {
     if (CurrentButtonState != NewState)
@@ -106,21 +116,24 @@ void UCustomButton::ActivateButton()
         UE_LOGFMT(LogCustomButton, Log, "버튼이 유효하지 않습니다.");
         return;
     }
+
     //@Button의 상호 작용 활성화
     Button->SetIsEnabled(true);
+
     //@Button State
     SetButtonState(EButtonState::Normal);
+    
 }
 
 void UCustomButton::DeactivateButton(bool bIsClicked)
 {
+    //@Button
     if (!Button)
     {
         UE_LOGFMT(LogCustomButton, Log, "버튼이 유효하지 않습니다.");
-            return;
+        return;
     }
-    //@Button의 상호 작용 비활성화
-    Button->SetIsEnabled(false);
+
     //@bClick
     if (!bIsClicked)
     {
@@ -132,25 +145,70 @@ void UCustomButton::DeactivateButton(bool bIsClicked)
         //@Button State
         SetButtonState(EButtonState::Selected);
     }
+
+    //@Button의 상호 작용 비활성화
+    Button->SetIsEnabled(false);
+
     //@Disabled 이벤트
     ButtonDisabled.Broadcast();
 }
+
+bool UCustomButton::SetButtonHoveredByKeyboard_Implementation()
+{
+    if (CurrentButtonState == EButtonState::Disabled
+        || CurrentButtonState == EButtonState::Selected
+        || CurrentButtonState == EButtonState::Hovered)
+    {
+        return false;
+    }
+
+    //@Button State를 Hovered 상태로 전환
+    SetButtonState(EButtonState::Hovered);
+
+    //@Button의 호버 이벤트
+    ButtonHovered.Broadcast(EInteractionMethod::Keyboard);
+
+    return true;
+}
+
+bool UCustomButton::SetButtonSelectedByKeyboard_Implementation()
+{
+    if (CurrentButtonState == EButtonState::Disabled)
+    {
+        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 비활성화 상태입니다. Click 무시.");
+        return false;
+    }
+
+    //@Clicke에 의한 비활성화
+    DeactivateButton(true);
+
+    //@Clicked/Selected 이벤트
+    ButtonSelected.Broadcast(EInteractionMethod::Keyboard);
+
+    UE_LOGFMT(LogCustomButton, Log, "버튼이 선택되었습니다.");
+
+    //@블루프린트에서 가져와 오버라이딩 합니다...
+    //@eg. 애니메이션
+    return true;
+
+}
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UCustomButton::OnButtonHovered_Implementation()
 {
     if (CurrentButtonState == EButtonState::Disabled
-        || CurrentButtonState == EButtonState::Selected)
+        || CurrentButtonState == EButtonState::Selected
+        || CurrentButtonState == EButtonState::Hovered)
     {
         UE_LOGFMT(LogCustomButton, Verbose, "버튼이 비활성화 혹은 이미 선택된 상태입니다. Hover 무시.");
         return;
     }
 
-    //@Button State
     SetButtonState(EButtonState::Hovered);
-    //@Delegate
-    ButtonHovered.Broadcast();
+
+    ButtonHovered.Broadcast(EInteractionMethod::Mouse);
 
     UE_LOGFMT(LogCustomButton, Log, "버튼에 마우스가 올라갔습니다.");
 
@@ -166,10 +224,14 @@ void UCustomButton::OnButtonUnhovered_Implementation()
         return;
     }
 
-    //@Button State
-    SetButtonState(EButtonState::Normal);
-    //@Unhovered 이벤트
-    ButtonUnhovered.Broadcast();
+    if (!bLockAsHovered)
+    {
+        //@Set Button State
+        SetButtonState(EButtonState::Normal);
+
+        //@Unhover 이벤트
+        ButtonUnhovered.Broadcast();
+    }
 
     UE_LOGFMT(LogCustomButton, Log, "버튼에서 마우스가 벗어났습니다.");
 
@@ -179,17 +241,20 @@ void UCustomButton::OnButtonUnhovered_Implementation()
 
 void UCustomButton::OnButtonPressed_Implementation()
 {
-    if (CurrentButtonState == EButtonState::Disabled
-        || CurrentButtonState == EButtonState::Selected)
+    //@Button이 Hovered 상태가 아니면 무시
+    if (CurrentButtonState != EButtonState::Hovered)
     {
-        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 비활성화 혹은 이미 선택된 상태입니다. Press 무시.");
+        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 Hovered 상태가 아닙니다. Press 무시.");
         return;
     }
 
     //@Set Button State
     SetButtonState(EButtonState::Pressed);
 
-    UE_LOGFMT(LogCustomButton, Log, "버튼이 눌렸습니다.");
+    //@즉시 클릭 동작 수행
+    OnButtonClicked();
+
+    UE_LOGFMT(LogCustomButton, Log, "버튼이 눌렸고 클릭되었습니다.");
 
     //@블루프린트에서 가져와 오버라이딩 합니다...
     //@eg. 애니메이션
@@ -197,7 +262,7 @@ void UCustomButton::OnButtonPressed_Implementation()
 
 void UCustomButton::OnButtonClicked_Implementation()
 {
-    if (CurrentButtonState == EButtonState::Disabled)
+    if (CurrentButtonState != EButtonState::Pressed)
     {
         UE_LOGFMT(LogCustomButton, Verbose, "버튼이 비활성화 상태입니다. Click 무시.");
         return;
@@ -207,7 +272,7 @@ void UCustomButton::OnButtonClicked_Implementation()
     DeactivateButton(true);
 
     //@Clicked/Selected 이벤트
-    ButtonSelected.Broadcast();
+    ButtonSelected.Broadcast(EInteractionMethod::Mouse);
 
     UE_LOGFMT(LogCustomButton, Log, "버튼이 선택되었습니다.");
 
@@ -217,13 +282,14 @@ void UCustomButton::OnButtonClicked_Implementation()
 
 void UCustomButton::CancelSelectedButton_Implementation()
 {
-    if (CurrentButtonState != EButtonState::Selected)
+    if (CurrentButtonState != EButtonState::Hovered
+        && CurrentButtonState != EButtonState::Selected)
     {
-        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 Selected 상태가 아닙니다. Cancel 무시.");
+        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 Hovered 혹은 Selected 상태가 아닙니다. Cancel 무시.");
         return;
     }
 
-    //@Butotn 상호작용 활성화
+    //@Button 상호작용 활성화
     ActivateButton();
 
     UE_LOGFMT(LogCustomButton, Log, "버튼 선택이 취소되었습니다.");
@@ -231,4 +297,8 @@ void UCustomButton::CancelSelectedButton_Implementation()
     //@블루프린트에서 가져와 오버라이딩 합니다...
     //@eg. 애니메이션
 }
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion
