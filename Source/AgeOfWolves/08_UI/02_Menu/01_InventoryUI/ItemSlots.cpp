@@ -104,7 +104,6 @@ void UItemSlots::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
 
 FReply UItemSlots::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
 {
-
     FKey Key = InKeyEvent.GetKey();
 
     UE_LOGFMT(LogItemSlots, Log, "키 입력 감지됨: {0}", Key.ToString());
@@ -114,28 +113,55 @@ FReply UItemSlots::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent&
     {
         //@좌로 이동
         HandleDirectionalInput(EUINavigation::Left);
-
         return FReply::Handled();
     }
     else if (Key == EKeys::Right)
     {
         //@우로 이동
         HandleDirectionalInput(EUINavigation::Right);
-
         return FReply::Handled();
     }
     else if (Key == EKeys::Up)
     {
-        //@위로 이동
-        HandleDirectionalInput(EUINavigation::Up);
+        //@현재 호버된 슬롯이 있는지 확인
+        if (!CurrentHoveredItemSlot.IsValid())
+        {
+            UE_LOGFMT(LogItemSlots, Warning, "현재 호버된 아이템 슬롯이 없습니다.");
+            return FReply::Unhandled();
+        }
 
-        return FReply::Handled();
+        //@현재 호버된 슬롯의 인덱스 찾기
+        int32 SlotIndex = ItemSlots.IndexOfByPredicate([this](const UInteractableItemSlot* ItemSlot) {
+            return ItemSlot == CurrentHoveredItemSlot.Get();
+            });
+
+        if (SlotIndex != INDEX_NONE)
+        {
+            int32 CurrentRow = 0;
+            int32 CurrentColumn = 0;
+            GetSlotRowAndColumn(SlotIndex, CurrentRow, CurrentColumn);
+
+            //@첫 번째 Row에 있으면 상위 위젯에서 처리하도록 Unhandled 반환
+            if (CurrentRow == 0)
+            {
+                //@현재 Hovered 상태의 Item Slot의 상태를 Normal로 변경
+                OnRequestCancelCurrentHoveredItemSlot(ItemType);
+
+                //@현재 Item Slots의 포커스 소실 요청 이벤트
+                RequestCancelItemSlotsFocus.ExecuteIfBound();
+
+                return FReply::Handled();
+            }
+
+            //@첫 번째 Row가 아니면 위로 이동
+            HandleDirectionalInput(EUINavigation::Up);
+            return FReply::Handled();
+        }
     }
     else if (Key == EKeys::Down)
     {
         //@아래로 이동
         HandleDirectionalInput(EUINavigation::Down);
-
         return FReply::Handled();
     }
     else if (Key == EKeys::Enter)
@@ -163,7 +189,8 @@ FReply UItemSlots::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent&
         }
 
         //@성공 로그 출력
-        UE_LOGFMT(LogItemSlots, Log, "Enter 키로 아이템 슬롯 선택됨: ID {0}", CurrentHoveredItemSlot->GetUniqueItemID().ToString());
+        UE_LOGFMT(LogItemSlots, Log, "Enter 키로 아이템 슬롯 선택됨: ID {0}",
+            CurrentHoveredItemSlot->GetUniqueItemID().ToString());
 
         return FReply::Handled();
     }

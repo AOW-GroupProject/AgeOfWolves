@@ -33,6 +33,9 @@ DECLARE_MULTICAST_DELEGATE(FRequestStartInitByItemSlots)
 //@초기화 완료 이벤트(초기화 작업 비동기화)
 DECLARE_DELEGATE(FItemSlotsInitFinished);
 
+//@Focus 취소 이벤트
+DECLARE_DELEGATE(FRequestCancelItemSlotsFocus);
+
 //@이전 선택된 아이템 슬롯 취소 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FCancelItemSlotButton, const FGuid&)
 
@@ -205,6 +208,9 @@ public:
     FItemSlotsInitFinished ItemSlotsInitFinished;
 
 public:
+    FRequestCancelItemSlotsFocus RequestCancelItemSlotsFocus;
+
+public:
     //@마지막 선택된 아이템 슬롯의 선택 취소 이벤트
     FCancelItemSlotButton CancelItemSlotButton;
 
@@ -287,6 +293,9 @@ public:
 public:
     FORCEINLINE EItemType GetItemType() const { return ItemType; }
     FORCEINLINE void SetItemType(const EItemType& Type) { ItemType = Type; }
+
+public:
+    FORCEINLINE UInteractableItemSlot* GetCurrentHoveredItemSlot() const { return CurrentHoveredItemSlot.Get(); }
 
 protected:
     // 새로운 유틸리티 함수들을 추가합니다.
