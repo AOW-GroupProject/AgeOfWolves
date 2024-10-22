@@ -77,6 +77,7 @@ class AGEOFWOLVES_API UCustomButton : public UUserWidget
     friend class UInteractableItemSlot;
     friend class UInventoryToolBar;
     friend class UMenuUIToolBar;
+    friend class UHorizontalToolBar;
 #pragma endregion
 
     GENERATED_BODY()

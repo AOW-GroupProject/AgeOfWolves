@@ -12,6 +12,7 @@
 
 DEFINE_LOG_CATEGORY(LogDropDownMenuOption)
 
+//@Defualt Setting
 #pragma region Default Setting
 UDropDownMenuOption::UDropDownMenuOption(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
@@ -62,10 +63,10 @@ void UDropDownMenuOption::InitializeDropDownMenuOption()
     //@초기화 완료 이벤트
     DropDownMenuOptionInitFinished.ExecuteIfBound();
 }
-
 #pragma endregion
 
-#pragma region Subwidgets
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UDropDownMenuOption::CreateButton()
 {
     //@Overlay
@@ -113,6 +114,7 @@ void UDropDownMenuOption::CreateButton()
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UDropDownMenuOption::OnDropDownMenuOptionButtonClicked_Implementation(EInteractionMethod InteractionMethodType)
 {
@@ -214,7 +216,7 @@ void UDropDownMenuOption::DropDownMenuOptionButtonCanceledNotified_Implementatio
         UE_LOGFMT(LogDropDownMenuOption, Error, "옵션 버튼을 찾을 수 없습니다.");
         return;
     }
-    
+
     //@Cancel Selected Button
     OptionButton->CancelSelectedButton();
     UE_LOGFMT(LogDropDownMenuOption, Log, "옵션 버튼 선택 취소됨: {0}", OptionName.ToString());
@@ -226,7 +228,8 @@ void UDropDownMenuOption::DropDownMenuOptionButtonCanceledNotified_Implementatio
 }
 #pragma endregion
 
-#pragma region Utilities
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 FName UDropDownMenuOption::GetOptionName() const
 {
     if (DropDownMenuOptionText)
@@ -308,5 +311,4 @@ UCustomButton* UDropDownMenuOption::GetDropDownMenuOptionButton() const
 
     return Button;
 }
-
 #pragma endregion

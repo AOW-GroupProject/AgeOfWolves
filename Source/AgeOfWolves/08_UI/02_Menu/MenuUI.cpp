@@ -120,14 +120,14 @@ FReply UMenuUI::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& In
     {
         UE_LOGFMT(LogMenuUI, Log, "Menu UI 카테고리를 왼쪽으로 이동합니다.");
         //@Menu Category를 왼쪽으로 이동 시킵니다.
-        ToolBar->MoveCategoryLeft();
+        ToolBar->MoveLeft();
 
         return FReply::Handled();
     }
     else if (KeyName == "x")
     {
         UE_LOGFMT(LogMenuUI, Log, "Menu UI 카테고리를 오른쪽으로 이동합니다.");
-        ToolBar->MoveCategoryRight();
+        ToolBar->MoveRight();
 
         return FReply::Handled();
     }
@@ -219,6 +219,7 @@ void UMenuUI::InitializeMenuUI()
     //@초기화 요청 이벤트 호
     RequestStartInitByMenuUI.Broadcast();
 }
+
 void UMenuUI::CheckAllUIsInitFinsiehd()
 {
     if (bMenuToolBarInitFinished

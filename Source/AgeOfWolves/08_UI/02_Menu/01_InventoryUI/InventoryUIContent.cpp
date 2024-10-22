@@ -166,7 +166,7 @@ void UInventoryUIContent::InternalBindingToInventoryToolBar(UInventoryToolBar* T
     }
 
     //@내부 바인딩
-    ToolBar->InventoryToolBarInitFinished.BindUFunction(this, "OnInventoryToolBarInitFinished");
+    ToolBar->ToolBarInitFinished.BindUFunction(this, "OnInventoryToolBarInitFinished");
     ToolBar->InventoryToolBarButtonClicked.BindUFunction(this, "OnInventoryToolBarButtonClicked");
 
 }
@@ -313,7 +313,7 @@ void UInventoryUIContent::CreateToolBar()
         return;
     }
     //@비동기 초기화 이벤트
-    RequestStartInitByInventoryUIContent.AddUFunction(InventoryToolBar, "InitializeInventoryToolBar");
+    RequestStartInitByInventoryUIContent.AddUFunction(InventoryToolBar, "InitializeToolBar");
     //@내부 바인딩
     InternalBindingToInventoryToolBar(InventoryToolBar);
     //@Tool Bar Overlay
