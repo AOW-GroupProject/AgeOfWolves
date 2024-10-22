@@ -131,7 +131,7 @@ FReply UInventoryUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const F
 
         return FReply::Handled();
     }
-    else if (Key == EKeys::Escape)
+    else if (Key == EKeys::Escape || Key == EKeys::Up)
     {
         //@Current Item Slots
         UItemSlots* CurrentItemSlots = Cast<UItemSlots>(GetItemSlotsUI(CurrentItemType));
