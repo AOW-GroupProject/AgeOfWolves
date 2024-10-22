@@ -140,7 +140,7 @@ FReply UInventoryUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const F
             //@Set Focus
             SetFocus();
 
-            //@Request Cancel Current Hovered Item Slot or Current Selected Item Slot
+            //@Request Cancel Current Hovered Item Slot
             RequestCancelCurrentHoveredItemSlot.Broadcast(CurrentItemType);
 
             return FReply::Handled();
@@ -181,6 +181,7 @@ void UInventoryUIContent::InternalBindingToItemSlots(UItemSlots* ItemSlotsWidget
     }
     //@초기화 완료 이벤트
     ItemSlotsWidget->ItemSlotsInitFinished.BindUFunction(this, "OnInventoryItemSlotsInitFinished");
+    ItemSlotsWidget->RequestCancelItemSlotsFocus.BindUFunction(this, "OnRequestCancelItemSlotsFocus");
 }
 
 void UInventoryUIContent::InternalBindingToItemDescription(UItemDescriptionSlot* ItemDescription)
@@ -484,6 +485,12 @@ void UInventoryUIContent::OnInventoryItemDescriptionInitFinished()
 
     //@Check 함수
     CheckInventoryUIContentInitialization();
+}
+
+void UInventoryUIContent::OnRequestCancelItemSlotsFocus()
+{
+    //@Set Focus
+    SetFocus();
 }
 
 void UInventoryUIContent::OnInventoryToolBarButtonClicked(EItemType ItemType)

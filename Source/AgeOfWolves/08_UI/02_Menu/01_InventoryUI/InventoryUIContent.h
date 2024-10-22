@@ -177,6 +177,10 @@ protected:
         void OnInventoryItemDescriptionInitFinished();
 
 protected:
+    UFUNCTION()
+        void OnRequestCancelItemSlotsFocus();
+
+protected:
     //@Inventory Tool Bar의 버튼 클릭 이벤트 구독
     UFUNCTION()
         void OnInventoryToolBarButtonClicked(EItemType ItemType);
