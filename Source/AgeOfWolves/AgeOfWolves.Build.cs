@@ -21,7 +21,8 @@ public class AgeOfWolves : ModuleRules
             "EnhancedInput",
             "Json",
             "JsonUtilities",
-            "AnimGraphRuntime"
+            "AnimGraphRuntime",
+            "MovieScene",
         });
     }
 }

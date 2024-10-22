@@ -147,8 +147,8 @@ FReply UInventoryUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const F
         }
         else
         {
-            // ItemSlots에 포커스가 없으면 상위 위젯에서 처리하도록 Unhandled 반환
-            return FReply::Unhandled();
+            //@ItemSlots에 포커스가 없으면 상위 위젯에서 처리하도록 Unhandled 반환 및 Focus 해제
+            return FReply::Unhandled().ClearUserFocus();
         }
     }
 
