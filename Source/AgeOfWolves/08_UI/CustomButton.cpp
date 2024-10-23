@@ -36,7 +36,7 @@ void UCustomButton::NativeOnInitialized()
     if (BlendOutAnimation)
     {
         FWidgetAnimationDynamicEvent AnimFinishedEvent;
-        AnimFinishedEvent.BindDynamic(this, &UCustomButton::OnBlendOuAnimationFinished);
+        AnimFinishedEvent.BindDynamic(this, &UCustomButton::OnBlendOutAnimationFinished);
         BindToAnimationFinished(BlendOutAnimation, AnimFinishedEvent);
     }
 
@@ -332,7 +332,7 @@ void UCustomButton::CancelSelectedButton_Implementation()
     //@eg. 애니메이션
 }
 
-void UCustomButton::OnBlendOuAnimationFinished()
+void UCustomButton::OnBlendOutAnimationFinished()
 {
     if (ButtonImage)
     {
@@ -344,4 +344,3 @@ void UCustomButton::OnBlendOuAnimationFinished()
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 #pragma endregion
-

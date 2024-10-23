@@ -510,6 +510,9 @@ void UInventoryUIContent::OnInventoryToolBarButtonClicked(EItemType ItemType)
     UE_LOGFMT(LogInventoryUIContent, Log, "아이템 타입이 {0}(으)로 변경되었습니다.",
         *UEnum::GetValueAsString(ItemType));
 
+    //@Set Focus
+    SetFocus();
+
     // TODO: 필요한 경우 추가 로직 구현
 }
 #pragma endregion

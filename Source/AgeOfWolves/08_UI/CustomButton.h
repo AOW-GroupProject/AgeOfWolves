@@ -136,10 +136,10 @@ protected:
         TArray<FButtonStateInformation> ButtonStateInfos;
 
 protected:
-    //@Blend-In 애니메이션
+    //@Blend-In/Out 애니메이션, 루프
     UPROPERTY(Transient, BlueprintReadWrite, meta = (BindWidgetAnim))
         TObjectPtr<UWidgetAnimation> BlendInAndOutAnimation;
-    //@Blend-In 애니메이션
+    //@Blend-Out 애니메이션
     UPROPERTY(Transient, BlueprintReadWrite, meta = (BindWidgetAnim))
         TObjectPtr<UWidgetAnimation> BlendOutAnimation;
 
@@ -191,7 +191,7 @@ public:
 protected:
     //@애니메이션 종료 콜백
     UFUNCTION()
-        void OnBlendOuAnimationFinished();
+        void OnBlendOutAnimationFinished();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
