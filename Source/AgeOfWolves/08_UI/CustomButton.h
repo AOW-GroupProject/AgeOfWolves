@@ -77,6 +77,7 @@ class AGEOFWOLVES_API UCustomButton : public UUserWidget
     friend class UInteractableItemSlot;
     friend class UInventoryToolBar;
     friend class UMenuUIToolBar;
+    friend class UHorizontalToolBar;
 #pragma endregion
 
     GENERATED_BODY()
@@ -98,28 +99,9 @@ protected:
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-protected:
-    //@Overlay
-    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-        UOverlay* ButtonOverlay;
-    //@Button
-    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-        UButton* Button;
-    //@Image
-    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
-        UImage* ButtonImage;
-
 private:
     //@Button State를 설정합니다.
     void SetButtonState(EButtonState NewState);
-
-protected:
-    //@현재 버튼의 상태를 나타냅니다.
-    UPROPERTY(BlueprintReadOnly, Category = "Button")
-        EButtonState CurrentButtonState = EButtonState::MAX;
-    //@버튼 상태별 정보를 담고 있는 구조체 목록
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
-        TArray<FButtonStateInformation> ButtonStateInfos;
 
 protected:
     //@버튼 이미지를 업데이트합니다.
@@ -133,6 +115,33 @@ protected:
     //@버트느이 상호작용 비활성화 함수
     UFUNCTION(BlueprintCallable, Category = "Button")
         void DeactivateButton(bool bIsClicked = false);
+
+protected:
+    //@Overlay
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+        UOverlay* ButtonOverlay;
+    //@Button
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+        UButton* Button;
+    //@Image
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+        UImage* ButtonImage;
+
+protected:
+    //@현재 버튼의 상태를 나타냅니다.
+    UPROPERTY(BlueprintReadOnly, Category = "Button")
+        EButtonState CurrentButtonState = EButtonState::MAX;
+    //@버튼 상태별 정보를 담고 있는 구조체 목록
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Button")
+        TArray<FButtonStateInformation> ButtonStateInfos;
+
+protected:
+    //@Blend-In/Out 애니메이션, 루프
+    UPROPERTY(Transient, BlueprintReadWrite, meta = (BindWidgetAnim))
+        TObjectPtr<UWidgetAnimation> BlendInAndOutAnimation;
+    //@Blend-Out 애니메이션
+    UPROPERTY(Transient, BlueprintReadWrite, meta = (BindWidgetAnim))
+        TObjectPtr<UWidgetAnimation> BlendOutAnimation;
 
 protected:
     //@참일 경우, 마우스가 벗어나도 Unhovered 되지 않습니다.
@@ -178,6 +187,11 @@ public:
     UFUNCTION(BlueprintNativeEvent, Category = "Button")
         void CancelSelectedButton();
     virtual void CancelSelectedButton_Implementation();
+
+protected:
+    //@애니메이션 종료 콜백
+    UFUNCTION()
+        void OnBlendOutAnimationFinished();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

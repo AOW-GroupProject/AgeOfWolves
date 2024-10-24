@@ -1,34 +1,15 @@
-// MenuUIToolBar.h
-
 #pragma once
 
 #include "CoreMinimal.h"
-#include "Blueprint/UserWidget.h"
+#include "08_UI/HorizontalToolBar.h"
 #include "MenuUI.h"
 
 #include "MenuUIToolBar.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogToolBar, Log, All)
-
-//@전방 선언
-#pragma region Forward Declaration
-class UHorizontalBox;
-class UCustomButton;
-#pragma endregion
-
-//@열거형
-#pragma region Enums
-#pragma endregion
-
-//@구조체
-#pragma region Structs
-#pragma endregion
+DECLARE_LOG_CATEGORY_EXTERN(LogMenuToolBar, Log, All)
 
 //@이벤트/델리게이트
 #pragma region Delegates
-//@초기화 완료 이벤트
-DECLARE_DELEGATE(FToolBarInitFinished)
-
 //@Menu Category 버튼 선택 이벤트
 DECLARE_DELEGATE_OneParam(FMenuCategoryButtonClicked, EMenuCategory)
 #pragma endregion
@@ -36,76 +17,56 @@ DECLARE_DELEGATE_OneParam(FMenuCategoryButtonClicked, EMenuCategory)
 /**
  * UMenuUIToolBar
  *
- * Menu UI 최상단에 위치하는 툴 바를 정의합니다.
+ * Menu UI 최상단에 위치하는 카테고리 선택 툴바입니다.
  */
-UCLASS()
-class AGEOFWOLVES_API UMenuUIToolBar : public UUserWidget
+    UCLASS()
+    class AGEOFWOLVES_API UMenuUIToolBar : public UHorizontalToolBar
 {
 
 //@친추 클래스
 #pragma region Friend Class
+    friend class UMenuUI;
 #pragma endregion
 
     GENERATED_BODY()
 
-//@Defualt Setting
+        //@Default Setting
 #pragma region Default Setting
 public:
     UMenuUIToolBar(const FObjectInitializer& ObjectInitializer);
 
 protected:
-    //~ Begin UUserWidget Interfaces
+    //~ Begin UUserWidget Interface
     virtual void NativeOnInitialized() override;
-    virtual void NativePreConstruct() override;
-    virtual void NativeConstruct() override;
-    virtual void NativeDestruct() override;
-    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
     //~ End UUserWidget Interface
-
-protected:
-    //@외부 바인딩
 
 protected:
     //@내부 바인딩
     void InternalBindToButton(UCustomButton* Button, EMenuCategory Category);
 
 public:
-    UFUNCTION()
-        void InitializeToolBar();
+    //@초기화
+    virtual void InitializeToolBar() override;
 #pragma endregion
 
-//@Property/Info...etc
-#pragma region Property or Subwidgets or Infos...etc
-public:
-    //@강제로 Default Setting으로 리셋합니다.
-    UFUNCTION(BlueprintCallable, Category = "Menu Tool Bar")
-        void ResetToolBar();
+    //@Property/Info...etc
+#pragma region SubWidgets
+protected:
+    virtual void ResetToolBar() override;
 
 protected:
     //@버튼 생성
-    void CreateButtons();
-    //@카테고리별 버튼 생성 및 추가
-    void CreateAndAddButton(EMenuCategory Category, TSubclassOf<UCustomButton> ButtonClass);
-
-public:
-    //@메뉴 카테고리를 왼쪽으로 이동
-    void MoveCategoryLeft();
-    //@메뉴 카테고리를 오른쪽으로 이동
-    void MoveCategoryRight();
+    virtual void CreateButtons() override;
+    void CreateAndAddButton(EMenuCategory Category);
 
 protected:
-    //@Tool Bar의 Horizontal Box
-    UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-        UHorizontalBox* CategoryButtonsBox;
+    virtual void MoveSelection(int32 Direction) override;
 
 protected:
-    //@Reset 시 설정할 Default 메뉴 카테고리
     const EMenuCategory DefaultCategory = EMenuCategory::Inventory;
-    //@현재 선택된 카테고리
     EMenuCategory CurrentCategory = EMenuCategory::MAX;
-    //@MenuCategory별 버튼들을 담고 있는 맵
     TMap<EMenuCategory, UCustomButton*> MMenuCategoryButtons;
-    //@Menu Category 별 버튼들의 블루프린트 클래스
+
     UPROPERTY(EditDefaultsOnly, Category = "Menu Tool Bar | Buttons")
         TSubclassOf<UCustomButton> InventoryButtonClass;
     UPROPERTY(EditDefaultsOnly, Category = "Menu Tool Bar | Buttons")
@@ -116,51 +77,36 @@ protected:
         TSubclassOf<UCustomButton> SystemButtonClass;
 #pragma endregion
 
-//@Delegates
+    //@Delegates
 #pragma region Delegates
-public:
-    //@Tool Bar의 초기화 완료 이벤트
-    FToolBarInitFinished ToolBarInitFinished;
-
 public:
     //@Menu Category Button의 선택 이벤트
     FMenuCategoryButtonClicked MenuCategoryButtonClicked;
 #pragma endregion
 
-//@Callbacks
+    //@Callbacks
 #pragma region Callbacks
+protected:
+    //@버튼 이벤트 override
+    virtual void OnToolBarButtonClicked_Implementation(EInteractionMethod InteractionMethodType, uint8 ButtonIndex) override;
+    virtual void OnToolBarButtonHovered_Implementation(EInteractionMethod InteractionMethodType, uint8 ButtonIndex) override;
+    virtual void OnToolBarButtonUnhovered_Implementation(uint8 ButtonIndex) override;
+    virtual void CancelToolBarButtonSelected_Implementation(uint8 PreviousIndex) override;
+
 protected:
     UFUNCTION()
         void MenuUIVisibilityChangedNotified(bool bIsVisible);
-
-protected:
-    //@Menu UI Tool Bar 버튼 클릭 이벤트 구독
-    UFUNCTION(BlueprintNativeEvent)
-        void OnMenuUIToolBarButtonClicked(EInteractionMethod InteractionMethodType, EMenuCategory Category);
-    virtual void OnMenuUIToolBarButtonClicked_Implementation(EInteractionMethod InteractionMethodType, EMenuCategory Category);
-    //@Menu UI Tool Bar 버튼 Hover 이벤트 구독
-    UFUNCTION(BlueprintNativeEvent)
-        void OnMenuUIToolBarButtonHovered(EInteractionMethod InteractionMethodType, EMenuCategory Category);
-    virtual void OnMenuUIToolBarButtonHovered_Implementation(EInteractionMethod InteractionMethodType, EMenuCategory Category);
-    //@Menu UI Tool Bar 버튼 Unhover 이벤트 구독
-    UFUNCTION(BlueprintNativeEvent)
-        void OnMenuUIToolBarButtonUnhovered(EMenuCategory Category);
-    virtual void OnMenuUIToolBarButtonUnhovered_Implementation(EMenuCategory Category);
-
-protected:
-    //@Menu UI Tool Bar 버튼 선택 취소 이벤트 구독
-    UFUNCTION(BlueprintNativeEvent)
-        void CancelMenuUIToolBarButtonSelected(EMenuCategory PreviousCategory);
-    virtual void CancelMenuUIToolBarButtonSelected_Implementation(EMenuCategory PreviousCategory);
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+    //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
-    //@현재 선택된 카테고리의 인덱스를 반환
-    int32 GetCurrentCategoryIndex() const;
-    //@인덱스에 해당하는 메뉴 카테고리를 반환
-    EMenuCategory GetMenuCategoryFromIndex(int32 Index) const;
-#pragma endregion
+    //@인덱스의 유효성 검사 override
+    virtual bool IsValidButtonIndex(uint8 Index) const override;
 
+private:
+    //@uint8 <-> EMenuCategory 변환 유틸리티
+    FORCEINLINE EMenuCategory IndexToMenuCategory(uint8 Index) const { return static_cast<EMenuCategory>(Index); }
+    FORCEINLINE uint8 MenuCategoryToIndex(EMenuCategory Category) const { return static_cast<uint8>(Category); }
+#pragma endregion
 };

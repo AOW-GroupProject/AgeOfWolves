@@ -131,7 +131,7 @@ FReply UInventoryUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const F
 
         return FReply::Handled();
     }
-    else if (Key == EKeys::Escape)
+    else if (Key == EKeys::Escape || Key == EKeys::Up)
     {
         //@Current Item Slots
         UItemSlots* CurrentItemSlots = Cast<UItemSlots>(GetItemSlotsUI(CurrentItemType));
@@ -147,8 +147,8 @@ FReply UInventoryUIContent::NativeOnKeyDown(const FGeometry& InGeometry, const F
         }
         else
         {
-            // ItemSlots에 포커스가 없으면 상위 위젯에서 처리하도록 Unhandled 반환
-            return FReply::Unhandled();
+            //@ItemSlots에 포커스가 없으면 상위 위젯에서 처리하도록 Unhandled 반환 및 Focus 해제
+            return FReply::Unhandled().ClearUserFocus();
         }
     }
 
@@ -166,7 +166,7 @@ void UInventoryUIContent::InternalBindingToInventoryToolBar(UInventoryToolBar* T
     }
 
     //@내부 바인딩
-    ToolBar->InventoryToolBarInitFinished.BindUFunction(this, "OnInventoryToolBarInitFinished");
+    ToolBar->ToolBarInitFinished.BindUFunction(this, "OnInventoryToolBarInitFinished");
     ToolBar->InventoryToolBarButtonClicked.BindUFunction(this, "OnInventoryToolBarButtonClicked");
 
 }
@@ -313,7 +313,7 @@ void UInventoryUIContent::CreateToolBar()
         return;
     }
     //@비동기 초기화 이벤트
-    RequestStartInitByInventoryUIContent.AddUFunction(InventoryToolBar, "InitializeInventoryToolBar");
+    RequestStartInitByInventoryUIContent.AddUFunction(InventoryToolBar, "InitializeToolBar");
     //@내부 바인딩
     InternalBindingToInventoryToolBar(InventoryToolBar);
     //@Tool Bar Overlay
@@ -509,6 +509,9 @@ void UInventoryUIContent::OnInventoryToolBarButtonClicked(EItemType ItemType)
 
     UE_LOGFMT(LogInventoryUIContent, Log, "아이템 타입이 {0}(으)로 변경되었습니다.",
         *UEnum::GetValueAsString(ItemType));
+
+    //@Set Focus
+    SetFocus();
 
     // TODO: 필요한 경우 추가 로직 구현
 }

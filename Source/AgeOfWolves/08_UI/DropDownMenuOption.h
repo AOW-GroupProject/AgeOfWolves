@@ -8,6 +8,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogDropDownMenuOption, Log, All)
 
+//@전방 선언
 #pragma region Forward Declaration
 class UOverlay;
 class UCustomButton;
@@ -16,6 +17,15 @@ class UHorizontalBox;
 class UImage;
 #pragma endregion
 
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
 #pragma region Delegates
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FDropDownMenuOptionInitFinished);
@@ -39,7 +49,7 @@ DECLARE_MULTICAST_DELEGATE(FNotifyDropDownMenuOptionCanceled);
 UCLASS()
 class AGEOFWOLVES_API UDropDownMenuOption : public UUserWidget
 {
-    //@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 #pragma endregion
 

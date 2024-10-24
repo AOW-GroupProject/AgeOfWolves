@@ -13,6 +13,7 @@
 #include "14_Subsystem/ItemManagerSubsystem.h"
 #include "04_Component/InventoryComponent.h"
 
+#include "Components/VerticalBox.h"
 #include "Components/EditableTextBox.h"
 #include "Components/MultiLineEditableTextBox.h"
 
@@ -29,6 +30,7 @@ void UItemDescriptionSlot::NativeOnInitialized()
     Super::NativeOnInitialized();
     //@외부 바인딩
     ExternalBindToInventoryComp();
+
 }
 
 void UItemDescriptionSlot::NativePreConstruct()
@@ -305,6 +307,11 @@ void UItemDescriptionSlot::OnItemSlotButtonHovered_Implementation(const FGuid& I
         // 가시성 활성화
         SetVisibility(ESlateVisibility::HitTestInvisible);
 
+        if (BlendInAnimation)
+        {
+            PlayAnimation(BlendInAnimation, 0.f, 1, EUMGSequencePlayMode::Forward);
+        }
+
         UE_LOGFMT(LogItemDescription, Log, "아이템 설명 UI에 새 아이템 할당: ID {0}, 이름 {1}, 등급 {2}",
             ID.ToString(), *ItemInfo.ItemName, *UEnum::GetValueAsString(ItemInfo.ItemRank));
     }
@@ -335,10 +342,10 @@ void UItemDescriptionSlot::OnItemSlotButtonCanceled_Implementation(const FGuid& 
     }
 
     //@필요 시 BP에서 해당 함수 오버라이딩...
-    UE_LOGFMT(LogItemDescription, Log, "아이템 슬롯 호버 혹은 선택 취소");
 
     //@가시성 비활성화
     SetVisibility(ESlateVisibility::Collapsed);
+
 }
 #pragma endregion
 

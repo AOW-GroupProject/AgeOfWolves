@@ -588,21 +588,6 @@ void UUIComponent::OnUIInputReleased(const FGameplayTag& InputTag)
 
 void UUIComponent::OnRequestCloseMenuUI()
 {
-	//@Input Mode를 UIOnly -> GameAndUI로 변경
-	APlayerController* PC = Cast<APlayerController>(GetOwner());
-	if (PC)
-	{
-		FInputModeGameAndUI InputMode;
-		InputMode.SetHideCursorDuringCapture(false);
-		PC->SetInputMode(InputMode);
-
-		//@bShowMouseCursor
-		PC->bShowMouseCursor = false;
-	}
-	else
-	{
-		UE_LOGFMT(LogUI, Warning, "{0}: PlayerController를 찾을 수 없습니다.", __FUNCTION__);
-	}
 
 	//@Hide Menu UI
 	HideAllUI(EUICategory::Menu);
@@ -613,6 +598,19 @@ void UUIComponent::OnRequestCloseMenuUI()
 	//@Interaction
 	ShowAllUI(EUICategory::Interaction);
 
+	//@Input Mode를 UIOnly -> GameAndUI로 변경 (이 부분을 먼저 처리)
+	APlayerController* PC = Cast<APlayerController>(GetOwner());
+	if (!PC)
+	{
+		UE_LOGFMT(LogUI, Warning, "{0}: PlayerController를 찾을 수 없습니다.", __FUNCTION__);
+		return;
+	}
+
+	//@Input Mode
+	PC->bShowMouseCursor = false;
+	FInputModeGameOnly GameOnly;
+	GameOnly.SetConsumeCaptureMouseDown(false);
+	PC->SetInputMode(GameOnly);
 }
 #pragma endregion
 
