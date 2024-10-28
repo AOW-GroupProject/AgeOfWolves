@@ -186,6 +186,14 @@ protected:
         TArray<FMenuUIContentInfo> MenuContents;
 
 protected:
+    //@Blend-In 애니메이션
+    UPROPERTY(Transient, BlueprintReadWrite, meta = (BindWidgetAnim))
+        TObjectPtr<UWidgetAnimation> BlendInAnimation;
+    //@Blend-In 애니메이션
+    UPROPERTY(Transient, BlueprintReadWrite, meta = (BindWidgetAnim))
+        TObjectPtr<UWidgetAnimation> BlendOutAnimation;
+
+protected:
     //@초기 Menu UI가 나타낼 Menu Category
     EMenuCategory DefaultCategory = EMenuCategory::Inventory;
 
@@ -235,6 +243,12 @@ protected:
     UFUNCTION(BlueprintNativeEvent)
         void OnMenuCategoryButtonClikced(EMenuCategory MenuCategory);
     virtual void OnMenuCategoryButtonClikced_Implementation(EMenuCategory MenuCategory);
+
+protected:
+    //@애니메이션 종료 콜백
+    UFUNCTION()
+        void OnBlendOuAnimationFinished();
+
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

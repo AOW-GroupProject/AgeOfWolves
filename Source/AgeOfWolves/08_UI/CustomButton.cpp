@@ -5,6 +5,7 @@
 #include "Components/Button.h"
 #include "Components/Image.h"
 #include "Components/Overlay.h"
+#include "Animation/WidgetAnimation.h" 
 
 DEFINE_LOG_CATEGORY(LogCustomButton);
 
@@ -29,6 +30,14 @@ void UCustomButton::NativeOnInitialized()
         Button->OnUnhovered.AddDynamic(this, &UCustomButton::OnButtonUnhovered);
         Button->OnPressed.AddDynamic(this, &UCustomButton::OnButtonPressed);
         Button->OnClicked.AddDynamic(this, &UCustomButton::OnButtonClicked);
+    }
+
+    //@애니메이션 완료 콜백 바인딩
+    if (BlendOutAnimation)
+    {
+        FWidgetAnimationDynamicEvent AnimFinishedEvent;
+        AnimFinishedEvent.BindDynamic(this, &UCustomButton::OnBlendOutAnimationFinished);
+        BindToAnimationFinished(BlendOutAnimation, AnimFinishedEvent);
     }
 
     SetButtonState(EButtonState::Normal);
@@ -162,6 +171,11 @@ bool UCustomButton::SetButtonHoveredByKeyboard_Implementation()
         return false;
     }
 
+    if (BlendInAndOutAnimation)
+    {
+        PlayAnimation(BlendInAndOutAnimation, 0.0f, 0, EUMGSequencePlayMode::Forward);  
+    }
+
     //@Button State를 Hovered 상태로 전환
     SetButtonState(EButtonState::Hovered);
 
@@ -177,6 +191,12 @@ bool UCustomButton::SetButtonSelectedByKeyboard_Implementation()
     {
         UE_LOGFMT(LogCustomButton, Verbose, "버튼이 비활성화 상태입니다. Click 무시.");
         return false;
+    }
+
+    //@Animation
+    if (BlendInAndOutAnimation && IsAnimationPlaying(BlendInAndOutAnimation))
+    {
+        StopAnimation(BlendInAndOutAnimation);
     }
 
     //@Clicke에 의한 비활성화
@@ -206,14 +226,17 @@ void UCustomButton::OnButtonHovered_Implementation()
         return;
     }
 
+    if (BlendInAndOutAnimation)
+    {
+        PlayAnimation(BlendInAndOutAnimation, 0.0f, 0, EUMGSequencePlayMode::Forward);
+    }
+
+
     SetButtonState(EButtonState::Hovered);
 
     ButtonHovered.Broadcast(EInteractionMethod::Mouse);
 
     UE_LOGFMT(LogCustomButton, Log, "버튼에 마우스가 올라갔습니다.");
-
-    //@블루프린트에서 가져와 오버라이딩 합니다...
-    //@eg. 애니메이션
 }
 
 void UCustomButton::OnButtonUnhovered_Implementation()
@@ -226,17 +249,22 @@ void UCustomButton::OnButtonUnhovered_Implementation()
 
     if (!bLockAsHovered)
     {
-        //@Set Button State
+        if (BlendInAndOutAnimation && IsAnimationPlaying(BlendInAndOutAnimation))
+        {
+            StopAnimation(BlendInAndOutAnimation);
+        }
+
+        if (BlendOutAnimation && !IsAnimationPlaying(BlendInAndOutAnimation))
+        {
+            PlayAnimation(BlendOutAnimation, 0.0f, 1, EUMGSequencePlayMode::Forward);
+        }
+
         SetButtonState(EButtonState::Normal);
 
-        //@Unhover 이벤트
         ButtonUnhovered.Broadcast();
     }
 
     UE_LOGFMT(LogCustomButton, Log, "버튼에서 마우스가 벗어났습니다.");
-
-    //@블루프린트에서 가져와 오버라이딩 합니다...
-    //@eg. 애니메이션
 }
 
 void UCustomButton::OnButtonPressed_Implementation()
@@ -268,16 +296,17 @@ void UCustomButton::OnButtonClicked_Implementation()
         return;
     }
 
-    //@Clicke에 의한 비활성화
+    // 애니메이션 정지
+    if (BlendInAndOutAnimation && IsAnimationPlaying(BlendInAndOutAnimation))
+    {
+        StopAnimation(BlendInAndOutAnimation);
+    }
+
     DeactivateButton(true);
 
-    //@Clicked/Selected 이벤트
     ButtonSelected.Broadcast(EInteractionMethod::Mouse);
 
     UE_LOGFMT(LogCustomButton, Log, "버튼이 선택되었습니다.");
-
-    //@블루프린트에서 가져와 오버라이딩 합니다...
-    //@eg. 애니메이션
 }
 
 void UCustomButton::CancelSelectedButton_Implementation()
@@ -289,6 +318,11 @@ void UCustomButton::CancelSelectedButton_Implementation()
         return;
     }
 
+    if (BlendOutAnimation && !IsAnimationPlaying(BlendInAndOutAnimation))
+    {
+        PlayAnimation(BlendOutAnimation, 0.0f, 1, EUMGSequencePlayMode::Forward);
+    }
+
     //@Button 상호작용 활성화
     ActivateButton();
 
@@ -296,6 +330,14 @@ void UCustomButton::CancelSelectedButton_Implementation()
 
     //@블루프린트에서 가져와 오버라이딩 합니다...
     //@eg. 애니메이션
+}
+
+void UCustomButton::OnBlendOutAnimationFinished()
+{
+    if (ButtonImage)
+    {
+        ButtonImage->SetRenderOpacity(1.f);
+    }
 }
 #pragma endregion
 

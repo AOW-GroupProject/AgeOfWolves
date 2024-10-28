@@ -6,8 +6,8 @@
 
 #include "08_UI/02_Menu/MenuUIToolBar.h"
 #include "08_UI/02_Menu/MenuUIContent.h"
+#include "Animation/WidgetAnimation.h" 
 
-//@TODO: Menu Content UI 설꼐 이후 아래 #include 제거
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
 #include "Components/Image.h"
@@ -44,6 +44,13 @@ void UMenuUI::NativeOnInitialized()
     //@외부 바인딩
     ExternalBindToUIComponent();
 
+    //@애니메이션 완료 콜백 바인딩
+    if (BlendOutAnimation)
+    {
+        FWidgetAnimationDynamicEvent AnimFinishedEvent;
+        AnimFinishedEvent.BindDynamic(this, &UMenuUI::OnBlendOuAnimationFinished);
+        BindToAnimationFinished(BlendOutAnimation, AnimFinishedEvent);
+    }
 }
 
 void UMenuUI::NativePreConstruct()
@@ -120,14 +127,14 @@ FReply UMenuUI::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& In
     {
         UE_LOGFMT(LogMenuUI, Log, "Menu UI 카테고리를 왼쪽으로 이동합니다.");
         //@Menu Category를 왼쪽으로 이동 시킵니다.
-        ToolBar->MoveCategoryLeft();
+        ToolBar->MoveLeft();
 
         return FReply::Handled();
     }
     else if (KeyName == "x")
     {
         UE_LOGFMT(LogMenuUI, Log, "Menu UI 카테고리를 오른쪽으로 이동합니다.");
-        ToolBar->MoveCategoryRight();
+        ToolBar->MoveRight();
 
         return FReply::Handled();
     }
@@ -136,7 +143,7 @@ FReply UMenuUI::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& In
         //@Menu UI 닫기 요청 이벤트
         RequestCloseMenuUI.ExecuteIfBound();
 
-        return FReply::Handled();
+        return FReply::Handled().ClearUserFocus();
     }
     else if (KeyName == "i")
     {
@@ -219,6 +226,7 @@ void UMenuUI::InitializeMenuUI()
     //@초기화 요청 이벤트 호
     RequestStartInitByMenuUI.Broadcast();
 }
+
 void UMenuUI::CheckAllUIsInitFinsiehd()
 {
     if (bMenuToolBarInitFinished
@@ -277,7 +285,6 @@ void UMenuUI::CheckSystemUIInitFinished()
         //@이벤트 호출...
     }
 }
-
 #pragma endregion
 
 //@Property/Info...etc
@@ -462,21 +469,29 @@ void UMenuUI::OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVi
         //@Reset Menu UI
         ResetMenuUI();
 
-        UE_LOGFMT(LogMenuUI, Log, "MenuUI가 뷰포트에 추가되었습니다. 현재 카테고리: {0}", *UEnum::GetValueAsString(CurrentCategory));
+        //@애니메이션 재생
+        if (BlendInAnimation)
+        {
+            PlayAnimation(BlendInAnimation, 0.0f, 1, EUMGSequencePlayMode::Forward);
+        }
 
-        // TODO: MenuUI가 표시될 때 필요한 추가 로직
-        // 예: 애니메이션 재생 등
+        UE_LOGFMT(LogMenuUI, Log, "MenuUI가 뷰포트에 추가되었습니다. 현재 카테고리: {0}", *UEnum::GetValueAsString(CurrentCategory));
     }
     //@가시성 비활성화
     else
     {
-        //@Remove From Parent
-        RemoveFromParent();
+        //@애니메이션 재생 및 콜백 바인딩
+        if (BlendOutAnimation)
+        {
+            PlayAnimation(BlendOutAnimation, 0.0f, 1, EUMGSequencePlayMode::Forward);
+        }
+        else
+        {
+            //@애니메이션이 없는 경우 즉시 제거
+            RemoveFromParent();
+        }
 
-        UE_LOGFMT(LogMenuUI, Log, "MenuUI가 뷰포트에서 제거되었습니다.");
-
-        // TODO: MenuUI가 숨겨질 때 필요한 추가 로직
-        // 예: 데이터 저장, 정리 작업 등
+        UE_LOGFMT(LogMenuUI, Log, "MenuUI 숨김 처리를 시작합니다.");
     }
 }
 
@@ -542,6 +557,14 @@ void UMenuUI::OnMenuCategoryButtonClikced_Implementation(EMenuCategory MenuCateg
     // TODO: 필요한 경우 추가 로직 구현
     // 예: 애니메이션 재생, 포커스 설정 등
 
+}
+
+void UMenuUI::OnBlendOuAnimationFinished()
+{
+    //@잠깐의 지연 후 원하는 설정으로 변경
+    RemoveFromParent();
+
+    UE_LOGFMT(LogMenuUI, Log, "MenuUI가 뷰포트에서 제거되었습니다.");
 }
 #pragma endregion
 
