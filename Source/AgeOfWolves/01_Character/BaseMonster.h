@@ -148,9 +148,6 @@ public:
 protected:
 
 
-	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Ability")
-	TObjectPtr<UBaseAbilitySet> AbilitySet;
-
 	UPROPERTY(VisibleAnywhere, Category = "Ability")
 	TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
 

@@ -21,6 +21,7 @@ void ULevelUI::NativeOnInitialized()
 void ULevelUI::NativePreConstruct()
 {
     Super::NativePreConstruct();
+
 }
 
 void ULevelUI::NativeConstruct()

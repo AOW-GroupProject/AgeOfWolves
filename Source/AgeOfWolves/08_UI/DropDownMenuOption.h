@@ -8,6 +8,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogDropDownMenuOption, Log, All)
 
+//@전방 선언
 #pragma region Forward Declaration
 class UOverlay;
 class UCustomButton;
@@ -16,16 +17,25 @@ class UHorizontalBox;
 class UImage;
 #pragma endregion
 
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
 #pragma region Delegates
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FDropDownMenuOptionInitFinished);
 
 //@옵션 선택 이벤트
-DECLARE_MULTICAST_DELEGATE(FDropDownMenuOptionSelected);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDropDownMenuOptionSelected, FName, EInteractionMethod);
 //@옵션 호버 이벤트
-DECLARE_MULTICAST_DELEGATE(FDropDownMenuOptionHovered);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDropDownMenuOptionHovered, FName, EInteractionMethod);
 //@옵션 언호버 이벤트
-DECLARE_MULTICAST_DELEGATE(FDropDownMenuOptionUnhovered);
+DECLARE_MULTICAST_DELEGATE_OneParam(FDropDownMenuOptionUnhovered, FName);
 
 //@옵션 취소 이벤트
 DECLARE_MULTICAST_DELEGATE(FNotifyDropDownMenuOptionCanceled);
@@ -39,13 +49,13 @@ DECLARE_MULTICAST_DELEGATE(FNotifyDropDownMenuOptionCanceled);
 UCLASS()
 class AGEOFWOLVES_API UDropDownMenuOption : public UUserWidget
 {
-    //@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 #pragma endregion
 
     GENERATED_BODY()
 
-        //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UDropDownMenuOption(const FObjectInitializer& ObjectInitializer);
@@ -68,7 +78,7 @@ public:
         virtual void InitializeDropDownMenuOption();
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region Subwidgets
 protected:
     //@CustomButton 생성
@@ -112,6 +122,10 @@ protected:
         UEditableTextBox* DropDownMenuOptionText;
 
 protected:
+    //@Option 버튼
+    TObjectPtr<UCustomButton> Button;
+
+protected:
     //@각 옵션의 Height 값
     UPROPERTY(EditDefaultsOnly, category = "Drop Down Menu Option | Option Text")
         float OptionHeight = 0;
@@ -121,7 +135,7 @@ protected:
         float LeftRightPadding = 0;
 #pragma endregion
 
-    //@Delegates
+//@Delegates
 #pragma region Delegates
 public:
     //@초기화 완료 이벤트
@@ -139,17 +153,17 @@ public:
     FNotifyDropDownMenuOptionCanceled NotifyDropDownMenuOptionCanceled;
 #pragma endregion
 
-    //@Callbacks
+//@Callbacks
 #pragma region Callbacks
 protected:
     //@Button Clicked 이벤트에 등록되는 콜백
     UFUNCTION(BlueprintNativeEvent)
-        void OnDropDownMenuOptionButtonClicked();
-    virtual void OnDropDownMenuOptionButtonClicked_Implementation();
+        void OnDropDownMenuOptionButtonClicked(EInteractionMethod InteractionMethodType);
+    virtual void OnDropDownMenuOptionButtonClicked_Implementation(EInteractionMethod InteractionMethodType);
     //@Button Hovered 이벤트에 등록되는 콜백
     UFUNCTION(BlueprintNativeEvent)
-        void OnDropDownMenuOptionButtonHovered();
-    virtual void OnDropDownMenuOptionButtonHovered_Implementation();
+        void OnDropDownMenuOptionButtonHovered(EInteractionMethod InteractionMethodType);
+    virtual void OnDropDownMenuOptionButtonHovered_Implementation(EInteractionMethod InteractionMethodType);
 
     //@Button Unhovered 이벤트에 등록되는 콜백
     UFUNCTION(BlueprintNativeEvent)
@@ -163,9 +177,11 @@ protected:
     virtual void DropDownMenuOptionButtonCanceledNotified_Implementation(FName OptionName);
 #pragma endregion
 
-    //@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utilities
 public:
+    UFUNCTION(BlueprintCallable)
+        FName GetOptionName() const;
     UFUNCTION(BlueprintCallable)
         void SetOptionName(FText Text);
 
@@ -192,5 +208,9 @@ public:
 
     UFUNCTION(BlueprintCallable)
         FORCEINLINE float GetLeftRightPadding() { return LeftRightPadding; }
+
+public:
+    UFUNCTION(BlueprintCallable, Category = "Item Slot | Button")
+        UCustomButton* GetDropDownMenuOptionButton() const;
 #pragma endregion
 };

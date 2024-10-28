@@ -8,17 +8,31 @@
 
 #include "BaseInputComponent.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogInputComponent, Log, All)
+
+//@전방 선언
+#pragma region Forward Declaration
 class UEnhancedInputLocalPlayerSubsystem;
 class UInputAction;
 class UObject;
+#pragma endregion
 
-DECLARE_LOG_CATEGORY_EXTERN(LogInputComponent, Log, All)
+//@열거형
+#pragma region Enums
+#pragma endregion
 
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
 //@Input Component 초기화 완료 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNotifyInputComponentInitFinished);
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FUIInputTagTriggered, const FGameplayTag&);
 DECLARE_MULTICAST_DELEGATE_OneParam(FUIInputTagReleased, const FGameplayTag&);
+#pragma endregion
 
 /**
  * @목적 : Enhanced Input System 활용을 위한 사용자 정의 Input Component를 정의합니다.
@@ -29,8 +43,13 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FUIInputTagReleased, const FGameplayTag&);
 UCLASS()
 class AGEOFWOLVES_API UBaseInputComponent : public UEnhancedInputComponent
 {
+	//@친추 클래스
+#pragma region Friend Class
+#pragma endregion
+
 	GENERATED_BODY()
-	
+		
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UBaseInputComponent(const FObjectInitializer& ObjectInitializer);
@@ -44,14 +63,12 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	//~End Of UActorComponent interface
-protected:
-	void ExternalBindingToUIComponent();
 
-public:
-	UFUNCTION()
-		void InitializeInputComponent();
-private:
-	//@Internal Binding
+protected:
+	//@외부 바인딩
+
+protected:
+	//@내부 바인딩
 	void InternalBindToInputActions(const APlayerController* PC);
 	//@Bind IA Template
 	template<typename UserClass, typename PressedFuncType, typename ReleasedFuncType>
@@ -91,8 +108,13 @@ private:
 	void BindUIInputActions(const UInputConfig* InputConfig);
 	// @breif : Remove BindHandles Interacting with corressponding Ability Input Action
 	void RemoveBinds(TArray<uint32>& BindHandles);
+
+public:
+	UFUNCTION()
+		void InitializeInputComponent();
 #pragma endregion 
 
+//@Property/Info...etc
 #pragma region IMC(Input Mapping Context)
 private:
 	//@현재 최 우선순위로 설정된 IMC의 Gameplay Tag
@@ -109,6 +131,7 @@ public:
 		void SwapMappings(const FGameplayTag& NewIMCTag);
 #pragma endregion
 
+//@Delegates
 #pragma region Delegate
 public:
 	//@Input Component의 초기화 완료 이벤트
@@ -121,6 +144,7 @@ public:
 	FUIInputTagReleased UIInputTagReleased;
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 protected:
 	// @목적 : 사용자의 Move IA에 대응되는 캐릭터 이동 조작을 정의하는 콜백 함수
@@ -135,6 +159,7 @@ protected:
 	void OnAbilityInputTagPressed(FGameplayTag InputTag);
 	// @목적 : 사용자의 Ability IA관련 키 해제에 대응되는 콜백 함수
 	void OnAbilityInputTagReleased(FGameplayTag InputTag);
+
 protected:
 	//@UI Input Tag Triggered 이벤트를 구독하는 콜백
 	void OnUIInputTagTriggered(FGameplayTag InputTag);
@@ -142,7 +167,8 @@ protected:
 	void OnUIInputTagReleased(FGameplayTag InputTag);
 #pragma endregion
 
-#pragma region Etc
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 private:
 	FVector2D InputVector;
 public:

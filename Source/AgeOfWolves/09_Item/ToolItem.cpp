@@ -20,6 +20,8 @@ bool AToolItem::TryActivateItem_Implementation()
 {
     if (Super::TryActivateItem_Implementation())
     {
+        UE_LOGFMT(LogToolItem, Log, "{0}: Tool Item 활성화 시작!", ItemTag.ToString());
+
         //@GA활성화 로직 작성
         return true;
     }

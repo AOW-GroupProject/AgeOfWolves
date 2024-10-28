@@ -10,6 +10,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogItemDescription, Log, All)
 
+//@전방 선언
 #pragma region Forward Declaration
 class UInventoryUIContent;
 class UItemSlots;
@@ -18,6 +19,15 @@ class UEditableTextBox;
 class UMultiLineEditableTextBox;
 #pragma endregion
 
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
 #pragma region Delegates
 //@초기화 완료 이벤트(초기화 작업 비동기화)
 DECLARE_DELEGATE(FItemDescriptionSlotInitFinished);
@@ -31,11 +41,16 @@ DECLARE_DELEGATE(FItemDescriptionSlotInitFinished);
 UCLASS()
 class AGEOFWOLVES_API UItemDescriptionSlot : public UItemSlot
 {
+
+//@친추 클래스
+#pragma region Friend Class
     friend class UInventoryUIContent;
+#pragma endregion
 
     GENERATED_BODY()
 
-#pragma region Default Settings
+//@Defualt Setting
+#pragma region Default Setting
 public:
     UItemDescriptionSlot(const FObjectInitializer& ObjectInitializer);
 
@@ -45,6 +60,7 @@ protected:
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
     //~ End UUserWidget Interface
 
 protected:
@@ -58,21 +74,22 @@ public:
     //@초기화
     UFUNCTION()
         void InitializeItemDescriptionSlot();
+
 #pragma endregion
 
-#pragma region SubWidgets
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 protected:
     void ResetItemDescriptionSlot();
 
 public:
     //@퀵슬롯에 새로운 아이템을 할당합니다.
-    virtual void AssignNewItem(const FGuid& ID, const FItemInformation* ItemInformation, int32 ItemCount = -1) override;
+    virtual void AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount = -1) override;
     //@퀵슬롯에 할당된 기존 아이템을 제거합니다.
-    virtual void ClearAssignedItem(bool bForceClear = false);
+    void ClearAssignedItem(bool bForceClear = false);
 
 protected:
     FString ArrangeItemDescriptionStringToText(FString String);
-
 
 protected:
     //@수직 상자
@@ -90,14 +107,21 @@ protected:
 protected:
     //@FGuid에 대응되는 FTemporaryItemInformation를 갖는 TMap
     TMap<FGuid, FItemInformation> MItemsInInventoryItemSlots;
+
+protected:
+    //@Blend-In 애니메이션
+    UPROPERTY(Transient, BlueprintReadWrite, meta = (BindWidgetAnim))
+        TObjectPtr<UWidgetAnimation> BlendInAnimation;
 #pragma endregion
 
-#pragma region Delegate
+//@Delegates
+#pragma region Delegates
 public:
     //@초기화 완료 이벤트
     FItemDescriptionSlotInitFinished ItemDescriptionSlotInitFinished;
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 protected:
     //@Item Slots의 바인딩 준비 완료 이벤트
@@ -114,13 +138,18 @@ protected:
 
 protected:
     UFUNCTION(BlueprintNativeEvent)
-        void OnItemSlotButtonHovered(const FGuid& ID);
-    virtual void OnItemSlotButtonHovered_Implementation(const FGuid& ID);
+        void OnItemSlotButtonHovered(const FGuid& ID, EInteractionMethod InteractionMethodType);
+    virtual void OnItemSlotButtonHovered_Implementation(const FGuid& ID, EInteractionMethod InteractionMethodType);
     UFUNCTION(BlueprintNativeEvent)
         void OnItemSlotButtonUnhovered(const FGuid& ID);
     virtual void OnItemSlotButtonUnhovered_Implementation(const FGuid& ID);
     UFUNCTION(BlueprintNativeEvent)
-        void OnItemSlotButtonCanceled();
-    virtual void OnItemSlotButtonCanceled_Implementation();
+        void OnItemSlotButtonCanceled(const FGuid& ID, EInteractionMethod InteractionMethodType);
+    virtual void OnItemSlotButtonCanceled_Implementation(const FGuid& ID, EInteractionMethod InteractionMethodType);
 #pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+#pragma endregion
+
 };

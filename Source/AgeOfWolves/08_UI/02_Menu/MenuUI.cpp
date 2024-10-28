@@ -6,18 +6,35 @@
 
 #include "08_UI/02_Menu/MenuUIToolBar.h"
 #include "08_UI/02_Menu/MenuUIContent.h"
+#include "Animation/WidgetAnimation.h" 
 
-//@TODO: Menu Content UI 설꼐 이후 아래 #include 제거
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
 #include "Components/Image.h"
 
 DEFINE_LOG_CATEGORY(LogMenuUI)
 
+//@Defualt Setting
 #pragma region Default Setting
 UMenuUI::UMenuUI(const FObjectInitializer& ObjectInitializer)
-    :Super(ObjectInitializer)
-{}
+    : Super(ObjectInitializer)
+    , DefaultCategory(EMenuCategory::Inventory)
+    , CurrentCategory(EMenuCategory::MAX)
+    , bMenuToolBarInitFinished(false)
+    , bInventoryUIInitFinished(false)
+    , bLevelUIInitFinished(false)
+    , bMapUIInitFinished(false)
+    , bSystemUIInitFinished(false)
+{
+    //@ToolBar 초기화
+    ToolBarRef = nullptr;
+
+    //@MMenuContents 맵 초기화
+    for (uint8 i = 0; i < static_cast<uint8>(EMenuCategory::MAX); ++i)
+    {
+        MMenuContents.Add(static_cast<EMenuCategory>(i), nullptr);
+    }
+}
 
 void UMenuUI::NativeOnInitialized()
 {
@@ -25,14 +42,22 @@ void UMenuUI::NativeOnInitialized()
 
     //@외부 바인딩 아래에서 수행...
     //@외부 바인딩
-    ExternalBindToInputComponent();
     ExternalBindToUIComponent();
-    
+
+    //@애니메이션 완료 콜백 바인딩
+    if (BlendOutAnimation)
+    {
+        FWidgetAnimationDynamicEvent AnimFinishedEvent;
+        AnimFinishedEvent.BindDynamic(this, &UMenuUI::OnBlendOuAnimationFinished);
+        BindToAnimationFinished(BlendOutAnimation, AnimFinishedEvent);
+    }
 }
 
 void UMenuUI::NativePreConstruct()
 {
     Super::NativePreConstruct();
+
+    SetIsFocusable(true);
 }
 
 void UMenuUI::NativeConstruct()
@@ -45,33 +70,93 @@ void UMenuUI::NativeDestruct()
     Super::NativeDestruct();
 }
 
-void UMenuUI::ExternalBindToInputComponent()
+FNavigationReply UMenuUI::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
 {
-    //@TODO: UI Comp에서 전달하는 UI Input Tag 활성화/해제 이벤트 바인딩 아래에서 수행...
-    UWorld* World = GetWorld();
-    if (!World)
+    return FNavigationReply::Explicit(nullptr);
+}
+
+FReply UMenuUI::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
+{
+
+    //@Set Directly(SetFocus())를 통한 포커스 시도 외에 다른 시도는 허용하지 않습니다.
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
     {
-        UE_LOGFMT(LogMenuUI, Error, "{0}: World is null", __FUNCTION__);
-        return;
+        return FReply::Handled().ClearUserFocus();
     }
-    //@PC
-    APlayerController* PC = World->GetFirstPlayerController();
-    if (!PC)
+
+    UE_LOGFMT(LogMenuUI, Log, "포커스 : 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+
+    return FReply::Handled();
+}
+
+void UMenuUI::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
+{
+    //@SetDirectly(다른 UI에 대한 SetFocus() 호출)에 의한 포커스 소실 외에 다른 소실 원인은 거부합니다.
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
     {
-        UE_LOGFMT(LogMenuUI, Error, "{0}: PlayerController is null", __FUNCTION__);
-        return;
-    }
-    //@Input Comp
-    UBaseInputComponent* BaseInputComp = Cast<UBaseInputComponent>(PC->InputComponent);
-    if (!BaseInputComp)
-    {
-        UE_LOGFMT(LogMenuUI, Error, "{0}: Input Component를 찾을 수 없습니다", __FUNCTION__);
+        SetFocus();
+
         return;
     }
 
-    //@외부 바인딩
-    BaseInputComp->UIInputTagTriggered.AddUFunction(this, "OnUIInputTagTriggered");
-    BaseInputComp->UIInputTagReleased.AddUFunction(this, "OnUIInputTagReleased");
+    Super::NativeOnFocusLost(InFocusEvent);
+
+    UE_LOGFMT(LogMenuUI, Log, "포커스 종료: 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+
+}
+
+FReply UMenuUI::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+    FKey Key = InKeyEvent.GetKey();
+
+    UE_LOGFMT(LogMenuUI, Log, "키 입력 감지됨: {0}", *Key.ToString());
+
+    //@Menu UI Tool Bar
+    UMenuUIToolBar* ToolBar = GetToolBarUI();
+    if (!ToolBar)
+    {
+        UE_LOGFMT(LogMenuUI, Error, "ToolBar를 찾을 수 없습니다.");
+        return FReply::Unhandled();
+    }
+
+    //@Tool Bar 카테고리 이동
+    FString KeyName = Key.GetFName().ToString().ToLower();
+    if (KeyName == "z")
+    {
+        UE_LOGFMT(LogMenuUI, Log, "Menu UI 카테고리를 왼쪽으로 이동합니다.");
+        //@Menu Category를 왼쪽으로 이동 시킵니다.
+        ToolBar->MoveLeft();
+
+        return FReply::Handled();
+    }
+    else if (KeyName == "x")
+    {
+        UE_LOGFMT(LogMenuUI, Log, "Menu UI 카테고리를 오른쪽으로 이동합니다.");
+        ToolBar->MoveRight();
+
+        return FReply::Handled();
+    }
+    else if (KeyName == "escape")
+    {
+        //@Menu UI 닫기 요청 이벤트
+        RequestCloseMenuUI.ExecuteIfBound();
+
+        return FReply::Handled().ClearUserFocus();
+    }
+    else if (KeyName == "i")
+    {
+        //@TODO: Item 카테고리로 이동
+        return FReply::Handled();
+    }
+    else if (KeyName == "m")
+    {
+        //@TODO: Map 카테고리로 이동
+        return FReply::Handled();
+    }
+
+    return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
 }
 
 void UMenuUI::ExternalBindToUIComponent()
@@ -202,7 +287,8 @@ void UMenuUI::CheckSystemUIInitFinished()
 }
 #pragma endregion
 
-#pragma region SubWidgets
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UMenuUI::ResetMenuUI()
 {
     UE_LOGFMT(LogMenuUI, Log, "MenuUI 리셋 시작");
@@ -216,6 +302,7 @@ void UMenuUI::ResetMenuUI()
             {
                 //@Reset ToolBar
                 MenuToolBar->ResetToolBar();
+
                 UE_LOGFMT(LogMenuUI, Log, "MenuToolBar 리셋 완료");
                 break;
             }
@@ -233,10 +320,12 @@ void UMenuUI::ResetMenuUI()
         {
             //@Reset
             Content->ResetMenuUIContent();
+            
             UE_LOGFMT(LogMenuUI, Log, "{0} 카테고리의 MenuUIContent 리셋 완료", *UEnum::GetValueAsString(Pair.Key));
 
             //@Visibility
             SetCategoryVisibility(Pair.Key, Pair.Key == DefaultCategory);
+
             UE_LOGFMT(LogMenuUI, Log, "{0} 카테고리의 가시성 설정: {1}",
                 *UEnum::GetValueAsString(Pair.Key),
                 Pair.Key == DefaultCategory ? TEXT("표시") : TEXT("숨김"));
@@ -266,14 +355,19 @@ void UMenuUI::CreateToolBar()
     }
     //@초기화 요청 이벤트
     RequestStartInitByMenuUI.AddUFunction(ToolBar, "InitializeToolBar");
+
     //@내부 바인딩
     InternalBindingToToolBar(ToolBar);
+
     //@Alignment
     if(UOverlaySlot* OverlaySlot = ToolBarOverlay->AddChildToOverlay(ToolBar))
     {
         OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
         OverlaySlot->SetVerticalAlignment(VAlign_Fill);
     }
+
+    //@TWeakObjectPtr
+    ToolBarRef = ToolBar;
 
     UE_LOGFMT(LogMenuUI, Log, "ToolBar가 성공적으로 생성되고 ToolBarOverlay에 추가되었습니다.");
 }
@@ -286,23 +380,18 @@ void UMenuUI::CreateAllCategoryUIs()
         UE_LOGFMT(LogMenuUI, Error, "MenuUIContentOverlay가 유효하지 않습니다.");
         return;
     }
-    //@TSet
-    TSet<EMenuCategory> CreatedCategories;
+
     //@Menu Content
-    for (const FMenuUIContentInfo& ContentUI : MenuContent)
+    for (const FMenuUIContentInfo& ContentUI : MenuContents)
     {
-        //@Contains
-        if (CreatedCategories.Contains(ContentUI.MenuCategory))
-        {
-            UE_LOGFMT(LogMenuUI, Warning, "{0} 카테고리의 MenuUIContent가 이미 생성되었습니다. 중복 생성을 건너뜁니다.", *UEnum::GetValueAsString(ContentUI.MenuCategory));
-            continue;
-        }
+
         //@MenuUIContentClass
         if (!ContentUI.MenuUIContentClass)
         {
             UE_LOGFMT(LogMenuUI, Warning, "{0} 카테고리의 MenuUIContentClass가 설정되지 않았습니다.", *UEnum::GetValueAsString(ContentUI.MenuCategory));
             continue;
         }
+
         //@MenuUIContent
         UMenuUIContent* NewContent = CreateWidget<UMenuUIContent>(this, ContentUI.MenuUIContentClass);
         if (!NewContent)
@@ -327,72 +416,43 @@ void UMenuUI::CreateAllCategoryUIs()
             OverlaySlot->SetVerticalAlignment(VAlign_Fill);
         }
 
-        //@TSet
-        CreatedCategories.Add(ContentUI.MenuCategory);
-
         UE_LOGFMT(LogMenuUI, Log, "{0} 카테고리의 MenuUIContent가 성공적으로 생성되고 MenuUIContentOverlay에 추가되었습니다.",
             *UEnum::GetValueAsString(ContentUI.MenuCategory));
     }
 
-    //@생성에 실패한 Category의 콘텐츠
-    for (uint8 i = 0; i < static_cast<uint8>(EMenuCategory::MAX); ++i)
-    {
-        EMenuCategory Category = static_cast<EMenuCategory>(i);
-        if (!CreatedCategories.Contains(Category))
-        {
-            UE_LOGFMT(LogMenuUI, Warning, "{0} 카테고리의 MenuUIContent가 생성되지 않았습니다.", *UEnum::GetValueAsString(Category));
-        }
-    }
 }
-#pragma endregion
 
-#pragma region Utility
 void UMenuUI::SetCategoryVisibility(EMenuCategory Category, bool bVisible)
 {
-    //@Widget
-    if (UUserWidget* Widget = GetCategoryUI(Category))
+    //@Menu UI Content
+    UUserWidget* Widget = GetCategoryUI(Category);
+    if (!Widget)
     {
-        //@Visibility
-        Widget->SetVisibility(bVisible ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
-    }
-}
+        UE_LOGFMT(LogMenuUI, Error, "{0} 카테고리의 위젯을 찾을 수 없습니다.", *UEnum::GetValueAsString(Category));
 
-UMenuUIToolBar* UMenuUI::GetToolBarUI() const
-{
-    if (!ToolBarOverlay)
-    {
-        UE_LOGFMT(LogMenuUI, Error, "ToolBarOverlay가 유효하지 않습니다.");
-        return nullptr;
+        return;
     }
 
-    TArray<UWidget*> Children = ToolBarOverlay->GetAllChildren();
-    for (UWidget* Child : Children)
+    //@Visibility
+    Widget->SetVisibility(bVisible ? ESlateVisibility::SelfHitTestInvisible : ESlateVisibility::Collapsed);
+
+    //@Focus
+    if (bVisible)
     {
-        UMenuUIToolBar* ToolBar = Cast<UMenuUIToolBar>(Child);
-        if (ToolBar)
-        {
-            return ToolBar;
-        }
+        Widget->SetFocus();
     }
 
-    UE_LOGFMT(LogMenuUI, Warning, "ToolBarOverlay에서 UMenuUIToolBar를 찾을 수 없습니다.");
-    return nullptr;
-}
+    UE_LOGFMT(LogMenuUI, Log, "{0} 카테고리의 가시성을 {1}(으)로 설정했습니다.",
+        *UEnum::GetValueAsString(Category),
+        bVisible ? TEXT("표시") : TEXT("숨김"));
 
-UUserWidget* UMenuUI::GetCategoryUI(EMenuCategory Category) const
-{
-    if (auto FoundWidget = MMenuContents.Find(Category))
-    {
-        return *FoundWidget;
-    }
-    return nullptr;
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UMenuUI::OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVisible)
 {
-
     if (Widget != this)
     {
         return;
@@ -403,60 +463,36 @@ void UMenuUI::OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVi
     {
         //@Add To Viewport
         AddToViewport();
+        //@Focus
+        SetIsFocusable(true);
+        SetFocus();
+        //@Reset Menu UI
+        ResetMenuUI();
+
+        //@애니메이션 재생
+        if (BlendInAnimation)
+        {
+            PlayAnimation(BlendInAnimation, 0.0f, 1, EUMGSequencePlayMode::Forward);
+        }
 
         UE_LOGFMT(LogMenuUI, Log, "MenuUI가 뷰포트에 추가되었습니다. 현재 카테고리: {0}", *UEnum::GetValueAsString(CurrentCategory));
-
-        // TODO: MenuUI가 표시될 때 필요한 추가 로직
-        // 예: 애니메이션 재생, 초기 포커스 설정 등
-
     }
     //@가시성 비활성화
     else
     {
-        //@Reset Menu UI
-        ResetMenuUI();
+        //@애니메이션 재생 및 콜백 바인딩
+        if (BlendOutAnimation)
+        {
+            PlayAnimation(BlendOutAnimation, 0.0f, 1, EUMGSequencePlayMode::Forward);
+        }
+        else
+        {
+            //@애니메이션이 없는 경우 즉시 제거
+            RemoveFromParent();
+        }
 
-        //@Remove From Parent
-        RemoveFromParent();
-        
-        UE_LOGFMT(LogMenuUI, Log, "MenuUI가 뷰포트에서 제거되었습니다.");
-
-        // TODO: MenuUI가 숨겨질 때 필요한 추가 로직
-        // 예: 데이터 저장, 정리 작업 등
-
+        UE_LOGFMT(LogMenuUI, Log, "MenuUI 숨김 처리를 시작합니다.");
     }
-}
-
-void UMenuUI::OnUIInputTagTriggered(const FGameplayTag& InputTag)
-{
-    UE_LOGFMT(LogMenuUI, Log, "Menu UI 입력이 트리거되었습니다. InputTag: {0}", *InputTag.ToString());
-
-    //@Menu UI Tool Bar
-    UMenuUIToolBar* ToolBar = GetToolBarUI();
-    if (!ToolBar)
-    {
-        UE_LOGFMT(LogMenuUI, Error, "ToolBar를 찾을 수 없습니다.");
-        return;
-    }
-
-    //@Move Menu Category To Left
-    if (InputTag.MatchesTagExact(FGameplayTag::RequestGameplayTag(FName("Input.UI.MenuUI.MoveMenuCategory_Left"))))
-    {
-        ToolBar->MoveCategoryLeft();
-    }
-    //@Move Menu Category To Right
-    if (InputTag.MatchesTagExact(FGameplayTag::RequestGameplayTag(FName("Input.UI.MenuUI.MoveMenuCategory_Right"))))
-    {
-        ToolBar->MoveCategoryRight();
-    }
-}
-
-void UMenuUI::OnUIInputTagReleased(const FGameplayTag& InputTag)
-{
-    UE_LOGFMT(LogMenuUI, Log, "Menu UI 입력이 해제되었습니다. InputTag: {0}", *InputTag.ToString());
-
-    // TODO: 여기에 입력 해제 처리 로직을 추가하세요
-
 }
 
 void UMenuUI::OnToolBarInitFinished()
@@ -521,5 +557,47 @@ void UMenuUI::OnMenuCategoryButtonClikced_Implementation(EMenuCategory MenuCateg
     // TODO: 필요한 경우 추가 로직 구현
     // 예: 애니메이션 재생, 포커스 설정 등
 
+}
+
+void UMenuUI::OnBlendOuAnimationFinished()
+{
+    //@잠깐의 지연 후 원하는 설정으로 변경
+    RemoveFromParent();
+
+    UE_LOGFMT(LogMenuUI, Log, "MenuUI가 뷰포트에서 제거되었습니다.");
+}
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+UMenuUIToolBar* UMenuUI::GetToolBarUI() const
+{
+    if (!ToolBarOverlay)
+    {
+        UE_LOGFMT(LogMenuUI, Error, "ToolBarOverlay가 유효하지 않습니다.");
+        return nullptr;
+    }
+
+    TArray<UWidget*> Children = ToolBarOverlay->GetAllChildren();
+    for (UWidget* Child : Children)
+    {
+        UMenuUIToolBar* ToolBar = Cast<UMenuUIToolBar>(Child);
+        if (ToolBar)
+        {
+            return ToolBar;
+        }
+    }
+
+    UE_LOGFMT(LogMenuUI, Warning, "ToolBarOverlay에서 UMenuUIToolBar를 찾을 수 없습니다.");
+    return nullptr;
+}
+
+UUserWidget* UMenuUI::GetCategoryUI(EMenuCategory Category) const
+{
+    if (auto FoundWidget = MMenuContents.Find(Category))
+    {
+        return *FoundWidget;
+    }
+    return nullptr;
 }
 #pragma endregion

@@ -25,7 +25,6 @@
 DEFINE_LOG_CATEGORY(LogInputComponent)
 // UE_LOGFMT(LogInputComponent, Log, "");
 
-
 #pragma region Default Setting
 UBaseInputComponent::UBaseInputComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -51,7 +50,6 @@ void UBaseInputComponent::InitializeComponent()
 	Super::InitializeComponent();
 
 	//@External Binding
-	ExternalBindingToUIComponent();
 }
 
 void UBaseInputComponent::DestroyComponent(bool bPromoteChildren)
@@ -69,29 +67,6 @@ void UBaseInputComponent::BeginPlay()
 void UBaseInputComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
 	Super::EndPlay(EndPlayReason);
-}
-
-void UBaseInputComponent::ExternalBindingToUIComponent()
-{
-	
-	//@PC
-	APlayerController* PC = Cast<APlayerController>(GetOwner());
-	if (!PC)
-	{
-		UE_LOGFMT(LogInputComponent, Error, "Controller를 PlayerController로 캐스팅할 수 없습니다.");
-		return;
-	}
-	//@UI Component
-	UUIComponent* UIComp = PC->FindComponentByClass<UUIComponent>();
-	if (!UIComp)
-	{
-		UE_LOGFMT(LogInputComponent, Error, "PlayerController에서 UIComponent를 찾을 수 없습니다.");
-		return;
-	}
-	//@External Binding
-	UIComp->RequestSwapIMC.BindUObject(this, &UBaseInputComponent::SwapMappings);
-
-	UE_LOGFMT(LogInputComponent, Log, "UIComponent와 InputComponent가 성공적으로 바인딩되었습니다.");
 }
 
 void UBaseInputComponent::InitializeInputComponent()

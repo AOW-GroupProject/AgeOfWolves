@@ -28,6 +28,7 @@ void UInteractableItemSlot::NativePreConstruct()
 {
     Super::NativePreConstruct();
 
+    SetIsFocusable(false);
 }
 
 void UInteractableItemSlot::NativeConstruct()
@@ -52,6 +53,57 @@ void UInteractableItemSlot::NativeDestruct()
     Super::NativeDestruct();
 }
 
+FNavigationReply UInteractableItemSlot::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+    return FNavigationReply::Explicit(nullptr);
+
+}
+
+FReply UInteractableItemSlot::NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent)
+{
+    // 모든 포커스 시도를 로깅
+    UE_LOGFMT(LogInteractableItemSlot, Log, "포커스 시도: 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+
+    // SetDirectly만 허용하고 나머지는 거부
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+    {
+        return FReply::Unhandled();
+    }
+
+    return FReply::Handled();
+}
+
+void UInteractableItemSlot::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
+{	
+    // SetDirectly가 아닌 경우 포커스 유지
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+    {
+        UE_LOGFMT(LogInteractableItemSlot, Log, "포커스 유지: 위젯: {0}, 원인: {1}",
+            *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+        return;
+    }
+
+    Super::NativeOnFocusLost(InFocusEvent);
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "포커스 종료: 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+}
+
+FReply UInteractableItemSlot::NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent)
+{
+    return FReply::Handled().PreventThrottling();
+}
+
+FReply UInteractableItemSlot::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent)
+{
+    FKey Key = InKeyEvent.GetKey();
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "키 입력 감지됨: {0}", *Key.ToString());
+
+    return Super::NativeOnKeyDown(InGeometry, InKeyEvent);
+}
+
 void UInteractableItemSlot::InternalBindToItemSlotButton(UCustomButton* InItemSlotButton)
 {
     if (!InItemSlotButton)
@@ -63,8 +115,8 @@ void UInteractableItemSlot::InternalBindToItemSlotButton(UCustomButton* InItemSl
     //@Button의 상태 별 이벤트에 바인딩 아래에서 수행...
     //@내부 바인딩
     InItemSlotButton->ButtonHovered.AddUObject(this, &UInteractableItemSlot::OnItemSlotButtonHovered);
-    InItemSlotButton->ButtonSelected.AddUObject(this, &UInteractableItemSlot::OnItemSlotButtonClicked);
     InItemSlotButton->ButtonUnhovered.AddUObject(this, &UInteractableItemSlot::OnItemSlotButtonUnhovered);
+    InItemSlotButton->ButtonSelected.AddUObject(this, &UInteractableItemSlot::OnItemSlotButtonClicked);
 
     UE_LOGFMT(LogInteractableItemSlot, Verbose, "CustomButton 이벤트가 성공적으로 바인딩되었습니다.");
 }
@@ -150,6 +202,29 @@ void UInteractableItemSlot::CreateButton()
     UE_LOGFMT(LogInteractableItemSlot, Log, "UCustomButton({0})이 생성되고 이벤트가 바인딩되었습니다.", *ItemSlotButtonClass->GetName());
 }
 
+void UInteractableItemSlot::AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount)
+{
+    Super::AssignNewItem_Implementation(
+        ID, ItemInformation, ItemCount
+    );
+}
+
+void UInteractableItemSlot::UpdateItemCount_Implementation(int32 NewCount)
+{
+    Super::UpdateItemCount_Implementation(
+        NewCount
+    );
+}
+
+void UInteractableItemSlot::ClearAssignedItem_Implementation(bool bForceClear)
+{
+    Super::ClearAssignedItem_Implementation(
+        bForceClear
+    );
+
+
+}
+
 void UInteractableItemSlot::ActivateItemSlotInteraction()
 {
     UCustomButton* CustomButton = GetItemSlotButton();
@@ -181,12 +256,22 @@ void UInteractableItemSlot::DeactivateItemSlotInteraction()
 
 //@Callbacks
 #pragma region Callbacks
-void UInteractableItemSlot::OnItemSlotButtonHovered_Implementation()
+void UInteractableItemSlot::OnItemSlotButtonHovered_Implementation(EInteractionMethod InteractionMethodType)
 {
     //@Item Slot Button 호버 이벤트
-    ItemSlotButtonHovered.Broadcast(UniqueItemID);
+    ItemSlotButtonHovered.Broadcast(UniqueItemID, InteractionMethodType);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에 마우스가 올라갔습니다. ID: {0}", UniqueItemID.ToString());
+
+    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
+
+}
+
+void UInteractableItemSlot::OnItemSlotButtonClicked_Implementation(EInteractionMethod InteractionMethodType)
+{
+    ItemSlotButtonClicked.Broadcast(UniqueItemID, InteractionMethodType);
+
+    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 클릭되었습니다. ID: {0}", UniqueItemID.ToString());
 
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 
@@ -198,16 +283,6 @@ void UInteractableItemSlot::OnItemSlotButtonUnhovered_Implementation()
     ItemSlotButtonUnhovered.Broadcast(UniqueItemID);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼에서 마우스가 벗어났습니다. ID: {0}", UniqueItemID.ToString());
-
-    //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
-
-}
-
-void UInteractableItemSlot::OnItemSlotButtonClicked_Implementation()
-{
-    ItemSlotButtonClicked.Broadcast(UniqueItemID);
-
-    UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 클릭되었습니다. ID: {0}", UniqueItemID.ToString());
 
     //@TODO: Animation 관련 작업 시 해당 함수 오버라이딩...
 

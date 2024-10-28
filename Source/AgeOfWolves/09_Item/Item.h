@@ -12,9 +12,14 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogItem, Log, All);
 
+//@전방 선언
+#pragma region Forward Declaration
 class UBaseGameplayAbility;
 class UItemManagerSubsystem;
+#pragma endregion
 
+//@열거형
+#pragma region Enums
 /*
 * EItemRank
 *
@@ -66,13 +71,17 @@ enum class EToolItemType : uint8
 UENUM(BlueprintType)
 enum class EEquipmentItemType : uint8
 {
-	Weapon	= 0		UMETA(DisplayName = "Weapon"),
+	Weapon = 0		UMETA(DisplayName = "Weapon"),
 	Talisman 		UMETA(DisplayName = "Talisman"),
 	MAX,
 };
+#pragma endregion
+
+//@구조체
+#pragma region Structs
 /*
 * FEnhancementInfo
-* 
+*
 * @목적: 아이템 제작을 위해 필요한 Material 정보를 담고 있습니다.
 * @설명: bOriginal(고유 아이템)여부 확인 후 필요 재료 정보를 추가할 수 있습니다.
 */
@@ -264,7 +273,7 @@ public:
 
 /*
 * FMaterailItemInforamtion : FItemInformation
-* 
+*
 * @목적: 재료 아이템 정보를 저장하는 구조체
 * @설명: Item Type 설정, 강화 정보가 포함되어 있는 구조체
 */
@@ -280,14 +289,26 @@ public:
 		ItemType = EItemType::Material;
 	}
 };
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+DECLARE_MULTICAST_DELEGATE(FItemActivationEnded)
+#pragma endregion
 
 UCLASS()
 class AGEOFWOLVES_API AItem : public AActor
 {
+
+//@친추 클래스
+#pragma region Friend Class
+#pragma endregion
+
 	GENERATED_BODY()
-	
+
+//@Defualt Setting
 #pragma region Default Setting
-public:	
+public:
 	AItem(const FObjectInitializer& ObjectInitializer);
 
 protected:
@@ -303,18 +324,17 @@ protected:
 public:
 	//@Item 초기화
 	UFUNCTION()
-		void InitializeItem(const FGuid& UniqueId);
+		void InitializeItem();
 #pragma endregion
 
-#pragma region Item
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 public:
 	//@아이템 활성화
 	UFUNCTION(BlueprintNativeEvent)
 		bool TryActivateItem();
 	virtual bool TryActivateItem_Implementation();
-#pragma endregion 
 
-#pragma region Property
 protected:
 	//@Item Tag
 	UPROPERTY(EditDefaultsOnly, Category = "Item | Item Tag")
@@ -322,17 +342,28 @@ protected:
 	//@Item Type
 	UPROPERTY(VisibleAnywhere, Category = "Item | Item Type")
 		EItemType ItemType;
-public:
-	FORCEINLINE const EItemType GetItemType() const { return ItemType; }
-	FORCEINLINE const FGameplayTag& GetItemTag() const { return ItemTag; }
 #pragma endregion
 
-#pragma region CallBacks
+//@Delegates
+#pragma region Delegates
+public:
+	//@아이템 활성화 종료 이벤트
+	FItemActivationEnded ItemActivationEnded;
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
 public:
 	//@Inventory의 아이템 제거 이벤트에 등록되는 콜백
 	UFUNCTION()
 		void OnItemRemovedFromInventory();
 #pragma endregion
 
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+public:
+	FORCEINLINE const EItemType GetItemType() const { return ItemType; }
+	FORCEINLINE const FGameplayTag& GetItemTag() const { return ItemTag; }
+#pragma endregion
 
 };

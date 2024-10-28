@@ -13,6 +13,7 @@
 #include "14_Subsystem/ItemManagerSubsystem.h"
 #include "04_Component/InventoryComponent.h"
 
+#include "Components/VerticalBox.h"
 #include "Components/EditableTextBox.h"
 #include "Components/MultiLineEditableTextBox.h"
 
@@ -29,6 +30,7 @@ void UItemDescriptionSlot::NativeOnInitialized()
     Super::NativeOnInitialized();
     //@외부 바인딩
     ExternalBindToInventoryComp();
+
 }
 
 void UItemDescriptionSlot::NativePreConstruct()
@@ -44,6 +46,12 @@ void UItemDescriptionSlot::NativeConstruct()
 void UItemDescriptionSlot::NativeDestruct()
 {
     Super::NativeDestruct();
+}
+
+FNavigationReply UItemDescriptionSlot::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+    return FNavigationReply::Explicit(nullptr);
+
 }
 
 void UItemDescriptionSlot::ExternalBindToInventoryComp()
@@ -109,16 +117,16 @@ void UItemDescriptionSlot::ResetItemDescriptionSlot()
     }
 }
 
-void UItemDescriptionSlot::AssignNewItem(const FGuid& ID, const FItemInformation* ItemInformation, int32 ItemCount)
+void UItemDescriptionSlot::AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount)
 {
     //@Unique Item ID
     UniqueItemID = ID;
     //@Slot Itme Image
-    SetSlotImage(ItemInformation->ItemImage);
+    SetSlotImage(ItemInformation.ItemImage);
     //@Item Name Text Block
-    ItemNameTextBox->SetText(FText::FromString(ItemInformation->ItemName));
+    ItemNameTextBox->SetText(FText::FromString(ItemInformation.ItemName));
     //@Item Descrption Text Block
-    ItemDescriptionTextBox->SetText(FText::FromString(ArrangeItemDescriptionStringToText(ItemInformation->ItemDescription)));
+    ItemDescriptionTextBox->SetText(FText::FromString(ArrangeItemDescriptionStringToText(ItemInformation.ItemDescription)));
 
     UE_LOGFMT(LogItemSlot, Log, "새 아이템이 아이템 슬롯에 할당되었습니다. ID: {0}", UniqueItemID.ToString());
 }
@@ -167,6 +175,7 @@ FString UItemDescriptionSlot::ArrangeItemDescriptionStringToText(FString String)
 #pragma region Callbacks
 void UItemDescriptionSlot::OnItemSlotsReadyForBinding(const UInventoryUIContent* InventoryUIContent)
 {
+    //@Inventory UI Content
     if (!InventoryUIContent)
     {
         UE_LOGFMT(LogItemDescription, Error, "InventoryUIContent가 유효하지 않습니다.");
@@ -177,8 +186,12 @@ void UItemDescriptionSlot::OnItemSlotsReadyForBinding(const UInventoryUIContent*
     int32 TotalSlots = 0;
     int32 TotalBindCount = 0;
 
+    //@TSet
+    TSet<UInteractableItemSlot*> BoundSlots;
+
     for (EItemType ItemType : ItemTypes)
     {
+        //@Item Slots
         UUserWidget* ItemSlotsWidget = InventoryUIContent->GetItemSlotsUI(ItemType);
         if (!ItemSlotsWidget)
         {
@@ -193,17 +206,27 @@ void UItemDescriptionSlot::OnItemSlotsReadyForBinding(const UInventoryUIContent*
             continue;
         }
 
+        //@바인딩 작업
+        ItemSlots->CancelItemSlotButton.AddUFunction(this, "OnItemSlotButtonCanceled");
+
         TArray<UInteractableItemSlot*> TypeItemSlots = ItemSlots->GetAllItemSlots();
         TotalSlots += TypeItemSlots.Num();
 
         int32 TypeBindCount = 0;
         for (UInteractableItemSlot* ItemSlot : TypeItemSlots)
         {
-            if (ItemSlot)
+            if (ItemSlot && !BoundSlots.Contains(ItemSlot))
             {
+                //@Remove All
+                ItemSlot->ItemSlotButtonHovered.RemoveAll(this);
+                ItemSlot->ItemSlotButtonUnhovered.RemoveAll(this);
+                ItemSlot->NotifyItemSlotButtonCanceled.RemoveAll(this);
+
+                //@외부 바인딩
                 ItemSlot->ItemSlotButtonHovered.AddUObject(this, &UItemDescriptionSlot::OnItemSlotButtonHovered);
                 ItemSlot->ItemSlotButtonUnhovered.AddUObject(this, &UItemDescriptionSlot::OnItemSlotButtonUnhovered);
-                ItemSlot->NotifyItemSlotButtonCanceled.AddUObject(this, &UItemDescriptionSlot::OnItemSlotButtonCanceled);
+
+                BoundSlots.Add(ItemSlot);
                 TypeBindCount++;
             }
         }
@@ -268,21 +291,29 @@ void UItemDescriptionSlot::OnItemRemovedFromInventory(const FGuid& ID)
     }
 }
 
-void UItemDescriptionSlot::OnItemSlotButtonHovered_Implementation(const FGuid& ID)
+void UItemDescriptionSlot::OnItemSlotButtonHovered_Implementation(const FGuid& ID, EInteractionMethod InteractionMethodType)
 {
     UE_LOGFMT(LogItemDescription, Log, "아이템 슬롯 호버: ID {0}", ID.ToString());
 
-    const FItemInformation* ItemInfo = MItemsInInventoryItemSlots.Find(ID);
-    if (ItemInfo)
+    const FItemInformation* ItemInfoPtr = MItemsInInventoryItemSlots.Find(ID);
+    if (ItemInfoPtr)
     {
+        // FItemInformation의 복사본 생성
+        FItemInformation ItemInfo = *ItemInfoPtr;
+
         // 새 아이템 할당
         AssignNewItem(ID, ItemInfo);
 
         // 가시성 활성화
         SetVisibility(ESlateVisibility::HitTestInvisible);
 
+        if (BlendInAnimation)
+        {
+            PlayAnimation(BlendInAnimation, 0.f, 1, EUMGSequencePlayMode::Forward);
+        }
+
         UE_LOGFMT(LogItemDescription, Log, "아이템 설명 UI에 새 아이템 할당: ID {0}, 이름 {1}, 등급 {2}",
-            ID.ToString(), *ItemInfo->ItemName, *UEnum::GetValueAsString(ItemInfo->ItemRank));
+            ID.ToString(), *ItemInfo.ItemName, *UEnum::GetValueAsString(ItemInfo.ItemRank));
     }
     else
     {
@@ -302,12 +333,22 @@ void UItemDescriptionSlot::OnItemSlotButtonUnhovered_Implementation(const FGuid&
 
 }
 
-void UItemDescriptionSlot::OnItemSlotButtonCanceled_Implementation()
+void UItemDescriptionSlot::OnItemSlotButtonCanceled_Implementation(const FGuid& ID, EInteractionMethod InteractionMethodType)
 {
-    //@필요 시 BP에서 해당 함수 오버라이딩...
+    //@Unique Item ID
+    if (UniqueItemID != ID)
+    {
+        return;
+    }
 
+    //@필요 시 BP에서 해당 함수 오버라이딩...
 
     //@가시성 비활성화
     SetVisibility(ESlateVisibility::Collapsed);
+
 }
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion
