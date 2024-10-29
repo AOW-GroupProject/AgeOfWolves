@@ -62,7 +62,6 @@ void UAbilityTagRelationshipMapping::GetAbilityTagsToBlockAndCancel(const FGamep
 {
     if (OutTagsToBlock)
     {
-        OutTagsToBlock->Reset();
         for (const FGameplayTag& Tag : AbilityTags)
         {
             if (const FGameplayTagContainer* BlockTags = AbilityTagsToBlockMap.Find(Tag))
@@ -74,7 +73,6 @@ void UAbilityTagRelationshipMapping::GetAbilityTagsToBlockAndCancel(const FGamep
 
     if (OutTagsToCancel)
     {
-        OutTagsToCancel->Reset();
         for (const FGameplayTag& Tag : AbilityTags)
         {
             if (const FGameplayTagContainer* CancelTags = AbilityTagsToCancelMap.Find(Tag))
@@ -91,7 +89,6 @@ void UAbilityTagRelationshipMapping::GetRequiredAndBlockedActivationTags(const F
 {
     if (OutActivationRequired)
     {
-        OutActivationRequired->Reset();
         for (const FGameplayTag& Tag : AbilityTags)
         {
             if (const FGameplayTagContainer* RequiredTags = ActivationRequiredTagsMap.Find(Tag))
@@ -103,7 +100,6 @@ void UAbilityTagRelationshipMapping::GetRequiredAndBlockedActivationTags(const F
 
     if (OutActivationBlocked)
     {
-        OutActivationBlocked->Reset();
         for (const FGameplayTag& Tag : AbilityTags)
         {
             if (const FGameplayTagContainer* BlockedTags = ActivationBlockedTagsMap.Find(Tag))
