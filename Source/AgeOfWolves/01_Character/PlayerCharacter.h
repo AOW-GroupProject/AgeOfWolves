@@ -6,6 +6,7 @@
 #include "CharacterBase.h"
 
 #include "GenericTeamAgentInterface.h"
+#include "CombatInterface.h"
 
 #include "PlayerCharacter.generated.h"
 
@@ -25,7 +26,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FRequestStartInitByPlayerCharacter, const AC
  * 사용자 캐릭터를 구현하는 ACharacterBase 유형의 객체
  */
 UCLASS()
-class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase, public IGenericTeamAgentInterface
+class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase, public IGenericTeamAgentInterface, public ICombatInterface
 {
 	GENERATED_BODY()
 	
@@ -112,6 +113,17 @@ protected:
 
 	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
 	void UpdateFacingTarget();
+
+#pragma endregion
+
+
+#pragma region CombatInterface
+
+public:
+
+	virtual void Die() override;
+
+	virtual void HitReact() override;
 
 #pragma endregion
 

@@ -17,6 +17,7 @@
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "05_Animation/BaseAnimInstance.h"
 #include "00_GameInstance/AOWGameInstance.h"
+#include "02_AbilitySystem/AOWGameplayTags.h"
 
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
@@ -151,4 +152,14 @@ void APlayerCharacter::AdjustControllerRotation(float DeltaSeconds)
 	// 결과 값을 액터 객체의 회전 값으로 설정
 	SetActorRotation(TargetRotation);
 
+}
+
+void APlayerCharacter::Die()
+{
+	
+}
+
+void APlayerCharacter::HitReact()
+{
+	GetAbilitySystemComponent()->TryActivateAbilitiesByTag(FGameplayTagContainer(AOWGameplayTags::Ability_Active_HitReact));
 }
