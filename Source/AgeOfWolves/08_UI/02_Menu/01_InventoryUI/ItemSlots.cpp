@@ -155,6 +155,7 @@ FReply UItemSlots::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent&
 
             //@첫 번째 Row가 아니면 위로 이동
             HandleDirectionalInput(EUINavigation::Up);
+
             return FReply::Handled();
         }
     }
@@ -520,28 +521,6 @@ bool UItemSlots::UseItem_Implementation(const int32 ItemCount)
     }
 
     FGuid ItemID = CurrentSelectedItemSlot->GetUniqueItemID();
-    int32 CurrentCount = CurrentSelectedItemSlot->GetSlotItemNum();
-
-    //@아이템 갯수 유효성 검사
-    if (ItemCount <= 0 || ItemCount > CurrentCount)
-    {
-        UE_LOGFMT(LogItemSlots, Warning, "UseItem: 유효하지 않은 아이템 개수입니다. 요청된 개수: {0}, 현재 개수: {1}", ItemCount, CurrentCount);
-        return false;
-    }
-
-    //@TODO: 아이템 사용 로직 구현
-
-    //@아이템 갯수 업데이트
-    int32 RemainingCount = CurrentCount - ItemCount;
-    CurrentSelectedItemSlot->UpdateItemCount(RemainingCount);
-
-    //@현재 선택된 아이템 슬롯 비울지 여부
-    if (RemainingCount <= 0)
-    {
-        CurrentSelectedItemSlot->ClearAssignedItem();
-    }
-
-    UE_LOGFMT(LogItemSlots, Log, "아이템 사용됨: ID {0}, 사용 개수: {1}, 남은 개수: {2}", ItemID.ToString(), ItemCount, RemainingCount);
 
     //@아이템 사용 이벤트
     ItemUsed.Broadcast(ItemID, ItemCount);
@@ -559,26 +538,6 @@ bool UItemSlots::LeaveItem_Implementation(const int32 ItemCount)
     }
 
     FGuid ItemID = CurrentSelectedItemSlot->GetUniqueItemID();
-    int32 CurrentCount = CurrentSelectedItemSlot->GetSlotItemNum();
-
-    //@아이템 갯수 유효성 체크
-    if (ItemCount <= 0 || ItemCount > CurrentCount)
-    {
-        UE_LOGFMT(LogItemSlots, Warning, "LeaveItem: 유효하지 않은 아이템 개수입니다. 요청된 개수: {0}, 현재 개수: {1}", ItemCount, CurrentCount);
-        return false;
-    }
-
-    //@아이템 갯수 업데이트
-    int32 RemainingCount = CurrentCount - ItemCount;
-    CurrentSelectedItemSlot->UpdateItemCount(RemainingCount);
-
-    //@Item Slot Clear 여부
-    if (RemainingCount <= 0)
-    {
-        CurrentSelectedItemSlot->ClearAssignedItem();
-    }
-
-    UE_LOGFMT(LogItemSlots, Log, "아이템 드롭됨: ID {0}, 드롭 개수: {1}, 남은 개수: {2}", ItemID.ToString(), ItemCount, RemainingCount);
 
     //@아이템 드롭 이벤트
     ItemLeft.Broadcast(ItemID, ItemCount);
@@ -596,34 +555,6 @@ bool UItemSlots::DiscardItem_Implementation(const int32 ItemCount)
     }
 
     FGuid ItemID = CurrentSelectedItemSlot->GetUniqueItemID();
-    int32 CurrentCount = CurrentSelectedItemSlot->GetSlotItemNum();
-
-    //@아이템 갯수 체크
-    if (ItemCount <= 0 || ItemCount > CurrentCount)
-    {
-        UE_LOGFMT(LogItemSlots, Warning, "DiscardItem: 유효하지 않은 아이템 개수입니다. 요청된 개수: {0}, 현재 개수: {1}", ItemCount, CurrentCount);
-        return false;
-    }
-
-    //@제거 가능 여부
-    if (!CurrentSelectedItemSlot->IsRemovable())
-    {
-        UE_LOGFMT(LogItemSlots, Warning, "DiscardItem: 이 아이템은 버릴 수 없습니다. ID: {0}", ItemID.ToString());
-        return false;
-    }
-
-    //@TODO: 아이템 버리기 로직 구현
-
-    //@Item Count 업데이트
-    int32 RemainingCount = CurrentCount - ItemCount;
-    CurrentSelectedItemSlot->UpdateItemCount(RemainingCount);
-
-    if (RemainingCount <= 0)
-    {
-        CurrentSelectedItemSlot->ClearAssignedItem();
-    }
-
-    UE_LOGFMT(LogItemSlots, Log, "아이템 버려짐: ID {0}, 버린 개수: {1}, 남은 개수: {2}", ItemID.ToString(), ItemCount, RemainingCount);
 
     //@아이템 버리기 이벤트
     ItemDiscarded.Broadcast(ItemID, ItemCount);
@@ -693,7 +624,9 @@ void UItemSlots::HandleDirectionalInput_Implementation(EUINavigation NavigationI
     {
         UInteractableItemSlot* NextSlot = ItemSlots[NextIndex];
         UCustomButton* Button = NextSlot->GetItemSlotButton();
-        if (Button && Button->SetButtonHoveredByKeyboard())
+        if (Button 
+            && Button
+            && Button->SetButtonHoveredByKeyboard())
         {
             UE_LOGFMT(LogItemSlots, Log, "{0} 타입의 ItemSlots에서 새로운 슬롯이 호버 상태로 설정되었습니다. Index: {1}",
                 *UEnum::GetValueAsString(ItemType), NextIndex);
@@ -1009,7 +942,7 @@ void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
         if (CurrentSelectedDropDownMenuOptionName == "USE")
         {
             //@TODO: Item 사용 작업 처리 예정
-            //UseItem(ItemCount);
+            UseItem(ItemCount);
         }
         else if (CurrentSelectedDropDownMenuOptionName == "LEAVE")
         {
@@ -1029,6 +962,7 @@ void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
 
         //@드롭 다운 메뉴 닫기
         ItemSlotDropDownMenu->CloseDropDownMenu();
+
         return;
     }
 
@@ -1045,7 +979,6 @@ void UItemSlots::OnConfirmationMenuOptionSelected(FName OkOrCancel)
 
         //@드롭다운 메뉴 Set Focus
         ItemSlotDropDownMenu->SetFocus();
-
 
         UE_LOGFMT(LogItemSlots, Verbose, "'{0}' 옵션의 Confirmation Menu가 닫혔습니다.", *CurrentSelectedDropDownMenuOptionName.ToString());
         return;
@@ -1159,27 +1092,34 @@ void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType 
     UTexture2D* ItemTexture = ItemInfo.ItemSlotImage.LoadSynchronous();
     //@Assign New Item
     EmptySlot->AssignNewItem(UniqueItemID, ItemInfo, 1);
-    //@Enabled
-    EmptySlot->ActivateItemSlotInteraction();
 }
 
-void UItemSlots::OnItemRemovedFromInventory(const FGuid& UniqueItemID)
+void UItemSlots::OnItemRemovedFromInventory(const FGuid& UniqueItemID, EItemType Type)
 {
+    if (ItemType != Type)
+    {
+        return;
+    }
+
     UE_LOGFMT(LogItemSlots, Log, "아이템이 인벤토리에서 제거됨: ID {0}", UniqueItemID.ToString());
 
     //@Find Slot By Item ID
-    UInteractableItemSlot* ItemSlot = FindSlotByItemID(UniqueItemID);
-    if (ItemSlot)
-    {
-        //@Clear Assigned Item
-        ItemSlot->ClearAssignedItem();
-        //@Deactive Item Slot
-        ItemSlot->DeactivateItemSlotInteraction();
-    }
-    else
+    UInteractableItemSlot* RemovedItemSlot = FindSlotByItemID(UniqueItemID);
+
+    if (!RemovedItemSlot)
     {
         UE_LOGFMT(LogItemSlots, Warning, "제거할 아이템을 찾을 수 없습니다: ID {0}", UniqueItemID.ToString());
+        return;
     }
+
+    //@삭제할 Item Slot의 인덱스
+    int32 RemovedIndex = ItemSlots.IndexOfByPredicate([&](const UInteractableItemSlot* ItemSlot) {
+        return ItemSlot->GetUniqueItemID() == RemovedItemSlot->GetUniqueItemID();
+        });
+
+    //@정렬 작업
+    SortItemSlots(RemovedIndex);
+
 }
 
 void UItemSlots::OnInventoryItemUpdated(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag, int32 UpdatedItemCount)
@@ -1231,6 +1171,105 @@ UInteractableItemSlot* UItemSlots::GetSlotAtPosition(int32 Row, int32 Column) co
         return ItemSlots[Index];
     }
     return nullptr;
+}
+
+void UItemSlots::SortItemSlots(int32 RemovedIndex)
+{
+    UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 재정렬 시작. 시작 인덱스: {0}", RemovedIndex);
+
+    //@시작 위치의 Row, Column 계산
+    int32 CurrentRow, CurrentCol;
+    GetSlotRowAndColumn(RemovedIndex, CurrentRow, CurrentCol);
+
+    UE_LOGFMT(LogItemSlots, Verbose, "재정렬 시작 위치 - Row: {0}, Col: {1}", CurrentRow, CurrentCol);
+
+    //@다음 유효한 아이템을 찾아 현재 위치로 이동
+    bool bFoundNext = false;
+    do
+    {
+        bFoundNext = false;
+
+        //@현재 행의 다음 열부터 검사
+        for (int32 col = CurrentCol + 1; col < MaxItemSlotsPerRow; ++col)
+        {
+            const int32 NextIndex = GetSlotIndex(CurrentRow, col);
+            if (ItemSlots.IsValidIndex(NextIndex) && ItemSlots[NextIndex]->GetUniqueItemID().IsValid())
+            {
+                //@아이템 이동
+                const int32 ToIndex = GetSlotIndex(CurrentRow, CurrentCol);
+                MoveItemSlot(NextIndex, ToIndex);
+
+                CurrentCol = col;
+                bFoundNext = true;
+
+                UE_LOGFMT(LogItemSlots, Verbose, "같은 행에서 아이템 이동 - From: ({0}, {1}) To: ({2}, {3})",
+                    CurrentRow, col, CurrentRow, CurrentCol);
+                break;
+            }
+        }
+
+        //@현재 행에서 찾지 못했다면, 다음 행의 첫 열부터 검사
+        if (!bFoundNext && CurrentRow < DefaultRows - 1)
+        {
+            for (int32 row = CurrentRow + 1; row < DefaultRows; ++row)
+            {
+                for (int32 col = 0; col < MaxItemSlotsPerRow; ++col)
+                {
+                    const int32 NextIndex = GetSlotIndex(row, col);
+                    if (ItemSlots.IsValidIndex(NextIndex) && ItemSlots[NextIndex]->GetUniqueItemID().IsValid())
+                    {
+                        //@아이템 이동
+                        const int32 ToIndex = GetSlotIndex(CurrentRow, CurrentCol);
+                        MoveItemSlot(NextIndex, ToIndex);
+
+                        CurrentRow = row;
+                        CurrentCol = col;
+                        bFoundNext = true;
+
+                        UE_LOGFMT(LogItemSlots, Verbose, "다음 행에서 아이템 이동 - From: ({0}, {1}) To: ({2}, {3})",
+                            row, col, CurrentRow, CurrentCol);
+                        break;
+                    }
+                }
+                if (bFoundNext) break;
+            }
+        }
+    } while (bFoundNext);
+
+    UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 재정렬 완료");
+}
+
+void UItemSlots::MoveItemSlot(int32 FromIndex, int32 ToIndex)
+{
+    //@Index 유효성 검사
+    if (!ItemSlots.IsValidIndex(FromIndex) || !ItemSlots.IsValidIndex(ToIndex))
+    {
+        UE_LOGFMT(LogItemSlots, Warning, "유효하지 않은 인덱스 - From: {0}, To: {1}", FromIndex, ToIndex);
+        return;
+    }
+
+    //@Slot 포인터 가져오기
+    UInteractableItemSlot* FromSlot = ItemSlots[FromIndex];
+    UInteractableItemSlot* ToSlot = ItemSlots[ToIndex];
+
+    //@Slot 유효성 검사
+    if (!FromSlot || !ToSlot)
+    {
+        UE_LOGFMT(LogItemSlots, Error, "유효하지 않은 슬롯 포인터 - FromSlot: {0}, ToSlot: {1}",
+            FromSlot ? TEXT("Valid") : TEXT("Invalid"),
+            ToSlot ? TEXT("Valid") : TEXT("Invalid"));
+        return;
+    }
+
+    //@FromSlot ID 저장 (로깅용)
+    const FGuid ItemID = FromSlot->GetUniqueItemID();
+
+    //@아이템 복사 및 이동
+    ToSlot->AssignNewItemFromSlot(FromSlot);
+    FromSlot->ClearAssignedItem();
+
+    UE_LOGFMT(LogItemSlots, Verbose, "아이템 이동 완료 - From: {0}, To: {1}, ID: {2}",
+        FromIndex, ToIndex, ItemID.ToString());
 }
 
 UInteractableItemSlot* UItemSlots::FindFirstItemSlot()

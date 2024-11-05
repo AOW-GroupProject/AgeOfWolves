@@ -69,6 +69,11 @@ public:
 		void AssignNewItem(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount = -1);
 	virtual void AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount=-1);
 
+	// 다른 ItemSlot으로부터 정보를 복사하여 할당
+	UFUNCTION(BlueprintNativeEvent)
+		void AssignNewItemFromSlot(UItemSlot* FromSlot);
+	virtual void AssignNewItemFromSlot_Implementation(UItemSlot* const& FromSlot);
+
 	//@퀵슬롯에 할당된 기존 아이템 정보를 업데이트 합니다.
 	UFUNCTION(BlueprintNativeEvent)
 		void UpdateItemCount(int32 NewCount);
@@ -110,6 +115,7 @@ public:
 		void SetSlotImage(TSoftObjectPtr<UTexture2D> InTexture);
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE void SetIsStackable(bool InBool) { bStackable = InBool; }
+	FORCEINLINE void SetIsRemovable(bool InBool){ bRemovable = InBool; }
 	UFUNCTION(BlueprintCallable, meta = (EditCondition = "bStackable == true"))
 		void SetSlotItemNum(int32 InNum);
 public:

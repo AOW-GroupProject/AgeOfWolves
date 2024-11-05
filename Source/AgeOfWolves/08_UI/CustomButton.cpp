@@ -146,6 +146,7 @@ void UCustomButton::DeactivateButton(bool bIsClicked)
     //@bClick
     if (!bIsClicked)
     {
+        UE_LOGFMT(LogCustomButton, Error, "Decati");
         //@Button State
         SetButtonState(EButtonState::Disabled);
     }
@@ -181,6 +182,8 @@ bool UCustomButton::SetButtonHoveredByKeyboard_Implementation()
 
     //@Button의 호버 이벤트
     ButtonHovered.Broadcast(EInteractionMethod::Keyboard);
+
+    UE_LOGFMT(LogCustomButton, Error, "Hovered");
 
     return true;
 }

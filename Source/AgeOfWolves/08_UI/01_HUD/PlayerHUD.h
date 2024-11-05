@@ -9,6 +9,23 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogHUD, Log, All)
 
+//@전방 선언
+#pragma region Forward Declaration
+class UScaleBox;
+class UQuickSlots;
+class UStateBars;
+#pragma endregion
+
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByHUD);
 //@HUD 초기화 완료 이벤트
@@ -18,13 +35,13 @@ DECLARE_DELEGATE(FHUDInitFinished);
 DECLARE_DELEGATE(FNotifyStateBarsInitFinished);
 //@Quick Slot 초기화 완료 이벤트
 DECLARE_DELEGATE(FNotifyQuickSlotsInitFinished);
+#pragma endregion
 
-
-class UScaleBox;
-class UQuickSlots;
-class UStateBars;
 
 /**
+ * UPlayerHUD
+ * 
+ * 인 게임에서 캐릭터 관련 HUD를 나타내는 UI 입니다.
  * 
  */
 UCLASS()

@@ -278,7 +278,7 @@ protected:
         void OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag);
     //@Inventory Comp의 아이템 제거 이벤트에 등록되는 콜백
     UFUNCTION()
-        void OnItemRemovedFromInventory(const FGuid& UniqueItemID);
+        void OnItemRemovedFromInventory(const FGuid& UniqueItemID, EItemType Type);
     //@Inventory Comp의 아이테 업데이트 이벤트에 등록되는 콜백
     UFUNCTION()
         void OnInventoryItemUpdated(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag, int32 UpdatedItemCount);
@@ -302,6 +302,10 @@ protected:
     int32 GetSlotIndex(int32 Row, int32 Column) const;
     void GetSlotRowAndColumn(int32 Index, int32& OutRow, int32& OutColumn) const;
     UInteractableItemSlot* GetSlotAtPosition(int32 Row, int32 Column) const;
+
+protected:
+    void SortItemSlots(int32 StartIndex);
+    void MoveItemSlot(int32 FromIndex, int32 ToIndex);
 
 protected:
     //@Item Slot 목록 중 좌측 최 상단에 위치한 첫 번째 Item Slot을 찾습니다.

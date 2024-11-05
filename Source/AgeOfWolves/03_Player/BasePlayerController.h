@@ -9,12 +9,22 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogBasePC, Log, All)
 
+//@전방 선언
 #pragma region Forward Declaration
 class APawn;
 class UUIComponent;
 class UBaseInputComponent;
 #pragma endregion
 
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
 #pragma region Delegates
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByPC)
@@ -28,8 +38,13 @@ DECLARE_MULTICAST_DELEGATE(FRequestStartInitByPC)
 UCLASS()
 class AGEOFWOLVES_API ABasePlayerController : public APlayerController
 {
+    //@친추 클래스
+#pragma region Friend Class
+#pragma endregion
+
     GENERATED_BODY()
 
+//@Defualt Setting
 #pragma region Default Setting
 public:
     ABasePlayerController(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
@@ -57,11 +72,10 @@ protected:
 
 protected:
     void InitializePlayerController();
-
-
 #pragma endregion
 
-#pragma region Properties
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 protected:
     void SetupInputModeOnBeginPlay();
     void SetupViewportClientOnBeginPlay();
@@ -73,18 +87,24 @@ private:
         UBaseInputComponent* BaseInputComponent;
 #pragma endregion
 
+//@Delegates
+#pragma region Delegates
+public:
+    //@초기화 요청 이벤트(비동기 초기화 작업)
+    FRequestStartInitByPC RequestStartInitByPC;
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
     UFUNCTION(BlueprintCallable, Category = "UI")
         UUIComponent* GetUIComponent() const;
     UFUNCTION(BlueprintCallable, Category = "Input")
         UBaseInputComponent* GetBaseInputComponent() const;
-#pragma endregion
-
-#pragma region Delegates
-public:
-    //@초기화 요청 이벤트(비동기 초기화 작업)
-    FRequestStartInitByPC RequestStartInitByPC;
 #pragma endregion
 
 };
