@@ -87,6 +87,8 @@ protected:
 
 protected:
     virtual void AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount = -1) override;
+    virtual void AssignNewItemFromSlot_Implementation(UItemSlot* FromSlot) override;
+
     virtual void UpdateItemCount_Implementation(int32 NewCount) override;
     virtual void ClearAssignedItem_Implementation(bool bForceClear = false) override;
 

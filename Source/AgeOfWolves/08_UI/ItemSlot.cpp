@@ -87,7 +87,7 @@ void UItemSlot::AssignNewItem_Implementation(const FGuid& ID, FItemInformation I
         UniqueItemID.ToString(), ItemCount, ItemInformation.bRemovable ? TEXT("Yes") : TEXT("No"), ItemInformation.bStackable ? TEXT("Yes") : TEXT("No"));
 }
 
-void UItemSlot::AssignNewItemFromSlot_Implementation(UItemSlot* const& FromSlot)
+void UItemSlot::AssignNewItemFromSlot_Implementation(UItemSlot* FromSlot)
 {
     //@Item Slot
     if (!FromSlot)

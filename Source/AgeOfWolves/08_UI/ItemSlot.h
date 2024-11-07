@@ -72,7 +72,7 @@ public:
 	// 다른 ItemSlot으로부터 정보를 복사하여 할당
 	UFUNCTION(BlueprintNativeEvent)
 		void AssignNewItemFromSlot(UItemSlot* FromSlot);
-	virtual void AssignNewItemFromSlot_Implementation(UItemSlot* const& FromSlot);
+	virtual void AssignNewItemFromSlot_Implementation(UItemSlot* FromSlot);
 
 	//@퀵슬롯에 할당된 기존 아이템 정보를 업데이트 합니다.
 	UFUNCTION(BlueprintNativeEvent)

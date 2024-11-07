@@ -307,6 +307,11 @@ protected:
     void SortItemSlots(int32 StartIndex);
     void MoveItemSlot(int32 FromIndex, int32 ToIndex);
 
+    bool ShouldPerformSort(int32 CurrentRow, int32 CurrentCol) const;
+
+    bool CheckNeedsSortForNextSlot(int32 CurrentRow, int32 CurrentCol) const;
+    bool CheckNeedsSortForNextRow(int32 CurrentRow, int32 CurrentCol) const;
+
 protected:
     //@Item Slot 목록 중 좌측 최 상단에 위치한 첫 번째 Item Slot을 찾습니다.
     UInteractableItemSlot* FindFirstItemSlot();

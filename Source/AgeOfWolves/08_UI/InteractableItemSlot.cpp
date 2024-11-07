@@ -211,6 +211,13 @@ void UInteractableItemSlot::AssignNewItem_Implementation(const FGuid& ID, FItemI
     ActivateItemSlotInteraction();
 }
 
+void UInteractableItemSlot::AssignNewItemFromSlot_Implementation(UItemSlot* FromSlot)
+{
+    Super::AssignNewItemFromSlot_Implementation(FromSlot);
+
+    ActivateItemSlotInteraction();
+}
+
 void UInteractableItemSlot::UpdateItemCount_Implementation(int32 NewCount)
 {
     Super::UpdateItemCount_Implementation(
