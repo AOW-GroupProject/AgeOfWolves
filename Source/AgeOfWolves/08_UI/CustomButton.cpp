@@ -221,36 +221,28 @@ bool UCustomButton::SetButtonSelectedByKeyboard_Implementation()
 #pragma region Callbacks
 void UCustomButton::OnButtonHovered_Implementation()
 {
-    UE_LOGFMT(LogCustomButton, Log, "OnButtonHovered 시작 - 현재 상태: {0}",
-        *StaticEnum<EButtonState>()->GetNameStringByValue(static_cast<int64>(CurrentButtonState)));
 
     if (CurrentButtonState == EButtonState::Disabled
         || CurrentButtonState == EButtonState::Selected
         || CurrentButtonState == EButtonState::Hovered)
     {
-        UE_LOGFMT(LogCustomButton, Log, "버튼이 {0} 상태여서 Hover 무시.",
-            *StaticEnum<EButtonState>()->GetNameStringByValue(static_cast<int64>(CurrentButtonState)));
         return;
     }
 
     if (BlendInAndOutAnimation)
     {
         PlayAnimation(BlendInAndOutAnimation, 0.0f, 0, EUMGSequencePlayMode::Forward);
-        UE_LOGFMT(LogCustomButton, Log, "Hover 애니메이션 재생");
     }
 
     SetButtonState(EButtonState::Hovered);
-    UE_LOGFMT(LogCustomButton, Log, "버튼 상태가 Normal에서 Hovered로 변경됨");
 
     ButtonHovered.Broadcast(EInteractionMethod::Mouse);
-    UE_LOGFMT(LogCustomButton, Log, "마우스로 인한 Hover 이벤트 발생");
 }
 
 void UCustomButton::OnButtonUnhovered_Implementation()
 {
     if (CurrentButtonState != EButtonState::Hovered)
     {
-        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 Hovered 상태가 아닙니다. Unhover 무시.");
         return;
     }
 
@@ -279,7 +271,6 @@ void UCustomButton::OnButtonPressed_Implementation()
     //@Button이 Hovered 상태가 아니면 무시
     if (CurrentButtonState != EButtonState::Hovered)
     {
-        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 Hovered 상태가 아닙니다. Press 무시.");
         return;
     }
 
@@ -299,7 +290,6 @@ void UCustomButton::OnButtonClicked_Implementation()
 {
     if (CurrentButtonState != EButtonState::Pressed)
     {
-        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 비활성화 상태입니다. Click 무시.");
         return;
     }
 
@@ -321,7 +311,6 @@ void UCustomButton::CancelSelectedButton_Implementation()
     if (CurrentButtonState != EButtonState::Hovered
         && CurrentButtonState != EButtonState::Selected)
     {
-        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 Hovered 혹은 Selected 상태가 아닙니다. Cancel 무시.");
         return;
     }
 

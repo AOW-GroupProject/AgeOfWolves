@@ -79,6 +79,28 @@ FReply UItemSlots::NativeOnFocusReceived(const FGeometry& InGeometry, const FFoc
         return FReply::Handled().ClearUserFocus();
     }
 
+    //@Current Selected Item Slot이 있을 경우
+    if (CurrentSelectedItemSlot.IsValid())
+    {
+        //@Selected -> Normal
+        CancelItemSlotButton.Broadcast(CurrentSelectedItemSlot->GetUniqueItemID());
+
+        //@Current Selected Item Slot Button 가져오기
+        UCustomButton* ItemSlotButton = CurrentSelectedItemSlot->GetItemSlotButton();
+        if (!ItemSlotButton)
+        {
+            UE_LOGFMT(LogItemSlots, Error, "선택된 아이템 슬롯의 버튼을 찾을 수 없습니다.");
+            return FReply::Handled().ClearUserFocus();
+        }
+
+        //@Normal -> Selected
+        if (!ItemSlotButton->SetButtonHoveredByKeyboard())
+        {
+            UE_LOGFMT(LogItemSlots, Error, "선택된 아이템 슬롯의 버튼을 Hovered 상태로 전환하는데 실패했습니다.");
+            return FReply::Handled().ClearUserFocus();
+        }
+    }
+
     UE_LOGFMT(LogItemSlots, Log, "포커스 : 위젯: {0}, 원인: {1}",
         *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
 
@@ -879,6 +901,31 @@ void UItemSlots::OnItemSlotDropDownMenuOptionSelected(FName ItemSlotDropDownMenu
     //@BACK일 경우, 메뉴 닫기
     if (ItemSlotDropDownMenuOptionName == "BACK")
     {
+        //@Current Selected Item Slot 유효성 검사
+        if (!CurrentSelectedItemSlot.IsValid())
+        {
+            UE_LOGFMT(LogItemSlots, Error, "선택된 아이템 슬롯이 유효하지 않습니다.");
+            return;
+        }
+
+        //@Cancel 이벤트 호출
+        CancelItemSlotButton.Broadcast(CurrentSelectedItemSlot->GetUniqueItemID());
+
+        //@Current Selected Item Slot Button 가져오기
+        UCustomButton* ItemSlotButton = CurrentSelectedItemSlot->GetItemSlotButton();
+        if (!ItemSlotButton)
+        {
+            UE_LOGFMT(LogItemSlots, Error, "선택된 아이템 슬롯의 버튼을 찾을 수 없습니다.");
+            return;
+        }
+
+        //@아이템 슬롯 버튼 Hover 상태로 전환
+        if (ItemSlotButton->SetButtonHoveredByKeyboard())
+        {
+            UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 버튼이 Hover 상태로 전환되었습니다. ID: {0}",
+                CurrentSelectedItemSlot->GetUniqueItemID().ToString());
+        }
+
         //@드롭 다운 메뉴 닫기
         ItemSlotDropDownMenu->CloseDropDownMenu();
 
