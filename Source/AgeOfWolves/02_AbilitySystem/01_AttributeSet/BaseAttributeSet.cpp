@@ -4,8 +4,12 @@
 #include "BaseAttributeSet.h"
 #include "Logging/StructuredLog.h"
 
-#include "GameplayEffectExtension.h"
+#include "01_Character/CombatInterface.h"
+#include "02_AbilitySystem/AOWGameplayTags.h"
+#include "04_Component/BaseAbilitySystemComponent.h"
 
+#include "GameplayEffectExtension.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogAttributeSet)
 
@@ -107,13 +111,18 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 			SetHealth(FMath::Clamp(NewHealth, 0.f, GetMaxHealth()));
 
 			const bool bFatal = NewHealth <= 0.f;
-			if (bFatal)
+
+			ICombatInterface* CombatInterface = Cast<ICombatInterface>(Data.Target.AbilityActorInfo->AvatarActor.Get());
+			if (CombatInterface)
 			{
-				// ToDo : 죽음 관련 로직 처리
-			}
-			else
-			{
-				// ToDo : 피격 관련 로직 처리
+				if (bFatal)
+				{
+					CombatInterface->Die();
+				}
+				else
+				{
+					CombatInterface->HitReact();
+				}
 			}
 			// ToDo : 그 외 로직 처리
 		}
