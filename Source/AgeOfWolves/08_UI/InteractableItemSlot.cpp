@@ -207,6 +207,15 @@ void UInteractableItemSlot::AssignNewItem_Implementation(const FGuid& ID, FItemI
     Super::AssignNewItem_Implementation(
         ID, ItemInformation, ItemCount
     );
+
+    ActivateItemSlotInteraction();
+}
+
+void UInteractableItemSlot::AssignNewItemFromSlot_Implementation(UItemSlot* FromSlot)
+{
+    Super::AssignNewItemFromSlot_Implementation(FromSlot);
+
+    ActivateItemSlotInteraction();
 }
 
 void UInteractableItemSlot::UpdateItemCount_Implementation(int32 NewCount)
@@ -222,7 +231,7 @@ void UInteractableItemSlot::ClearAssignedItem_Implementation(bool bForceClear)
         bForceClear
     );
 
-
+    DeactivateItemSlotInteraction();
 }
 
 void UInteractableItemSlot::ActivateItemSlotInteraction()
@@ -248,7 +257,7 @@ void UInteractableItemSlot::DeactivateItemSlotInteraction()
         return;
     }
     //@Deactivate Button
-    CustomButton->DeactivateButton();
+    CustomButton->DeactivateButton(false);
 
     UE_LOGFMT(LogInteractableItemSlot, Log, "아이템 슬롯 버튼이 비활성화되었습니다. ID: {0}", UniqueItemID.ToString());
 }

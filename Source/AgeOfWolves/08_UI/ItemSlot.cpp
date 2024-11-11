@@ -72,24 +72,65 @@ void UItemSlot::InitializeItemSlot()
 #pragma region SubWidgets
 void UItemSlot::AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount)
 {
-    //@Unique Item ID
+    //@ID
     UniqueItemID = ID;
-    //@bRemovable
-    bRemovable = ItemInformation.bRemovable;
-    //@Slot Itme Image
+    //@Image
     SetSlotImage(ItemInformation.ItemSlotImage);
-    //@bStackable
+    //@Removable
+    bRemovable = ItemInformation.bRemovable;
+    //@Stackable
     SetIsStackable(ItemInformation.bStackable);
-    //@ItemCount
+    //@Count
     UpdateItemCount(ItemCount);
 
     UE_LOGFMT(LogItemSlot, Log, "새 아이템이 아이템 슬롯에 할당되었습니다. ID: {0}, 갯수: {1}, 제거가능: {2}, 스택가능: {3}",
         UniqueItemID.ToString(), ItemCount, ItemInformation.bRemovable ? TEXT("Yes") : TEXT("No"), ItemInformation.bStackable ? TEXT("Yes") : TEXT("No"));
 }
 
+void UItemSlot::AssignNewItemFromSlot_Implementation(UItemSlot* FromSlot)
+{
+    //@Item Slot
+    if (!FromSlot)
+    {
+        UE_LOGFMT(LogItemSlot, Warning, "소스 ItemSlot이 유효하지 않습니다.");
+        return;
+    }
+
+    //@FGuid
+    if (!FromSlot->GetUniqueItemID().IsValid())
+    {
+        UE_LOGFMT(LogItemSlot, Warning, "소스 ItemSlot에 유효한 아이템이 없습니다.");
+        return;
+    }
+
+    //@정보 가져오기
+    const FGuid FromID = FromSlot->GetUniqueItemID();
+    const FSlateBrush FromImageBrush = FromSlot->GetSlotImage();
+    const bool FromCanRemove = FromSlot->IsRemovable();
+    const bool FromIsStackable = FromSlot->GetIsStackable();
+    const int32 FromItemCount = FromSlot->GetSlotItemNum();
+
+    //@ID
+    UniqueItemID = FromID;
+    //@Image
+    if (SlotImage)
+    {
+        SlotImage->SetBrush(FromImageBrush);
+    }
+    //@Removable
+    SetIsRemovable(FromCanRemove);
+    //@Stackable
+    SetIsStackable(FromIsStackable);
+    //@Count
+    SetSlotItemNum(FromItemCount);
+
+    UE_LOGFMT(LogItemSlot, Log, "아이템이 다른 슬롯으로부터 복사되었습니다. ID: {0}, 갯수: {1}, 제거가능: {2}, 스택가능: {3}",
+        FromID.ToString(), FromItemCount, FromCanRemove ? TEXT("Yes") : TEXT("No"), FromIsStackable ? TEXT("Yes") : TEXT("No"));
+}
+
 void UItemSlot::UpdateItemCount_Implementation(int32 NewCount)
 {
-    //@Item Count
+    //@Count
     SetSlotItemNum(NewCount);
 
     UE_LOGFMT(LogItemSlot, Log, "아이템 슬롯의 아이템 갯수가 업데이트되었습니다. ID: {0}, 새 갯수: {1}",
@@ -100,16 +141,17 @@ void UItemSlot::ClearAssignedItem_Implementation(bool bForceClear)
 {
     if (bForceClear || bRemovable)
     {
-        //@FGuid
+        //@ID
         UniqueItemID.Invalidate();
-        //@Slot Item Image
+        //@Image
         SetSlotImage(nullptr);
-        //@bStackable
-        SetIsStackable(false);
-        //@ItemNum
-        UpdateItemCount(0);
-        //@bRemovable
+        //@Removable
         bRemovable = true;  // 기본값으로 리셋
+        //@Stackable
+        SetIsStackable(false);
+        //@Count
+        UpdateItemCount(0);
+
         UE_LOGFMT(LogItemSlot, Log, "아이템 슬롯의 아이템이 제거되었습니다. 강제 제거: {0}, 원래 제거 가능 여부: {1}",
             bForceClear ? TEXT("Yes") : TEXT("No"),
             bRemovable ? TEXT("Yes") : TEXT("No"));

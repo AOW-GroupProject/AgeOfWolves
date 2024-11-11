@@ -78,7 +78,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FRequestInitializationByInvenComp, const FGu
 //@인벤토리 아이템 추가 이벤트
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FItemAssignedToInventory, const FGuid&, EItemType, const FGameplayTag&);
 //@인벤토리 아이템 제거 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FItemRemovedFromInventory, const FGuid&);
+DECLARE_MULTICAST_DELEGATE_TwoParams(FItemRemovedFromInventory, const FGuid&, EItemType);
 //@인벤토리 아이템 업데이트 이벤트(강화 정보, 개수 정보)
 DECLARE_MULTICAST_DELEGATE_FourParams(FInventoryItemUpdated, const FGuid&, EItemType, const FGameplayTag&, int32);
 
@@ -198,6 +198,10 @@ private:
 	//@퀵 슬롯에 추가된 고유의 아이템 아이디 목록, 크기는 3 이하로 고정
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TArray<FGuid> QuickSlots;
+
+private:
+	//@Subsystem Caching
+	TWeakObjectPtr<UItemManagerSubsystem> CachedItemManager;
 #pragma endregion
 
 //@Delegates

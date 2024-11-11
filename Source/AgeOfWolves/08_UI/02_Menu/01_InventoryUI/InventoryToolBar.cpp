@@ -52,57 +52,25 @@ void UInventoryToolBar::InitializeToolBar()
 // InventoryToolBar.cpp
 void UInventoryToolBar::ResetToolBar()
 {
-    EItemType PreviousType = CurrentSelectedItemType;
-
-    //@최소 Reset 호출 시
-    if (CurrentSelectedItemType == EItemType::MAX)
+    if (DefaultItemType == EItemType::MAX)
     {
-        //@Current Item Type
-        CurrentSelectedItemType = DefaultItemType;
-
-        //@Button
-        UCustomButton* DefaultButton = MItemTypeButtons.FindRef(DefaultItemType);
-        if (!DefaultButton)
-        {
-            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
-            return;
-        }
-
-        //@Set Button Selected By Keyboard
-        if (!DefaultButton->SetButtonSelectedByKeyboard())
-        {
-            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 Selected로 초기화하는데 실패했습니다.");
-            return;
-        }
-
-        //@버튼 클릭 이벤트
-        InventoryToolBarButtonClicked.ExecuteIfBound(CurrentSelectedItemType);
+        UE_LOGFMT(LogInventoryToolBar, Error, "Default Item Type을 설정해주세요!");
+        return;
     }
-    else
+
+    //@Button
+    UCustomButton* DefaultButton = MItemTypeButtons.FindRef(DefaultItemType);
+    if (!DefaultButton)
     {
-        //@Current Item Type != Default Item Type
-        if (PreviousType != DefaultItemType)
-        {
-            CancelToolBarButtonSelected(ItemTypeToIndex(PreviousType));
-        }
+        UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
+        return;
+    }
 
-        //@Current Selected Item Type
-        CurrentSelectedItemType = DefaultItemType;
-
-        //@Button
-        UCustomButton* DefaultButton = MItemTypeButtons.FindRef(CurrentSelectedItemType);
-        if (!DefaultButton)
-        {
-            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
-            return;
-        }
-
-        //@Set Button Selected By Keyboard
-        if (!DefaultButton->SetButtonSelectedByKeyboard())
-        {
-            UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 Selected로 초기화하는데 실패했습니다.");
-            return;
-        }
+    //@Set Button Selected By Keyboard
+    if (!DefaultButton->SetButtonSelectedByKeyboard())
+    {
+        UE_LOGFMT(LogInventoryToolBar, Error, "Default 아이템 타입 버튼을 Selected로 초기화하는데 실패했습니다.");
+        return;
     }
 
     UE_LOGFMT(LogInventoryToolBar, Log, "Inventory Tool Bar가 초기 상태로 리셋되었습니다. 현재 아이템 타입: {0}",
@@ -247,24 +215,14 @@ void UInventoryToolBar::MoveSelection(int32 Direction)
 
     if (NewIndex != CurrentIndex)
     {
-        //@Previous Item Type Button
-        if (UCustomButton* PreviousButton = MItemTypeButtons[CurrentSelectedItemType])
-        {
-            PreviousButton->SetButtonState(EButtonState::Normal);
-        }
-
         //@Current Item Type Button
         EItemType NewType = ItemTypes[NewIndex];
-        CurrentSelectedItemType = NewType;
 
         //@Button의 상태를 Selected로 변경
         if (UCustomButton* NewButton = MItemTypeButtons[NewType])
         {
-            NewButton->SetButtonState(EButtonState::Selected);
+            NewButton->SetButtonSelectedByKeyboard();
         }
-
-        //@Item Type 버튼 클릭 이벤트
-        InventoryToolBarButtonClicked.ExecuteIfBound(NewType);
 
         UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 선택되었습니다.", *UEnum::GetValueAsString(NewType));
     }
@@ -275,12 +233,16 @@ void UInventoryToolBar::MoveSelection(int32 Direction)
 #pragma region Callbacks
 void UInventoryToolBar::OnToolBarButtonClicked_Implementation(EInteractionMethod InteractionMethodType, uint8 ButtonIndex)
 {
+    //@Super: 이전 Selected Item Type 버튼의 취소 작업
     Super::OnToolBarButtonClicked_Implementation(InteractionMethodType, ButtonIndex);
 
     EItemType NewItemType = IndexToItemType(ButtonIndex);
     if (CurrentSelectedItemType == NewItemType) return;
 
+    //@Current Selected ItemType 변경
     CurrentSelectedItemType = NewItemType;
+
+    //Inventory Tool Bar 버튼 클릭 이벤트 호출
     InventoryToolBarButtonClicked.ExecuteIfBound(NewItemType);
 
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 클릭되었습니다.", *UEnum::GetValueAsString(NewItemType));
@@ -290,7 +252,10 @@ void UInventoryToolBar::OnToolBarButtonHovered_Implementation(EInteractionMethod
 {
     Super::OnToolBarButtonHovered_Implementation(InteractionMethodType, ButtonIndex);
 
+    //@Current Hovered  Item Type 변경
     EItemType ItemType = IndexToItemType(ButtonIndex);
+
+    //@Inventory Tool Bar 버튼 호버 이벤트 호출
     InventoryToolBarButtonHovered.ExecuteIfBound(ItemType);
 
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼에 마우스가 올라갔습니다.", *UEnum::GetValueAsString(ItemType));
@@ -300,24 +265,15 @@ void UInventoryToolBar::OnToolBarButtonUnhovered_Implementation(uint8 ButtonInde
 {
     Super::OnToolBarButtonUnhovered_Implementation(ButtonIndex);
 
+    //@Hovered -> Unhovered 된 Item Type 버튼
     EItemType ItemType = IndexToItemType(ButtonIndex);
+
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼에서 마우스가 벗어났습니다.", *UEnum::GetValueAsString(ItemType));
 }
 
 void UInventoryToolBar::CancelToolBarButtonSelected_Implementation(uint8 PreviousIndex)
 {
     Super::CancelToolBarButtonSelected_Implementation(PreviousIndex);
-
-    EItemType PreviousType = IndexToItemType(PreviousIndex);
-    UCustomButton* PreviousButton = MItemTypeButtons.FindRef(PreviousType);
-    if (!PreviousButton)
-    {
-        UE_LOGFMT(LogInventoryToolBar, Error, "Item Type Button이 유효하지 않습니다!");
-        return;
-    }
-
-    PreviousButton->CancelSelectedButton();
-    UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 취소되었습니다.", *UEnum::GetValueAsString(PreviousType));
 }
 #pragma endregion
 

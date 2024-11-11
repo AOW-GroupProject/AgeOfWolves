@@ -308,7 +308,6 @@ void UItemSlot_DropDownMenu::ResetSelectedOptionToHovered()
 
     UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "현재 선택된 옵션이 Hover 상태로 재설정되었습니다: {0}", CurrentSelectedOptionName.ToString());
 }
-
 #pragma endregion
 
 //@Callbacks
