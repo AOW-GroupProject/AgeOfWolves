@@ -99,8 +99,6 @@ void UUIComponent::InternalBindToHUDUI()
 
 	//@내부 바인딩
 	PlayerHUD->HUDInitFinished.BindUFunction(this, "OnHUDInitFinished");
-	PlayerHUD->NotifyQuickSlotsInitFinished.BindUFunction(this, "QuickSlotsInitFinishedNotified");
-	PlayerHUD->NotifyStateBarsInitFinished.BindUFunction(this, "StateBarsInitFinishedNotified");
 }
 
 void UUIComponent::InternalBindToMenuUI()
@@ -115,7 +113,6 @@ void UUIComponent::InternalBindToMenuUI()
 
 	//@내부 바인딩
 	MenuUIRef->MenuUIInitFinished.BindUFunction(this, "OnMenuUIInitFinished");
-	MenuUIRef->NotifyInventoryUIInitFinished.BindUFunction(this, "InventoryUIInitFinishedNotified");
 	MenuUIRef->RequestCloseMenuUI.BindUFunction(this, "OnRequestCloseMenuUI");
 }
 
@@ -182,29 +179,6 @@ void UUIComponent::InitializeUIComponent()
 	RequestInitializationByUIComp.Broadcast();
 }
 
-void UUIComponent::CheckAllUIsForInventoryReady()
-{
-	//@Delgate, Iventory 로딩 이전에 초기화 완료 확인할 UI들 추가
-	if (bQuickSlotsReadyForLoading && bInventoryUIReadyForLoading)
-	{
-		bQuickSlotsReadyForLoading = false;
-		bInventoryUIReadyForLoading = false;
-
-		UIsForInventoryReady.ExecuteIfBound();
-	}
-}
-
-void UUIComponent::CheckAllUIsForAttributeSetReady()
-{
-	//@Delegate, Attribute Set 로딩 이전에 초기화 완료 확인할 UI들 추가
-	if (bStateBarsReadyForLoading)
-	{
-		bStateBarsReadyForLoading = false;
-
-		UIsForAttributeSetReady.ExecuteIfBound();
-	}
-}
-
 void UUIComponent::CheckAllUIsForDefaultVisibilitySetting()
 {
 	if (bHUDInitFinished && bMenuUIInitFinished)
@@ -212,8 +186,11 @@ void UUIComponent::CheckAllUIsForDefaultVisibilitySetting()
 		bHUDInitFinished = false;
 		bMenuUIInitFinished = false;
 
+		UIsForInventoryReady.ExecuteIfBound();
+		UIsForAttributeSetReady.ExecuteIfBound();
+
 		//@모든 UI들에 대한 리셋 작업
-		UE_LOGFMT(LogUI, Error, "초기화");
+		UE_LOGFMT(LogUI, Log, "초기화");
 		ResetUIs();
 	}
 }
@@ -490,29 +467,6 @@ void UUIComponent::OnMenuUIInitFinished()
 	bMenuUIInitFinished = true;
 
 	CheckAllUIsForDefaultVisibilitySetting();
-}
-
-void UUIComponent::StateBarsInitFinishedNotified()
-{
-	bStateBarsReadyForLoading = true;
-
-	CheckAllUIsForAttributeSetReady();
-}
-
-void UUIComponent::QuickSlotsInitFinishedNotified()
-{
-	bQuickSlotsReadyForLoading = true;
-
-	//@Inventory Loading 시작을 위한 준비가 완료되었는지 체크합니다.
-	CheckAllUIsForInventoryReady();
-}
-
-void UUIComponent::InventoryUIInitFinishedNotified()
-{
-	bInventoryUIReadyForLoading = true;
-
-	//@Inventory Loading 시작을 위한 준비가 완료되었는지 체크합니다.
-	CheckAllUIsForInventoryReady();
 }
 
 void UUIComponent::OnUIInputTriggered(const FGameplayTag& InputTag)

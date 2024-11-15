@@ -11,9 +11,10 @@ DECLARE_LOG_CATEGORY_EXTERN(LogHUD, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
-class UScaleBox;
+class UOverlay;
 class UQuickSlots;
 class UStateBars;
+class UHUD_StatusUI;
 #pragma endregion
 
 //@열거형
@@ -30,11 +31,6 @@ class UStateBars;
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByHUD);
 //@HUD 초기화 완료 이벤트
 DECLARE_DELEGATE(FHUDInitFinished);
-
-//@State Bars 초기화 완료 이벤트
-DECLARE_DELEGATE(FNotifyStateBarsInitFinished);
-//@Quick Slot 초기화 완료 이벤트
-DECLARE_DELEGATE(FNotifyQuickSlotsInitFinished);
 #pragma endregion
 
 
@@ -47,17 +43,22 @@ DECLARE_DELEGATE(FNotifyQuickSlotsInitFinished);
 UCLASS()
 class AGEOFWOLVES_API UPlayerHUD : public UUserWidget
 {
+//@친추 클래스
+#pragma region Friend Class
+#pragma endregion
+
 	GENERATED_BODY()
-	
+
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UPlayerHUD(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	//~ Begin UUserWidget Interfaces
-	virtual void NativeOnInitialized(); 
+	virtual void NativeOnInitialized();
 	virtual void NativePreConstruct();
-	virtual void NativeConstruct(); 
+	virtual void NativeConstruct();
 	virtual void NativeDestruct();
 	//~ End UUserWidget Interface
 protected:
@@ -66,8 +67,8 @@ protected:
 
 protected:
 	//@내부 바인딩
-	void InternalBindToStateBars(UStateBars* StateBars) ;
-	void InternalBindToQuickSlots(UQuickSlots* QuickSlots) ;
+	void InternalBindToStatusUI(UHUD_StatusUI* StatusUI);
+	void InternalBindToQuickSlots(UQuickSlots* QuickSlots);
 
 public:
 	//@초기화
@@ -75,50 +76,47 @@ public:
 		void InitializePlayerHUD();
 
 protected:
-	bool bStateBarsInitFinished = false;
+	bool bStatusUIInitFinished = false;
 	bool bQuickSlotsInitFinished = false;
 	void CheckAllUIsInitFinsiehd();
 
 #pragma endregion
 
-#pragma region Subwidgets
-private:
-	void CreateStateBars();
-	void CreateQuickSlots();
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+protected:
+	void CreateStatusUI();
 
 protected:
-	UPROPERTY(BlueprintReadWrite, Category = "HUD | State Bars", meta = (BindWidget))
-		UScaleBox* StateBarsBox;
-	UPROPERTY(EditDefaultsOnly, category = "HUD | State Bars")
-		TSubclassOf<UStateBars> StateBarsClass;
-public:
-	UFUNCTION(BlueprintCallable, Category = "HUD | State Bars")
-		UStateBars* GetStateBarsUI() const;
+	UPROPERTY(BlueprintReadWrite, Category = "HUD | Status UI", meta = (BindWidget))
+		UOverlay* StatusUIOverlay;
+	UPROPERTY(EditDefaultsOnly, category = "HUD | Status UI")
+		TSubclassOf<UUserWidget> StatusUIClass;
+
+	UPROPERTY(BlueprintReadWrite, Category = "HUD | Quick Slot", meta = (BindWidget))
+		UOverlay* QuickSlotUIOverlay;
+	UPROPERTY(EditDefaultsOnly, category = "HUD | Quick Slot")
+		TSubclassOf<UUserWidget> QuickSlotUIClass;
+
+	UPROPERTY(BlueprintReadWrite, Category = "HUD | HP Potion UI", meta = (BindWidget))
+		UOverlay* HPPotionUIOverlay;
+	UPROPERTY(EditDefaultsOnly, category = "HUD | HP Potion UI")
+		TSubclassOf<UUserWidget> HPPotionUIClass;
 
 protected:
-	UPROPERTY(BlueprintReadWrite, Category = "HUD | Quick Slots", meta = (BindWidget))
-		UScaleBox* QuickSlotsBox;
-	UPROPERTY(EditDefaultsOnly, category = "HUD | Quick Slots")
-		TSubclassOf<UQuickSlots> QuickSlotsClass;
-public:
-	UFUNCTION(BlueprintCallable, Category = "HUD | Quick Slots")
-		UQuickSlots* GetQuickSlotsUI() const;
+	TObjectPtr<UHUD_StatusUI> StatusUIRef;
 #pragma endregion
 
+//@Delegates
 #pragma region Delegates
 public:
 	//@초기화 요청 이벤트
 	FRequestStartInitByHUD RequestStartInitByHUD;
 	//@초기화 완료 이벤트
 	FHUDInitFinished HUDInitFinished;
-
-public:
-	//@State Bars 초기화 완료 알림 이벤트
-	FNotifyStateBarsInitFinished NotifyStateBarsInitFinished;
-	//@Quick Slots 초기화 완료 알림 이벤트
-	FNotifyQuickSlotsInitFinished NotifyQuickSlotsInitFinished;
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 protected:
 	//@UI의 가시성 변화 이벤트에 바인딩 되는 콜백
@@ -132,7 +130,11 @@ protected:
 		void OnQuickSlotsInitFinished();
 	//@상태 창 초기화 완료 이벤트에 등록되는 콜백
 	UFUNCTION()
-		void OnStateBarsInitFinished();
+		void OnStatusUIInitFinished();
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion
 
 };

@@ -8,17 +8,22 @@
 #include "08_UI/01_HUD/QuickSlots.h"
 #include "08_UI/01_HUD/StateBars.h"
 
-#include "Components/ScaleBox.h"
-#include "Components/ScaleBoxSlot.h"
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
+
+#include "08_UI/01_HUD/HUD_StatusUI.h"
 
 #include "04_Component/UIComponent.h"
 
 DEFINE_LOG_CATEGORY(LogHUD)
 
+//@Defualt Setting
 #pragma region Default Setting
 UPlayerHUD::UPlayerHUD(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
-{}
+{
+    StatusUIRef = nullptr;
+}
 
 void UPlayerHUD::NativeOnInitialized()
 {
@@ -73,15 +78,16 @@ void UPlayerHUD::ExternalBindingToUIComponent()
     UE_LOGFMT(LogHUD, Log, "PlayerHUD가 UIComponent의 WidgetVisibilityChanged 델리게이트에 성공적으로 바인딩되었습니다.");
 }
 
-void UPlayerHUD::InternalBindToStateBars(UStateBars* StateBars)
+void UPlayerHUD::InternalBindToStatusUI(UHUD_StatusUI* StatusUI)
 {
-    if (!StateBars)
+    if (!StatusUI)
     {
-        UE_LOGFMT(LogHUD, Error, "State Bars UI가 유효하지 않습니다.");
+        UE_LOGFMT(LogHUD, Error, "Status UI가 유효하지 않습니다.");
         return;
     }
 
-    StateBars->StateBarsInitFinished.BindUFunction(this, "OnStateBarsInitFinished");
+    //@초기화 완료 이벤트 바인딩
+    StatusUI->StatusUIInitFinished.BindUFunction(this, "OnStatusUIInitFinished");
 }
 
 void UPlayerHUD::InternalBindToQuickSlots(UQuickSlots* QuickSlots)
@@ -98,155 +104,69 @@ void UPlayerHUD::InternalBindToQuickSlots(UQuickSlots* QuickSlots)
 
 void UPlayerHUD::InitializePlayerHUD()
 {
+    // @TODO: 임시, 초기화 완료 체크 함수들로 이동 예정
+    CreateStatusUI();
 
-    UE_LOGFMT(LogHUD, Log, "PlayerHUD 초기화 시작");
-
-    //@State Bars
-    CreateStateBars();
-    //@Quick Slots
-    CreateQuickSlots();
-    //@초기화 요청
     RequestStartInitByHUD.Broadcast();
 
-    UE_LOGFMT(LogHUD, Log, "PlayerHUD 초기화 완료");
-
+    OnQuickSlotsInitFinished();
 }
 
 void UPlayerHUD::CheckAllUIsInitFinsiehd()
 {
-    if (bStateBarsInitFinished && bQuickSlotsInitFinished)
+    if (bStatusUIInitFinished && bQuickSlotsInitFinished)
     {
-        bStateBarsInitFinished = false;
+        bStatusUIInitFinished = false;
         bQuickSlotsInitFinished = false;
 
         HUDInitFinished.ExecuteIfBound();
     }
 }
+
 #pragma endregion
 
-#pragma region Subwidgets
-void UPlayerHUD::CreateStateBars()
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+void UPlayerHUD::CreateStatusUI()
 {
-    //@Scale Box
-    if (!IsValid(StateBarsBox))
-    {
-        UE_LOGFMT(LogHUD, Error, "StateBarsBox가 유효하지 않습니다.");
-        return;
-    }
-    //@BP Class
-    if (!ensureMsgf(StateBarsClass, TEXT("StateBarsClass가 설정되지 않았습니다.")))
+    //@Status UI Blueprint class, Status UI Overlay 체크
+    if (!ensureMsgf(StatusUIClass && StatusUIOverlay, TEXT("StatusUIClass 또는 StatusUIOverlay가 유효하지 않습니다.")))
     {
         return;
     }
-    //@Create Widget
-    UStateBars* StateBars = CreateWidget<UStateBars>(this, StateBarsClass);
-    //@State Bars
-    if (!IsValid(StateBars))
+
+    //@Status UI 생성
+    UHUD_StatusUI* StatusUI = CreateWidget<UHUD_StatusUI>(this, StatusUIClass);
+    if (!IsValid(StatusUI))
     {
-        UE_LOGFMT(LogHUD, Error, "StateBars 위젯 생성에 실패했습니다.");
+        UE_LOGFMT(LogHUD, Error, "StatusUI 위젯 생성에 실패했습니다.");
         return;
     }
-    //@Binding(초기화 작업 비동기화 위한 바인딩)
-    RequestStartInitByHUD.AddUFunction(StateBars, "InitializeStateBars");
-    //@Internal Binding
-    InternalBindToStateBars(StateBars);
-    //@Allignment
-    UScaleBoxSlot* ScaleBoxSlot = Cast<UScaleBoxSlot>(StateBarsBox->AddChild(StateBars));
-    if (ScaleBoxSlot)
-    {
-        ScaleBoxSlot->SetHorizontalAlignment(HAlign_Fill);
-        ScaleBoxSlot->SetVerticalAlignment(VAlign_Fill);
 
-        UE_LOGFMT(LogHUD, Log, "StateBars 위젯이 성공적으로 추가되었습니다.");
-    }
-}
+    //@초기화 요청 이벤트에 바인딩
+    RequestStartInitByHUD.AddUFunction(StatusUI, "InitializeStatusUI");
 
-void UPlayerHUD::CreateQuickSlots()
-{
-    //@Scale Box
-    if (!IsValid(QuickSlotsBox))
-    {
-        UE_LOGFMT(LogHUD, Error, "QuickSlotsBox가 유효하지 않습니다.");
-        return;
-    }
-    //@BP Class
-    if (!ensureMsgf(QuickSlotsClass, TEXT("QuickSlotsClass가 설정되지 않았습니다.")))
-    {
-        return;
-    }
-    //@Create Widget
-    UQuickSlots* QuickSlots = CreateWidget<UQuickSlots>(this, QuickSlotsClass);
-    if (!IsValid(QuickSlots))
-    {
-        UE_LOGFMT(LogHUD, Error, "QuickSlots 위젯 생성에 실패했습니다.");
-        return;
-    }
-    //@Binding(초기화 작업 동기화를 위한 바인딩)
-    RequestStartInitByHUD.AddUFunction(QuickSlots, "InitializeQuickSlots");
-    //@Internal Binding
-    InternalBindToQuickSlots(QuickSlots);
-    //@Alignment
-    UScaleBoxSlot* ScaleBoxSlot = Cast<UScaleBoxSlot>(QuickSlotsBox->AddChild(QuickSlots));
-    if (ScaleBoxSlot)
-    {
-        ScaleBoxSlot->SetHorizontalAlignment(HAlign_Right);
-        ScaleBoxSlot->SetVerticalAlignment(VAlign_Bottom);
+    //@내부 바인딩
+    InternalBindToStatusUI(StatusUI);
 
-        UE_LOGFMT(LogHUD, Log, "QuickSlots 위젯이 성공적으로 추가되었습니다.");
-    }
-}
-
-UQuickSlots* UPlayerHUD::GetQuickSlotsUI() const
-{
-    if (!QuickSlotsBox)
+    //@Alignment 설정
+    if (UOverlaySlot* OverlaySlot = StatusUIOverlay->AddChildToOverlay(StatusUI))
     {
-        UE_LOGFMT(LogHUD, Warning, "Quick Slots Box가 유효하지 않습니다. : {0}", __FUNCTION__);
-        return nullptr;
+        OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+        OverlaySlot->SetVerticalAlignment(VAlign_Fill);
     }
 
-    UWidget* ChildWidget = QuickSlotsBox->GetChildAt(0);
-    if (!ChildWidget)
-    {
-        UE_LOGFMT(LogHUD, Warning, "Quick Slot Box에 유효한 자식 Widget이 존재하지 않습니다.");
-        return nullptr;
-    }
-   
-    auto QuickSlots = Cast<UQuickSlots>(ChildWidget);
-    if(!QuickSlots)
-    {
-        UE_LOGFMT(LogHUD, Warning, "Casting Failed : {0}", __FUNCTION__);
-        return nullptr;
-    }
+    StatusUIRef = StatusUI;
 
-    return QuickSlots;
-}
-
-UStateBars* UPlayerHUD::GetStateBarsUI() const
-{
-    if (!StateBarsBox)
-    {
-        UE_LOGFMT(LogHUD, Warning, "State Bars Box가 유효하지 않습니다. : {0}", __FUNCTION__);
-        return nullptr;
-    }
-
-    UWidget* ChildWidget = StateBarsBox->GetChildAt(0);
-    if (!ChildWidget)
-    {
-        UE_LOGFMT(LogHUD, Warning, "State Bar Box에 유효한 자식 Widget이 존재하지 않습니다.");
-        return nullptr;
-    }
-
-    auto StateBars = Cast<UStateBars>(ChildWidget);
-    if (!StateBars)
-    {
-        UE_LOGFMT(LogHUD, Warning, "Casting Failed : {0}", __FUNCTION__);
-        return nullptr;
-    }
-
-    return StateBars;
+    UE_LOGFMT(LogHUD, Log, "StatusUI가 성공적으로 생성되고 StatusUIOverlay에 추가되었습니다.");
 }
 #pragma endregion
 
+//@Delegates
+#pragma region Delegates
+#pragma endregion
+
+//@Callbacks
 #pragma region Callbacks
 void UPlayerHUD::OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVisible)
 {
@@ -273,12 +193,9 @@ void UPlayerHUD::OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool 
     }
 }
 
-void UPlayerHUD::OnStateBarsInitFinished()
+void UPlayerHUD::OnStatusUIInitFinished()
 {
-    bStateBarsInitFinished = true;
-
-    //@Deelgate
-    NotifyStateBarsInitFinished.ExecuteIfBound();
+    bStatusUIInitFinished = true;
 
     CheckAllUIsInitFinsiehd();
 }
@@ -286,10 +203,11 @@ void UPlayerHUD::OnStateBarsInitFinished()
 void UPlayerHUD::OnQuickSlotsInitFinished()
 {
     bQuickSlotsInitFinished = true;
-    //@Delgate
-    NotifyQuickSlotsInitFinished.ExecuteIfBound();
 
     CheckAllUIsInitFinsiehd();
-
 }
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion

@@ -27,38 +27,6 @@ void UBaseAbilitySystemComponent::InitializeComponent()
 void UBaseAbilitySystemComponent::CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore)
 {
 
-	//UGameplayAbility* GA = Spec.Ability; 
-	//if (!GA)
-	//{
-	//	UE_LOGFMT(LogASC, Error, "Ability Spec에 Ability 정보가 없습니다!");
-	//	return;
-	//}
-	//// @Activating Abilities: 활성화 목록에서 제거
-	//{
-	//	if (ActivatingAbilityTags.HasAllExact(GA->AbilityTags))
-	//	{
-	//		ActivatingAbilityTags.RemoveTags(GA->AbilityTags);
-	//		UE_LOGFMT(LogASC, Warning, "{0}이 취소되었습니다.", GA->GetName());
-	//	}
-	//}
-	//// @GE 제거(Cost, Cooldown 제외)
-	//{
-	//	if (const auto BaseGA = CastChecked<UBaseGameplayAbility>(GA))
-	//	{
-	//		if (Spec.Handle.IsValid())
-	//		{
-	//			FActiveGameplayEffectHandle ActiveGEHandle = FindActiveGameplayEffectHandle(Spec.Handle);
-	//			const FActiveGameplayEffect* ActiveGE = GetActiveGameplayEffect(ActiveGEHandle);
-
-	//			if (ActiveGE && ActiveGE->Spec.Def && ActiveGE->Spec.Def->GetClass() == BaseGA->ApplyGameplayEffectClass)
-	//			{
-	//				RemoveActiveGameplayEffect(ActiveGEHandle);
-	//				UE_LOGFMT(LogASC, Warning, "{0} 게임플레이 이펙트가 제거되었습니다.", *BaseGA->ApplyGameplayEffectClass->GetName());
-	//			}
-	//		}
-	//	}
-	//}
-
 	UGameplayAbility* GA = Spec.Ability; 
 	if (!GA)
 	{

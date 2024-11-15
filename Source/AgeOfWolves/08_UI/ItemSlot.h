@@ -118,6 +118,7 @@ public:
 	FORCEINLINE void SetIsRemovable(bool InBool){ bRemovable = InBool; }
 	UFUNCTION(BlueprintCallable, meta = (EditCondition = "bStackable == true"))
 		void SetSlotItemNum(int32 InNum);
+
 public:
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE FGuid GetUniqueItemID() const { return UniqueItemID; } 

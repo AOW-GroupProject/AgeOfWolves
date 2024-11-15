@@ -190,15 +190,15 @@ void UInventoryComponent::ExternalBindToQuickSlots()
     }
 
     //@Quick Slots
-    UQuickSlots* QuickSlotsUI = PlayerHUD->GetQuickSlotsUI();
-    if (!QuickSlotsUI)
-    {
-        UE_LOGFMT(LogInventory, Warning, "{0}: QuickSlots를 가져오는 데 실패했습니다.", __FUNCTION__);
-        return;
-    }
+    //UQuickSlots* QuickSlotsUI = PlayerHUD->GetQuickSlotsUI();
+    //if (!QuickSlotsUI)
+    //{
+    //    UE_LOGFMT(LogInventory, Warning, "{0}: QuickSlots를 가져오는 데 실패했습니다.", __FUNCTION__);
+    //    return;
+    //}
 
-    //@External Binding
-    QuickSlotsUI->QuickSlotItemActivated.BindUFunction(this, "StartUseItem");
+    ////@External Binding
+    //QuickSlotsUI->QuickSlotItemActivated.BindUFunction(this, "StartUseItem");
 
     UE_LOGFMT(LogInventory, Log, "{0}: Inventory Component가 QuickSlots에 성공적으로 바인딩 되었습니다.", __FUNCTION__);
 }

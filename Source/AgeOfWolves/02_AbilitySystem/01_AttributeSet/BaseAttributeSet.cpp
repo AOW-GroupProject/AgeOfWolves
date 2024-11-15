@@ -51,12 +51,7 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
 	Super::PreAttributeChange(Attribute, NewValue);
-//<<<<<<< HEAD:Source/AgeOfWolves/02_AbilitySystem/01_AttributeSet/BaseAttributeSet.cpp
 
-	// @Max HP
-//=======
-	
-//>>>>>>> develop:Source/AgeOfWolves/02_GameplayAbility/BaseAttributeSet.cpp
 	if (Attribute == GetMaxHealthAttribute())
 	{
 		AdjustAttributeForMaxChange(Health, MaxHealth, NewValue, GetHealthAttribute());
@@ -70,6 +65,8 @@ void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 	else if (Attribute == GetMaxStaminaAttribute())
 	{
 		AdjustAttributeForMaxChange(Stamina, MaxStamina, NewValue, GetStaminaAttribute());
+
+		UE_LOGFMT(LogAttributeSet, Error, "{0} : Stamina", NewValue);
 	}
 	// @Move Speed
 	else if (Attribute == GetMoveSpeedAttribute())
