@@ -89,7 +89,7 @@ public:
 
 protected:
 	UPROPERTY(EditAnywhere)
-		TSoftObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
+		TObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
 
 public:
 	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM;}
