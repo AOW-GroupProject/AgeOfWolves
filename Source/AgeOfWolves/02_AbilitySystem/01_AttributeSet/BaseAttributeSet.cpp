@@ -4,8 +4,12 @@
 #include "BaseAttributeSet.h"
 #include "Logging/StructuredLog.h"
 
-#include "GameplayEffectExtension.h"
+#include "02_AbilitySystem/AOWGameplayTags.h"
 
+#include "04_Component/BaseAbilitySystemComponent.h"
+
+#include "GameplayEffectExtension.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogAttributeSet)
 
@@ -111,6 +115,13 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 			else
 			{
 				// ToDo : 피격 관련 로직 처리
+				UBaseAbilitySystemComponent* TargetASC = Cast<UBaseAbilitySystemComponent>(UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(Data.Target.AbilityActorInfo->AvatarActor.Get()));
+				if (TargetASC)
+				{
+					FGameplayTagContainer TagContainer;
+					TagContainer.AddTag(AOWGameplayTags::Ability_Active_HitReact);
+					TargetASC->TryActivateAbilitiesByTag(TagContainer);
+				}
 			}
 			// ToDo : 그 외 로직 처리
 		}
