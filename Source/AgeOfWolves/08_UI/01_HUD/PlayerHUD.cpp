@@ -160,6 +160,14 @@ void UPlayerHUD::CreateStatusUI()
 
     UE_LOGFMT(LogHUD, Log, "StatusUI가 성공적으로 생성되고 StatusUIOverlay에 추가되었습니다.");
 }
+
+void UPlayerHUD::CreateQuickSlotUI()
+{
+}
+
+void UPlayerHUD::CreateHPPotionUI()
+{
+}
 #pragma endregion
 
 //@Delegates

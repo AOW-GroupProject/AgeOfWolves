@@ -97,54 +97,54 @@ void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 {
 
-	UE_LOGFMT(LogASC, Warning, "{0}가 종료되었습니다.", Ability->GetName());
-	// @Ability
+	//@Ability
 	if (!Ability)
 	{
 		UE_LOGFMT(LogASC, Error, "{0}가 유효하지 않습니다", Ability->GetName());
 		return;
 	}
-	// @Activating Abilities
+	//@Activating Abilities
+	if (!ActivatingAbilityTags.IsEmpty() && ActivatingAbilityTags.HasAllExact(Ability->AbilityTags))
 	{
-		if (!ActivatingAbilityTags.IsEmpty() && ActivatingAbilityTags.HasAllExact(Ability->AbilityTags))
-		{
-			ActivatingAbilityTags.RemoveTags(Ability->AbilityTags);
-			UE_LOGFMT(LogASC, Warning, "{0}가 활성화 목록에서 제거되었습니다.", Ability->GetName());
-		}
+		ActivatingAbilityTags.RemoveTags(Ability->AbilityTags);
+		UE_LOGFMT(LogASC, Warning, "{0}가 활성화 목록에서 제거되었습니다.", Ability->GetName());
 	}
 	// @UnBlock
+	if (AbilityTagRelationshipMapping)
 	{
-		if (AbilityTagRelationshipMapping)
+		FGameplayTagContainer TagsToBlock;
+		FGameplayTagContainer DummyContainer;
+
+		AbilityTagRelationshipMapping->GetAbilityTagsToBlockAndCancel(Ability->AbilityTags, &TagsToBlock, &DummyContainer);
+
+		for (auto Blocked : TagsToBlock)
 		{
-			FGameplayTagContainer TagsToBlock;
-			FGameplayTagContainer DummyContainer;
+			UE_LOGFMT(LogASC, Error, "{0} : 블록된 태그 목록", Blocked.GetTagName().ToString());
+		}
 
-			AbilityTagRelationshipMapping->GetAbilityTagsToBlockAndCancel(Ability->AbilityTags, &TagsToBlock, &DummyContainer);
-
-			if (!TagsToBlock.IsEmpty())
+		if (!TagsToBlock.IsEmpty())
+		{
+			UnBlockAbilitiesWithTags(TagsToBlock);
+			UE_LOGFMT(LogASC, Warning, "Block 되었던 {0}가 해제되었습니다.", TagsToBlock.ToString());
+			// @Reactivate
+			FGameplayTagContainer TagsToReactivate;
+			for (const auto Tag : TagsToBlock)
 			{
-				UnBlockAbilitiesWithTags(TagsToBlock);
-				UE_LOGFMT(LogASC, Warning, "Block 되었던 {0}가 해제되었습니다.", TagsToBlock.ToString());
-				// @Reactivate
-				FGameplayTagContainer TagsToReactivate;
-				for (const auto Tag : TagsToBlock)
+				if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag("Ability.Passive")))
 				{
-					if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag("Ability.Passive")))
-					{
-						TagsToReactivate.AddTag(Tag);
-					}
+					TagsToReactivate.AddTag(Tag);
 				}
-				// if (!TagsToReactivate.IsEmpty()) ReactivateUnblockedPassiveAbility(TagsToReactivate);
 			}
+			if (!TagsToReactivate.IsEmpty()) ReactivateUnblockedPassiveAbility(TagsToReactivate);
 		}
 	}
+
+	UE_LOGFMT(LogASC, Warning, "{0}가 종료되었습니다.", Ability->GetName());
 
 	// @TODO: Ability 활성화 종료 시점에 ASC에서 할 일들...
 
 }
 #pragma endregion
-
-
 
 #pragma region Gameplay Tag Relationship Mapping
 void UBaseAbilitySystemComponent::GetAbilityBlockAndCancelTagsForAbilityTag(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutAbilityTagsToBlock, OUT FGameplayTagContainer& OutAbilityTagsToCancel)

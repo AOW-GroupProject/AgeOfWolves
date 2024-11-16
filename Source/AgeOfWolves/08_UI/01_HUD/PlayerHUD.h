@@ -33,6 +33,11 @@ DECLARE_MULTICAST_DELEGATE(FRequestStartInitByHUD);
 DECLARE_DELEGATE(FHUDInitFinished);
 #pragma endregion
 
+//@State Bars 초기화 완료 이벤트
+DECLARE_DELEGATE(FNotifyStateBarsInitFinished);
+//@Quick Slot 초기화 완료 이벤트
+DECLARE_DELEGATE(FNotifyQuickSlotsInitFinished);
+#pragma endregion
 
 /**
  * UPlayerHUD
@@ -85,7 +90,12 @@ protected:
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
+	//@Status UI 생성
 	void CreateStatusUI();
+	//@Quick Slot UI 생성
+	void CreateQuickSlotUI();
+	//@HP Potion UI 생성
+	void CreateHPPotionUI();
 
 protected:
 	UPROPERTY(BlueprintReadWrite, Category = "HUD | Status UI", meta = (BindWidget))

@@ -75,6 +75,7 @@ void APlayerStateBase::InitializePlayerState()
 					{
 						if (PawnData->TagRelationship)
 						{
+							PawnData->TagRelationship->InitializeCacheMaps();
 							AbilitySystemComponent->SetAbilityTagRelationshipMapping(PawnData->TagRelationship);
 						}
 					}

@@ -68,8 +68,6 @@ protected:
 	virtual void OnAbilityEnded(UGameplayAbility* Ability);
 #pragma endregion
 
-
-
 #pragma region Gameplay Tag Relationship Mapping
 public:
 	/*

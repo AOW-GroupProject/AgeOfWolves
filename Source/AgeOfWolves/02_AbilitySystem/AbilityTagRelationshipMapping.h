@@ -58,6 +58,7 @@ private:
     TMap<FGameplayTag, FGameplayTagContainer> ActivationBlockedTagsMap;
 
     // 캐시 맵 초기화
+public:
     void InitializeCacheMaps();
 
 public:
