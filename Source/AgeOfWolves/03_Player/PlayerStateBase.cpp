@@ -2,6 +2,8 @@
 #include "Logging/StructuredLog.h"
 
 #include "GameFramework/PlayerController.h"
+#include "Kismet/GameplayStatics.h"
+#include "00_GameInstance/AOWGameInstance.h"
 
 #include "01_Character/PawnData.h"
 #include "01_Character/CharacterBase.h"
@@ -13,121 +15,179 @@
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 
-// @¸ñÀû : ·Î±× ¸ŞÅ©·ÎÀÔ´Ï´Ù. º¹»ç+ºÙ¿©³Ö±â È°¿ë
+// @ëª©ì  : ë¡œê·¸ ë©”í¬ë¡œì…ë‹ˆë‹¤. ë³µì‚¬+ë¶™ì—¬ë„£ê¸° í™œìš©
 // UE_LOGFMT(LogPlayerStateBase, Log, "");
 
+//@Defualt Setting
+#pragma region Default Setting
 APlayerStateBase::APlayerStateBase()
 {
-	PawnData = nullptr;
-	AbilitySystemComponent = CreateDefaultSubobject<UPlayerAbilitySystemComponent>(TEXT("Ability System Component"));
+    PawnData = nullptr;
+    AbilitySystemComponent = CreateDefaultSubobject<UPlayerAbilitySystemComponent>(TEXT("Ability System Component"));
 
 }
 
 void APlayerStateBase::PostInitializeComponents()
 {
-	Super::PostInitializeComponents();
+    Super::PostInitializeComponents();
 
 }
 
 void APlayerStateBase::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 
 }
 
 void APlayerStateBase::InitializePlayerState()
 {
-	check(PawnData);
+    //@Controlelr
+    const auto& Controller = Cast<AController>(GetOwner());
+    if (!Controller)
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "Controllerê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+    //@Pawn
+    const auto& Pawn = Controller->GetPawn();
+    if (!Pawn)
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "Pawnì´ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+    //@Pawn Data
+    if (!PawnData->IsValidLowLevel())
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "PawnDataê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+    //@Base Ability Set
+    UBaseAbilitySet* SetToGrant = PawnData->AbilitySet;
+    if (!IsValid(SetToGrant))
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "AbilitySetì´ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
 
-	//@AttributeSet, GE, GA
-	if (const auto& Controller = Cast<AController>(GetOwner()))
-	{
-		if (const auto& Pawn = Controller->GetPawn())
-		{
-			// Actor Info
-			AbilitySystemComponent->InitAbilityActorInfo(Pawn, Pawn);
+    // ActorInfo ì´ˆê¸°í™”
+    AbilitySystemComponent->InitAbilityActorInfo(Pawn, Pawn);
 
-			if (PawnData->IsValidLowLevel())
-			{
-				UBaseAbilitySet* SetToGrant = PawnData->AbilitySet;
-				if (IsValid(SetToGrant))
-				{
-					// Ä³¸¯ÅÍÀÇ ±âº» AttributeSetÀ» ASC¿¡ ÃÖÃÊ µî·ÏÇÕ´Ï´Ù.
-					{
-						SetToGrant->GiveStartupAttributeSetToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+    // @ê¸°ë³¸ AttributeSet ë“±ë¡
+    SetToGrant->GiveStartupAttributeSetToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+    UE_LOGFMT(LogPlayerStateBase, Log, "ê¸°ë³¸ AttributeSet ë“±ë¡ ì™„ë£Œ");
 
-						// °¢ Attribute Ç×¸ñ ¼öÄ¡ º¯È­ ÀÌº¥Æ®¿¡ Äİ¹éÇÔ¼ö¸¦ µî·ÏÇÕ´Ï´Ù.
-						for (auto& AS : AbilitySystemComponent->GetSpawnedAttributes())
-						{
-							if (IsValid(AS))
-							{
-								AttributeSet = AS;
-								TArray<FGameplayAttribute> Attributes = AttributeSet->GetAllAttributes();
-								for (const FGameplayAttribute& Attribute : Attributes)
-								{
-									FDelegateHandle DelegateHandle = AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddUObject(this, &APlayerStateBase::OnAttributeValueChanged);
-								}
-								break;
-							}
-						}
-					}
-					// Ä³¸¯ÅÍÀÇ ±âº» GA¿¡ ´ëÇÑ Ability Tag RelationpshipÀ» µî·ÏÇÕ´Ï´Ù.
-					{
-						if (PawnData->TagRelationship)
-						{
-							PawnData->TagRelationship->InitializeCacheMaps();
-							AbilitySystemComponent->SetAbilityTagRelationshipMapping(PawnData->TagRelationship);
-						}
-					}
-					// Ä³¸¯ÅÍÀÇ ±âº» Gameplay Effect¸¦ ASC¿¡ ÃÖÃÊ µî·Ï/Àû¿ëÇÕ´Ï´Ù.
-					{
-						SetToGrant->GiveStartupGameplayEffectToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
-					}
-					// Ä³¸¯ÅÍÀÇ ±âº» Gameplay Ability¸¦ ASC¿¡ ÃÖÃÊ µî·Ï/Àû¿ëÇÕ´Ï´Ù.
-					{
-						SetToGrant->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
-					}
+    // @Attribute ë³€ê²½ ì½œë°± í•¨ìˆ˜ ë“±ë¡
+    for (auto& AS : AbilitySystemComponent->GetSpawnedAttributes())
+    {
+        if (IsValid(AS))
+        {
+            AttributeSet = AS;
+            TArray<FGameplayAttribute> Attributes = AttributeSet->GetAllAttributes();
+            for (const FGameplayAttribute& Attribute : Attributes)
+            {
+                AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddUObject(this, &APlayerStateBase::OnAttributeValueChanged);
+            }
+            UE_LOGFMT(LogPlayerStateBase, Log, "Attribute ë³€ê²½ ì½œë°± ë“±ë¡ ì™„ë£Œ");
+            break;
+        }
+    }
 
-					// ASC¿¡ Startup GA, GE, AttributeSetÀÇ µî·Ï ¿Ï·á ÀÌº¥Æ® È£Ãâ, ÀÓ½Ã ÁÖ¼® Ã³¸®
-					OnAttributeSetInitialized.Broadcast();
-				}
-			}
-		}
-	}
+    // @íƒœê·¸ ê´€ê³„ ì´ˆê¸°í™”
+    if (PawnData->TagRelationship)
+    {
+        PawnData->TagRelationship->InitializeCacheMaps();
+        AbilitySystemComponent->SetAbilityTagRelationshipMapping(PawnData->TagRelationship);
+        UE_LOGFMT(LogPlayerStateBase, Log, "íƒœê·¸ ê´€ê³„ ë§¤í•‘ ì™„ë£Œ");
+    }
 }
+#pragma endregion
 
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void APlayerStateBase::LoadGameAbilitySystem()
 {
+    UE_LOGFMT(LogPlayerStateBase, Warning, "ì–´ë¹Œë¦¬í‹° ì‹œìŠ¤í…œì˜ Load ì‘ì—…ì„ ì‹œì‘í•©ë‹ˆë‹¤ : {0}", __FUNCTION__);
+
+    //@GameInstance
+    if (const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this)))
+    {
+        //@SaveFile
+        if (GameInstance->DoesSaveGameExist())
+        {
+            auto* SaveGameInstance = GameInstance->GetSaveGameInstance();
+            LoadAbilitySystemFromSaveGame(SaveGameInstance);
+        }
+        //@Ability Manager
+        else
+        {
+            //UAbilityManagerSubsystem* AbilityManager = GameInstance->GetSubsystem<UAbilityManagerSubsystem>();
+            LoadDefaultAbilitySystemFromAbilityManager(/*AbilityManager*/);
+        }
+    }
+}
+
+void APlayerStateBase::LoadDefaultAbilitySystemFromAbilityManager()
+{
+    // @ASCì™€ AttributeSet ì´ˆê¸°í™” ê²€ì¦
+    if (!AbilitySystemComponent || !AttributeSet.Get())
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "LoadGameAbilitySystem ì‹¤íŒ¨: ASC ë˜ëŠ” AttributeSetì´ ì´ˆê¸°í™”ë˜ì§€ ì•ŠìŒ");
+        return;
+    }
+
+    if (const auto& Controller = Cast<AController>(GetOwner()))
+    {
+        if (const auto& Pawn = Controller->GetPawn())
+        {
+            if (PawnData->IsValidLowLevel())
+            {
+                UBaseAbilitySet* SetToGrant = PawnData->AbilitySet;
+                if (IsValid(SetToGrant))
+                {
+                    // ìºë¦­í„°ì˜ ê¸°ë³¸ Gameplay Effectë¥¼ ASCì— ìµœì´ˆ ë“±ë¡/ì ìš©í•©ë‹ˆë‹¤.
+                    SetToGrant->GiveStartupGameplayEffectToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+
+                    // ìºë¦­í„°ì˜ ê¸°ë³¸ Gameplay Abilityë¥¼ ASCì— ìµœì´ˆ ë“±ë¡/ì ìš©í•©ë‹ˆë‹¤.
+                    SetToGrant->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+
+                    // ASCì— Startup GA, GE, AttributeSetì˜ ë“±ë¡ ì™„ë£Œ ì´ë²¤íŠ¸ í˜¸ì¶œ
+                    OnAttributeSetInitialized.Broadcast();
+                }
+            }
+        }
+    }
 }
 
 void APlayerStateBase::LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame)
 {
-}
 
-void APlayerStateBase::LoadDefaultAbilitySystemFromAbilityManager(UAbilityManagerSubsystem* AbilityManager)
+}
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
 {
+    OnAnyAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);
 }
 
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 UAbilitySystemComponent* APlayerStateBase::GetAbilitySystemComponent() const
 {
-	return AbilitySystemComponent;
+    return AbilitySystemComponent;
 }
 
 TSoftObjectPtr<UBaseAttributeSet> APlayerStateBase::GetAttributeSet() const
 {
-	return AttributeSet;
+    return AttributeSet;
 }
 
 UPawnData* APlayerStateBase::GetPawnData() const
 {
-	return PawnData.Get();
+    return PawnData.Get();
 }
 
-void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
-{
-	if (OnAnyAttributeValueChanged.IsBound())
-	{
-		OnAnyAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);	
-	}
-
-}
+#pragma endregion

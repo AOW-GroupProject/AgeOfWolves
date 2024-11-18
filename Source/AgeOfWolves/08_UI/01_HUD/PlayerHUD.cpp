@@ -104,11 +104,11 @@ void UPlayerHUD::InternalBindToQuickSlots(UQuickSlots* QuickSlots)
 
 void UPlayerHUD::InitializePlayerHUD()
 {
-    // @TODO: 임시, 초기화 완료 체크 함수들로 이동 예정
     CreateStatusUI();
 
     RequestStartInitByHUD.Broadcast();
 
+    // @TODO: 임시, 초기화 완료 체크 함수들로 이동 예정
     OnQuickSlotsInitFinished();
 }
 
@@ -122,7 +122,6 @@ void UPlayerHUD::CheckAllUIsInitFinsiehd()
         HUDInitFinished.ExecuteIfBound();
     }
 }
-
 #pragma endregion
 
 //@Property/Info...etc
