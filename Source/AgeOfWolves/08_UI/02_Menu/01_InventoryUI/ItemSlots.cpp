@@ -411,6 +411,7 @@ void UItemSlots::CreateItemSlots()
                 if (ItemSlot)
                 {
                     RequestStartInitByItemSlots.AddUFunction(ItemSlot, "InitializeItemSlot");
+
                     CancelItemSlotButton.AddUFunction(ItemSlot, "ItemSlotButtonCanceledNotified");
 
                     if (CurrentSlot == TotalSlots - 1)

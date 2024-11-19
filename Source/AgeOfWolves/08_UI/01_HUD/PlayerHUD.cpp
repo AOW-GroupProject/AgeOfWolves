@@ -1,17 +1,12 @@
-// PlayerHUD.cpp
-
 #include "PlayerHUD.h"
 #include "Logging/StructuredLog.h"    
-
-#include "04_Component/UIComponent.h"
-
-#include "08_UI/01_HUD/QuickSlots.h"
-#include "08_UI/01_HUD/StateBars.h"
 
 #include "Components/Overlay.h"
 #include "Components/OverlaySlot.h"
 
 #include "08_UI/01_HUD/HUD_StatusUI.h"
+#include "08_UI/01_HUD/HUD_QuickSlotsUI.h"
+#include "08_UI/01_HUD/HUD_HPToolItemDotGauge.h"
 
 #include "04_Component/UIComponent.h"
 
@@ -23,6 +18,8 @@ UPlayerHUD::UPlayerHUD(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
 {
     StatusUIRef = nullptr;
+    QuickSlotUIRef = nullptr;
+    HPToolItemDotGaugeRef = nullptr;
 }
 
 void UPlayerHUD::NativeOnInitialized()
@@ -90,34 +87,47 @@ void UPlayerHUD::InternalBindToStatusUI(UHUD_StatusUI* StatusUI)
     StatusUI->StatusUIInitFinished.BindUFunction(this, "OnStatusUIInitFinished");
 }
 
-void UPlayerHUD::InternalBindToQuickSlots(UQuickSlots* QuickSlots)
+void UPlayerHUD::InternalBindToQuickSlotsUI(UHUD_QuickSlotsUI* QuickSlotsUI)
 {
-
-    if (!QuickSlots)
+    if (!QuickSlotsUI)
     {
         UE_LOGFMT(LogHUD, Error, "Quick Slots UI가 유효하지 않습니다.");
         return;
     }
     //@Internal Binding
-    QuickSlots->QuickSlotsInitFinished.BindUFunction(this, "OnQuickSlotsInitFinished");
+    QuickSlotsUI->QuickSlotsInitFinished.BindUFunction(this, "OnQuickSlotsInitFinished");
+}
+
+void UPlayerHUD::InternalBindToHPToolItemDotGauge(UHUD_HPToolItemDotGauge* HPToolItemDotGauge)
+{
+    if (!HPToolItemDotGauge)
+    {
+        return;
+    }
+
+    //@내부 바인딩
+    HPToolItemDotGauge->HorizontalDotGaugeInitFinished.BindUFunction(this, "OnHPToolItemDotGaugeInitFinished");
 }
 
 void UPlayerHUD::InitializePlayerHUD()
 {
+    //@Status UI 생성
     CreateStatusUI();
+    //@Quick Slot UI 생성
+    CreateQuickSlotUI();
+    //@HP Potion Dot Gauge 생성
+    CreateHPToolItemDotGauge();
 
     RequestStartInitByHUD.Broadcast();
-
-    // @TODO: 임시, 초기화 완료 체크 함수들로 이동 예정
-    OnQuickSlotsInitFinished();
 }
 
 void UPlayerHUD::CheckAllUIsInitFinsiehd()
 {
-    if (bStatusUIInitFinished && bQuickSlotsInitFinished)
+    if (bStatusUIInitFinished && bQuickSlotsInitFinished && bHPToolItemDotGaugeInitFinished)
     {
         bStatusUIInitFinished = false;
         bQuickSlotsInitFinished = false;
+        bHPToolItemDotGaugeInitFinished = false;
 
         HUDInitFinished.ExecuteIfBound();
     }
@@ -162,15 +172,71 @@ void UPlayerHUD::CreateStatusUI()
 
 void UPlayerHUD::CreateQuickSlotUI()
 {
+    //@Quick Slot UI Blueprint class, Quick Slot UI Overlay 체크
+    if (!ensureMsgf(QuickSlotUIClass && QuickSlotUIOverlay, TEXT("QuickSlotUIClass 또는 QuickSlotUIOverlay가 유효하지 않습니다.")))
+    {
+        return;
+    }
+
+    //@Quick Slot UI 생성
+    UHUD_QuickSlotsUI* QuickSlotUI = CreateWidget<UHUD_QuickSlotsUI>(this, QuickSlotUIClass);
+    if (!IsValid(QuickSlotUI))
+    {
+        UE_LOGFMT(LogHUD, Error, "QuickSlotUI 위젯 생성에 실패했습니다.");
+        return;
+    }
+
+    //@초기화 요청 이벤트에 바인딩
+    RequestStartInitByHUD.AddUFunction(QuickSlotUI, "InitializeQuickSlotsUI");
+
+    //@내부 바인딩
+    InternalBindToQuickSlotsUI(QuickSlotUI);
+
+    //@Alignment 설정
+    if (UOverlaySlot* OverlaySlot = QuickSlotUIOverlay->AddChildToOverlay(QuickSlotUI))
+    {
+        OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+        OverlaySlot->SetVerticalAlignment(VAlign_Fill);
+    }
+
+    QuickSlotUIRef = QuickSlotUI;
+
+    UE_LOGFMT(LogHUD, Log, "QuickSlotUI가 성공적으로 생성되고 QuickSlotUIOverlay에 추가되었습니다.");
 }
 
-void UPlayerHUD::CreateHPPotionUI()
+void UPlayerHUD::CreateHPToolItemDotGauge()
 {
-}
-#pragma endregion
+    //@HP Potion UI Blueprint class, HP Potion UI Overlay 체크
+    if (!ensureMsgf(HPToolItemDotGaugeClass && HPToolItemDotGaugeOverlay, TEXT("HPToolItemDotGaugeClass 또는 HPToolItemDotGaugeOverlay가 유효하지 않습니다.")))
+    {
+        return;
+    }
 
-//@Delegates
-#pragma region Delegates
+    //@HP Potion UI 생성
+    UHUD_HPToolItemDotGauge* HPToolItemDotGauge = CreateWidget<UHUD_HPToolItemDotGauge>(this, HPToolItemDotGaugeClass);
+    if (!IsValid(HPToolItemDotGauge))
+    {
+        UE_LOGFMT(LogHUD, Error, "HPToolItemDotGauge 위젯 생성에 실패했습니다.");
+        return;
+    }
+
+    //@비동기 초기화
+    RequestStartInitByHUD.AddUFunction(HPToolItemDotGauge, "InitializeHorizontalDotGauge");
+
+    //@내부 바인딩
+    InternalBindToHPToolItemDotGauge(HPToolItemDotGauge);
+
+    //@Alignment 설정
+    if (UOverlaySlot* OverlaySlot = HPToolItemDotGaugeOverlay->AddChildToOverlay(HPToolItemDotGauge))
+    {
+        OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+        OverlaySlot->SetVerticalAlignment(VAlign_Fill);
+    }
+
+    HPToolItemDotGaugeRef = HPToolItemDotGauge;
+
+    UE_LOGFMT(LogHUD, Log, "HPToolItemDotGauge가 성공적으로 생성되고 HPToolItemDotGaugeOverlay에 추가되었습니다.");
+}
 #pragma endregion
 
 //@Callbacks
@@ -203,6 +269,13 @@ void UPlayerHUD::OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool 
 void UPlayerHUD::OnStatusUIInitFinished()
 {
     bStatusUIInitFinished = true;
+
+    CheckAllUIsInitFinsiehd();
+}
+
+void UPlayerHUD::OnHPToolItemDotGaugeInitFinished()
+{
+    bHPToolItemDotGaugeInitFinished = true;
 
     CheckAllUIsInitFinsiehd();
 }

@@ -72,9 +72,6 @@ public:
 protected:
 	//~ Begin UUserWidget Interfaces
 	virtual void NativeOnInitialized();
-	virtual void NativePreConstruct();
-	virtual void NativeConstruct();
-	virtual void NativeDestruct();
 	//~ End UUserWidget Interface
 
 protected:
@@ -86,16 +83,17 @@ protected:
 public:
 	//@초기화
     UFUNCTION()
-        void InitializeHorizontalDotGauge();
+        virtual void InitializeHorizontalDotGauge();
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
+    //@게이지 유닛 생성
     void CreateDotGaugeUnits();
 
 public:
-    // 게이지 설정/업데이트 함수들
+    //@게이지 설정 업데이트 함수
     UFUNCTION(BlueprintCallable, Category = "게이지")
         void UpdateFilledCount(int32 Count);
 

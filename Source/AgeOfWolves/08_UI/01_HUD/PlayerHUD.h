@@ -12,9 +12,9 @@ DECLARE_LOG_CATEGORY_EXTERN(LogHUD, Log, All)
 //@전방 선언
 #pragma region Forward Declaration
 class UOverlay;
-class UQuickSlots;
-class UStateBars;
 class UHUD_StatusUI;
+class UHUD_QuickSlotsUI;
+class UHUD_HPToolItemDotGauge;
 #pragma endregion
 
 //@열거형
@@ -73,7 +73,8 @@ protected:
 protected:
 	//@내부 바인딩
 	void InternalBindToStatusUI(UHUD_StatusUI* StatusUI);
-	void InternalBindToQuickSlots(UQuickSlots* QuickSlots);
+	void InternalBindToQuickSlotsUI(UHUD_QuickSlotsUI* QuickSlotsUI);
+	void InternalBindToHPToolItemDotGauge(UHUD_HPToolItemDotGauge* HPToolItemDotGauge);
 
 public:
 	//@초기화
@@ -83,6 +84,7 @@ public:
 protected:
 	bool bStatusUIInitFinished = false;
 	bool bQuickSlotsInitFinished = false;
+	bool bHPToolItemDotGaugeInitFinished = false;
 	void CheckAllUIsInitFinsiehd();
 
 #pragma endregion
@@ -95,26 +97,35 @@ protected:
 	//@Quick Slot UI 생성
 	void CreateQuickSlotUI();
 	//@HP Potion UI 생성
-	void CreateHPPotionUI();
+	void CreateHPToolItemDotGauge();
 
 protected:
 	UPROPERTY(BlueprintReadWrite, Category = "HUD | Status UI", meta = (BindWidget))
 		UOverlay* StatusUIOverlay;
-	UPROPERTY(EditDefaultsOnly, category = "HUD | Status UI")
-		TSubclassOf<UUserWidget> StatusUIClass;
 
 	UPROPERTY(BlueprintReadWrite, Category = "HUD | Quick Slot", meta = (BindWidget))
 		UOverlay* QuickSlotUIOverlay;
-	UPROPERTY(EditDefaultsOnly, category = "HUD | Quick Slot")
-		TSubclassOf<UUserWidget> QuickSlotUIClass;
 
 	UPROPERTY(BlueprintReadWrite, Category = "HUD | HP Potion UI", meta = (BindWidget))
-		UOverlay* HPPotionUIOverlay;
-	UPROPERTY(EditDefaultsOnly, category = "HUD | HP Potion UI")
-		TSubclassOf<UUserWidget> HPPotionUIClass;
+		UOverlay* HPToolItemDotGaugeOverlay;
 
 protected:
 	TObjectPtr<UHUD_StatusUI> StatusUIRef;
+
+	UPROPERTY(EditDefaultsOnly, category = "HUD | Status UI")
+		TSubclassOf<UUserWidget> StatusUIClass;
+
+protected:
+	TObjectPtr<UHUD_QuickSlotsUI> QuickSlotUIRef;
+
+	UPROPERTY(EditDefaultsOnly, category = "HUD | Quick Slot")
+		TSubclassOf<UUserWidget> QuickSlotUIClass;
+
+protected:
+	TObjectPtr<UHUD_HPToolItemDotGauge> HPToolItemDotGaugeRef;
+
+	UPROPERTY(EditDefaultsOnly, category = "HUD | HP Potion UI")
+		TSubclassOf<UUserWidget> HPToolItemDotGaugeClass;
 #pragma endregion
 
 //@Delegates
@@ -135,12 +146,15 @@ protected:
 	virtual void OnUIVisibilityChanged_Implementation(UUserWidget* Widget, bool bVisible);
 
 protected:
-	//@퀵슬롯 초기화 완료 이벤트에 등록하는 콜백
-	UFUNCTION()
-		void OnQuickSlotsInitFinished();
 	//@상태 창 초기화 완료 이벤트에 등록되는 콜백
 	UFUNCTION()
 		void OnStatusUIInitFinished();
+	//@HP Tool Item 게이지 초기화 완료 이벤트에 등록되는 콜백
+	UFUNCTION()
+		void OnHPToolItemDotGaugeInitFinished();
+	//@퀵슬롯 초기화 완료 이벤트에 등록하는 콜백
+	UFUNCTION()
+		void OnQuickSlotsInitFinished();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

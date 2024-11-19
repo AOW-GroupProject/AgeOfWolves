@@ -25,24 +25,6 @@ void UHorizontalDotGauge::NativeOnInitialized()
 	Super::NativeOnInitialized();
 }
 
-void UHorizontalDotGauge::NativePreConstruct()
-{
-	Super::NativePreConstruct();
-}
-
-void UHorizontalDotGauge::NativeConstruct()
-{
-	Super::NativeConstruct();
-}
-
-void UHorizontalDotGauge::NativeDestruct()
-{
-	Super::NativeDestruct();
-}
-#pragma endregion
-
-//@Property/Info...etc
-#pragma region Property or Subwidgets or Infos...etc
 void UHorizontalDotGauge::InitializeHorizontalDotGauge()
 {
     //@Dot Gauge Unit 생성
@@ -51,9 +33,13 @@ void UHorizontalDotGauge::InitializeHorizontalDotGauge()
     //@초기화 완료 이벤트
     HorizontalDotGaugeInitFinished.ExecuteIfBound();
 }
+#pragma endregion
 
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UHorizontalDotGauge::CreateDotGaugeUnits()
 {
+
     if (!HorizontalDotGaugeBox || !DotGaugeUnitClass)
     {
         UE_LOGFMT(LogHorizontalDotGaguge, Warning, "HorizontalDotGaugeBox 또는 DotGaugeUnitClass가 유효하지 않습니다.");
