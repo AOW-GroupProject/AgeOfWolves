@@ -1105,7 +1105,7 @@ void UItemSlots::OnRequestCancelCurrentHoveredItemSlot(EItemType RequestedItemTy
 
 }
 
-void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag)
+void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag, int32 ItemNum)
 {
     UE_LOGFMT(LogItemSlots, Log, "새 아이템이 인벤토리에 할당됨: ID {0}, 유형 {1}, 태그 {2}",
         UniqueItemID.ToString(), UEnum::GetValueAsString(Type), ItemTag.ToString());
@@ -1143,7 +1143,7 @@ void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType 
     //@Item Images
     UTexture2D* ItemTexture = ItemInfo.ItemSlotImage.LoadSynchronous();
     //@Assign New Item
-    EmptySlot->AssignNewItem(UniqueItemID, ItemInfo, 1);
+    EmptySlot->AssignNewItem(UniqueItemID, ItemInfo, ItemNum);
 }
 
 void UItemSlots::OnItemRemovedFromInventory(const FGuid& UniqueItemID, EItemType Type)

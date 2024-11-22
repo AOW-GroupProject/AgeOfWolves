@@ -5,6 +5,8 @@
 #include "Components/HorizontalBoxSlot.h"
 
 #include "08_UI/ItemSlot.h"
+#include "08_UI/01_HUD/HUD_QuickSlotsUI_AbilitySlot.h"
+
 
 DEFINE_LOG_CATEGORY(LogQuickSlotsUI)
 
@@ -17,6 +19,12 @@ UHUD_QuickSlotsUI::UHUD_QuickSlotsUI(const FObjectInitializer& ObjectInitializer
 	ToolItemQuickSlotBox = nullptr;
 	BattoujutsuQuickSlotBox = nullptr;
 	JujutsuQuickSlotBox = nullptr;
+
+    ToolItemSlotClass = nullptr;
+    BattoujutsuAbilitySlotClass = nullptr;
+    JujutsuAbilitySlotClass = nullptr;
+
+    ToolItemSlots.Reset();
 }
 
 void UHUD_QuickSlotsUI::NativeOnInitialized()
@@ -25,13 +33,57 @@ void UHUD_QuickSlotsUI::NativeOnInitialized()
 
 }
 
+void UHUD_QuickSlotsUI::InternalBindToToolItemSlots(UItemSlot* ItemSlot, bool bLast)
+{
+    if (!ItemSlot)
+    {
+        return;
+    }
+
+    //@내부 바인딩
+    ItemSlot->ItemSlotInitFinished.BindUFunction(this, "OnToolItemSlotsInitFinished");
+}
+
+void UHUD_QuickSlotsUI::InternalBindToBattoujutsuAbilitySlot(UHUD_QuickSlotsUI_AbilitySlot* AbilitySlot)
+{
+    if (!AbilitySlot)
+    {
+        return;
+    }
+
+    //@내부 바인딩
+    AbilitySlot->AbilitySlotInitFinished.BindUFunction(this, "OnBattoujutsuAbilitySlotInitFinished");
+}
+
+void UHUD_QuickSlotsUI::InternalBindToJujutsuAbilitySlots(UHUD_QuickSlotsUI_AbilitySlot* AbilitySlot)
+{
+    
+}
+
 void UHUD_QuickSlotsUI::InitializeQuickSlotsUI()
 {
 	//@Tool Item 퀵슬롯 생성
 	CreateToolItemQuickSlots();
+    //@발도술 슬롯 생성
+    CreateBattouJutsuAbilitySlot();
+    //@주술 슬롯 목록 생성
+    CreateJujutsuAbilitySlot();
 
-	//@TODO: 임시 초기화 완료 이벤트 호출
-	QuickSlotsInitFinished.ExecuteIfBound();
+    //@초기화 요청
+    RequestStartInitByQuickSlots.Broadcast();
+}
+
+void UHUD_QuickSlotsUI::CheckAllUIsInitFinished()
+{
+    if (bToolItemSlotInitFinished && bBattouJutsuAbilitySlotInitFinished /* && bJujutsuAbilitySlotsInitFinished*/)
+    {
+        bToolItemSlotInitFinished = false;
+        bBattouJutsuAbilitySlotInitFinished = false;
+        bJujutsuAbilitySlotsInitFinished = false;
+
+        //@초기화 완료 이벤트
+	    QuickSlotsInitFinished.ExecuteIfBound();
+    }
 }
 #pragma endregion
 
@@ -58,6 +110,12 @@ void UHUD_QuickSlotsUI::CreateToolItemQuickSlots()
             continue;
         }
 
+        //@초기화 요청 이벤트
+        RequestStartInitByQuickSlots.AddUFunction(ToolItemSlot, "InitializeItemSlot");
+
+        //@내부 바인딩
+        InternalBindToToolItemSlots(ToolItemSlot);
+
         //@Alignment 설정
         if (UHorizontalBoxSlot* HorizontalBoxSlot = ToolItemQuickSlotBox->AddChildToHorizontalBox(ToolItemSlot))
         {
@@ -73,10 +131,65 @@ void UHUD_QuickSlotsUI::CreateToolItemQuickSlots()
 
     UE_LOGFMT(LogQuickSlotsUI, Log, "총 {0}개의 Tool Item Slots가 생성되었습니다.", ToolItemSlots.Num());
 }
+
+void UHUD_QuickSlotsUI::CreateBattouJutsuAbilitySlot()
+{
+    //@BP 클래스, HorizontalBox 체크
+    if (!ensureMsgf(BattoujutsuAbilitySlotClass && BattoujutsuQuickSlotBox,
+        TEXT("BattoujutsuAbilitySlotClass 또는 BattoujutsuQuickSlotBox가 유효하지 않습니다.")))
+    {
+        return;
+    }
+
+    //@발도술 Ability Slot 생성
+    UHUD_QuickSlotsUI_AbilitySlot* BattoujutsuAbilitySlot = CreateWidget<UHUD_QuickSlotsUI_AbilitySlot>(this, BattoujutsuAbilitySlotClass);
+    if (!IsValid(BattoujutsuAbilitySlot))
+    {
+        UE_LOGFMT(LogQuickSlotsUI, Error, "발도술 Ability Slot 위젯 생성에 실패했습니다.");
+        return;
+    }
+
+    //@초기화 요청 이벤트
+    RequestStartInitByQuickSlots.AddUFunction(BattoujutsuAbilitySlot, "InitializeAbilitySlot");
+
+    //@내부 바인딩
+    InternalBindToBattoujutsuAbilitySlot(BattoujutsuAbilitySlot);
+
+    //@Alignment 설정
+    if (UHorizontalBoxSlot* HorizontalBoxSlot = BattoujutsuQuickSlotBox->AddChildToHorizontalBox(BattoujutsuAbilitySlot))
+    {
+        HorizontalBoxSlot->SetHorizontalAlignment(HAlign_Fill);
+        HorizontalBoxSlot->SetVerticalAlignment(VAlign_Top);
+    }
+
+    UE_LOGFMT(LogQuickSlotsUI, Log, "발도술 Ability Slot이 생성되어 추가되었습니다.");
+}
+
+void UHUD_QuickSlotsUI::CreateJujutsuAbilitySlot()
+{
+}
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
+void UHUD_QuickSlotsUI::OnToolItemSlotsInitFinished()
+{
+    bToolItemSlotInitFinished = true;
+
+    CheckAllUIsInitFinished();
+}
+void UHUD_QuickSlotsUI::OnBattoujutsuAbilitySlotInitFinished()
+{
+    bBattouJutsuAbilitySlotInitFinished = true;
+
+    CheckAllUIsInitFinished();
+}
+void UHUD_QuickSlotsUI::OnJujutsuAbilitySlotsInitFinished()
+{
+    bJujutsuAbilitySlotsInitFinished = true;
+
+    CheckAllUIsInitFinished();
+}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

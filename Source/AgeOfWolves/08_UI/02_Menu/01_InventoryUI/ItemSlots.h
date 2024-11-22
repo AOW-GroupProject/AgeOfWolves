@@ -275,7 +275,7 @@ public:
 protected:
     //@Inventory Comp의 아이템 할당 이벤트에 등록되는 콜백
     UFUNCTION()
-        void OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag);
+        void OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag, int32 ItemNum);
     //@Inventory Comp의 아이템 제거 이벤트에 등록되는 콜백
     UFUNCTION()
         void OnItemRemovedFromInventory(const FGuid& UniqueItemID, EItemType Type);

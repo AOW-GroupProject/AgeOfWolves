@@ -74,7 +74,6 @@ public:
     //@초기화
     UFUNCTION()
         void InitializeItemDescriptionSlot();
-
 #pragma endregion
 
 //@Property/Info...etc

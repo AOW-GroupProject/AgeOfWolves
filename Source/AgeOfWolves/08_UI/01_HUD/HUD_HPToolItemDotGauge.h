@@ -11,6 +11,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogHPToolItemDotGauge, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
+class UEditableTextBox;
 #pragma endregion
 
 //@열거형
@@ -64,6 +65,21 @@ public:
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+protected:
+	//@현재 사용 가능한 HP 회복 아이템 갯수 업데이트
+	void UpdateHPToolItemCount(int32 NewCount);
+
+protected:
+	//@아이템 개수를 표시하는 Text Box
+	UPROPERTY(BlueprintReadWrite, Category = "HP 게이지 | 아이템 개수", meta = (BindWidget))
+		UEditableTextBox* HPToolItemCountTextBox;
+
+protected:
+	FGuid HPToolItemID;
+
+	//@테스트용 타이머 핸들 배열
+	UPROPERTY()
+		TArray<FTimerHandle> TestTimerHandles;
 #pragma endregion
 
 //@Delegates
@@ -75,13 +91,10 @@ public:
 protected:
 	//@Inventory Comp의 아이템 할당 이벤트에 등록되는 콜백
 	UFUNCTION()
-		void OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag);
-	//@Inventory Comp의 아이템 제거 이벤트에 등록되는 콜백
-	UFUNCTION()
-		void OnItemRemovedFromInventory(const FGuid& UniqueItemID, EItemType Type);
+		void OnQuickSlotItemsLoaded(int32 QuickSlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount);
 	//@Inventory Comp의 아이테 업데이트 이벤트에 등록되는 콜백
 	UFUNCTION()
-		void OnInventoryItemUpdated(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag, int32 UpdatedItemCount);
+		void OnQuickSlotItemUpdated(int32 QuickSlotNum, const FGuid& UniqueItemID, int32 ItemNum);
 #pragma endregion
 
 	//@Utility(Setter, Getter,...etc)

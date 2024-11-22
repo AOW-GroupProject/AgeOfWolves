@@ -120,8 +120,11 @@ protected:
         TSubclassOf<UDotGaugeUnit> DotGaugeUnitClass;
 
 protected:
-    //@현재 Gauge에 추가된 Unit 개수
-    int32 CurrentGaugeUnitCount;
+    //@현재 Gauge에서 Active한 Dot Gauge Unit 총 개수
+    int32 MaxUnitCount;
+
+    //@현재 Gauge에서 Active, Filled 상태의 Dot Gauge Unit 개수
+    int32 FilledUnitCount;
 #pragma endregion
 
 //@Delegates

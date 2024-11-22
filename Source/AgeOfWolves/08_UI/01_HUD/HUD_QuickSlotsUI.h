@@ -15,6 +15,7 @@ class UOverlay;
 class UHorizontalBox;
 class UVerticalBox;
 class UItemSlot;
+class UHUD_QuickSlotsUI_AbilitySlot;
 #pragma endregion
 
 //@열거형
@@ -27,6 +28,9 @@ class UItemSlot;
 
 //@이벤트/델리게이트
 #pragma region Delegates
+//@초기화 요청 이벤트
+DECLARE_MULTICAST_DELEGATE(FRequestStartInitByQuickSlots);
+
 //@초기화 완료 이벤트
 DECLARE_DELEGATE(FQuickSlotsInitFinished);
 #pragma endregion
@@ -62,17 +66,33 @@ protected:
 
 protected:
 	//@내부 바인딩
+	void InternalBindToToolItemSlots(UItemSlot* ItemSlot, bool bLast = false);
+	void InternalBindToBattoujutsuAbilitySlot(UHUD_QuickSlotsUI_AbilitySlot* AbilitySlot);
+	void InternalBindToJujutsuAbilitySlots(UHUD_QuickSlotsUI_AbilitySlot* AbilitySlot);
 
 public:
 	//@초기화
 	UFUNCTION()
 		void InitializeQuickSlotsUI();
+
+protected:
+	//@초기화 완료 체크
+	bool bToolItemSlotInitFinished = false;
+	bool bBattouJutsuAbilitySlotInitFinished = false;
+	bool bJujutsuAbilitySlotsInitFinished = false;
+	void CheckAllUIsInitFinished();
+
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
+	//@Tool Item Slots 생성
 	void CreateToolItemQuickSlots();
+	//@발도술 슬롯 생성
+	void CreateBattouJutsuAbilitySlot();
+	//@주술 슬롯 생성
+	void CreateJujutsuAbilitySlot();
 
 protected:
 	UPROPERTY(BlueprintReadWrite, Category = "퀵슬롯", meta = (BindWidget))
@@ -89,25 +109,40 @@ protected:
 	UPROPERTY(BlueprintReadWrite, Category = "퀵슬롯 | 발도술", meta = (BindWidget))
 		UHorizontalBox* BattoujutsuQuickSlotBox;
 
+	UPROPERTY(EditDefaultsOnly, Category = "퀵슬롯 | 발도술 슬롯 BP 클래스")
+		TSubclassOf<UHUD_QuickSlotsUI_AbilitySlot> BattoujutsuAbilitySlotClass;
+
 protected:
 	UPROPERTY(BlueprintReadWrite, Category = "퀵슬롯 | 주술", meta = (BindWidget))
 		UHorizontalBox* JujutsuQuickSlotBox;
 
+	UPROPERTY(EditDefaultsOnly, Category = "퀵슬롯 | 주술 슬롯 BP 클래스")
+		TSubclassOf<UHUD_QuickSlotsUI_AbilitySlot> JujutsuAbilitySlotClass;
+
 protected:
 	//@Tool Item Slot 목록
 	TArray<UItemSlot*> ToolItemSlots;
-
 #pragma endregion
 
 //@Delegates
 #pragma region Delegates
 public:
+	//@초기화 요청 이벤트
+	FRequestStartInitByQuickSlots RequestStartInitByQuickSlots;
+
 	//@초기화 완료 이벤트
 	FQuickSlotsInitFinished QuickSlotsInitFinished;
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
+protected:
+	UFUNCTION()
+		void OnToolItemSlotsInitFinished();
+	UFUNCTION()
+		void OnBattoujutsuAbilitySlotInitFinished();
+	UFUNCTION()
+		void OnJujutsuAbilitySlotsInitFinished();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

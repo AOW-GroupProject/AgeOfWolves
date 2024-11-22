@@ -117,8 +117,11 @@ protected:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
-    FORCEINLINE bool IsActive() const { return bIsActive; }
-    FORCEINLINE void SetIsActive(bool InBool) { bIsActive = InBool; }
+    FORCEINLINE bool IsActive() const { return GetVisibility() == ESlateVisibility::HitTestInvisible; }
+    FORCEINLINE void SetIsActive(bool InBool) { InBool ? SetVisibility(ESlateVisibility::HitTestInvisible) : SetVisibility(ESlateVisibility::Collapsed); }
+
+    FORCEINLINE bool IsFilled() const { return bIsFilled; }
+    FORCEINLINE void SetIsFilled(bool InBool) { bIsFilled = InBool; }
 #pragma endregion
 
 };

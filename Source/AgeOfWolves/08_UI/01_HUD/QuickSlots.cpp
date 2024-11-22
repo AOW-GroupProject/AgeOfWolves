@@ -86,8 +86,8 @@ void UQuickSlots::ExternalBindToInventoryComponent()
         return;
     }
     //@Binding
-    InvenComp->QuickSlotItemsLoaded.BindUFunction(this, "OnQuickSlotItemsLoaded");
-    InvenComp->QuickSlotItemUpdated.BindUFunction(this, "OnQuickSlotItemUpdated");
+    InvenComp->QuickSlotItemsLoaded.AddUFunction(this, "OnQuickSlotItemsLoaded");
+    InvenComp->QuickSlotItemUpdated.AddUFunction(this, "OnQuickSlotItemUpdated");
 
 
     UE_LOGFMT(LogQuickSlots, Log, "Inventory Component에 성공적으로 바인딩 되었습니다 : {0}", __FUNCTION__);
