@@ -1,12 +1,17 @@
 #include "HUD_QuickSlotsUI.h"
 #include "Logging/StructuredLog.h"
 
+#include "Kismet/GameplayStatics.h"
+
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
 
 #include "08_UI/ItemSlot.h"
 #include "08_UI/01_HUD/HUD_QuickSlotsUI_AbilitySlot.h"
 
+#include "03_Player/BasePlayerController.h"
+#include "03_Player/PlayerStateBase.h"
+#include "04_Component/BaseAbilitySystemComponent.h"
 
 DEFINE_LOG_CATEGORY(LogQuickSlotsUI)
 
@@ -31,6 +36,49 @@ void UHUD_QuickSlotsUI::NativeOnInitialized()
 {
 	Super::NativeOnInitialized();
 
+    //@외부 바인딩
+    ExternalBindToASC();
+}
+
+void UHUD_QuickSlotsUI::ExternalBindToASC()
+{
+    UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(this);
+    if (!GameInstance)
+    {
+        UE_LOGFMT(LogQuickSlotsUI, Error, "{0}: Game Insatnce가 유효하지 않습니다.", __FUNCDNAME__);
+        return;
+    }
+
+    APlayerController* PC = GameInstance->GetFirstLocalPlayerController(GetWorld());
+    if (!PC)
+    {
+        UE_LOGFMT(LogQuickSlotsUI, Error, "{0}: Player Controller가 유효하지 않습니다.", __FUNCDNAME__);
+        return;
+    }
+
+    ABasePlayerController* BasePC = Cast< ABasePlayerController>(PC);
+    if (!BasePC)
+    {
+        UE_LOGFMT(LogQuickSlotsUI, Error, "{0}: Base Player Controller가 유효하지 않습니다.", __FUNCDNAME__);
+        return;
+    }
+
+    APlayerStateBase* PS = BasePC->GetPlayerState<APlayerStateBase>();
+    if (!PS)
+    {
+        UE_LOGFMT(LogQuickSlotsUI, Error, "{0}: Player State가 유효하지 않습니다.", __FUNCDNAME__);
+        return;
+    }
+
+    UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent());
+    if (!ASC)
+    {
+        UE_LOGFMT(LogQuickSlotsUI, Error, "{0}: Base ASC가 유효하지 않습니다.", __FUNCDNAME__);
+        return;
+    }
+
+    ASC->AbilitySpecGiven.AddUFunction(this, "OnAbilitySpecGiven");
+  
 }
 
 void UHUD_QuickSlotsUI::InternalBindToToolItemSlots(UItemSlot* ItemSlot, bool bLast)
@@ -178,21 +226,44 @@ void UHUD_QuickSlotsUI::OnToolItemSlotsInitFinished()
 
     CheckAllUIsInitFinished();
 }
+
 void UHUD_QuickSlotsUI::OnBattoujutsuAbilitySlotInitFinished()
 {
     bBattouJutsuAbilitySlotInitFinished = true;
 
     CheckAllUIsInitFinished();
 }
+
 void UHUD_QuickSlotsUI::OnJujutsuAbilitySlotsInitFinished()
 {
     bJujutsuAbilitySlotsInitFinished = true;
 
     CheckAllUIsInitFinished();
 }
+
+void UHUD_QuickSlotsUI::OnAbilitySpecGiven(FGameplayAbilitySpec AbilitySpec)
+{
+    if (!AbilitySpec.Ability)
+    {
+        UE_LOGFMT(LogQuickSlotsUI, Error, "{0}: Ability가 유효하지 않습니다.", __FUNCDNAME__);
+        return;
+    }
+
+    FGameplayTagContainer AbilityTags = AbilitySpec.Ability->AbilityTags;
+    if (AbilityTags.IsEmpty())
+    {
+        UE_LOGFMT(LogQuickSlotsUI, Error, "{0}: Ability Tag가 유효하지 않습니다.", __FUNCDNAME__);
+        return;
+    }
+
+    for (const auto AbilityTag : AbilityTags)
+    {
+        UE_LOGFMT(LogQuickSlotsUI, Log, "Ability Tag: {0}", AbilityTag.GetTagName().ToString());
+    }
+
+}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 #pragma endregion
-

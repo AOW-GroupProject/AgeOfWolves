@@ -16,6 +16,7 @@ class UHorizontalBox;
 class UVerticalBox;
 class UItemSlot;
 class UHUD_QuickSlotsUI_AbilitySlot;
+class UBaseAbilitySystemComponent;
 #pragma endregion
 
 //@열거형
@@ -63,6 +64,7 @@ protected:
 
 protected:
 	//@외부 바인딩
+	void ExternalBindToASC();
 
 protected:
 	//@내부 바인딩
@@ -81,7 +83,6 @@ protected:
 	bool bBattouJutsuAbilitySlotInitFinished = false;
 	bool bJujutsuAbilitySlotsInitFinished = false;
 	void CheckAllUIsInitFinished();
-
 #pragma endregion
 
 //@Property/Info...etc
@@ -143,6 +144,10 @@ protected:
 		void OnBattoujutsuAbilitySlotInitFinished();
 	UFUNCTION()
 		void OnJujutsuAbilitySlotsInitFinished();
+
+protected:
+	UFUNCTION()
+		void OnAbilitySpecGiven(FGameplayAbilitySpec AbilitySpec);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

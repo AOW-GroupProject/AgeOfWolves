@@ -10,8 +10,8 @@ DEFINE_LOG_CATEGORY(LogQuickSlotsAbilitySlot)
 UHUD_QuickSlotsUI_AbilitySlot::UHUD_QuickSlotsUI_AbilitySlot(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
-	AbilityTypeName = nullptr;
 	AbilityName = nullptr;
+    AbilityTypeName = nullptr;
 }
 
 void UHUD_QuickSlotsUI_AbilitySlot::NativeOnInitialized()
@@ -27,7 +27,6 @@ void UHUD_QuickSlotsUI_AbilitySlot::InitializeAbilitySlot()
 	Super::InitializeAbilitySlot();
 
 }
-
 #pragma endregion
 
 //@Property/Info...etc
@@ -37,7 +36,7 @@ void UHUD_QuickSlotsUI_AbilitySlot::AssignNewAbility_Implementation(const FGamep
     Super::AssignNewAbility_Implementation(Tag);
 
     //@UEditable Text Box
-    if (!AbilityTypeName || !AbilityName)
+    if (!AbilityName)
     {
         UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "TextBox가 유효하지 않습니다.");
         return;
@@ -50,8 +49,6 @@ void UHUD_QuickSlotsUI_AbilitySlot::AssignNewAbility_Implementation(const FGamep
         return;
     }
 
-    //@Ability Type Name
-    AbilityTypeName->SetText(FText::FromString(TypeName));
     //@Ability Nmae
     AbilityName->SetText(FText::FromString(AbilityNameStr));
 }
@@ -66,7 +63,7 @@ void UHUD_QuickSlotsUI_AbilitySlot::AssignNewAbilityFromSlot_Implementation(UAbi
         return;
     }
 
-    if (!AbilityTypeName || !AbilityName)
+    if (!AbilityName)
     {
         UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "TextBox가 유효하지 않습니다.");
         return;
@@ -79,8 +76,6 @@ void UHUD_QuickSlotsUI_AbilitySlot::AssignNewAbilityFromSlot_Implementation(UAbi
         return;
     }
 
-    //@Ability Type Name
-    AbilityTypeName->SetText(FText::FromString(TypeName));
     //@Ability Nmae
     AbilityName->SetText(FText::FromString(AbilityNameStr));
 }
@@ -89,20 +84,14 @@ void UHUD_QuickSlotsUI_AbilitySlot::ClearAssignedAbility_Implementation(bool bFo
 {
     Super::ClearAssignedAbility_Implementation(bForceClear);
 
-    if (!AbilityTypeName || !AbilityName)
+    if (!AbilityName)
     {
         return;
     }
 
-    //@Ability Type Name
-    AbilityTypeName->SetText(FText::GetEmpty());
     //@Ability Nmae
     AbilityName->SetText(FText::GetEmpty());
 }
-#pragma endregion
-
-//@Delegates
-#pragma region Delegates
 #pragma endregion
 
 //@Callbacks
@@ -131,8 +120,6 @@ bool UHUD_QuickSlotsUI_AbilitySlot::ExtractAbilityNamesFromTag(const FGameplayTa
         return false;
     }
 
-    //@마지막에서 2번째 계층을 TypeName으로
-    OutTypeName = TagHierarchy[TagHierarchy.Num() - 2];
     //@마지막 계층을 AbilityName으로
     OutAbilityName = TagHierarchy[TagHierarchy.Num() - 1];
 

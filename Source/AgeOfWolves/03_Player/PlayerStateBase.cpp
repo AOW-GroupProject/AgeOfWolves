@@ -69,14 +69,14 @@ void APlayerStateBase::InitializePlayerState()
         return;
     }
 
-    // ActorInfo 초기화
+    //@ActorInfo 초기화
     AbilitySystemComponent->InitAbilityActorInfo(Pawn, Pawn);
 
-    // @기본 AttributeSet 등록
+    //@기본 AttributeSet 등록
     SetToGrant->GiveStartupAttributeSetToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
     UE_LOGFMT(LogPlayerStateBase, Log, "기본 AttributeSet 등록 완료");
 
-    // @Attribute 변경 콜백 함수 등록
+    //@Attribute 변경 콜백 함수 등록
     for (auto& AS : AbilitySystemComponent->GetSpawnedAttributes())
     {
         if (IsValid(AS))
@@ -92,7 +92,7 @@ void APlayerStateBase::InitializePlayerState()
         }
     }
 
-    // @태그 관계 초기화
+    //@태그 관계 초기화
     if (PawnData->TagRelationship)
     {
         PawnData->TagRelationship->InitializeCacheMaps();
@@ -120,8 +120,7 @@ void APlayerStateBase::LoadGameAbilitySystem()
         //@Ability Manager
         else
         {
-            //UAbilityManagerSubsystem* AbilityManager = GameInstance->GetSubsystem<UAbilityManagerSubsystem>();
-            LoadDefaultAbilitySystemFromAbilityManager(/*AbilityManager*/);
+            LoadDefaultAbilitySystemFromAbilityManager();
         }
     }
 }
