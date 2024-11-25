@@ -34,6 +34,7 @@ class AGEOFWOLVES_API UHUD_QuickSlotsUI_AbilitySlot : public UAbilitySlot
 {
 //@친추 클래스
 #pragma region Friend Class
+	friend class UHUD_QuickSlotsUI;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -63,7 +64,7 @@ public:
 #pragma region Property or Subwidgets or Infos...etc
 protected:
 	//@새로운 Ability 할당
-	virtual void AssignNewAbility_Implementation(const FGameplayTag& Tag) override;
+	virtual void AssignNewAbility_Implementation(FGameplayTag Tag) override;
 
 	//@다른 Ability Slot으로부터 Ability 할당
 	virtual void AssignNewAbilityFromSlot_Implementation(UAbilitySlot* FromSlot) override;
@@ -72,9 +73,6 @@ protected:
 	virtual void ClearAssignedAbility_Implementation(bool bForceClear = false) override;
 
 protected:
-	//@Ability Slot의 타입 이름
-	UPROPERTY(BlueprintReadWrite, Category = "어빌리티 슬롯 | 어빌리티 기술 명", meta = (BindWidget))
-		UEditableTextBox* AbilityTypeName;
 	//@Ability Slot의 세부 이름
 	UPROPERTY(BlueprintReadWrite, Category = "어빌리티 슬롯 | 어빌리티 세부 기술 명", meta = (BindWidget))
 		UEditableTextBox* AbilityName;

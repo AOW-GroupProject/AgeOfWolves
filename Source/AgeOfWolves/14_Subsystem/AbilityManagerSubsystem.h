@@ -5,6 +5,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "GameplayTags.h" 
+#include "02_AbilitySystem/BaseAbilitySet.h"
 
 #include "AbilityManagerSubsystem.generated.h"
 
@@ -55,7 +56,16 @@ public:
 #pragma region Property or Subwidgets or Infos...etc
 protected:
 	//@Ability 정보를 담은 Data Asset
-	TObjectPtr<UBaseAbilitySet> AbilitySet = nullptr;
+	TObjectPtr<UBaseAbilitySet> AbilitySet;
+
+private:
+	UPROPERTY()
+		TArray<FBaseAbilitySet_GameplayAbility> CachedAbilities;
+
+public:
+	void CacheAbilitySetData();
+	const TArray<FBaseAbilitySet_GameplayAbility>& GetCachedAbilities() const { return CachedAbilities; }
+
 #pragma endregion
 
 //@Delegates
@@ -69,7 +79,7 @@ protected:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
-	UTexture2D* GetAbilityIconTexture2D(const FGameplayTag& AbilityTag) const;
+	UTexture2D* GetAbilityIconTexture2D(FGameplayTag AbilityTag);
 #pragma endregion
 
 };

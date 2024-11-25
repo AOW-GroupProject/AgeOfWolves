@@ -1,6 +1,8 @@
 #include "AbilitySlot.h"
 #include "Logging/StructuredLog.h"
 
+#include "Kismet/GameplayStatics.h"
+
 #include "Components/Image.h"
 #include "Components/VerticalBox.h"
 
@@ -27,16 +29,6 @@ void UAbilitySlot::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
-    //@Ability Manager Subsystem
-    UAbilityManagerSubsystem* AbilityManager = GetWorld()->GetGameInstance()->GetSubsystem<UAbilityManagerSubsystem>();
-    if (!AbilityManager)
-    {
-        UE_LOGFMT(LogAbilitySlot, Error, "AbilityManagerSubsystem을 찾을 수 없습니다.");
-        return;
-    }
-
-    //@캐싱
-    AbilityManagerCache = AbilityManager;
 }
 
 void UAbilitySlot::NativePreConstruct()
@@ -56,6 +48,20 @@ void UAbilitySlot::NativeDestruct()
 
 void UAbilitySlot::InitializeAbilitySlot()
 {
+    //@캐싱
+    if (UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(this))
+    {
+        AbilityManagerCache = GameInstance->GetSubsystem<UAbilityManagerSubsystem>();
+        if (!AbilityManagerCache)
+        {
+            UE_LOGFMT(LogAbilitySlot, Error, "Ability Manaer Subsystem 캐싱 실패");
+        }
+        else
+        {
+            UE_LOGFMT(LogAbilitySlot, Log, "Ability Manaer Subsystem 캐싱 성공");
+        }
+    }
+
     //@초기화 완료 이벤트
     AbilitySlotInitFinished.ExecuteIfBound();
 }
@@ -63,7 +69,7 @@ void UAbilitySlot::InitializeAbilitySlot()
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-void UAbilitySlot::AssignNewAbility_Implementation(const FGameplayTag& Tag)
+void UAbilitySlot::AssignNewAbility_Implementation(FGameplayTag Tag)
 {
     //@Ability Tag
     if (!Tag.IsValid())
@@ -72,7 +78,7 @@ void UAbilitySlot::AssignNewAbility_Implementation(const FGameplayTag& Tag)
         return;
     }
     //@Ability Manager Subsystem
-    if (!AbilityManagerCache.IsValid())
+    if (!AbilityManagerCache)
     {
         UE_LOGFMT(LogAbilitySlot, Warning, "AbilityManagerCache가 유효하지 않습니다.");
         return;
@@ -90,8 +96,8 @@ void UAbilitySlot::AssignNewAbility_Implementation(const FGameplayTag& Tag)
     SetIsFilled(true);
 
     //@아이콘 이미지 설정
-    UTexture2D* IconTexture = AbilityManagerCache->GetAbilityIconTexture2D(AbilityTag);
-    if (!IconTexture)
+    UTexture2D* IconTexture = AbilityManagerCache->GetAbilityIconTexture2D(Tag);
+    if (!IconTexture->IsValidLowLevel())
     {
         AbilityImage->SetBrushFromTexture(nullptr);
         AbilityImage->SetBrushTintColor(FLinearColor::Transparent);
@@ -121,7 +127,7 @@ void UAbilitySlot::AssignNewAbilityFromSlot_Implementation(UAbilitySlot* FromSlo
         return;
     }
 
-    if (!AbilityManagerCache.IsValid())
+    if (!AbilityManagerCache)
     {
         UE_LOGFMT(LogAbilitySlot, Warning, "AbilityManagerCache가 유효하지 않습니다.");
         return;

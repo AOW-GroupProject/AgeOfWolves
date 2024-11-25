@@ -60,6 +60,9 @@ struct FBaseAbilitySet_GameplayAbility
 
 public:
 
+	//@어빌리티 태그
+	UPROPERTY(EditDefaultsOnly)
+		FGameplayTag AbilityTag;
 	/// @어빌리티 유형의 BP 클래스
 	UPROPERTY(EditDefaultsOnly)
 		TSubclassOf<UBaseGameplayAbility> Ability = nullptr;
@@ -178,7 +181,6 @@ public:
 	void GiveStartupGameplayAbilityToAbilitySystem(UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles, UObject* SourceObject) const;
 
 protected:
-
 	// Gameplay abilities to grant when this ability set is granted.
 	UPROPERTY(EditDefaultsOnly, Category = "GA 목록")
 		TArray<FBaseAbilitySet_GameplayAbility> GameplayAbilities;
@@ -192,8 +194,8 @@ protected:
 		TArray<FBaseAbilitySet_AttributeSet> AttributeSets;
 
 public:
-	TArray<FBaseAbilitySet_GameplayAbility> GetGameplayAbilities() const { return GameplayAbilities; }
+	const TArray<FBaseAbilitySet_GameplayAbility>& GetGameplayAbilities() const { return GameplayAbilities; }
 	TArray<FBaseAbilitySet_GameplayEffect> GetGameplayEffects() const { return GameplayEffects; }
 	TArray<FBaseAbilitySet_AttributeSet> GetAttributeSets() const { return AttributeSets; }
 
-};
+};

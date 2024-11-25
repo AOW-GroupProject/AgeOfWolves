@@ -15,6 +15,7 @@ class UOverlay;
 class UHorizontalBox;
 class UVerticalBox;
 class UItemSlot;
+class UAbilitySlot;
 class UHUD_QuickSlotsUI_AbilitySlot;
 class UBaseAbilitySystemComponent;
 #pragma endregion
@@ -70,7 +71,7 @@ protected:
 	//@내부 바인딩
 	void InternalBindToToolItemSlots(UItemSlot* ItemSlot, bool bLast = false);
 	void InternalBindToBattoujutsuAbilitySlot(UHUD_QuickSlotsUI_AbilitySlot* AbilitySlot);
-	void InternalBindToJujutsuAbilitySlots(UHUD_QuickSlotsUI_AbilitySlot* AbilitySlot);
+	void InternalBindToJujutsuAbilitySlots(UAbilitySlot* AbilitySlot);
 
 public:
 	//@초기화
@@ -91,7 +92,7 @@ protected:
 	//@Tool Item Slots 생성
 	void CreateToolItemQuickSlots();
 	//@발도술 슬롯 생성
-	void CreateBattouJutsuAbilitySlot();
+	void CreateBattoujutsuAbilitySlot();
 	//@주술 슬롯 생성
 	void CreateJujutsuAbilitySlot();
 
@@ -108,21 +109,38 @@ protected:
 
 protected:
 	UPROPERTY(BlueprintReadWrite, Category = "퀵슬롯 | 발도술", meta = (BindWidget))
-		UHorizontalBox* BattoujutsuQuickSlotBox;
+		UOverlay* BattoujutsuQuickSlotOverlay;
 
 	UPROPERTY(EditDefaultsOnly, Category = "퀵슬롯 | 발도술 슬롯 BP 클래스")
 		TSubclassOf<UHUD_QuickSlotsUI_AbilitySlot> BattoujutsuAbilitySlotClass;
 
 protected:
 	UPROPERTY(BlueprintReadWrite, Category = "퀵슬롯 | 주술", meta = (BindWidget))
-		UHorizontalBox* JujutsuQuickSlotBox;
+		UOverlay* JujutsuQuickSlotsOverlay;
+
+	UPROPERTY(BlueprintReadWrite, Category = "퀵슬롯 | 주술", meta = (BindWidget))
+		UVerticalBox* JujutsuExtraQuickSlotBox;
 
 	UPROPERTY(EditDefaultsOnly, Category = "퀵슬롯 | 주술 슬롯 BP 클래스")
 		TSubclassOf<UHUD_QuickSlotsUI_AbilitySlot> JujutsuAbilitySlotClass;
 
+	UPROPERTY(EditDefaultsOnly, Category = "퀵슬롯 | 대기 주술 슬롯 BP 클래스")
+		TSubclassOf<UAbilitySlot> ExtraJujutsuAbilitySlotClass;
+
 protected:
 	//@Tool Item Slot 목록
 	TArray<UItemSlot*> ToolItemSlots;
+
+protected:
+	//@발도술 어빌리티 슬롯 캐싱
+	TObjectPtr<UHUD_QuickSlotsUI_AbilitySlot> BattoujutsuAbilitySlotRef;
+
+protected:
+	//@주술 어빌리티 슬롯 목록
+	struct FJujutsuSlots {
+		TObjectPtr<UHUD_QuickSlotsUI_AbilitySlot> MainSlot;
+		TArray<UAbilitySlot*> ExtraSlots;
+	} JujutsuSlots;
 #pragma endregion
 
 //@Delegates

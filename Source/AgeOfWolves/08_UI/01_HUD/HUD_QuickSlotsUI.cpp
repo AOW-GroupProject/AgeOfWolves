@@ -3,8 +3,12 @@
 
 #include "Kismet/GameplayStatics.h"
 
+#include "Components/Overlay.h"
+#include "Components/OverlaySlot.h"
 #include "Components/HorizontalBox.h"
 #include "Components/HorizontalBoxSlot.h"
+#include "Components/VerticalBox.h"
+#include "Components/VerticalBoxSlot.h"
 
 #include "08_UI/ItemSlot.h"
 #include "08_UI/01_HUD/HUD_QuickSlotsUI_AbilitySlot.h"
@@ -21,15 +25,22 @@ UHUD_QuickSlotsUI::UHUD_QuickSlotsUI(const FObjectInitializer& ObjectInitializer
 	:Super(ObjectInitializer)
 {
 	QuickSlotsBox = nullptr;
-	ToolItemQuickSlotBox = nullptr;
-	BattoujutsuQuickSlotBox = nullptr;
-	JujutsuQuickSlotBox = nullptr;
 
-    ToolItemSlotClass = nullptr;
-    BattoujutsuAbilitySlotClass = nullptr;
-    JujutsuAbilitySlotClass = nullptr;
+	ToolItemQuickSlotBox = nullptr;
+
+    BattoujutsuQuickSlotOverlay = nullptr;
+
+    JujutsuQuickSlotsOverlay = nullptr;
+    JujutsuExtraQuickSlotBox = nullptr;
 
     ToolItemSlots.Reset();
+    ToolItemSlotClass = nullptr;
+
+    BattoujutsuAbilitySlotRef = nullptr;
+    BattoujutsuAbilitySlotClass = nullptr;
+
+    JujutsuAbilitySlotClass = nullptr;
+    ExtraJujutsuAbilitySlotClass = nullptr;
 }
 
 void UHUD_QuickSlotsUI::NativeOnInitialized()
@@ -103,9 +114,15 @@ void UHUD_QuickSlotsUI::InternalBindToBattoujutsuAbilitySlot(UHUD_QuickSlotsUI_A
     AbilitySlot->AbilitySlotInitFinished.BindUFunction(this, "OnBattoujutsuAbilitySlotInitFinished");
 }
 
-void UHUD_QuickSlotsUI::InternalBindToJujutsuAbilitySlots(UHUD_QuickSlotsUI_AbilitySlot* AbilitySlot)
+void UHUD_QuickSlotsUI::InternalBindToJujutsuAbilitySlots(UAbilitySlot* AbilitySlot)
 {
-    
+    if (!AbilitySlot)
+    {
+        return;
+    }
+
+    //@내부 바인딩
+    AbilitySlot->AbilitySlotInitFinished.BindUFunction(this, "OnJujutsuAbilitySlotsInitFinished");
 }
 
 void UHUD_QuickSlotsUI::InitializeQuickSlotsUI()
@@ -113,7 +130,7 @@ void UHUD_QuickSlotsUI::InitializeQuickSlotsUI()
 	//@Tool Item 퀵슬롯 생성
 	CreateToolItemQuickSlots();
     //@발도술 슬롯 생성
-    CreateBattouJutsuAbilitySlot();
+    CreateBattoujutsuAbilitySlot();
     //@주술 슬롯 목록 생성
     CreateJujutsuAbilitySlot();
 
@@ -123,7 +140,7 @@ void UHUD_QuickSlotsUI::InitializeQuickSlotsUI()
 
 void UHUD_QuickSlotsUI::CheckAllUIsInitFinished()
 {
-    if (bToolItemSlotInitFinished && bBattouJutsuAbilitySlotInitFinished /* && bJujutsuAbilitySlotsInitFinished*/)
+    if (bToolItemSlotInitFinished && bBattouJutsuAbilitySlotInitFinished && bJujutsuAbilitySlotsInitFinished)
     {
         bToolItemSlotInitFinished = false;
         bBattouJutsuAbilitySlotInitFinished = false;
@@ -180,10 +197,10 @@ void UHUD_QuickSlotsUI::CreateToolItemQuickSlots()
     UE_LOGFMT(LogQuickSlotsUI, Log, "총 {0}개의 Tool Item Slots가 생성되었습니다.", ToolItemSlots.Num());
 }
 
-void UHUD_QuickSlotsUI::CreateBattouJutsuAbilitySlot()
+void UHUD_QuickSlotsUI::CreateBattoujutsuAbilitySlot()
 {
     //@BP 클래스, HorizontalBox 체크
-    if (!ensureMsgf(BattoujutsuAbilitySlotClass && BattoujutsuQuickSlotBox,
+    if (!ensureMsgf(BattoujutsuAbilitySlotClass && BattoujutsuQuickSlotOverlay,
         TEXT("BattoujutsuAbilitySlotClass 또는 BattoujutsuQuickSlotBox가 유효하지 않습니다.")))
     {
         return;
@@ -204,17 +221,66 @@ void UHUD_QuickSlotsUI::CreateBattouJutsuAbilitySlot()
     InternalBindToBattoujutsuAbilitySlot(BattoujutsuAbilitySlot);
 
     //@Alignment 설정
-    if (UHorizontalBoxSlot* HorizontalBoxSlot = BattoujutsuQuickSlotBox->AddChildToHorizontalBox(BattoujutsuAbilitySlot))
+    if (UOverlaySlot* HorizontalBoxSlot = BattoujutsuQuickSlotOverlay->AddChildToOverlay(BattoujutsuAbilitySlot))
     {
         HorizontalBoxSlot->SetHorizontalAlignment(HAlign_Fill);
         HorizontalBoxSlot->SetVerticalAlignment(VAlign_Top);
     }
+
+    //@캐싱
+    BattoujutsuAbilitySlotRef = BattoujutsuAbilitySlot;
 
     UE_LOGFMT(LogQuickSlotsUI, Log, "발도술 Ability Slot이 생성되어 추가되었습니다.");
 }
 
 void UHUD_QuickSlotsUI::CreateJujutsuAbilitySlot()
 {
+    //@BP 클래스, Jujutsu Quick Slot Box(Horizontal), Jujutsu Extra Quick Slot Box(Vertical)
+    if (!ensureMsgf(JujutsuAbilitySlotClass && JujutsuQuickSlotsOverlay &&
+        ExtraJujutsuAbilitySlotClass && JujutsuExtraQuickSlotBox,
+        TEXT("Jujutsu 관련 클래스 또는 Box가 유효하지 않습니다.")))
+    {
+        return;
+    }
+
+    //@메인 주술 슬롯(1번 슬롯)
+    UHUD_QuickSlotsUI_AbilitySlot* MainJujutsuSlot = CreateWidget<UHUD_QuickSlotsUI_AbilitySlot>(this, JujutsuAbilitySlotClass);
+    if (IsValid(MainJujutsuSlot))
+    {
+        //@비동기 초기화
+        RequestStartInitByQuickSlots.AddUFunction(MainJujutsuSlot, "InitializeAbilitySlot");
+
+        //@Add Child To Overlay
+        if (UOverlaySlot* HBoxSlot = JujutsuQuickSlotsOverlay->AddChildToOverlay(MainJujutsuSlot))
+        {
+            HBoxSlot->SetHorizontalAlignment(HAlign_Fill);
+            HBoxSlot->SetVerticalAlignment(VAlign_Fill);
+        }
+
+        //@캐싱
+        JujutsuSlots.MainSlot = MainJujutsuSlot;
+    }
+
+    //@대기 주술 슬롯(2번, 3번 슬롯)
+    for (int32 i = 0; i < 2; ++i)
+    {
+        UAbilitySlot* ExtraSlot = CreateWidget<UAbilitySlot>(this, ExtraJujutsuAbilitySlotClass);
+        if (IsValid(ExtraSlot))
+        {
+            RequestStartInitByQuickSlots.AddUFunction(ExtraSlot, "InitializeAbilitySlot");
+
+            i == 1 ? InternalBindToJujutsuAbilitySlots(ExtraSlot) : nullptr;
+
+            if (UVerticalBoxSlot* VBoxSlot = JujutsuExtraQuickSlotBox->AddChildToVerticalBox(ExtraSlot))
+            {
+                VBoxSlot->SetHorizontalAlignment(HAlign_Left);
+                VBoxSlot->SetVerticalAlignment(VAlign_Bottom);
+            }
+
+            //@캐싱
+            JujutsuSlots.ExtraSlots.Add(ExtraSlot);
+        }
+    }
 }
 #pragma endregion
 
@@ -243,12 +309,19 @@ void UHUD_QuickSlotsUI::OnJujutsuAbilitySlotsInitFinished()
 
 void UHUD_QuickSlotsUI::OnAbilitySpecGiven(FGameplayAbilitySpec AbilitySpec)
 {
-    if (!AbilitySpec.Ability)
+    //@Ability, BattoujutsuRef
+    if (!AbilitySpec.Ability || !BattoujutsuAbilitySlotRef)
     {
-        UE_LOGFMT(LogQuickSlotsUI, Error, "{0}: Ability가 유효하지 않습니다.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsUI, Error, "{0}: Ability 또는 BattoujutsuRef가 유효하지 않습니다.", __FUNCDNAME__);
         return;
     }
 
+    if (BattoujutsuAbilitySlotRef->GetIsFilled())
+    {
+        return;
+    }
+
+    //@Ability Tag 목록
     FGameplayTagContainer AbilityTags = AbilitySpec.Ability->AbilityTags;
     if (AbilityTags.IsEmpty())
     {
@@ -256,11 +329,18 @@ void UHUD_QuickSlotsUI::OnAbilitySpecGiven(FGameplayAbilitySpec AbilitySpec)
         return;
     }
 
-    for (const auto AbilityTag : AbilityTags)
+    //@발도술 태그
+    for (auto AbilityTag : AbilityTags)
     {
-        UE_LOGFMT(LogQuickSlotsUI, Log, "Ability Tag: {0}", AbilityTag.GetTagName().ToString());
-    }
+        FString TagString = AbilityTag.ToString();
 
+        if (TagString.StartsWith("Ability.Active.Battoujutsu"))
+        {
+            UE_LOGFMT(LogQuickSlotsUI, Log, "발도술 태그 감지됨: {0}", TagString);
+            BattoujutsuAbilitySlotRef->AssignNewAbility(AbilityTag);
+            break;
+        }
+    }
 }
 #pragma endregion
 

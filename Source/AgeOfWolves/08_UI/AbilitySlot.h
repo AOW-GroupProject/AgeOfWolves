@@ -67,8 +67,8 @@ public:
 protected:
 	//@새로운 Ability 할당
 	UFUNCTION(BlueprintNativeEvent)
-		void AssignNewAbility(const FGameplayTag& Tag);
-	virtual void AssignNewAbility_Implementation(const FGameplayTag& Tag);
+		void AssignNewAbility(FGameplayTag Tag);
+	virtual void AssignNewAbility_Implementation(FGameplayTag Tag);
 
 	//@다른 Ability Slot으로부터 Ability 할당
 	UFUNCTION(BlueprintNativeEvent)
@@ -116,7 +116,8 @@ public:
 #pragma region Utility
 protected:
 	//@어빌리티 매니저 서브시스템 약한 참조 캐싱
-	TWeakObjectPtr<UAbilityManagerSubsystem> AbilityManagerCache;
+	UPROPERTY()
+		UAbilityManagerSubsystem* AbilityManagerCache;
 
 public:
 	FORCEINLINE void SetAbilityTag(FGameplayTag Tag) { AbilityTag = Tag; }
