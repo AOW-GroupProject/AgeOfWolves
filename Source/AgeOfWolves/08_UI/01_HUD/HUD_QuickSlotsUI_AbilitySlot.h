@@ -34,7 +34,6 @@ class AGEOFWOLVES_API UHUD_QuickSlotsUI_AbilitySlot : public UAbilitySlot
 {
 //@친추 클래스
 #pragma region Friend Class
-	friend class UHUD_QuickSlotsUI;
 #pragma endregion
 
 	GENERATED_BODY()

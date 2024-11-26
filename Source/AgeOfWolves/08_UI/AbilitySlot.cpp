@@ -180,6 +180,29 @@ void UAbilitySlot::ClearAssignedAbility_Implementation(bool bForceClear)
     UE_LOGFMT(LogAbilitySlot, Log, "어빌리티 슬롯의 어빌리티가 제거되었습니다. 강제 제거: {0}",
         bForceClear ? TEXT("Yes") : TEXT("No"));
 }
+
+void UAbilitySlot::SetImagesSize(const FVector2D& BGSize, const FVector2D& ImageSize)
+{
+    if (!SlotBGImage || !AbilityImage)
+    {
+        UE_LOG(LogAbilitySlot, Warning, TEXT("SetImagesSize - 이미지가 유효하지 않습니다."));
+        return;
+    }
+
+    FSlateBrush BGBrush = SlotBGImage->Brush;
+    BGBrush.ImageSize = BGSize;
+    BGBrush.SetImageSize(BGSize);
+    SlotBGImage->Brush = BGBrush;
+    SlotBGImage->Brush.DrawAs = ESlateBrushDrawType::Image;
+    SlotBGImage->SetDesiredSizeOverride(BGSize);
+
+    FSlateBrush AbilityBrush = AbilityImage->Brush;
+    AbilityBrush.ImageSize = ImageSize;
+    AbilityBrush.SetImageSize(ImageSize);
+    AbilityImage->Brush = AbilityBrush;
+    AbilityImage->Brush.DrawAs = ESlateBrushDrawType::Image;
+    AbilityImage->SetDesiredSizeOverride(ImageSize);
+}
 #pragma endregion
 
 //@Callbacks

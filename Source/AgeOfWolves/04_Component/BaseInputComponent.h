@@ -32,6 +32,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNotifyInputComponentInitFinished);
 
 DECLARE_MULTICAST_DELEGATE_OneParam(FUIInputTagTriggered, const FGameplayTag&);
 DECLARE_MULTICAST_DELEGATE_OneParam(FUIInputTagReleased, const FGameplayTag&);
+
+DECLARE_MULTICAST_DELEGATE_TwoParams(FUIInputTagTriggeredWithValue, const FGameplayTag&, const float);
 #pragma endregion
 
 /**
@@ -70,9 +72,19 @@ protected:
 protected:
 	//@내부 바인딩
 	void InternalBindToInputActions(const APlayerController* PC);
+
+public:
+	UFUNCTION()
+		void InitializeInputComponent();
+#pragma endregion 
+
+//@Property/Info...etc
+#pragma region IMC(Input Mapping Context)
+protected:
 	//@Bind IA Template
 	template<typename UserClass, typename PressedFuncType, typename ReleasedFuncType>
-	void BindInputActions(const TArray<FInputActionInfo>& InputActionInfos, UserClass* Object, PressedFuncType PressedFunc, ReleasedFuncType ReleasedFunc)
+	void BindInputActions(const TArray<FInputActionInfo>& InputActionInfos, UserClass* Object,
+		PressedFuncType PressedFunc, ReleasedFuncType ReleasedFunc)
 	{
 		if (InputActionInfos.IsEmpty()) return;
 
@@ -80,18 +92,31 @@ protected:
 		{
 			if (InputActionInfo.InputAction && InputActionInfo.InputTag.IsValid())
 			{
-				if (PressedFunc)
+				// Axis 타입 체크
+				if (InputActionInfo.InputAction->ValueType == EInputActionValueType::Axis1D)
 				{
-					BindAction(InputActionInfo.InputAction, ETriggerEvent::Triggered, Object, PressedFunc, InputActionInfo.InputTag);
+					// Value가 첫 번째 매개변수, Tag가 두 번째 매개변수로 오도록 수정
+					BindAction(InputActionInfo.InputAction, ETriggerEvent::Triggered,
+						this, &UBaseInputComponent::OnUIInputTagValueTriggered, InputActionInfo.InputTag);
 				}
-
-				if (ReleasedFunc)
+				else
 				{
-					BindAction(InputActionInfo.InputAction, ETriggerEvent::Completed, Object, ReleasedFunc, InputActionInfo.InputTag);
+					if (PressedFunc)
+					{
+						BindAction(InputActionInfo.InputAction, ETriggerEvent::Triggered,
+							Object, PressedFunc, InputActionInfo.InputTag);
+					}
+
+					if (ReleasedFunc)
+					{
+						BindAction(InputActionInfo.InputAction, ETriggerEvent::Completed,
+							Object, ReleasedFunc, InputActionInfo.InputTag);
+					}
 				}
 			}
 		}
 	}
+
 	//@Bind Native IA Template
 	template<typename UserClass, typename FuncType>
 	void BindNativeInputAction(const UInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func)
@@ -109,18 +134,13 @@ protected:
 	// @breif : Remove BindHandles Interacting with corressponding Ability Input Action
 	void RemoveBinds(TArray<uint32>& BindHandles);
 
-public:
-	UFUNCTION()
-		void InitializeInputComponent();
-#pragma endregion 
-
-//@Property/Info...etc
-#pragma region IMC(Input Mapping Context)
 private:
 	//@현재 최 우선순위로 설정된 IMC의 Gameplay Tag
 	FGameplayTag CurrentIMCTag;
+
 public:
 	FORCEINLINE const FGameplayTag& GetCurrentIMCTag() { return CurrentIMCTag; }
+
 public:
 	// @설명 : Enhanced Input System에 사용자의 IMC(Input Mapping Context)를 등록합니다.
 	void AddInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
@@ -142,6 +162,9 @@ public:
 	FUIInputTagTriggered UIInputTagTriggered;
 	//@UI Input Tag의 해제 이벤트
 	FUIInputTagReleased UIInputTagReleased;
+
+	//@UI Input Tag의 활성화 및 수치값 발생 IA 이벤트
+	FUIInputTagTriggeredWithValue UIInputTagTriggeredWithValue;
 #pragma endregion
 
 //@Callbacks
@@ -165,6 +188,9 @@ protected:
 	void OnUIInputTagTriggered(FGameplayTag InputTag);
 	//@UI Input Tag Released 이벤트를 구독하는 콜백
 	void OnUIInputTagReleased(FGameplayTag InputTag);
+
+	// Axis 입력 처리를 위한 새로운 콜백
+	void OnUIInputTagValueTriggered(const FInputActionValue& Value, FGameplayTag InputTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

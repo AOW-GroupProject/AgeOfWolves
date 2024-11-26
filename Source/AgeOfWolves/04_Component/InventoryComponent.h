@@ -124,7 +124,7 @@ protected:
 private:
 	//@외부 바인딩
 	void ExternalBindToUIComponent(const AController* Controller);
-	void ExternalBindToQuickSlots();
+	void ExternalBindToInputComponent(const AController* Controller);
 	void ExternalBindToInventoryUI();
 
 private:
@@ -226,8 +226,14 @@ public:
 //@Callbacks
 #pragma region Callbacks
 protected:
+	//@아이템 활성화 종료 이벤트 구독
 	UFUNCTION()
 		void OnItemActivationEnded(FGuid UniqueItemID);
+
+protected:
+	//@UI 입력 태그 활성화 이벤트 구독
+	UFUNCTION()
+		void OnUIInputTriggered(const FGameplayTag& InputTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

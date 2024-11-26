@@ -145,6 +145,9 @@ void UBaseInputComponent::InternalBindToInputActions(const APlayerController* PC
 
 }
 
+#pragma endregion 
+
+#pragma region IMC(Input Mapping Context)
 void UBaseInputComponent::BindNativeInputActions(const UInputConfig* InputConfig)
 {
 	UE_LOGFMT(LogInputComponent, Log, "기본 입력 액션을 바인딩합니다.");
@@ -182,9 +185,7 @@ void UBaseInputComponent::RemoveBinds(TArray<uint32>& BindHandles)
 	}
 	BindHandles.Reset();
 }
-#pragma endregion 
 
-#pragma region IMC(Input Mapping Context)
 void UBaseInputComponent::AddInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const
 {
 	check(InputConfig);
@@ -407,5 +408,12 @@ void UBaseInputComponent::OnUIInputTagReleased(FGameplayTag InputTag)
 
 	UIInputTagReleased.Broadcast(InputTag);
 
+}
+
+void UBaseInputComponent::OnUIInputTagValueTriggered(const FInputActionValue& Value, FGameplayTag InputTag)
+{
+	const float AxisValue = Value.Get<float>();
+	UE_LOGFMT(LogInputComponent, Log, "UI Input Value Triggered - Tag: {0}, Value: {1}", InputTag.ToString(), AxisValue);
+	UIInputTagTriggeredWithValue.Broadcast(InputTag, AxisValue);
 }
 #pragma endregion

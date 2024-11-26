@@ -56,16 +56,8 @@ public:
 #pragma region Property or Subwidgets or Infos...etc
 protected:
 	//@Ability 정보를 담은 Data Asset
-	TObjectPtr<UBaseAbilitySet> AbilitySet;
-
-private:
 	UPROPERTY()
-		TArray<FBaseAbilitySet_GameplayAbility> CachedAbilities;
-
-public:
-	void CacheAbilitySetData();
-	const TArray<FBaseAbilitySet_GameplayAbility>& GetCachedAbilities() const { return CachedAbilities; }
-
+		TObjectPtr<UBaseAbilitySet> AbilitySet;
 #pragma endregion
 
 //@Delegates

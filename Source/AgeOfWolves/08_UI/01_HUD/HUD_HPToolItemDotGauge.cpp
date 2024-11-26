@@ -1,6 +1,9 @@
 #include "HUD_HPToolItemDotGauge.h"
 #include "Logging/StructuredLog.h"
 
+#include "Kismet/GameplayStatics.h"
+#include "03_Player/BasePlayerController.h"
+
 #include "04_Component/InventoryComponent.h"
 
 #include "Components/EditableTextBox.h"
@@ -84,10 +87,6 @@ void UHUD_HPToolItemDotGauge::UpdateHPToolItemCount(int32 NewCount)
 }
 #pragma endregion
 
-//@Delegates
-#pragma region Delegates
-#pragma endregion
-
 //@Callbacks
 #pragma region Callbacks
 void UHUD_HPToolItemDotGauge::OnQuickSlotItemsLoaded(int32 QuickSlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)
@@ -104,6 +103,7 @@ void UHUD_HPToolItemDotGauge::OnQuickSlotItemsLoaded(int32 QuickSlotNum, const F
         return;
     }
 
+    //@FGuid
     HPToolItemID = UniqueItemID;
 
     //@Max Count 설정
@@ -113,112 +113,18 @@ void UHUD_HPToolItemDotGauge::OnQuickSlotItemsLoaded(int32 QuickSlotNum, const F
     //@텍스트 업데이트
     UpdateHPToolItemCount(ItemCount);
 
-    //@TODO: 테스트 케이스
-    //@테스트 케이스 실행을 위한 공통 변수
-    //float CurrentDelay = 20.0f;
-    //const float DelayBetweenTests = 5.0f;
-
-    ////@Test Case: -1
-    //GetWorld()->GetTimerManager().SetTimer(
-    //    TestTimerHandles.Add_GetRef(FTimerHandle()),
-    //    FTimerDelegate::CreateLambda([this]() {
-    //        UE_LOGFMT(LogHPToolItemDotGauge, Log, "=== Test Case: Remove 1 ===");
-    //        UpdateFilledCount(FilledUnitCount - 1);
-    //        UpdateHPToolItemCount(FilledUnitCount);
-    //        }),
-    //    CurrentDelay,
-    //            false);
-
-    ////@Test Case: +2
-    //CurrentDelay += DelayBetweenTests;
-    //GetWorld()->GetTimerManager().SetTimer(
-    //    TestTimerHandles.Add_GetRef(FTimerHandle()),
-    //    FTimerDelegate::CreateLambda([this]() {
-    //        UE_LOGFMT(LogHPToolItemDotGauge, Log, "=== Test Case: Add 2 ===");
-    //        UpdateFilledCount(FilledUnitCount + 2);
-    //        UpdateHPToolItemCount(FilledUnitCount);
-    //        }),
-    //    CurrentDelay,
-    //            false);
-
-    ////@Test Case: -2
-    //CurrentDelay += DelayBetweenTests;
-    //GetWorld()->GetTimerManager().SetTimer(
-    //    TestTimerHandles.Add_GetRef(FTimerHandle()),
-    //    FTimerDelegate::CreateLambda([this]() {
-    //        UE_LOGFMT(LogHPToolItemDotGauge, Log, "=== Test Case: Remove 2 ===");
-    //        UpdateFilledCount(FilledUnitCount - 2);
-    //        UpdateHPToolItemCount(FilledUnitCount);
-    //        }),
-    //    CurrentDelay,
-    //            false);
-
-    ////@Test Case: +3
-    //CurrentDelay += DelayBetweenTests;
-    //GetWorld()->GetTimerManager().SetTimer(
-    //    TestTimerHandles.Add_GetRef(FTimerHandle()),
-    //    FTimerDelegate::CreateLambda([this]() {
-    //        UE_LOGFMT(LogHPToolItemDotGauge, Log, "=== Test Case: Add 3 ===");
-    //        UpdateFilledCount(FilledUnitCount + 3);
-    //        UpdateHPToolItemCount(FilledUnitCount);
-    //        }),
-    //    CurrentDelay,
-    //            false);
-
-    ////@Test Case: -3
-    //CurrentDelay += DelayBetweenTests;
-    //GetWorld()->GetTimerManager().SetTimer(
-    //    TestTimerHandles.Add_GetRef(FTimerHandle()),
-    //    FTimerDelegate::CreateLambda([this]() {
-    //        UE_LOGFMT(LogHPToolItemDotGauge, Log, "=== Test Case: Remove 3 ===");
-    //        UpdateFilledCount(FilledUnitCount - 3);
-    //        UpdateHPToolItemCount(FilledUnitCount);
-    //        }),
-    //    CurrentDelay,
-    //            false);
-
-    ////@Test Case: +4
-    //CurrentDelay += DelayBetweenTests;
-    //GetWorld()->GetTimerManager().SetTimer(
-    //    TestTimerHandles.Add_GetRef(FTimerHandle()),
-    //    FTimerDelegate::CreateLambda([this]() {
-    //        UE_LOGFMT(LogHPToolItemDotGauge, Log, "=== Test Case: Add 4 ===");
-    //        UpdateFilledCount(FilledUnitCount + 4);
-    //        UpdateHPToolItemCount(FilledUnitCount);
-    //        }),
-    //    CurrentDelay,
-    //            false);
-
-    ////@Test Case: -4
-    //CurrentDelay += DelayBetweenTests;
-    //GetWorld()->GetTimerManager().SetTimer(
-    //    TestTimerHandles.Add_GetRef(FTimerHandle()),
-    //    FTimerDelegate::CreateLambda([this]() {
-    //        UE_LOGFMT(LogHPToolItemDotGauge, Log, "=== Test Case: Remove 4 ===");
-    //        UpdateFilledCount(FilledUnitCount - 4);
-    //        UpdateHPToolItemCount(FilledUnitCount);
-    //        }),
-    //    CurrentDelay,
-    //            false);
-
-    ////@Test Case: +5
-    //CurrentDelay += DelayBetweenTests;
-    //GetWorld()->GetTimerManager().SetTimer(
-    //    TestTimerHandles.Add_GetRef(FTimerHandle()),
-    //    FTimerDelegate::CreateLambda([this]() {
-    //        UE_LOGFMT(LogHPToolItemDotGauge, Log, "=== Test Case: Add 5 ===");
-    //        UpdateFilledCount(FilledUnitCount + 5);
-    //        UpdateHPToolItemCount(FilledUnitCount);
-    //        }),
-    //    CurrentDelay,
-    //            false);
-
     UE_LOGFMT(LogHPToolItemDotGauge, Log, "퀵슬롯 {0}에 HP 포션 {1}개가 로드되었습니다. Max Count가 {2}로 설정되었습니다.",
         QuickSlotNum, ItemCount, ItemCount);
 }
 
 void UHUD_HPToolItemDotGauge::OnQuickSlotItemUpdated(int32 QuickSlotNum, const FGuid& UniqueItemID, int32 ItemCount)
 {
+
+    //@FGuid 체크
+    if (UniqueItemID != HPToolItemID)
+    {
+        return;
+    }
 
     //@충전 Dot Gauge Unit 업데이트
     UpdateFilledCount(ItemCount);

@@ -41,6 +41,7 @@ class AGEOFWOLVES_API UAbilitySlot : public UUserWidget
 
 //@친추 클래스
 #pragma region Friend Class
+	friend class UHUD_QuickSlotsUI;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -120,8 +121,13 @@ protected:
 		UAbilityManagerSubsystem* AbilityManagerCache;
 
 public:
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 슬롯")
+		void SetImagesSize(const FVector2D& BGSize, const FVector2D& ImageSize);
+
+public:
 	FORCEINLINE void SetAbilityTag(FGameplayTag Tag) { AbilityTag = Tag; }
 	FORCEINLINE FGameplayTag GetAbilityTag() const { return AbilityTag; }
+
 public:
 	FORCEINLINE void SetIsFilled(bool bNewIsFilled) { bIsFilled = bNewIsFilled; }
 	FORCEINLINE bool GetIsFilled() const { return bIsFilled; }

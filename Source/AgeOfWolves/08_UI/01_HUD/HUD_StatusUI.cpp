@@ -190,7 +190,6 @@ void UHUD_StatusUI::ExternalBindingToAttributeSet()
 
 void UHUD_StatusUI::InitializeStatusUI()
 {
-
     //@Memory 아이템 생성
     CreateAndSetupMemoryImage();
     //@마나 카운트 이미지 생성

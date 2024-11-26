@@ -1115,6 +1115,7 @@ void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType 
     {
         return; // 다른 유형의 아이템은 무시
     }
+
     //@Empty Item Slot
     UInteractableItemSlot* EmptySlot = FindEmptySlot();
     if (!EmptySlot)
@@ -1122,6 +1123,7 @@ void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType 
         UE_LOGFMT(LogItemSlots, Warning, "빈 슬롯을 찾을 수 없습니다. 아이템을 추가할 수 없습니다.");
         return;
     }
+
     //@Item Manager Subsystem
     UItemManagerSubsystem* ItemManager = GetWorld()->GetGameInstance()->GetSubsystem<UItemManagerSubsystem>();
     if (!ItemManager)

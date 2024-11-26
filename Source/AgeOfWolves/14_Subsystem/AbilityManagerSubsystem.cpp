@@ -1,3 +1,4 @@
+// AbilityManagerSubsystem.cpp
 #include "AbilityManagerSubsystem.h"
 #include "Logging/StructuredLog.h"
 
@@ -16,9 +17,9 @@ void UAbilityManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
     AbilitySet = LoadObject<UBaseAbilitySet>(nullptr, TEXT("/Game/Blueprints/02_AbilitySystem/01_Character/01_AkaOni/AS_AkaOni"));
 
-    if (AbilitySet)
+    if (!AbilitySet)
     {
-        CacheAbilitySetData();
+        UE_LOG(LogAbilityManager, Warning, TEXT("Failed to load AbilitySet: AS_AkaOni"));
     }
 }
 #pragma endregion
@@ -33,35 +34,40 @@ void UAbilityManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
-void UAbilityManagerSubsystem::CacheAbilitySetData()
-{
-    if (!AbilitySet)
-        return;
-
-    CachedAbilities = AbilitySet->GetGameplayAbilities();
-}
-
 UTexture2D* UAbilityManagerSubsystem::GetAbilityIconTexture2D(FGameplayTag AbilityTag)
 {
     if (!AbilityTag.IsValid())
+    {
+        UE_LOG(LogAbilityManager, Warning, TEXT("GetAbilityIconTexture2D - Invalid AbilityTag"));
         return nullptr;
+    }
 
-    for (const auto& AbilityInfo : CachedAbilities)
+    if (!AbilitySet)
+    {
+        UE_LOG(LogAbilityManager, Warning, TEXT("GetAbilityIconTexture2D - AbilitySet is null"));
+        return nullptr;
+    }
+
+    const TArray<FBaseAbilitySet_GameplayAbility> GAInfos = AbilitySet->GetGameplayAbilities();
+
+    for (const auto& AbilityInfo : GAInfos)
     {
         if (!AbilityInfo.AbilityTag.IsValid())
             continue;
 
         if (AbilityInfo.AbilityTag == AbilityTag)
         {
-            if (AbilityInfo.AbilityIconImage)
+            if (!AbilityInfo.AbilityIconImage)
             {
-                return AbilityInfo.AbilityIconImage;
+                UE_LOG(LogAbilityManager, Warning, TEXT("GetAbilityIconTexture2D - Icon not found for AbilityTag: %s"), *AbilityTag.ToString());
+                return nullptr;
             }
 
-
+            return AbilityInfo.AbilityIconImage;
         }
     }
 
+    UE_LOG(LogAbilityManager, Warning, TEXT("GetAbilityIconTexture2D - No matching ability for AbilityTag: %s"), *AbilityTag.ToString());
     return nullptr;
 }
 #pragma endregion

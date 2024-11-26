@@ -6,10 +6,8 @@
 #include "14_Subsystem/ItemManagerSubsystem.h"
 #include "09_Item/Item.h"
 
-#include "04_Component/UIComponent.h" // 제거 예정
-
-#include "08_UI/01_HUD/PlayerHUD.h"
-#include "08_UI/01_HUD/QuickSlots.h"
+#include "04_Component/UIComponent.h" 
+#include "04_Component/BaseInputComponent.h" 
 
 #include "08_UI/02_Menu/01_InventoryUI/InventoryUI.h"
 #include "08_UI/02_Menu/01_InventoryUI/ItemSlots.h"
@@ -87,7 +85,7 @@ UInventoryComponent::UInventoryComponent(const FObjectInitializer& ObjectInitial
 	:Super(ObjectInitializer)
 {
 	PrimaryComponentTick.bCanEverTick = false;
-    bWantsInitializeComponent = true;//Initialize Component 활용에 필요 
+    bWantsInitializeComponent = true;
 
 }
 
@@ -154,53 +152,17 @@ void UInventoryComponent::ExternalBindToUIComponent(const AController* Controlle
     }
 }
 
-void UInventoryComponent::ExternalBindToQuickSlots()
+void UInventoryComponent::ExternalBindToInputComponent(const AController* Controller)
 {
-    UE_LOGFMT(LogInventory, Log, "{0}: QuickSlots 바인딩 작업을 시작합니다.", __FUNCTION__);
+    check(Controller);
 
-    //@World
-    UWorld* World = GetWorld();
-    if (!World)
+    if (auto InputComp = Controller->FindComponentByClass<UBaseInputComponent>())
     {
-        UE_LOGFMT(LogInventory, Error, "{0}: World is null", __FUNCTION__);
-        return;
+        //@UI Comp의 HUD 초기화 완료 이벤트(아이템 로드 작업 과 HUD의 초기화 작업의 동기화)
+        InputComp->UIInputTagTriggered.AddUFunction(this, "OnUIInputTriggered");
+
+        UE_LOGFMT(LogInventory, Log, "Inventory Component가 Input Component에 성공적으로 바인딩 되었습니다.");
     }
-    //@PC
-    APlayerController* PC = World->GetFirstPlayerController();
-    if (!PC)
-    {
-        UE_LOGFMT(LogInventory, Error, "{0}: PlayerController is null", __FUNCTION__);
-        return;
-    }
-
-    //@UI Comp
-    UUIComponent* UIComponent = PC->FindComponentByClass<UUIComponent>();
-    if (!UIComponent)
-    {
-        UE_LOGFMT(LogInventory, Warning, "{0}: UIComponent를 가져오는 데 실패했습니다.", __FUNCTION__);
-        return;
-    }
-
-    //@Player HUD
-    UPlayerHUD* PlayerHUD = Cast<UPlayerHUD>(UIComponent->GetUI(EUICategory::HUD));
-    if (!PlayerHUD)
-    {
-        UE_LOGFMT(LogInventory, Warning, "{0}: PlayerHUD를 가져오는 데 실패했습니다.", __FUNCTION__);
-        return;
-    }
-
-    //@Quick Slots
-    //UQuickSlots* QuickSlotsUI = PlayerHUD->GetQuickSlotsUI();
-    //if (!QuickSlotsUI)
-    //{
-    //    UE_LOGFMT(LogInventory, Warning, "{0}: QuickSlots를 가져오는 데 실패했습니다.", __FUNCTION__);
-    //    return;
-    //}
-
-    ////@External Binding
-    //QuickSlotsUI->QuickSlotItemActivated.BindUFunction(this, "StartUseItem");
-
-    UE_LOGFMT(LogInventory, Log, "{0}: Inventory Component가 QuickSlots에 성공적으로 바인딩 되었습니다.", __FUNCTION__);
 }
 
 void UInventoryComponent::ExternalBindToInventoryUI()
@@ -283,6 +245,8 @@ void UInventoryComponent::InitializeInventory(const AController* Controller)
 {
     //@외부 바인딩
     ExternalBindToUIComponent(Controller);
+    ExternalBindToInputComponent(Controller);
+
     //@Inventory
     Inventory.Empty();
     //@Quick Slots
@@ -298,7 +262,6 @@ void UInventoryComponent::LoadInventory()
 
     //@외부 바인딩
     ExternalBindToInventoryUI();
-    ExternalBindToQuickSlots();
 
     //@GameInstance
     if (const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this)))
@@ -554,7 +517,7 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
         && ItemInfo->QuickSlotNum > 0 && ItemInfo->QuickSlotNum < 4)
     {
         //@Quick Slots
-        QuickSlots[ItemInfo->QuickSlotNum] = NewID;
+        QuickSlots[ItemInfo->QuickSlotNum-1] = NewID;
         //@Delegate
         QuickSlotItemsLoaded.Broadcast(ItemInfo->QuickSlotNum, NewID, ItemInfo->ItemType, ItemInfo->ItemTag, Num);
     }
@@ -909,6 +872,77 @@ void UInventoryComponent::DisableItem(AItem* Item)
 void UInventoryComponent::OnItemActivationEnded(FGuid UniqueItemID)
 {
     UE_LOGFMT(LogInventory, Log, "{0} Item 활성화 작업이 종료되었습니다.", UniqueItemID.ToString());
+}
+
+void UInventoryComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
+{
+    //@FGampelayTag
+    if (!InputTag.IsValid())
+    {
+        return;
+    }
+
+    //@FString
+    FString TagString = InputTag.ToString();
+    if (!TagString.StartsWith("Input.UI.QuickSlots"))
+    {
+        return;
+    }
+
+    //@1. Input.UI.QuickSlots.StartUseToolItemQuickSlot1, 2
+    if (TagString.StartsWith("Input.UI.QuickSlots.StartUseToolItemQuickSlot"))
+    {
+        //@Quick Slots Index
+        int32 SlotNum = FCString::Atoi(*TagString.Right(1));
+        if (SlotNum < 1 || SlotNum > 2)
+        {
+            UE_LOGFMT(LogInventory, Warning, "잘못된 Tool Item Quick Slot 번호: {0}", SlotNum);
+            return;
+        }
+
+        //@Quick Slots
+        int32 SlotIndex = SlotNum - 1;
+        if (!QuickSlots.IsValidIndex(SlotIndex))
+        {
+            UE_LOGFMT(LogInventory, Warning, "Quick Slots의 유효하지 않은 인덱스: {0}", SlotIndex);
+            return;
+        }
+
+        //@FGuid
+        const FGuid& ItemID = QuickSlots[SlotIndex];
+        if (!ItemID.IsValid())
+        {
+            UE_LOGFMT(LogInventory, Warning, "Tool Item Quick Slot {0}이(가) 비어있습니다.", SlotNum);
+            return;
+        }
+
+        //@Start Use Item
+        StartUseItem(ItemID, 1);
+        return;
+    }
+
+    //@2. Input.UI.QuickSlots.StartUseHPToolItem
+    if (TagString.StartsWith("Input.UI.QuickSlots.StartUseHPToolItem"))
+    {
+        //@QuickSlots
+        if (!QuickSlots.IsValidIndex(2))
+        {
+            UE_LOGFMT(LogInventory, Warning, "HP Tool Item Quick Slot 인덱스가 유효하지 않습니다.");
+            return;
+        }
+
+        //@FGuid
+        const FGuid& ItemID = QuickSlots[2];
+        if (!ItemID.IsValid())
+        {
+            UE_LOGFMT(LogInventory, Warning, "HP Tool Item Quick Slot이 비어있습니다.");
+            return;
+        }
+
+        //@Start Use Item
+        StartUseItem(ItemID, 1);
+        return;
+    }
 }
 #pragma endregion
 

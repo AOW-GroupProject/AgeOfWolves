@@ -159,6 +159,9 @@ protected:
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+public:
+	UHUD_QuickSlotsUI* GetQuickSlots() const { return QuickSlotUIRef; }
+
 #pragma endregion
 
 };

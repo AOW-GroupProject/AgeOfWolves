@@ -133,8 +133,8 @@ protected:
    //@AttributeName, FStateBarInfo
     TMap<FString, FStateBarInfo> MStateBars;
 
-    // 데미지 표시 관련 상수
-    const float DAMAGE_COLOR_DURATION = 0.3f;  // 데미지 색상 지속 시간
+    //@데미지 표시 관련 상수
+    const float DAMAGE_COLOR_DURATION = 0.3f;
     const FLinearColor DAMAGE_COLOR = FLinearColor(1.0f, 0.8f, 0.0f, 1.0f);
 
 protected:

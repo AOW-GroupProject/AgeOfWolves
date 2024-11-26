@@ -198,4 +198,4 @@ public:
 	TArray<FBaseAbilitySet_GameplayEffect> GetGameplayEffects() const { return GameplayEffects; }
 	TArray<FBaseAbilitySet_AttributeSet> GetAttributeSets() const { return AttributeSets; }
 
-};
+};
