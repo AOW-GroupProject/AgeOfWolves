@@ -93,6 +93,7 @@ protected:
 
 	UPROPERTY()
 		UPlayerAbilitySystemComponent* AbilitySystemComponent;
+
 	UPROPERTY()
 		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
 #pragma endregion

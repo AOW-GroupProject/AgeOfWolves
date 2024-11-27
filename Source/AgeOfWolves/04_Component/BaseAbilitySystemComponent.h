@@ -32,7 +32,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FAbilitySpecGiven, FGameplayAbilitySpec)
  * 
  *	AOW의 캐릭터 기본 ASC 유형입니다.
  */	
-UCLASS()
+UCLASS(meta = (BlueprintSpawnableComponent))
 class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemComponent
 {
 

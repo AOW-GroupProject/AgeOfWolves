@@ -76,8 +76,6 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	AActor* TargetAvatar = TargetASC ? TargetASC->GetAvatarActor() : nullptr;
 
 	// ToDo : 추가할 Source, Target 관련 멤버 변수 설정 ...
-
-
 	const FGameplayEffectSpec& Spec = ExecutionParams.GetOwningSpec();
 	const FGameplayTagContainer* SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
 	const FGameplayTagContainer* TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
@@ -86,21 +84,19 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	EvaluationParameters.SourceTags = SourceTags;
 	EvaluationParameters.TargetTags = TargetTags;
 
-	
 	// 계산결과 target에게 적용 될 Damage 변수
 	float Damage = 0.f;
 	
 	float SourceOffense = 0.f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().OffenseDef, EvaluationParameters, SourceOffense);
 	Damage += SourceOffense;
+
 	// ToDo : 스킬판정배율을 피해량(Damage)에 반영, 그로기 적용
-
-
 	float TargetDefense = 0.f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().DefenseDef, EvaluationParameters, TargetDefense);
 	TargetDefense = FMath::Max<float>(TargetDefense, 0.f);
-	// ToDo : 방어력이 Damage보다 더 높은 경우 로직 추가?
 
+	// ToDo : 방어력이 Damage보다 더 높은 경우 로직 추가?
 	Damage -= TargetDefense;
 	// 0 이하면 1로 표기
 	Damage = FMath::Max<float>(Damage, 1.f);

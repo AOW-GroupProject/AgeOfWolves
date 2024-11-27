@@ -19,6 +19,7 @@
 #include "00_GameInstance/AOWGameInstance.h"
 #include "02_AbilitySystem/AOWGameplayTags.h"
 
+#include "AbilitySystemBlueprintLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -159,7 +160,14 @@ void APlayerCharacter::Die()
 	
 }
 
-void APlayerCharacter::HitReact()
+void APlayerCharacter::HitReact(FGameplayTag HitDirectionTag)
 {
-	GetAbilitySystemComponent()->TryActivateAbilitiesByTag(FGameplayTagContainer(AOWGameplayTags::Ability_Active_HitReact));
+	FGameplayEventData GameplayEventData;
+	GameplayEventData.EventTag = AOWGameplayTags::Ability_Active_HitReact;
+	GameplayEventData.Instigator = this;
+	GameplayEventData.Target = this; 
+	GameplayEventData.OptionalObject = nullptr; 
+	GameplayEventData.ContextHandle = FGameplayEffectContextHandle(); 
+	GameplayEventData.TargetTags.AddTag(HitDirectionTag); // HitDirectionTag 전달
+	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, AOWGameplayTags::Ability_Active_HitReact, GameplayEventData);
 }

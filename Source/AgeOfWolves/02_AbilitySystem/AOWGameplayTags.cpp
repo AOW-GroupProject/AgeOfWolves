@@ -31,6 +31,11 @@ namespace AOWGameplayTags
 	UE_DEFINE_GAMEPLAY_TAG_COMMENT(Ability_Ready_Attack_DodgeAttack, "Ability.Ready.Attack.DodgeAttack", "");
 
 	UE_DEFINE_GAMEPLAY_TAG(TAG_EventTag_HitReact, "EventTag.HitReact");
+	UE_DEFINE_GAMEPLAY_TAG(TAG_EventTag_HitReact_Forward, "EventTag.HitReact.Forward");
+	UE_DEFINE_GAMEPLAY_TAG(TAG_EventTag_HitReact_Backward, "EventTag.HitReact.Backward");
+	UE_DEFINE_GAMEPLAY_TAG(TAG_EventTag_HitReact_Left, "EventTag.HitReact.Left");
+	UE_DEFINE_GAMEPLAY_TAG(TAG_EventTag_HitReact_Right, "EventTag.HitReact.Right");
+
 	UE_DEFINE_GAMEPLAY_TAG(TAG_EventTag_Montage_Start, "EventTag.Montage.Start");
 	UE_DEFINE_GAMEPLAY_TAG(TAG_EventTag_Montage_End, "EventTag.Montage.End");
 	

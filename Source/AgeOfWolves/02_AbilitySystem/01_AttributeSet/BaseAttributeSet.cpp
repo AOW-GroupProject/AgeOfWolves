@@ -118,7 +118,13 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 				}
 				else
 				{
-					CombatInterface->HitReact();
+					FGameplayTagContainer TagContainer = Data.EffectSpec.GetDynamicAssetTags();
+					if (TagContainer.HasTag(AOWGameplayTags::TAG_EventTag_HitReact))
+					{
+						TArray<FGameplayTag> TagArray;
+						TagContainer.GetGameplayTagArray(TagArray);
+						CombatInterface->HitReact(TagArray[0]);
+					}
 				}
 			}
 			// ToDo : 그 외 로직 처리
