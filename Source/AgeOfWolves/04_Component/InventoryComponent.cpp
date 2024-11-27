@@ -106,6 +106,20 @@ void UInventoryComponent::OnUnregister()
 void UInventoryComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
+
+    // ItemManager 캐싱
+    if (UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(this))
+    {
+        CachedItemManager = GameInstance->GetSubsystem<UItemManagerSubsystem>();
+        if (!CachedItemManager.IsValid())
+        {
+            UE_LOGFMT(LogInventory, Error, "ItemManagerSubsystem 캐싱 실패");
+        }
+        else
+        {
+            UE_LOGFMT(LogInventory, Log, "ItemManagerSubsystem 캐싱 성공");
+        }
+    }
 }
 
 void UInventoryComponent::DestroyComponent(bool bPromoteChildren)
@@ -605,12 +619,16 @@ void UInventoryComponent::RemoveExistingItem(const FGuid& ItemId, const FItemInf
         UE_LOGFMT(LogInventory, Error, "아이템 제거 실패: 인벤토리에 ID {0}인 아이템이 없습니다.", ItemId.ToString());
         return;
     }
+
     //@아이템 정보 가져오기
     FInventoryItem& ExistingItem = Inventory[ItemId];
     int32 CurrentCount = ExistingItem.ItemCount;
+    const EItemType ItemType = ExistingItem.GetItemType();  // ItemType 저장
+
     //@제거할 수량 계산
     int32 ActuallyRemoved = FMath::Min(CurrentCount, Num);
     ExistingItem.ItemCount -= ActuallyRemoved;
+
     //@아이템 완전 제거 여부 확인
     if (ExistingItem.ItemCount <= 0 && ExistingItem.bRemovable)
     {
@@ -619,8 +637,8 @@ void UInventoryComponent::RemoveExistingItem(const FGuid& ItemId, const FItemInf
 
         UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 인벤토리에서 완전히 제거되었습니다.", ItemInfo.ItemTag.ToString());
 
-        //@아이템 제거 이벤트 발생
-        ItemRemovedFromInventory.Broadcast(ItemId);
+        //@아이템 제거 이벤트 발생 (ItemType 추가)
+        ItemRemovedFromInventory.Broadcast(ItemId, ItemType);
     }
     else
     {
@@ -638,7 +656,7 @@ void UInventoryComponent::RemoveExistingItem(const FGuid& ItemId, const FItemInf
         }
 
         //@아이템 업데이트 이벤트 발생
-        InventoryItemUpdated.Broadcast(ItemId, ItemInfo.ItemType, ItemInfo.ItemTag, ExistingItem.ItemCount);
+        InventoryItemUpdated.Broadcast(ItemId, ItemType, ItemInfo.ItemTag, ExistingItem.ItemCount);
     }
 
     //@퀵슬롯 업데이트
@@ -650,7 +668,8 @@ void UInventoryComponent::RemoveExistingItem(const FGuid& ItemId, const FItemInf
             //@퀵슬롯에서 제거
             QuickSlots[QuickSlotIndex] = FGuid();
 
-            UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 퀵슬롯 {1}에서 제거되었습니다.", ItemInfo.ItemTag.ToString(), QuickSlotIndex + 1);
+            UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 퀵슬롯 {1}에서 제거되었습니다.",
+                ItemInfo.ItemTag.ToString(), QuickSlotIndex + 1);
         }
         else
         {
@@ -673,6 +692,9 @@ void UInventoryComponent::StartUseItem(const FGuid& UniqueItemID, int32 ItemCoun
         return;
     }
 
+    //@Item Type 미리 저장
+    const EItemType ItemType = InventoryItem->GetItemType();
+
     //@Item Manager Subsystem
     UItemManagerSubsystem* ItemManager = GetWorld()->GetGameInstance()->GetSubsystem<UItemManagerSubsystem>();
     if (!ItemManager)
@@ -682,7 +704,7 @@ void UInventoryComponent::StartUseItem(const FGuid& UniqueItemID, int32 ItemCoun
     }
 
     //@FItemInformation
-    const FItemInformation* ItemInfo = ItemManager->GetItemInformation<FItemInformation>(InventoryItem->GetItemType(), InventoryItem->GetItemTag());
+    const FItemInformation* ItemInfo = ItemManager->GetItemInformation<FItemInformation>(ItemType, InventoryItem->GetItemTag());
     if (!ItemInfo)
     {
         UE_LOGFMT(LogInventory, Error, "ItemInformation을 가져올 수 없습니다.");
@@ -691,7 +713,7 @@ void UInventoryComponent::StartUseItem(const FGuid& UniqueItemID, int32 ItemCoun
 
     //@Log
     UEnum* ItemTypeEnum = StaticEnum<EItemType>();
-    FString ItemTypeString = ItemTypeEnum ? ItemTypeEnum->GetNameStringByValue(static_cast<int64>(InventoryItem->GetItemType())) : TEXT("Unknown");
+    FString ItemTypeString = ItemTypeEnum ? ItemTypeEnum->GetNameStringByValue(static_cast<int64>(ItemType)) : TEXT("Unknown");
     UE_LOGFMT(LogInventory, Log, "아이템 사용 시작: 아이템 ID {0}, 아이템 유형 {1}, 아이템 태그 {2}, 현재 수량 {3}",
         UniqueItemID.ToString(), ItemTypeString, InventoryItem->GetItemTag().ToString(), InventoryItem->ItemCount);
 
@@ -718,8 +740,8 @@ void UInventoryComponent::StartUseItem(const FGuid& UniqueItemID, int32 ItemCoun
 
                     UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 모두 소진되어 인벤토리에서 제거되었습니다.", InventoryItem->GetItemTag().ToString());
 
-                    //@아이템 제거 이벤트 발생
-                    ItemRemovedFromInventory.Broadcast(UniqueItemID);
+                    //@아이템 제거 이벤트 발생 (ItemType 추가)
+                    ItemRemovedFromInventory.Broadcast(UniqueItemID, ItemType);
                 }
                 //@bRemovable == false
                 else
@@ -727,13 +749,13 @@ void UInventoryComponent::StartUseItem(const FGuid& UniqueItemID, int32 ItemCoun
                     UE_LOGFMT(LogInventory, Log, "아이템 {0}이(가) 모두 소진되었지만, 제거 불가능한 아이템이므로 인벤토리에 유지됩니다.", InventoryItem->GetItemTag().ToString());
 
                     //@아이템 업데이트 이벤트 발생 (수량 0)
-                    InventoryItemUpdated.Broadcast(UniqueItemID, InventoryItem->GetItemType(), InventoryItem->GetItemTag(), 0);
+                    InventoryItemUpdated.Broadcast(UniqueItemID, ItemType, InventoryItem->GetItemTag(), 0);
                 }
             }
             else
             {
                 //@아이템 업데이트 이벤트 발생
-                InventoryItemUpdated.Broadcast(UniqueItemID, InventoryItem->GetItemType(), InventoryItem->GetItemTag(), InventoryItem->ItemCount);
+                InventoryItemUpdated.Broadcast(UniqueItemID, ItemType, InventoryItem->GetItemTag(), InventoryItem->ItemCount);
             }
 
             UE_LOGFMT(LogInventory, Log, "아이템 {0} 사용 완료. 남은 수량: {1}", InventoryItem->GetItemTag().ToString(), InventoryItem->ItemCount);
@@ -750,7 +772,6 @@ void UInventoryComponent::StartUseItem(const FGuid& UniqueItemID, int32 ItemCoun
         UE_LOGFMT(LogInventory, Error, "아이템 {0}의 CDO가 유효하지 않습니다.", UniqueItemID.ToString());
         return;
     }
-
 }
 
 void UInventoryComponent::LeaveItem(const FGuid& UniqueItemID, int32 ItemCount)

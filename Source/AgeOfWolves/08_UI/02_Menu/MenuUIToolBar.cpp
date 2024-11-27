@@ -48,53 +48,24 @@ void UMenuUIToolBar::InitializeToolBar()
 // MenuUIToolBar.cpp
 void UMenuUIToolBar::ResetToolBar()
 {
-    EMenuCategory PreviousCategory = CurrentCategory;
-
-    if (CurrentCategory == EMenuCategory::MAX)
+    //@Default Menu Category
+    if (DefaultCategory == EMenuCategory::MAX)
     {
-        //@Current Category
-        CurrentCategory = DefaultCategory;
-
-        //@Default Category Button
-        UCustomButton* DefaultCategoryButton = MMenuCategoryButtons.FindRef(DefaultCategory);
-        if (!DefaultCategoryButton)
-        {
-            UE_LOGFMT(LogMenuToolBar, Error, "Default 카테고리 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
-            return;
-        }
-
-        //@Set Button State
-        if (!DefaultCategoryButton->SetButtonSelectedByKeyboard())
-        {
-            UE_LOGFMT(LogMenuToolBar, Error, "Default 카테고리 버튼을 Selected로 초기화하는데 실패했습니다.");
-            return;
-        }
-
-        //@Menu Category Button 선택 이벤트 호출
-        MenuCategoryButtonClicked.ExecuteIfBound(CurrentCategory);
+        UE_LOGFMT(LogMenuToolBar, Error, "Default Category 설정이 필요합니다!");
+        return;
     }
-    else
+    //@Custom Button
+    UCustomButton* DefaultCategoryButton = MMenuCategoryButtons.FindRef(DefaultCategory);
+    if (!DefaultCategoryButton)
     {
-        //@Current Category != Default Category
-        if (PreviousCategory != DefaultCategory)
-        {
-            CancelToolBarButtonSelected(MenuCategoryToIndex(PreviousCategory));
-        }
-
-        CurrentCategory = DefaultCategory;
-
-        UCustomButton* DefaultCategoryButton = MMenuCategoryButtons.FindRef(CurrentCategory);
-        if (!DefaultCategoryButton)
-        {
-            UE_LOGFMT(LogMenuToolBar, Error, "Default 카테고리 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
-            return;
-        }
-
-        if (!DefaultCategoryButton->SetButtonSelectedByKeyboard())
-        {
-            UE_LOGFMT(LogMenuToolBar, Error, "Default 카테고리 버튼을 Selected로 초기화하는데 실패했습니다.");
-            return;
-        }
+        UE_LOGFMT(LogMenuToolBar, Error, "Default 카테고리 버튼을 찾을 수 없습니다. 초기화에 실패했을 수 있습니다.");
+        return;
+    }
+    //@Selected By Keyboard
+    if (!DefaultCategoryButton->SetButtonSelectedByKeyboard())
+    {
+        UE_LOGFMT(LogMenuToolBar, Error, "Default 카테고리 버튼을 Selected로 초기화하는데 실패했습니다.");
+        return;
     }
 
     UE_LOGFMT(LogMenuToolBar, Log, "MenuUIToolBar가 초기 상태로 리셋되었습니다. 현재 카테고리: {0}",
@@ -200,15 +171,8 @@ void UMenuUIToolBar::MoveSelection(int32 Direction)
 
     if (NewIndex != CurrentIndex)
     {
-        //@Previous Category Button
-        if (UCustomButton* PreviousButton = MMenuCategoryButtons[CurrentCategory])
-        {
-            PreviousButton->SetButtonState(EButtonState::Normal);
-        }
-
         //@Current Category Button
         EMenuCategory NewCategory = MenuCategories[NewIndex];
-        CurrentCategory = NewCategory;
 
         //@Button의 상태를 Selected로 변경
         if (UCustomButton* NewButton = MMenuCategoryButtons[NewCategory])
@@ -219,9 +183,6 @@ void UMenuUIToolBar::MoveSelection(int32 Direction)
                 return;
             }
         }
-
-        //@Menu Category 버튼 클릭 이벤트
-        MenuCategoryButtonClicked.ExecuteIfBound(NewCategory);
 
         UE_LOGFMT(LogMenuToolBar, Log, "메뉴 카테고리가 {0}쪽으로 이동했습니다. 새 카테고리: {1}",
             Direction > 0 ? TEXT("오른") : TEXT("왼"),
@@ -274,17 +235,6 @@ void UMenuUIToolBar::OnToolBarButtonUnhovered_Implementation(uint8 ButtonIndex)
 void UMenuUIToolBar::CancelToolBarButtonSelected_Implementation(uint8 PreviousIndex)
 {
     Super::CancelToolBarButtonSelected_Implementation(PreviousIndex);
-
-    EMenuCategory PreviousCategory = IndexToMenuCategory(PreviousIndex);
-    UCustomButton* PreviousButton = MMenuCategoryButtons.FindRef(PreviousCategory);
-    if (!PreviousButton)
-    {
-        UE_LOGFMT(LogMenuToolBar, Error, "Menu Category Button이 유효하지 않습니다!");
-        return;
-    }
-
-    PreviousButton->CancelSelectedButton();
-    UE_LOGFMT(LogMenuToolBar, Log, "{0} 버튼이 취소되었습니다.", *UEnum::GetValueAsString(PreviousCategory));
 }
 #pragma endregion
 
