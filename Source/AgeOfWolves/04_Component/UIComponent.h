@@ -91,15 +91,6 @@ public:
 	UFUNCTION()
 		void InitializeUIComponent();
 protected:
-	//@Inventory의 관련 UI들의 초기화 작업 완료를 체크합니다.
-	bool bQuickSlotsReadyForLoading = false;
-	bool bInventoryUIReadyForLoading = false;
-	void CheckAllUIsForInventoryReady();
-
-	//@Player State Base의 AttributeSet 관련 UI들의 초기화 작업 완료를 체크합니다.
-	bool bStateBarsReadyForLoading = false;
-	void CheckAllUIsForAttributeSetReady();
-
 	//@Player HUD, Menu UI들의 초기화 작업 완료를 체크합니다.
 	bool bHUDInitFinished = false;
 	bool bMenuUIInitFinished = false;
@@ -183,19 +174,6 @@ protected:
 		void OnHUDInitFinished();
 	UFUNCTION()
 		void OnMenuUIInitFinished();
-
-protected:
-	//@Player HUD의 State Bar의 초기화 완료 이벤트 구독
-	UFUNCTION()
-		void StateBarsInitFinishedNotified();
-
-protected:
-	//@Player HUD의 Quick Slots의 초기화 완료 이벤트 구독
-	UFUNCTION()
-		void QuickSlotsInitFinishedNotified();
-	//@Menu UI의 Inventory UI 초기화 완료를 알리는 이벤트 호출
-	UFUNCTION()
-		void InventoryUIInitFinishedNotified();
 
 protected:
 	//@UI Input Tag 활성화 이벤트 구독

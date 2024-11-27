@@ -32,12 +32,12 @@ void ABasePlayerController::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
     
-    //@Input Mode
-    //FInputModeGameAndUI DefaultInputMode;
-    //bShowMouseCursor = true;
-    //DefaultInputMode.SetHideCursorDuringCapture(false);
-    //DefaultInputMode.SetLockMouseToViewportBehavior(EMouseLockMode::LockAlways);
-    //SetInputMode(DefaultInputMode);
+    //@바인딩
+    if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
+    {
+        UIComponent->UIsForAttributeSetReady.BindUFunction(PS, "LoadGameAbilitySystem"); 
+    }
+
 }
 
 void ABasePlayerController::BeginPlay()
@@ -113,14 +113,12 @@ void ABasePlayerController::InitializePlayerController()
         //@초기화 작업 동기화
         RequestStartInitByPC.AddUFunction(BaseInputComp, "InitializeInputComponent");
     }
-
     //@UI Comp
     if (UIComponent)
     {
         //@초기화 작업 동기화
         RequestStartInitByPC.AddUFunction(UIComponent, "InitializeUIComponent");
     }
-
     //@PS
     if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
     {

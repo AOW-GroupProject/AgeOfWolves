@@ -242,49 +242,6 @@ void UMenuUI::CheckAllUIsInitFinsiehd()
         MenuUIInitFinished.ExecuteIfBound();
     }
 }
-
-void UMenuUI::CheckMenuToolBarInitFinished()
-{
-    //@Menu Tool Bar의 초기화 완료
-    if (bMenuToolBarInitFinished)
-    {
-        //@이벤트 호출...
-    }
-}
-
-void UMenuUI::CheckInventoryUIInitFinished()
-{
-    //@초기화 완료 여부
-    if (bInventoryUIInitFinished)
-    {
-        //@이벤트 호출
-        NotifyInventoryUIInitFinished.ExecuteIfBound();
-    }
-}
-
-void UMenuUI::CheckLevelUIInitFinished()
-{
-    if (bLevelUIInitFinished)
-    {
-        //@이벤트 호출...
-    }
-}
-
-void UMenuUI::CheckMapUIInitFinished()
-{
-    if (bMapUIInitFinished)
-    {
-        //@이벤트 호출..
-    }
-}
-
-void UMenuUI::CheckSystemUIInitFinished()
-{
-    if (bSystemUIInitFinished)
-    {
-        //@이벤트 호출...
-    }
-}
 #pragma endregion
 
 //@Property/Info...etc
@@ -499,8 +456,6 @@ void UMenuUI::OnToolBarInitFinished()
 {
     bMenuToolBarInitFinished = true;
 
-    CheckMenuToolBarInitFinished();
-
     CheckAllUIsInitFinsiehd();
 }
 
@@ -511,19 +466,15 @@ void UMenuUI::OnMenuUIContentInitFinished(EMenuCategory Category)
     {
     case EMenuCategory::Inventory:
         bInventoryUIInitFinished = true;
-        CheckInventoryUIInitFinished();
         break;
     case EMenuCategory::Level:
         bLevelUIInitFinished = true;
-        CheckLevelUIInitFinished();
         break;
     case EMenuCategory::Map:
         bMapUIInitFinished = true;
-        CheckMapUIInitFinished();
         break;
     case EMenuCategory::System:
         bSystemUIInitFinished = true;
-        CheckSystemUIInitFinished();
         break;
     default:
         break;

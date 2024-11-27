@@ -411,6 +411,7 @@ void UItemSlots::CreateItemSlots()
                 if (ItemSlot)
                 {
                     RequestStartInitByItemSlots.AddUFunction(ItemSlot, "InitializeItemSlot");
+
                     CancelItemSlotButton.AddUFunction(ItemSlot, "ItemSlotButtonCanceledNotified");
 
                     if (CurrentSlot == TotalSlots - 1)
@@ -1104,7 +1105,7 @@ void UItemSlots::OnRequestCancelCurrentHoveredItemSlot(EItemType RequestedItemTy
 
 }
 
-void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag)
+void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType Type, const FGameplayTag& ItemTag, int32 ItemNum)
 {
     UE_LOGFMT(LogItemSlots, Log, "새 아이템이 인벤토리에 할당됨: ID {0}, 유형 {1}, 태그 {2}",
         UniqueItemID.ToString(), UEnum::GetValueAsString(Type), ItemTag.ToString());
@@ -1114,6 +1115,7 @@ void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType 
     {
         return; // 다른 유형의 아이템은 무시
     }
+
     //@Empty Item Slot
     UInteractableItemSlot* EmptySlot = FindEmptySlot();
     if (!EmptySlot)
@@ -1121,6 +1123,7 @@ void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType 
         UE_LOGFMT(LogItemSlots, Warning, "빈 슬롯을 찾을 수 없습니다. 아이템을 추가할 수 없습니다.");
         return;
     }
+
     //@Item Manager Subsystem
     UItemManagerSubsystem* ItemManager = GetWorld()->GetGameInstance()->GetSubsystem<UItemManagerSubsystem>();
     if (!ItemManager)
@@ -1142,7 +1145,7 @@ void UItemSlots::OnItemAssignedToInventory(const FGuid& UniqueItemID, EItemType 
     //@Item Images
     UTexture2D* ItemTexture = ItemInfo.ItemSlotImage.LoadSynchronous();
     //@Assign New Item
-    EmptySlot->AssignNewItem(UniqueItemID, ItemInfo, 1);
+    EmptySlot->AssignNewItem(UniqueItemID, ItemInfo, ItemNum);
 }
 
 void UItemSlots::OnItemRemovedFromInventory(const FGuid& UniqueItemID, EItemType Type)

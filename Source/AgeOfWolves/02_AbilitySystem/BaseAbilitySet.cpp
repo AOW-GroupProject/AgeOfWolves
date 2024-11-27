@@ -37,7 +37,7 @@ UBaseAbilitySet::UBaseAbilitySet(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {}
 
-void UBaseAbilitySet::GiveStartupAttributeSetToAbilitySystem(UBaseAbilitySystemComponent * ASC, FBaseAbilitySet_GrantedHandles * OutGrantedHandles, UObject * SourceObject) const
+void UBaseAbilitySet::GiveStartupAttributeSetToAbilitySystem(UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles, UObject* SourceObject) const
 {
 	check(ASC);
 
@@ -48,13 +48,13 @@ void UBaseAbilitySet::GiveStartupAttributeSetToAbilitySystem(UBaseAbilitySystemC
 
 		if (!IsValid(SetToGrant.AttributeSet))
 		{
-			UE_LOGFMT(LogAbilitySet, Error, "Ability Setì˜ Attribute Setì´ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤!");
+			UE_LOGFMT(LogAbilitySet, Error, "Ability SetÀÇ Attribute SetÀÌ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù!");
 			continue;
 		}
-		// #1. ASCì— AttributeSet ë“±ë¡
+		// #1. ASC¿¡ AttributeSet µî·Ï
 		UBaseAttributeSet* NewSet = NewObject<UBaseAttributeSet>(ASC->GetOwner(), SetToGrant.AttributeSet);
 		ASC->AddAttributeSetSubobject(NewSet);
-		// #2. BaseAilitySetì— GrantedHandle ì¶”ê°€
+		// #2. BaseAilitySet¿¡ GrantedHandle Ãß°¡
 		if (OutGrantedHandles)
 		{
 			OutGrantedHandles->AddAttributeSet(NewSet);
@@ -73,7 +73,7 @@ void UBaseAbilitySet::GiveStartupGameplayEffectToAbilitySystem(UBaseAbilitySyste
 
 		if (!IsValid(EffectToGrant.GameplayEffect))
 		{
-			UE_LOGFMT(LogAbilitySet, Error, "Ability Setì˜ {0}ë²ˆì§¸ Gameplay Effectê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤!", FString::FromInt(EffectIndex));
+			UE_LOGFMT(LogAbilitySet, Error, "Ability SetÀÇ {0}¹øÂ° Gameplay Effect°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù!", FString::FromInt(EffectIndex));
 			continue;
 		}
 
@@ -96,27 +96,27 @@ void UBaseAbilitySet::GiveStartupGameplayAbilityToAbilitySystem(UBaseAbilitySyst
 
 		if (!IsValid(AbilityToGrant.Ability))
 		{
-			UE_LOGFMT(LogAbilitySet, Error, "Ability Setì˜ {0}ë²ˆì§¸ Input Binded Gameplay Abilityê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤!", FString::FromInt(AbilityIndex));
+			UE_LOGFMT(LogAbilitySet, Error, "Ability SetÀÇ {0}¹øÂ° Input Binded Gameplay Ability°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù!", FString::FromInt(AbilityIndex));
 			continue;
 		}
-		
+
 		// 1. Ability CDO
 		UBaseGameplayAbility* AbilityCDO = AbilityToGrant.Ability->GetDefaultObject<UBaseGameplayAbility>();
 
-		// 2. AbilitySpec êµ¬ì„±
+		// 2. AbilitySpec ±¸¼º
 		FGameplayAbilitySpec AbilitySpec(AbilityCDO, AbilityToGrant.AbilityLevel);
 		AbilitySpec.SourceObject = SourceObject;
 
-		// 3. Active GAëŠ” ë³„ë„ì˜ Input Tagë¥¼ AbilitySpecì— ì €ì¥í•©ë‹ˆë‹¤. 
-		if(AbilityToGrant.bActive && AbilityToGrant.bInputBinded)
+		// 3. Active GA´Â º°µµÀÇ Input Tag¸¦ AbilitySpec¿¡ ÀúÀåÇÕ´Ï´Ù. 
+		if (AbilityToGrant.bActive && AbilityToGrant.bInputBinded)
 			AbilitySpec.DynamicAbilityTags.AddTag(AbilityToGrant.InputTag);
 
-		// 4. ASC ë“±ë¡
+		// 4. ASC µî·Ï
 		const FGameplayAbilitySpecHandle AbilitySpecHandle = ASC->GiveAbility(AbilitySpec);
 
 		// 5. Passive GA
 
-		// 6. Handle ì €ì¥
+		// 6. Handle ÀúÀå
 		if (OutGrantedHandles)
 		{
 			OutGrantedHandles->AddAbilitySpecHandle(AbilitySpecHandle);

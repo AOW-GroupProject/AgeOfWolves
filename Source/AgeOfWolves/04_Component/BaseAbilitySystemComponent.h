@@ -10,89 +10,106 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 
+//@전방 선언
+#pragma region Forward Declaration
+#pragma endregion
+
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+DECLARE_MULTICAST_DELEGATE_OneParam(FAbilitySpecGiven, FGameplayAbilitySpec)
+#pragma endregion
+
 /**	
- *	
+ *	@UBaseAbilitySystemComponent
+ * 
+ *	AOW의 캐릭터 기본 ASC 유형입니다.
  */	
 UCLASS(meta = (BlueprintSpawnableComponent))
 class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemComponent
 {
-	GENERATED_BODY()
 
+//@친추 클래스
 #pragma region Friend Class
-
 #pragma endregion
 
+	GENERATED_BODY()
+
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UBaseAbilitySystemComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 protected:
-	virtual void InitializeComponent() override;
+	//@내부 바인딩
 
 protected:
-	//~UAbilitySystemComponent Interfaces
-	virtual void CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore) override;
-	//~End Of Interface
-	/*
-	* @목적: Unblock된 Passive GA의 재 활성화 동작 수행.
-	* @참조: UBaseAbilitySystemComponent::OnAbilityEnded
-	*/
-	void ReactivateUnblockedPassiveAbility(const FGameplayTagContainer UnblockedAbilityTags);
+	//@외부 바인딩
+
+protected:
+	//@초기화
+	virtual void InitializeComponent() override;
 #pragma endregion
 
-#pragma region GA Life Span
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+public:
+	//@오버로딩
+	FGameplayAbilitySpecHandle GiveAbility(const FGameplayAbilitySpec& AbilitySpec);
+
 protected:
-	/*
-	* @목적: 현재 활성화 이벤트 처리 중인 GA들의 Gameplay Tag들을 담아둡니다.
-	* @설명: OnAbilityActivated 콜백 함수에서 Gameplay Tag를 추가하고, OnAbilityEnded 혹은 OnAbilityCanceled에서 특정 Gameplay Tag를 삭제해줍니다.
-	*/
-	FGameplayTagContainer ActivatingAbilityTags;
+	//@현재 활성화된 GA를 강제 취소합니다.
+	virtual void CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore) override;
+	//@목적: Unblock된 Passive GA의 재 활성화 동작 수행.
+	void ReactivateUnblockedPassiveAbility(const FGameplayTagContainer UnblockedAbilityTags);
+
 public:
 	FORCEINLINE void GetActivatingAbilityTags(OUT FGameplayTagContainer& OutGameplayTagContainer) const { OutGameplayTagContainer = ActivatingAbilityTags; }
 
-protected:
-	/*
-	* @목적: Ability의 활성화 이벤트에 등록할 콜백 함수
-	* @설명
-	*	1. "AbilityTagsToBlock"과 "AbilityTagsToCancel"목록에 해당되는 GA의 "Block"과 "Cancel"동작 수행
-	*	2. ActivatingAbilityTags 목록에 해당 GA를 추가합니다. 
-	*/
-	void OnAbilityActivated(UGameplayAbility* Ability);
-	/*
-	* @목적: Ability의 활성화 종료 이벤트에 등록할 콜백 함수
-	* @설명
-	*	1. ActivatingAbilityTags 목록에서 해당 GA를 제거합니다.
-	*	2. Unblock 수행
-	*	3. Unblock된 GA 중 선택적으로 Passive GA에 대하여 재 활성화 동작 수행
-	*/
-	virtual void OnAbilityEnded(UGameplayAbility* Ability);
-#pragma endregion
-
-
-
-#pragma region Gameplay Tag Relationship Mapping
 public:
-	/*
-	* @목적: 전달 받은 GA와 관련하여 "Ability Tags To Block"/"Ability Tags To Cancel" Ability Tag를 전달합니다.
-	*/
+	//@목적: 전달 받은 GA와 관련하여 "Ability Tags To Block"/"Ability Tags To Cancel" Ability Tag를 전달합니다.
 	void GetAbilityBlockAndCancelTagsForAbilityTag(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutAbilityTagsToBlock, OUT FGameplayTagContainer& OutAbilityTagsToCancel);
-	/*
-	* @목적: 전달 받은 GA와 관련하여 "Activation Required"/"Activation Blocked" Ability Tag를 전달합니다.
-	*/
+	//@목적: 전달 받은 GA와 관련하여 "Activation Required"/"Activation Blocked" Ability Tag를 전달합니다.
 	void GetAbilityRelationshipActivationTags(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer* OutActivationRequired, OUT FGameplayTagContainer* OutActivationBlocked) const;
-	/*
-	* @목적: 전달 받은 GA와 관련하여 "Blocekd"/"Canceled" Ability Tag에 대응되는 GA들에 대한 각각의 조치
-	*/
-	//~UAbilitySystemComponent Interface
+	//@목적: 전달 받은 GA와 관련하여 "Blocekd"/"Canceled" Ability Tag에 대응되는 GA들에 대한 각각의 조치
 	virtual void ApplyAbilityBlockAndCancelTags(const FGameplayTagContainer& AbilityTags, UGameplayAbility* RequestingAbility, bool bEnableBlockTags, const FGameplayTagContainer& BlockTags, bool bExecuteCancelTags, const FGameplayTagContainer& CancelTags) override;
-	//~End of Interface
 
 protected:
 	UPROPERTY(EditAnywhere)
 		TObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
 
-public:
-	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM;}
+protected:
+	//@목적: 현재 활성화 이벤트 처리 중인 GA들의 Gameplay Tag들을 담아둡니다.
+	FGameplayTagContainer ActivatingAbilityTags;
 #pragma endregion
 
+//@Delegates
+#pragma region Delegates
+public:
+	//@어빌리티 등록 이벤트
+	FAbilitySpecGiven AbilitySpecGiven;
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+protected:
+	//@목적: Ability의 활성화 이벤트에 등록할 콜백 함수
+	void OnAbilityActivated(UGameplayAbility* Ability);
+
+	//@목적: Ability의 활성화 종료 이벤트에 등록할 콜백 함수
+	virtual void OnAbilityEnded(UGameplayAbility* Ability);
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+public:
+	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM; }
+#pragma endregion
 };

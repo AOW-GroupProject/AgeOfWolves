@@ -56,7 +56,15 @@ protected:
 	virtual void NativeConstruct(); // 화면에 렌더되기 직전에 호출됨
 	virtual void NativeDestruct();
 	//~ End UUserWidget Interface
+
+protected:
+	//@내부 바인딩
+
+protected:
+	//@외부 바인딩
+
 public:
+	//@초기화
 	UFUNCTION()
 		virtual void InitializeItemSlot();
 #pragma endregion
@@ -118,6 +126,7 @@ public:
 	FORCEINLINE void SetIsRemovable(bool InBool){ bRemovable = InBool; }
 	UFUNCTION(BlueprintCallable, meta = (EditCondition = "bStackable == true"))
 		void SetSlotItemNum(int32 InNum);
+
 public:
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE FGuid GetUniqueItemID() const { return UniqueItemID; } 

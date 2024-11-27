@@ -7,7 +7,6 @@
 #include "02_AbilitySystem/AOWGameplayTags.h"
 #include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
 
-
 void UPlayerAbilitySystemComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
@@ -21,6 +20,7 @@ UPlayerAbilitySystemComponent::UPlayerAbilitySystemComponent(const FObjectInitia
 	InputReleasedSpecHandles.Reset();
 	InputHeldSpecHandles.Reset();
 }
+
 void UPlayerAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGamePaused)
 {
 	static TArray<FGameplayAbilitySpecHandle> AbilitiesToActivate;
@@ -114,6 +114,7 @@ void UPlayerAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& I
 		}
 	}
 }
+
 void UPlayerAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
 {
 	if (InputTag.IsValid())
@@ -134,12 +135,12 @@ void UPlayerAbilitySystemComponent::AbilitySpecInputPressed(FGameplayAbilitySpec
 	// @Spec의 InputPressed 값 변경(참), GA의 InputPressed 호출
 	Super::AbilitySpecInputPressed(Spec);
 }
+
 void UPlayerAbilitySystemComponent::AbilitySpecInputReleased(FGameplayAbilitySpec& Spec)
 {
 	// @Spec의 InputPressed 값 변경(거짓), GA의 InputReleased 호출
 	Super::AbilitySpecInputReleased(Spec);
 }
-
 #pragma endregion
 
 #pragma region Player Input Buffer
@@ -211,8 +212,6 @@ void UPlayerAbilitySystemComponent::EarlyCancelAbility()
 	}
 }
 
-
-
 bool UPlayerAbilitySystemComponent::DoesAvatarActorHasActivationRequiredTagsForAbility(const UGameplayAbility* BlockedAbility)
 {
 	const FGameplayTagContainer RequiredTags = Cast<UBaseGameplayAbility>(BlockedAbility)->GetRequiredTags();
@@ -220,7 +219,6 @@ bool UPlayerAbilitySystemComponent::DoesAvatarActorHasActivationRequiredTagsForA
 	GetOwnedGameplayTags(CurrentOwnedGameplayTags);
 	return CurrentOwnedGameplayTags.HasAllExact(RequiredTags);
 }
-
 
 void UPlayerAbilitySystemComponent::SetbCanSaveBlockedAbility(bool bCanSave)
 {

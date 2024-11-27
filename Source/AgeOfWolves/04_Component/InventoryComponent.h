@@ -76,16 +76,16 @@ public:
 DECLARE_MULTICAST_DELEGATE_OneParam(FRequestInitializationByInvenComp, const FGuid&);
 
 //@인벤토리 아이템 추가 이벤트
-DECLARE_MULTICAST_DELEGATE_ThreeParams(FItemAssignedToInventory, const FGuid&, EItemType, const FGameplayTag&);
+DECLARE_MULTICAST_DELEGATE_FourParams(FItemAssignedToInventory, const FGuid&, EItemType, const FGameplayTag&, int32);
 //@인벤토리 아이템 제거 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FItemRemovedFromInventory, const FGuid&, EItemType);
 //@인벤토리 아이템 업데이트 이벤트(강화 정보, 개수 정보)
 DECLARE_MULTICAST_DELEGATE_FourParams(FInventoryItemUpdated, const FGuid&, EItemType, const FGameplayTag&, int32);
 
 //@퀵슬롯 정보 로드
-DECLARE_DELEGATE_FiveParams(FQuickSlotItemsLoaded, int32, const FGuid&, EItemType, const FGameplayTag&, int32);
+DECLARE_MULTICAST_DELEGATE_FiveParams(FQuickSlotItemsLoaded, int32, const FGuid&, EItemType, const FGameplayTag&, int32);
 //@퀵슬롯 정보 업데이트 (강화 정보 등 추가 예정)
-DECLARE_DELEGATE_ThreeParams(FQuickSlotItemUpdated, int32, const FGuid&, int32);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FQuickSlotItemUpdated, int32, const FGuid&, int32);
 
 //@아이템 활성화 이벤트(한 번에 하나의 아이템 활성화 강요)
 DECLARE_DELEGATE_RetVal(bool, FItemStartActivation);
@@ -124,7 +124,7 @@ protected:
 private:
 	//@외부 바인딩
 	void ExternalBindToUIComponent(const AController* Controller);
-	void ExternalBindToQuickSlots();
+	void ExternalBindToInputComponent(const AController* Controller);
 	void ExternalBindToInventoryUI();
 
 private:
@@ -215,6 +215,7 @@ public:
 	FItemRemovedFromInventory ItemRemovedFromInventory;
 	//@아이템 업데이트 이벤트: Item, Inven UI
 	FInventoryItemUpdated InventoryItemUpdated;
+
 public:
 	//@퀵슬롯 아이템 로딩 이벤트 
 	FQuickSlotItemsLoaded QuickSlotItemsLoaded;
@@ -225,8 +226,14 @@ public:
 //@Callbacks
 #pragma region Callbacks
 protected:
+	//@아이템 활성화 종료 이벤트 구독
 	UFUNCTION()
 		void OnItemActivationEnded(FGuid UniqueItemID);
+
+protected:
+	//@UI 입력 태그 활성화 이벤트 구독
+	UFUNCTION()
+		void OnUIInputTriggered(const FGameplayTag& InputTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

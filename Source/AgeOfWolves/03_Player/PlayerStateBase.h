@@ -13,27 +13,31 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayerStateBase, Log, All)
 
-/*
-* @¸ñÀû : ASC¿¡ µî·ÏµÈ AttributeSetÀÇ °¢ Attribute °ªÀÇ ÃÊ±âÈ­ ÀÌº¥Æ®
-* @¼³¸í : Attribute °ª ÃÊ±âÈ­ ÀÌº¥Æ® ¹ß»ı ½Ã ÀÌ¸¦ UI µî ´Ù¾çÇÑ °÷¿¡ ¾Ë¸®±â À§ÇÔ
-* @ÂüÁ¶ : -
-*/
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAttributeSetInitialized);
 
-/*
-* @¸ñÀû : ASC¿¡ µî·ÏµÈ AttributeSetÀÇ °¢ Attribute °ª º¯È­ ÀÌº¥Æ®¸¦ ÀüÆÄÇÏ´Â ÀÌº¥Æ®
-* @¼³¸í : Attribute °ª º¯È­ ÀÌº¥Æ® ¹ß»ı ½Ã ÀÌ¸¦ UI µî ´Ù¾çÇÑ °÷¿¡ ¾Ë¸®±â À§ÇÔ
-* @ÂüÁ¶ : -
-*/
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGameplayAttribute, Attribute, float, OldValue, float, NewValue);
-
+//@ì „ë°© ì„ ì–¸
+#pragma region Forward Declaration
 class ABasePlayerController;
 class UPawnData;
-class UBaseAttributeSet;
-class UPlayerAbilitySystemComponent; 
+class UPlayerAbilitySystemComponent;
 class UUserWidget;
 class UAOWSaveGame;
 class UAbilityManagerSubsystem;
+#pragma endregion
+
+//@ì—´ê±°í˜•
+#pragma region Enums
+#pragma endregion
+
+//@êµ¬ì¡°ì²´
+#pragma region Structs
+#pragma endregion
+
+//@ì´ë²¤íŠ¸/ë¸ë¦¬ê²Œì´íŠ¸
+#pragma region Delegates
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAttributeSetInitialized);
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGameplayAttribute, Attribute, float, OldValue, float, NewValue);
+#pragma endregion
+
 
 /**
  * Player State contaions pawn's info interacting with others
@@ -41,10 +45,15 @@ class UAbilityManagerSubsystem;
 UCLASS()
 class AGEOFWOLVES_API APlayerStateBase : public APlayerState, public IAbilitySystemInterface
 {
-	GENERATED_BODY()
-	// Player ControllerÀÇ friend Å¬·¡½º·Î ¼³Á¤
-	friend class ABasePlayerController;
 
+//@ì¹œì¶” í´ë˜ìŠ¤
+#pragma region Friend Class
+	friend class ABasePlayerController;
+#pragma endregion
+
+	GENERATED_BODY()
+
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	APlayerStateBase();
@@ -55,26 +64,31 @@ protected:
 	virtual void BeginPlay() override;
 	//~End Of APlayerState Interface
 protected:
-	
+	//@ë‚´ë¶€ ë°”ì¸ë”©
+
+protected:
+	//@ì™¸ë¶€ ë°”ì¸ë”©
 
 public:
 	UFUNCTION()
 		void InitializePlayerState();
 #pragma endregion
 
-#pragma region Gameplay Ability System
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 public:
-	//@·Îµù ÀÛ¾÷
+	//@ë¡œë”© ì‘ì—…
 	UFUNCTION()
 		void LoadGameAbilitySystem();
-	//@InventoryÀÇ Item Á¤º¸¸¦ Save File·ÎºÎÅÍ LoadÇÕ´Ï´Ù.
+	//@ìºë¦­í„°ì˜ Ability System ì •ë³´ë¥¼ Ability Manager Subsystemìœ¼ë¡œë¶€í„° Loadí•©ë‹ˆë‹¤.
+	void LoadDefaultAbilitySystemFromAbilityManager();
+	//@ìºë¦­í„°ì˜ Ability System ì •ë³´ë¥¼ Save Fileë¡œë¶€í„° Loadí•©ë‹ˆë‹¤.
 	void LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame);
-	//@InventoryÀÇ Item Á¤º¸¸¦ Item Manager·ÎºÎÅÍ LoadÇÕ´Ï´Ù.
-	void LoadDefaultAbilitySystemFromAbilityManager(UAbilityManagerSubsystem* AbilityManager);
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Ability System|Pawn Data")
 		TObjectPtr<UPawnData> PawnData;
+
 	FBaseAbilitySet_GrantedHandles* SetGrantedHandles;
 
 	UPROPERTY()
@@ -82,46 +96,32 @@ protected:
 
 	UPROPERTY()
 		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
+#pragma endregion
 
+//@Delegates
+#pragma region Delegates
+public:
+	FAttributeSetInitialized OnAttributeSetInitialized;
+
+	FAnyAttributeValueChanged OnAnyAttributeValueChanged;
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+protected:
+	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 public:
 	UPawnData* GetPawnData() const;
 	//~IAbilitySystemInterface Interface
 	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	//~End Of IAbilitySystemInterface Interface
 	TSoftObjectPtr<UBaseAttributeSet> GetAttributeSet() const;
-#pragma endregion
-
-#pragma region Attribute Callbacks
-protected:
-	/*
-	* @¸ñÀû : Ä³¸¯ÅÍÀÇ Attribute ¼öÄ¡ º¯È­ ÀÌº¥Æ®¿¡ µî·ÏÇÒ Äİ¹é ÇÔ¼ö
-	* @¼³¸í : Ability System Component¿¡¼­ °ü¸®ÇÏ´Â Attribute Ç×¸ñÀÇ ¼öÄ¡ º¯È­ ÀÌº¥Æ®¿¡ µî·ÏÇÒ Äİ¹é ÇÔ¼öÀÔ´Ï´Ù.
-	*		  HUD ±¸ÇöÀ» À§ÇØ PS¿¡¼­ Á¦°øÇÏ´Â AttributeBase °ü·Ã ÀÎÅÍÆäÀÌ½º·Î È°¿ë °¡´ÉÇÕ´Ï´Ù(C++È¯°æ).
-	* @ÂüÁ¶ : APlayerStateBase::InitializeGameplayAbilitySystem()
-	*/
-	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);
 
 public:
-	/*
-	* @¸ñÀû : ASC¿¡ µî·ÏµÈ AttributeSetÀÇ °¢ Attribute °ª ÃÊ±âÈ­ ÀÌº¥Æ®¸¦ ÀüÆÄÇÏ´Â ÀÌº¥Æ®
-	* @¼³¸í : Attribute °ª º¯È­ ÀÌº¥Æ® ¹ß»ı ½Ã ÀÌ¸¦ UI µî ´Ù¾çÇÑ °÷¿¡ ¾Ë¸®±â À§ÇÔ
-	* @ÂüÁ¶ : -
-	*/
-	FAttributeSetInitialized OnAttributeSetInitialized;
-	/*
-	* @¸ñÀû : ASC¿¡ µî·ÏµÈ AttributeSetÀÇ °¢ Attribute °ª º¯È­ ÀÌº¥Æ®¸¦ ÀüÆÄÇÏ´Â ÀÌº¥Æ®
-	* @¼³¸í : Attribute °ª º¯È­ ÀÌº¥Æ® ¹ß»ı ½Ã ÀÌ¸¦ UI µî ´Ù¾çÇÑ °÷¿¡ ¾Ë¸®±â À§ÇÔ
-	* @ÂüÁ¶ : -
-	*/
-	FAnyAttributeValueChanged OnAnyAttributeValueChanged;
-#pragma endregion
-
-#pragma region Getter&Setter
-public:
-	/*
-	* @¸ñÀû: AttributeÀÇ ÇöÀç ¼öÄ¡ °ªÀ» Á¦°øÇÏ´Â GetterÀÔ´Ï´Ù.
-	* @¼³¸í: Attribute Ç×¸ñÀÌ Ãß°¡µÉ ¼ö·Ï Getter ÇÔ¼ö °ü·Ã ÄÚµåµµ Áõ°¡ÇÏ¿©, Áßº¹À» ¹æÁöÇÏ±â À§ÇØ ÅÛÇÃ¸´ ÇÔ¼ö·Î Á¤ÀÇÇÕ´Ï´Ù.
-	*/
 	template<typename T>
 	T GetAttributeValue(FString FindingAttriubteName)
 	{

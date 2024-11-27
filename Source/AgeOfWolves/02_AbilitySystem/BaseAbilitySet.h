@@ -13,11 +13,26 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogAbilitySet, Log, All)
 
+//@전방 선언
+#pragma region Forward Declaration
 class UBaseAttributeSet;
 class UBaseGameplayAbility;
 class UGameplayEffect;
 class UBaseAbilitySystemComponent;
 class APlayerStateBase;
+#pragma endregion
+
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+#pragma endregion
 
 /**
  * FAbilitySet_GameplayAbility
@@ -45,23 +60,30 @@ struct FBaseAbilitySet_GameplayAbility
 
 public:
 
-	// Gameplay ability to grant.
+	//@어빌리티 태그
+	UPROPERTY(EditDefaultsOnly)
+		FGameplayTag AbilityTag;
+	/// @어빌리티 유형의 BP 클래스
 	UPROPERTY(EditDefaultsOnly)
 		TSubclassOf<UBaseGameplayAbility> Ability = nullptr;
 
-	// Level of ability to grant.
+	/// @어빌리티의 아이콘 이미지
+	UPROPERTY(EditDefaultsOnly)
+		UTexture2D* AbilityIconImage;
+
+	/// @어빌리티 레벨
 	UPROPERTY(EditDefaultsOnly)
 		int32 AbilityLevel = 1;
 
-	// Level of ability to grant.
+	/// @Active/Passive 여부
 	UPROPERTY(EditDefaultsOnly)
 		bool bActive = false;
 
-		// Level of ability to grant.
+	/// @사용자 입력 바인딩 여부(체크를 위해 bActive가 참이여만 합니다)
 	UPROPERTY(EditDefaultsOnly)
 		bool bInputBinded = false;
 
-	// Tag used to process input for the ability.
+	/// @입력 태그
 	UPROPERTY(EditDefaultsOnly, Meta = (Categories = "InputTag", EditCondition = "bActive&&bInputBinded"))
 		FGameplayTag InputTag;
 };
@@ -159,16 +181,21 @@ public:
 	void GiveStartupGameplayAbilityToAbilitySystem(UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles, UObject* SourceObject) const;
 
 protected:
-
 	// Gameplay abilities to grant when this ability set is granted.
-	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Abilities", meta = (TitleProperty = GameplayAbility))
+	UPROPERTY(EditDefaultsOnly, Category = "GA 목록")
 		TArray<FBaseAbilitySet_GameplayAbility> GameplayAbilities;
 
 	// Gameplay effects to grant when this ability set is granted.
-	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Effects", meta = (TitleProperty = GameplayEffect))
+	UPROPERTY(EditDefaultsOnly, Category = "GE 목록")
 		TArray<FBaseAbilitySet_GameplayEffect> GameplayEffects;
 
 	// Attribute sets to grant when this ability set is granted.
-	UPROPERTY(EditDefaultsOnly, Category = "Attribute Sets", meta = (TitleProperty = AttributeSet))
+	UPROPERTY(EditDefaultsOnly, Category = "어트리뷰트 목록")
 		TArray<FBaseAbilitySet_AttributeSet> AttributeSets;
+
+public:
+	const TArray<FBaseAbilitySet_GameplayAbility>& GetGameplayAbilities() const { return GameplayAbilities; }
+	TArray<FBaseAbilitySet_GameplayEffect> GetGameplayEffects() const { return GameplayEffects; }
+	TArray<FBaseAbilitySet_AttributeSet> GetAttributeSets() const { return AttributeSets; }
+
 };
