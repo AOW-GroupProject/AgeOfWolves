@@ -60,14 +60,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (Category = "AttackAbilityInfo"))
 	float MontagePlayRate = 1.0f;
 
+
 	UFUNCTION(BlueprintCallable)
-	void CauseDamageToTarget(AActor* TargetActor);
+	void CauseDamageToTarget(AActor* TargetActor, FGameplayTag HitDirectionTag = FGameplayTag());
 
-
-private:
+	UFUNCTION(BlueprintCallable)
+	static FGameplayTag CalculateHitDirection(const FVector& HitLocation, const AActor* HitActor);
 
 public: 
-	UFUNCTION(BlueprintCallable, Category = "Ability | Getter")
+	UFUNCTION(BlueprintCallable, Category = "Ability|Getter")
 	APlayerCharacter* GetPlayerCharacterFromActorInfo() const;
 	
 };

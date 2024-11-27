@@ -4,6 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
+#include "GameplayTagContainer.h"
 #include "CombatInterface.generated.h"
 
 // This class does not need to be modified.
@@ -24,5 +25,5 @@ public:
 
 	virtual void Die() = 0;
 
-	virtual void HitReact() = 0;
+	virtual void HitReact(FGameplayTag HitDirectionTag) = 0;
 };

@@ -13,7 +13,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 /**	
  *	
  */	
-UCLASS()
+UCLASS(meta = (BlueprintSpawnableComponent))
 class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemComponent
 {
 	GENERATED_BODY()

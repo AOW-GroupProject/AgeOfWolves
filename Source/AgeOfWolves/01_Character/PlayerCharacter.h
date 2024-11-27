@@ -123,7 +123,7 @@ public:
 
 	virtual void Die() override;
 
-	virtual void HitReact() override;
+	virtual void HitReact(FGameplayTag HitDirectionTag) override;
 
 #pragma endregion
 
