@@ -49,30 +49,32 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 void UBaseAnimInstance::FindMovementState()
 {
+	//@이전 이동 상태 값 기억
+	LastMovementState = MovementState;
 
-	// @FIX: 240 -> 350 상향
-	// #1. 뛰기
-	if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 400.f && Speed > 0.05f)
-	{
-		MovementState = EMovementState::Run;
-		LastMovementState = MovementState;
-	}
-	// #2. 걷기
-	else if (OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed > 0.f && OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed < 600.f && Speed > 10.f)
-	{
-		MovementState = EMovementState::Walk;
-	}
-	// #3. 정지
-	else
+	//@현재 스피드
+	float CurrentSpeed = Speed;
+	//@최대 속도
+	float MaxWalkSpeed = OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed;
+	//@달리기 여부
+	bool bIsSprinting = MaxWalkSpeed >= 550.f;
+
+	//@EMovementState::Idle
+	if (CurrentSpeed < 0.05f)
 	{
 		MovementState = EMovementState::Idle;
+	}
+	//@EMovementState::Sprinting or Walking
+	else
+	{
+		MovementState = bIsSprinting ? EMovementState::Sprinting : EMovementState::Walking;
 	}
 }
 
 void UBaseAnimInstance::FindMovementDirection()
 {
 	//케릭터가 LockOn을 취소하거나, Run동안은 이동 방향을 Fwd로 설정.
-	if (bLockOn == false || MovementState == EMovementState::Run)
+	if (bLockOn == false || MovementState == EMovementState::Sprinting || LastMovementState == EMovementState::Sprinting)
 	{
 		MovementDirection = EMovementDirection::Fwd;
 		return;

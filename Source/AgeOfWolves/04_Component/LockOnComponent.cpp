@@ -255,7 +255,7 @@ void ULockOnComponent::AdjustCameraTransform(float DeltaTime)
 
 			// 달리지 않는 동안에만 Character의 Rotation을 LockOn방향으로 설정한다.
 			// 달리는 동안은 방향키 방향으로 설정된다.
-			if (!(BaseAnimInstance->GetMovementState() == EMovementState::Run))
+			if (!(BaseAnimInstance->GetMovementState() == EMovementState::Sprinting))
 			{
 				FRotator LooAtRotatoionYaw = FRotator(0.f, LookAtRotation.Yaw, 0.f);
 				// 선형 보간

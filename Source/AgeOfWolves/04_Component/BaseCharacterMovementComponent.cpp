@@ -1,11 +1,10 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "BaseCharacterMovementComponent.h"
 
 #include "GameFramework/Character.h"
 #include "03_Player/PlayerStateBase.h"
 
+//@Defualt Setting
+#pragma region Default Setting
 UBaseCharacterMovementComponent::UBaseCharacterMovementComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {}
@@ -28,15 +27,10 @@ void UBaseCharacterMovementComponent::BeginPlay()
 		}
 	}
 }
+#pragma endregion
 
-void UBaseCharacterMovementComponent::MoveSpeedChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
-{
-	if (Attribute.IsValid() && Attribute.AttributeName == "MoveSpeed")
-	{
-		ChangeMoveSpeed(OldValue, NewValue);
-	}
-}
-
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UBaseCharacterMovementComponent::ChangeMoveSpeed(float InOldVal, float InNewVal)
 {
 
@@ -54,3 +48,23 @@ void UBaseCharacterMovementComponent::ChangeMoveSpeed(float InOldVal, float InNe
 	}
 
 }
+#pragma endregion
+
+//@Delegates
+#pragma region Delegates
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+void UBaseCharacterMovementComponent::MoveSpeedChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
+{
+	if (Attribute.IsValid() && Attribute.AttributeName == "MoveSpeed")
+	{
+		ChangeMoveSpeed(OldValue, NewValue);
+	}
+}
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+#pragma endregion

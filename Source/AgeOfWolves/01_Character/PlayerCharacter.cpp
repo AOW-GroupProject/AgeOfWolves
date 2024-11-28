@@ -53,12 +53,12 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
 		GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
 		// @FIX: 300 -> 800 상향
-		GetCharacterMovement()->RotationRate = FRotator(0.0f, 800.f, 0.0f); // ...at this rotation rate
+		GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.f, 0.0f); // ...at this rotation rate
 		GetCharacterMovement()->JumpZVelocity = 700.f;
 		GetCharacterMovement()->AirControl = 0.35f;
-		GetCharacterMovement()->MaxWalkSpeed = 400.f;
+		GetCharacterMovement()->MaxWalkSpeed = 200.f;
 		// @FIX: 150 -> 500 상향
-		GetCharacterMovement()->MaxAcceleration = 500.f;
+		GetCharacterMovement()->MaxAcceleration = 800.f;
 		GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 		GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
 		GetCharacterMovement()->GroundFriction = 8.0f;
@@ -69,9 +69,14 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		SpringArm->SetupAttachment(RootComponent);
 		SpringArm->TargetArmLength = 400.0f; 
 		SpringArm->bUsePawnControlRotation = true; 
+
 		SpringArm->bEnableCameraLag = true;
 		SpringArm->bEnableCameraRotationLag = true;
-		SpringArm->CameraRotationLagSpeed = 30.f;
+
+		SpringArm->CameraLagSpeed = 10.f;
+		SpringArm->CameraRotationLagSpeed = 8.f;
+		SpringArm->CameraLagMaxDistance = 100.f;
+
 		SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 10.f));
 
 		FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
