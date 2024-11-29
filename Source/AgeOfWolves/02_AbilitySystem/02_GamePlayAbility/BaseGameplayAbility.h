@@ -12,7 +12,18 @@ class UAbilityTagRelationshipMapping;
 
 DECLARE_LOG_CATEGORY_EXTERN(LogGA, Log, All)
 
-UENUM(BlueprintType)	
+//@전방 선언
+#pragma region Forward Declaration
+#pragma endregion
+
+//@열거형
+#pragma region Enums
+/*
+*	@EAbilityActivationPolicy
+* 
+*	활성화 정책
+*/
+UENUM(BlueprintType)
 enum class EAbilityActivationPolicy : uint8
 {
 	/*
@@ -40,6 +51,15 @@ enum class EAbilityActivationPolicy : uint8
 
 	MAX
 };
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+#pragma endregion
 
 /**
  * 
@@ -47,17 +67,21 @@ enum class EAbilityActivationPolicy : uint8
 UCLASS()
 class AGEOFWOLVES_API UBaseGameplayAbility : public UGameplayAbility
 {
-	GENERATED_BODY()
 
+//@친추 클래스
 #pragma region Friend Class
-		friend class UBaseAbilitySystemComponent;
-		friend class UBaseMonsterASC;
+	friend class UBaseAbilitySystemComponent;
+	friend class UPlayerAbilitySystemComponent;
+	friend class UBaseMonsterASC;
 #pragma endregion
 
+	GENERATED_BODY()
+
+//@Defualt Setting
+#pragma region Default Setting
 public:
 	UBaseGameplayAbility(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
-#pragma region Default Setting
 protected:
 	//~UGameplayAbility interface, ASC와 상호작용
 	virtual void OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec) override;
@@ -69,32 +93,33 @@ protected:
 	//~End of Interface
 #pragma endregion
 
-#pragma region Gameplay Tag Relationship Mapping
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 protected:
 	//~UGameplayAbility interface, Overloading
-	/*
-	* @목적:해당 GA의 활성화 조건(Cost, CoolDown, ATRM)을 확인하고, 해당 GA의 활성화 가능 여부를 반환합니다.
-	* @설명
-	*	1. ActorInfo 체크
-	*	2. Input Inhibition 체크(추후에 결정)
-	*	3. CoolDown, Cost 체크
-	*	4. AR(Activation Required), AB(Activation Blocked) 태그 관계성 만족 여부 확인
-	*	5. 그 외 Null 체크
-	* @참조:UBaseAbilitySystemComponent::TryActivateAbility
-	*/
+	//@활성화 가능 여부 체크
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const override;
-	/*
-	* @목적: 해당 GA의 관계성을 통해 활성화 조건 만족 여부 확인
-	* @설명
-	*	1. BlockedAbilityTags에 해당 GA가 있다면, 활성화 할 수 없습니다.
-	*	2. AR(Activation Required), AB(Activation Blocked) 관계성 확인
-	* @참조: UBaseGameplayAbility::CanActivateAbility
-	*/	
+	//@활성화 조건 충족 여부
 	virtual bool DoesAbilitySatisfyTagRequirements(const UAbilitySystemComponent& AbilitySystemComponent, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 	//~End of Interface
-#pragma endregion
 
-#pragma region GA Info
+protected:
+	/** Input binding stub. */
+	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
+
+	/** Input binding stub. */
+	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
+
+	// Input Pressed 이벤트를 Blueprint에서 구현할 수 있도록 함
+	UFUNCTION(BlueprintNativeEvent, Category = "Ability")
+		void K2_InputPressed();
+	virtual void K2_InputPressed_Implementation() { }
+
+	// Input Released 이벤트를 Blueprint에서 구현할 수 있도록 함
+	UFUNCTION(BlueprintNativeEvent, Category = "Ability")
+		void K2_InputReleased();
+	virtual void K2_InputReleased_Implementation() { }
+
 protected:
 	// @목적: Gameplay Ability의 발동 조건입니다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gameplay Ability | Ability Activation")
@@ -104,11 +129,22 @@ protected:
 		TSubclassOf<UGameplayEffect> ApplyGameplayEffectClass;
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Gameplay Ability | Gameplay Effect")
 		FActiveGameplayEffectHandle ActiveApplyGameplayEffectHandle;
+#pragma endregion
+
+//@Delegates
+#pragma region Delegates
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 public:
 	FORCEINLINE EAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
 	FORCEINLINE TSubclassOf<UGameplayEffect> GetApplyGameplayEffectClass() { return ApplyGameplayEffectClass; }
-	FORCEINLINE FGameplayTagContainer GetRequiredTags() const { return ActivationRequiredTags;  }
-
+	FORCEINLINE FGameplayTagContainer GetRequiredTags() const { return ActivationRequiredTags; }
 #pragma endregion
 
 };

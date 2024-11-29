@@ -20,11 +20,10 @@
 #include "GameplayTagContainer.h"
 #include "EnhancedInputSubsystems.h"
 
-#include UE_INLINE_GENERATED_CPP_BY_NAME(BaseInputComponent)
-
 DEFINE_LOG_CATEGORY(LogInputComponent)
 // UE_LOGFMT(LogInputComponent, Log, "");
 
+//@Defualt Setting
 #pragma region Default Setting
 UBaseInputComponent::UBaseInputComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -121,14 +120,14 @@ void UBaseInputComponent::InternalBindToInputActions(const APlayerController* PC
 	if (!LocalPlayer)
 	{
 		UE_LOGFMT(LogInputComponent, Error, "LocalPlayer is null in UIComponent::InitializeComponent");
-		return ;
+		return;
 	}
 	//@Input Manager Subsystem
 	UInputManagerSubsystem* InputManagerSubsystem = LocalPlayer->GetSubsystem<UInputManagerSubsystem>();
 	if (!InputManagerSubsystem)
 	{
 		UE_LOGFMT(LogInputComponent, Error, "입력 설정 로드 실패: InputManagerSubsystem을 찾을 수 없습니다.");
-		return ;
+		return;
 	}
 	//@Input Configs
 	const TArray<UInputConfig*>& InputConfigs = InputManagerSubsystem->GetInputConfigs();
@@ -144,10 +143,10 @@ void UBaseInputComponent::InternalBindToInputActions(const APlayerController* PC
 	}
 
 }
+#pragma endregion
 
-#pragma endregion 
-
-#pragma region IMC(Input Mapping Context)
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UBaseInputComponent::BindNativeInputActions(const UInputConfig* InputConfig)
 {
 	UE_LOGFMT(LogInputComponent, Log, "기본 입력 액션을 바인딩합니다.");
@@ -285,6 +284,7 @@ void UBaseInputComponent::SwapMappings(const FGameplayTag& NewIMCTag)
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 {
@@ -371,6 +371,7 @@ void UBaseInputComponent::OnAbilityInputTagPressed(FGameplayTag InputTag)
 				if (UPlayerAbilitySystemComponent* ASC = Cast<UPlayerAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
 				{
 					ASC->AbilityInputTagPressed(InputTag);
+
 				}
 			}
 		}
@@ -416,4 +417,8 @@ void UBaseInputComponent::OnUIInputTagValueTriggered(const FInputActionValue& Va
 	UE_LOGFMT(LogInputComponent, Log, "UI Input Value Triggered - Tag: {0}, Value: {1}", InputTag.ToString(), AxisValue);
 	UIInputTagTriggeredWithValue.Broadcast(InputTag, AxisValue);
 }
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion

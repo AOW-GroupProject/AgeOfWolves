@@ -10,6 +10,11 @@
 DEFINE_LOG_CATEGORY(LogAnimInstance)
 // UE_LOGFMT(LogAnimInstance, Log, "");
 
+//@Defualt Setting
+#pragma region Default Setting
+UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer)
+	:Super(ObjectInitializer)
+{}
 void UBaseAnimInstance::NativeBeginPlay()
 {
 	Super::NativeBeginPlay();
@@ -46,7 +51,10 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 		FindMovementDirection();
 	}
 }
+#pragma endregion
 
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UBaseAnimInstance::FindMovementState()
 {
 	//@이전 이동 상태 값 기억
@@ -56,6 +64,10 @@ void UBaseAnimInstance::FindMovementState()
 	float CurrentSpeed = Speed;
 	//@최대 속도
 	float MaxWalkSpeed = OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed;
+
+	// Max Walk Speed 로그 출력
+	UE_LOGFMT(LogAnimInstance, Log, "Current Max Walk Speed: {0}", MaxWalkSpeed);
+
 	//@달리기 여부
 	bool bIsSprinting = MaxWalkSpeed >= 550.f;
 
@@ -73,41 +85,53 @@ void UBaseAnimInstance::FindMovementState()
 
 void UBaseAnimInstance::FindMovementDirection()
 {
-	//케릭터가 LockOn을 취소하거나, Run동안은 이동 방향을 Fwd로 설정.
+	//캐릭터가 LockOn을 취소하거나, Sprint 중일 때는 정면으로 설정
 	if (bLockOn == false || MovementState == EMovementState::Sprinting || LastMovementState == EMovementState::Sprinting)
 	{
+		DirectionAngle = 0.f;
 		MovementDirection = EMovementDirection::Fwd;
 		return;
 	}
-		
+
 	// 캐릭터의 현재 가속도 벡터를 기반으로 한 로테이션을 계산
 	FRotator Rotation1 = UKismetMathLibrary::MakeRotFromX(OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration());
 
 	// 캐릭터가 바라보는 방향의 벡터를 기반으로 로테이션을 계산
 	FRotator Rotation2 = OwnerCharacterBase->GetControlRotation();
 
-	// 두 방향 사이의 최소 각도 차이를 계산, 오른손 좌표계 기준 캐릭터의 Yaw 회전 값 기준 시계 방향은 음수, 반 시계 방향은 양수
-	float Angle = FMath::FindDeltaAngleDegrees(Rotation1.Yaw, Rotation2.Yaw);
+	// 두 방향 사이의 각도 차이를 계산 (-180 ~ 180 범위)
+	DirectionAngle = FMath::FindDeltaAngleDegrees(Rotation1.Yaw, Rotation2.Yaw);
 
-	// #1. Fwd
-	if (Angle >= -70.f && Angle <= 70.f)
+	// Movement Direction 업데이트
+	if (DirectionAngle >= -70.f && DirectionAngle <= 70.f)
 	{
 		MovementDirection = EMovementDirection::Fwd;
 	}
-	// #2. Left
-	else if (Angle > 70.f && Angle < 110.f)
+	else if (DirectionAngle > 70.f && DirectionAngle < 110.f)
 	{
 		MovementDirection = EMovementDirection::Left;
 	}
-	// #3. Right
-	else if (Angle > -110.f && Angle < -70.f)
+	else if (DirectionAngle > -110.f && DirectionAngle < -70.f)
 	{
 		MovementDirection = EMovementDirection::Right;
 	}
-	// #4. Back
 	else
 	{
 		MovementDirection = EMovementDirection::Bwd;
 	}
 
+	// 디버그 로그
+	UE_LOGFMT(LogAnimInstance, Verbose, "Movement Direction Angle: {0}, Direction: {1}",
+		DirectionAngle,
+		*UEnum::GetValueAsString(MovementDirection));
 }
+
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+#pragma endregion

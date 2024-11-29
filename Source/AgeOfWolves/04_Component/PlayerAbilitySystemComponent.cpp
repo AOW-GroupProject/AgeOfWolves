@@ -1,11 +1,14 @@
 ﻿// Fill out your copyright notice in the Description page of Project Settings.
 
-
 #include "04_Component/PlayerAbilitySystemComponent.h"
+#include "Logging/StructuredLog.h"
 
 #include "GameplayTagContainer.h"
 #include "02_AbilitySystem/AOWGameplayTags.h"
 #include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
+
+DEFINE_LOG_CATEGORY(LogPlayerASC)
+
 
 void UPlayerAbilitySystemComponent::InitializeComponent()
 {
@@ -34,9 +37,12 @@ void UPlayerAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bG
 			if (AbilitySpec->Ability && !AbilitySpec->IsActive())
 			{
 				const UBaseGameplayAbility* BaseAbilityCDO = Cast<UBaseGameplayAbility>(AbilitySpec->Ability);
-				if (BaseAbilityCDO && BaseAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::WhileInputActive)
+				if (BaseAbilityCDO)
 				{
-					AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+					if (BaseAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::WhileInputActive)
+					{
+						AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+					}
 				}
 			}
 		}
@@ -132,14 +138,24 @@ void UPlayerAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& 
 
 void UPlayerAbilitySystemComponent::AbilitySpecInputPressed(FGameplayAbilitySpec& Spec)
 {
-	// @Spec의 InputPressed 값 변경(참), GA의 InputPressed 호출
+	// 로그 추가
+	UE_LOGFMT(LogPlayerASC, Log, "AbilitySpecInputPressed - Ability: {0}",
+		*Spec.Ability->GetName());
+
+	// 부모 클래스의 InputPressed 처리 (여기서 Spec.InputPressed = true 설정)
 	Super::AbilitySpecInputPressed(Spec);
+
 }
 
 void UPlayerAbilitySystemComponent::AbilitySpecInputReleased(FGameplayAbilitySpec& Spec)
 {
-	// @Spec의 InputPressed 값 변경(거짓), GA의 InputReleased 호출
+	// 로그 추가
+	UE_LOGFMT(LogPlayerASC, Log, "AbilitySpecInputReleased - Ability: {0}",
+		*Spec.Ability->GetName());
+
+	// 부모 클래스의 InputReleased 처리 (여기서 Spec.InputPressed = false 설정)
 	Super::AbilitySpecInputReleased(Spec);
+
 }
 #pragma endregion
 

@@ -57,8 +57,8 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		GetCharacterMovement()->JumpZVelocity = 700.f;
 		GetCharacterMovement()->AirControl = 0.35f;
 		GetCharacterMovement()->MaxWalkSpeed = 200.f;
-		// @FIX: 150 -> 500 상향
-		GetCharacterMovement()->MaxAcceleration = 800.f;
+
+		GetCharacterMovement()->MaxAcceleration = 600.f;
 		GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 		GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
 		GetCharacterMovement()->GroundFriction = 8.0f;
