@@ -118,6 +118,7 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
 
+	//AdjustControllerRotation(DeltaSeconds);
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)

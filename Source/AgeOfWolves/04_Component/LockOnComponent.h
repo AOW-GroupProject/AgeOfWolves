@@ -2,86 +2,114 @@
 
 #pragma once
 
+//@#include
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 #include "LockOnComponent.generated.h"
 
+//@UE_LOGFMT 활용을 위한 로그 매크로 선언
+DECLARE_LOG_CATEGORY_EXTERN(LogLockOn, Log, All)
 
+//@전방 선언
+#pragma region Forward Declaration
+class APlayerCharacter;
+class UBaseAnimInstance;
+class USpringArmComponent;
+class UCameraComponent;
+class UBaseInputComponent;
 struct FInputActionValue;
+#pragma endregion
 
-UCLASS( ClassGroup=(Custom), meta=(BlueprintSpawnableComponent) )
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+#pragma endregion
+
+UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class AGEOFWOLVES_API ULockOnComponent : public UActorComponent
 {
-	GENERATED_BODY()
+    //@친추 클래스
+#pragma region Friend Class
+#pragma endregion
 
-public:	
-	// Sets default values for this component's properties
-	ULockOnComponent();
+    GENERATED_BODY()
+
+        //@Defualt Setting
+#pragma region Default Setting
+public:
+    ULockOnComponent();
+    virtual void BeginPlay() override;
+    virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+#pragma endregion
+
+    //@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+public:
+    void Input_LockOn();
+    void StartLockOn();
+    void CancelLockOn();
+    void Input_ChangeLockOnTarget(const FInputActionValue& Value);
+    void SetControllerRotationTowardTarget();
+    void AdjustCameraTransform(float DeltaTime);
+    bool FindTargetEnemy();
 
 protected:
-	// Called when the game starts
-	virtual void BeginPlay() override;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Lock On")
+        float MaxDetectRadius = 1000.f;
 
-public:	
-	// Called every frame
-	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Lock On")
+        float MaxLockOnDistance = 2000.f;
 
+    UPROPERTY(EditDefaultsOnly, Category = "Lock On")
+        float InterpolationSpeed = 40.f;
 
-public:
+    UPROPERTY()
+        TArray<AActor*> NearByEnemies;
 
-	// @목적 : 사용자의 LockOn IA에 대응되는 Lock On 기능을 정의하는 콜백 함수 
-	void Input_LockOn();
+    UPROPERTY()
+        TMap<float, AActor*> EnemyMap;
 
-	// @목적 : LockOn을 시작하는 함수
-	void StartLockOn();
-	// @목적 : LockOn을 취소하는 함수
-	void CancelLockOn();
+    UPROPERTY()
+        AActor* TargetEnemy;
 
-	// @목적 : 사용자의 ChageLockOnTarget IA에 대응되는 Lock On Target 변경을 정의하는 콜백 함수 (사용하지 않음)
-	void Input_ChangeLockOnTarget(const FInputActionValue& Value);
+    bool bLockOn = false;
+    FVector2D InputVector;
+#pragma endregion
 
+    //@Delegates
+#pragma region Delegates
+#pragma endregion
 
-	// @목적 : TargetEnemy 방향으로 Controller Rotation을 설정하는 함수
-	void SetControllerRotationTowardTarget();
-	// @목적 : 주변 Enemy를 찾고 TargetEnemy를 설정하는 함수
-	// @설명 : TargetEnemy를 찾았으면 true를 반환한다.
-	bool FindTargetEnemy();
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
 
-	// @설명 : 케릭터가 LockOn시 적을 찾는 감지 범위
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input Action | Native Input Action")
-	float MaxDetectRadius = 1000.f;
-	// @설명 : 케릭터가 LockOn을 유지하는 최대 거리
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Input Action | Native Input Action")
-	float  MaxLockOnDistance = 2000.f;
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+protected:
+    UPROPERTY()
+        TWeakObjectPtr<APlayerCharacter> PlayerCharacterRef;
 
-	// @설명 : Input_LockOn 함수 실행 시 찾은 적 Actor 담는 Array
-	UPROPERTY()
-	TArray<AActor*> NearByEnemies;
-	// @설명 : nput_LockOn 함수 실행 시 계산한 내적값과 찾은 적 Actor를 담는 Map
-	UPROPERTY()
-	TMap<float, AActor*> EnemyMap;
-	// @설명 : 현재 플레이어가 LockOn 중인 적 Actor
-	UPROPERTY()
-	AActor* TargetEnemy;
-	// @설명 : 현재 플레이어가 LockOn 중인지 나타내는 bool 변수
-	bool bLockOn = false;
-	// @설명 : 현재 플레이어의 입력 벡터
-	FVector2D InputVector;
+    UPROPERTY()
+        TWeakObjectPtr<UBaseAnimInstance> BaseAnimInstanceRef;
 
-	UPROPERTY(BlueprintReadWrite)
-	int32 InputCount;
+    UPROPERTY()
+        TWeakObjectPtr<USpringArmComponent> SpringArmComponentRef;
 
-	void AdjustCameraTransform(float DeltaTime);
+    UPROPERTY()
+        TWeakObjectPtr<UCameraComponent> FollowCameraComponentRef;
 
-	
-private:
-
-	class APlayerCharacter* PlayerCharacter;
-	class UBaseAnimInstance* BaseAnimInstance;
-	class USpringArmComponent* SpringArmComponent;
-	class UCameraComponent* FollowCameraComponent;
-	class UBaseInputComponent* BaseInputComponent;
+    UPROPERTY()
+        TWeakObjectPtr<UBaseInputComponent> BaseInputComponentRef;
 
 public:
-	FORCEINLINE bool GetbLockOn() { return bLockOn; }
+    FORCEINLINE bool GetbLockOn() const { return bLockOn; }
+#pragma endregion
 };
