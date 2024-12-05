@@ -11,6 +11,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAnimInstance, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
+class ACharacterBase;
+class UCharacterMovementComponent;
 #pragma endregion
 
 //@열거형
@@ -25,9 +27,7 @@ enum class EMovementState : uint8
 {
 	Idle = 0    UMETA(DisplayName = "Idle"),
 	Walking     UMETA(DisplayName = "Walking"),
-	WalkStop    UMETA(DisplayName = "WalkStop"),
 	Sprinting   UMETA(DisplayName = "Sprinting"),
-	SprintStop  UMETA(DisplayName = "SprintStop"),
 	MAX         UMETA(DisplayName = "MAX"),
 };
 
@@ -43,6 +43,14 @@ enum class EMovementDirection : uint8
 	Bwd			UMETA(DisplayName = "Bwd"),
 	Left		UMETA(DisplayName = "Left"),
 	Right		UMETA(DisplayName = "Right"),
+	MAX			UMETA(DisplayName = "MAX"),
+};
+
+UENUM(BlueprintType)
+enum class EStopMotionType : uint8
+{
+	WalkStop =0	UMETA(DisplayName = "Walk Stop"),
+	SprintStop	UMETA(DisplayName = "Sprint Stop"),
 	MAX			UMETA(DisplayName = "MAX"),
 };
 #pragma endregion
@@ -65,6 +73,7 @@ class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 {
 //@친추 클래스
 #pragma region Friend Class
+	friend class UAN_UpdateStopMotionType;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -99,14 +108,28 @@ protected:
 	virtual void ClearBoneTransform_Implementation(float DeltaTime) { }
 
 protected:
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement State", meta = (AlloPrivateAccess = "true"))
-		EMovementState LastMovementState = EMovementState::Idle;
+	//@Movement Setting 업데이트
+	UFUNCTION()
+		void UpdateMovementSettings();
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement State", meta = (AlloPrivateAccess = "true"))
-		EMovementState MovementState = EMovementState::Idle;
+	UFUNCTION(BlueprintCallable)
+		void UpdateStopMotionType(EStopMotionType Type);
 
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement Direction", meta = (AlloPrivateAccess = "true"))
-		EMovementDirection MovementDirection = EMovementDirection::Fwd;
+protected:
+	//@직전 이동 상태에 따른 스탑 모션
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "이동 | 이동 상태", meta = (AlloPrivateAccess = "true"))
+		EStopMotionType StopMotionType ;
+
+	//@직전 이동 상태
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "이동 | 이동 상태", meta = (AlloPrivateAccess = "true"))
+		EMovementState LastMovementState;
+
+	//@이동 상태
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "이동 | 이동 상태", meta = (AlloPrivateAccess = "true"))
+		EMovementState MovementState;
+	//@이동 방향
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "이동 | 이동 방향", meta = (AlloPrivateAccess = "true"))
+		EMovementDirection MovementDirection;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
@@ -119,14 +142,28 @@ protected:
 		float Speed;
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		float DirectionAngle;
+	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+		bool bEnableDirectionalMovement;
 
-	bool bLockOn = false;
+protected:
+	UPROPERTY()
+		bool bIsSprintingCooldown;
+
+	UPROPERTY()
+		float SprintingCooldownTime;
+
+	UPROPERTY(EditAnywhere, Category = "Movement|Sprint", meta = (AllowPrivateAccess = "true"))
+		float SprintingCooldownDuration;
+
+	// 현재 누적된 Cooldown 시간을 추적
+	float CurrentCooldownTime;
 
 protected:
 	UPROPERTY(Transient, BlueprintReadOnly)
 		bool bModifyBoneTransform;
+
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float BoneTransformLerpSpeed = 10.f;
+		float BoneTransformLerpSpeed;
 #pragma endregion
 
 //@Delegates
@@ -135,13 +172,21 @@ protected:
 
 //@Callbacks
 #pragma region Callbacks
+protected:
+	//@Lock On 상태 변화 이벤트 구독
+	UFUNCTION()
+		void OnLockOnStateChanged(bool bIsLockOn);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
+	//@Owner Character 캐싱
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TWeakObjectPtr<class ACharacterBase> OwnerCharacterBase;
+		TWeakObjectPtr<ACharacterBase> OwnerCharacterBase;
+	//@Character Movement 캐싱
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+		TWeakObjectPtr<UCharacterMovementComponent> CharacterMovementCompRef;
 
 public:
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
@@ -151,12 +196,13 @@ public:
 		FORCEINLINE EMovementState GetLastMovementState() const { return LastMovementState; }
 
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
+		FORCEINLINE EStopMotionType GetStopMotionType() const { return StopMotionType; }
+
+	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE float GetDirectionAngle() const { return DirectionAngle; }
 
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE EMovementDirection GetMovementDirection() const { return MovementDirection; }
-
-	FORCEINLINE void SetbLockOn(bool LockOn) { bLockOn = LockOn; }
 #pragma endregion
 
 };

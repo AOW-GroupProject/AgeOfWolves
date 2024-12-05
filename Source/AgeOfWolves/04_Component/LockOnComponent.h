@@ -5,12 +5,13 @@
 //@#include
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+
 #include "LockOnComponent.generated.h"
 
-//@UE_LOGFMT È°¿ëÀ» À§ÇÑ ·Î±× ¸ÅÅ©·Î ¼±¾ğ
+//@UE_LOGFMT í™œìš©ì„ ìœ„í•œ ë¡œê·¸ ë§¤í¬ë¡œ ì„ ì–¸
 DECLARE_LOG_CATEGORY_EXTERN(LogLockOn, Log, All)
 
-//@Àü¹æ ¼±¾ğ
+//@ì „ë°© ì„ ì–¸
 #pragma region Forward Declaration
 class APlayerCharacter;
 class UBaseAnimInstance;
@@ -20,45 +21,67 @@ class UBaseInputComponent;
 struct FInputActionValue;
 #pragma endregion
 
-//@¿­°ÅÇü
+//@ì—´ê±°í˜•
 #pragma region Enums
 #pragma endregion
 
-//@±¸Á¶Ã¼
+//@êµ¬ì¡°ì²´
 #pragma region Structs
 #pragma endregion
 
-//@ÀÌº¥Æ®/µ¨¸®°ÔÀÌÆ®
+//@ì´ë²¤íŠ¸/ë¸ë¦¬ê²Œì´íŠ¸
 #pragma region Delegates
+DECLARE_MULTICAST_DELEGATE_OneParam(FLockOnStateChanged, bool)
 #pragma endregion
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class AGEOFWOLVES_API ULockOnComponent : public UActorComponent
 {
-    //@Ä£Ãß Å¬·¡½º
+ //@ì¹œì¶” í´ë˜ìŠ¤
 #pragma region Friend Class
+    friend class UBaseInputComponent;
 #pragma endregion
 
     GENERATED_BODY()
 
-        //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     ULockOnComponent();
     virtual void BeginPlay() override;
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
+
+protected:
+    //@ë‚´ë¶€ ë°”ì¸ë”©
+
+protected:
+    //@ì™¸ë¶€ ë°”ì¸ë”©
+
+protected:
+    //@ì´ˆê¸°í™”
+    UFUNCTION()
+        void InitializeLockOnComp(const AController* Controller);
 #pragma endregion
 
     //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
     void Input_LockOn();
+    void Input_ChangeLockOnTarget(const FInputActionValue& Value);
+
+protected:
     void StartLockOn();
     void CancelLockOn();
-    void Input_ChangeLockOnTarget(const FInputActionValue& Value);
-    void SetControllerRotationTowardTarget();
-    void AdjustCameraTransform(float DeltaTime);
+
+protected:
     bool FindTargetEnemy();
+
+private:
+    void UpdateSpringArmSettings(bool bIsLockingOn);
+
+protected:
+    void UpdateControllerRotation(float DeltaTime);
+    void UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& FinalRotation);
 
 protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Lock On")
@@ -70,21 +93,29 @@ protected:
     UPROPERTY(EditDefaultsOnly, Category = "Lock On")
         float InterpolationSpeed = 40.f;
 
+protected:
+    bool bLockOn;
+
+protected:
+    //@ì£¼ìœ„ì— ìˆëŠ” ì ë“¤ ëª©ë¡
     UPROPERTY()
         TArray<AActor*> NearByEnemies;
 
+    //@ê±°ë¦¬, ì  ì •ë³´ ì €ì¥í•œ TMap
     UPROPERTY()
         TMap<float, AActor*> EnemyMap;
 
+    //@Targetìœ¼ë¡œ ì„¤ì •í•œ ì ì˜ ì•½í•œ ì°¸ì¡°
     UPROPERTY()
-        AActor* TargetEnemy;
+        TWeakObjectPtr<AActor> TargetEnemyRef;
 
-    bool bLockOn = false;
-    FVector2D InputVector;
 #pragma endregion
 
-    //@Delegates
+//@Delegates
 #pragma region Delegates
+public:
+    //@Lock On ìƒíƒœ ì´ë²¤íŠ¸
+    FLockOnStateChanged LockOnStateChanged;
 #pragma endregion
 
 //@Callbacks

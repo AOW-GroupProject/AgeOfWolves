@@ -340,23 +340,28 @@ void UBaseInputComponent::Input_Look(const FInputActionValue& InputActionValue)
 
 void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 {
-	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
+	if (CurrentIMCTag != FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
+		return;
+
+	APlayerController* PC = Cast<APlayerController>(GetOwner());
+	if (!PC)
+		return;
+
+	APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(PC->GetPawn());
+	if (!PlayerCharacter)
+		return;
+
+	ULockOnComponent* LockOnComponent = PlayerCharacter->GetLockOnComponent();
+	if (!LockOnComponent)
+		return;
+
+	if (LockOnComponent->GetbLockOn())
 	{
-		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
-		{
-			if (APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(PC->GetPawn()))
-			{
-				ULockOnComponent* LockOnComponent = PlayerCharacter->GetLockOnComponent();
-				if (LockOnComponent->GetbLockOn() == true)
-				{
-					LockOnComponent->CancelLockOn();
-				}
-				else
-				{
-					LockOnComponent->StartLockOn();
-				}
-			}
-		}
+		LockOnComponent->CancelLockOn();
+	}
+	else
+	{
+		LockOnComponent->StartLockOn();
 	}
 }
 

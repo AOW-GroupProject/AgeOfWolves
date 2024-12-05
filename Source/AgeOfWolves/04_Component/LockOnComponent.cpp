@@ -19,37 +19,93 @@ DEFINE_LOG_CATEGORY(LogLockOn)
 ULockOnComponent::ULockOnComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
+
     bLockOn = false;
+
+    NearByEnemies.Reset();
+    EnemyMap.Reset();
+
+    TargetEnemyRef.Reset();
+    PlayerCharacterRef.Reset();
+    BaseAnimInstanceRef.Reset();
+    SpringArmComponentRef.Reset();
+    FollowCameraComponentRef.Reset();
+    BaseInputComponentRef.Reset();
 }
 
 void ULockOnComponent::BeginPlay()
 {
     Super::BeginPlay();
 
-    PlayerCharacterRef = Cast<APlayerCharacter>(GetOwner());
-    if (!PlayerCharacterRef.IsValid()) return;
-
-    SpringArmComponentRef = PlayerCharacterRef->GetSpringArmComponent();
-    if (!SpringArmComponentRef.IsValid()) return;
-
-    FollowCameraComponentRef = PlayerCharacterRef->GetCameraComponent();
-    if (!FollowCameraComponentRef.IsValid()) return;
-
-    BaseAnimInstanceRef = Cast<UBaseAnimInstance>(PlayerCharacterRef->GetMesh()->GetAnimInstance());
-    if (!BaseAnimInstanceRef.IsValid()) return;
-
-    ABasePlayerController* PlayerController = Cast<ABasePlayerController>(PlayerCharacterRef->GetController());
-    if (!PlayerController) return;
-
-    BaseInputComponentRef = PlayerController->GetBaseInputComponent();
-    if (!BaseInputComponentRef.IsValid()) return;
 }
 
 void ULockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-    AdjustCameraTransform(DeltaTime);
+
+    UpdateControllerRotation(DeltaTime);
 }
+
+void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
+{
+    if (!Controller)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "컴포넌트 초기화 실패: 컨트롤러가 유효하지 않음");
+        return;
+    }
+
+    const auto Owner = GetOwner();
+    if (!Owner)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "Owner Actor가 유효하지 않습니다.");
+        return;
+    }
+
+    PlayerCharacterRef = Cast<APlayerCharacter>(Owner);
+    if (!PlayerCharacterRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "컴포넌트 초기화 실패: 플레이어 캐릭터가 유효하지 않음");
+        return;
+    }
+
+    SpringArmComponentRef = PlayerCharacterRef->GetSpringArmComponent();
+    if (!SpringArmComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "컴포넌트 초기화 실패: 스프링암이 유효하지 않음");
+        return;
+    }
+
+    FollowCameraComponentRef = PlayerCharacterRef->GetCameraComponent();
+    if (!FollowCameraComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "컴포넌트 초기화 실패: 카메라가 유효하지 않음");
+        return;
+    }
+
+    BaseAnimInstanceRef = Cast<UBaseAnimInstance>(PlayerCharacterRef->GetMesh()->GetAnimInstance());
+    if (!BaseAnimInstanceRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "컴포넌트 초기화 실패: 애님 인스턴스가 유효하지 않음");
+        return;
+    }
+
+    ABasePlayerController* PlayerController = Cast<ABasePlayerController>(PlayerCharacterRef->GetController());
+    if (!PlayerController)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "컴포넌트 초기화 실패: 플레이어 컨트롤러가 유효하지 않음");
+        return;
+    }
+
+    BaseInputComponentRef = PlayerController->GetBaseInputComponent();
+    if (!BaseInputComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "컴포넌트 초기화 실패: 입력 컴포넌트가 유효하지 않음");
+        return;
+    }
+
+    UE_LOGFMT(LogLockOn, Log, "락온 컴포넌트 초기화 완료");
+}
+
 #pragma endregion
 
 //@Property/Info...etc
@@ -69,92 +125,76 @@ void ULockOnComponent::Input_LockOn()
     UE_LOGFMT(LogLockOn, Log, "Lock On Started");
 }
 
-void ULockOnComponent::StartLockOn()
-{
-    if (!PlayerCharacterRef.IsValid()) return;
-    if (!FindTargetEnemy()) return;
-
-    PlayerCharacterRef->GetCharacterMovement()->bOrientRotationToMovement = false;
-    PlayerCharacterRef->GetCharacterMovement()->bUseControllerDesiredRotation = true;
-
-    if (SpringArmComponentRef.IsValid())
-    {
-        SpringArmComponentRef->bUsePawnControlRotation = false;
-        SpringArmComponentRef->CameraLagSpeed = 5;
-        SpringArmComponentRef->CameraRotationLagSpeed = 17.5;
-    }
-
-    bLockOn = true;
-    if (BaseAnimInstanceRef.IsValid())
-    {
-        BaseAnimInstanceRef->SetbLockOn(true);
-    }
-
-    SetControllerRotationTowardTarget();
-}
-
-void ULockOnComponent::CancelLockOn()
-{
-    if (!PlayerCharacterRef.IsValid()) return;
-
-    PlayerCharacterRef->GetCharacterMovement()->bOrientRotationToMovement = true;
-    PlayerCharacterRef->GetCharacterMovement()->bUseControllerDesiredRotation = false;
-
-    if (SpringArmComponentRef.IsValid())
-    {
-        SpringArmComponentRef->bUsePawnControlRotation = true;
-        SpringArmComponentRef->CameraLagSpeed = 10;
-        SpringArmComponentRef->CameraRotationLagSpeed = 30;
-    }
-
-    if (BaseAnimInstanceRef.IsValid())
-    {
-        BaseAnimInstanceRef->SetbLockOn(false);
-    }
-
-    InputVector = FVector2D::ZeroVector;
-    NearByEnemies.Empty();
-    EnemyMap.Empty();
-    TargetEnemy = nullptr;
-    bLockOn = false;
-}
-
 void ULockOnComponent::Input_ChangeLockOnTarget(const FInputActionValue& Value)
 {
     if (NearByEnemies.Num() == 0) return;
 
-    int32 TargetIndex = NearByEnemies.IndexOfByKey(TargetEnemy);
+    int32 TargetIndex = NearByEnemies.IndexOfByKey(TargetEnemyRef);
     FVector2D ValueVector = Value.Get<FVector2D>();
 
     if (ValueVector.X > 0)
     {
         TargetIndex = FMath::Clamp(TargetIndex + 1, 0, NearByEnemies.Num() - 1);
-        TargetEnemy = NearByEnemies[TargetIndex];
-        UE_LOGFMT(LogLockOn, Log, "Changed Target to next: {0}", *TargetEnemy->GetName());
+        TargetEnemyRef = NearByEnemies[TargetIndex];
+        UE_LOGFMT(LogLockOn, Log, "Changed Target to next: {0}", *TargetEnemyRef->GetName());
     }
     else
     {
         TargetIndex = FMath::Clamp(TargetIndex - 1, 0, NearByEnemies.Num() - 1);
-        TargetEnemy = NearByEnemies[TargetIndex];
-        UE_LOGFMT(LogLockOn, Log, "Changed Target to previous: {0}", *TargetEnemy->GetName());
+        TargetEnemyRef = NearByEnemies[TargetIndex];
+        UE_LOGFMT(LogLockOn, Log, "Changed Target to previous: {0}", *TargetEnemyRef->GetName());
     }
 
-    SetControllerRotationTowardTarget();
 }
 
-void ULockOnComponent::SetControllerRotationTowardTarget()
+void ULockOnComponent::StartLockOn()
 {
-    if (!PlayerCharacterRef.IsValid() || !TargetEnemy) return;
 
-    FVector Start = PlayerCharacterRef->GetActorLocation();
-    FVector Target = TargetEnemy->GetActorLocation();
-    FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
-    FRotator CurrentRotation = PlayerCharacterRef->GetControlRotation();
+    //@Ref 
+    if (!PlayerCharacterRef.IsValid() || !BaseAnimInstanceRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "락온 시작 실패: 플레이어 캐릭터가 유효하지 않음");
+        return;
+    }
 
-    FRotator FinalRotation = UKismetMathLibrary::RInterpTo(CurrentRotation, TargetRotation, GetWorld()->GetDeltaSeconds(), 10.f);
-    PlayerCharacterRef->GetController()->SetControlRotation(FRotator(0.f, FinalRotation.Yaw, 0.f));
+    //@Target Enemy 찾기
+    if (!FindTargetEnemy())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "락온 시작 실패: 적절한 타겟을 찾을 수 없음");
+        return;
+    }
 
-    UE_LOGFMT(LogLockOn, Verbose, "Set Controller Rotation - Target: {0}, Final Yaw: {1}", *TargetEnemy->GetName(), FinalRotation.Yaw);
+    //@Spring Arm(Camera) 설정 업데이트
+    UpdateSpringArmSettings(true);
+
+    //@Lock On 상태
+    bLockOn = true;
+
+    //@Lock On 상태 이벤트
+    LockOnStateChanged.Broadcast(bLockOn);
+}
+
+void ULockOnComponent::CancelLockOn()
+{
+    //@Ref
+    if (!PlayerCharacterRef.IsValid() || !BaseAnimInstanceRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "락온 해제 실패: 플레이어 캐릭터가 유효하지 않음");
+        return;
+    }
+    //@Spring Arm 설정 업데이트
+    UpdateSpringArmSettings(false);
+
+    //@Lock On 상태
+    bLockOn = false;
+
+    //@Lock On 상태 이벤트
+    LockOnStateChanged.Broadcast(bLockOn);
+
+    //@초기화
+    NearByEnemies.Empty();
+    EnemyMap.Empty();
+    TargetEnemyRef.Reset();
 }
 
 bool ULockOnComponent::FindTargetEnemy()
@@ -249,44 +289,80 @@ bool ULockOnComponent::FindTargetEnemy()
         NearByEnemies.Add(*EnemyMap.Find(DotProduct));
     }
 
-    TargetEnemy = *EnemyMap.Find(Min);
-    UE_LOGFMT(LogLockOn, Log, "Found target: {0}", *TargetEnemy->GetName());
+    TargetEnemyRef = *EnemyMap.Find(Min);
+    UE_LOGFMT(LogLockOn, Log, "Found target: {0}", *TargetEnemyRef->GetName());
 
-    return IsValid(TargetEnemy);
+    return IsValid(TargetEnemyRef.Get());
 }
 
-void ULockOnComponent::AdjustCameraTransform(float DeltaTime)
+void ULockOnComponent::UpdateSpringArmSettings(bool bIsLockingOn)
 {
-    if (!bLockOn || !IsValid(TargetEnemy) || !PlayerCharacterRef.IsValid() || !SpringArmComponentRef.IsValid())
+    if (!SpringArmComponentRef.IsValid())
     {
-        CancelLockOn();
+        UE_LOGFMT(LogLockOn, Warning, "스프링암 설정 업데이트 실패: 스프링암이 유효하지 않음");
         return;
     }
 
-    bool bCloseToEnemy = (PlayerCharacterRef->GetActorLocation() - TargetEnemy->GetActorLocation()).Length() < MaxLockOnDistance;
+    SpringArmComponentRef->bUsePawnControlRotation = !bIsLockingOn;
+    SpringArmComponentRef->CameraLagSpeed = bIsLockingOn ? 5.0f : 10.0f;
+    SpringArmComponentRef->CameraRotationLagSpeed = bIsLockingOn ? 17.5f : 30.0f;
+}
+
+void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
+{
+    //@락온 체크, Target Enemy 체크, Player Character 유효성 체크, Spring Arm Component 유효성 체크
+    if (!bLockOn || !TargetEnemyRef.IsValid() || !PlayerCharacterRef.IsValid() || !SpringArmComponentRef.IsValid())
+    {
+        return;
+    }
+
+    //@Max Lock On Distance
+    bool bCloseToEnemy = (PlayerCharacterRef->GetActorLocation() - TargetEnemyRef->GetActorLocation()).Length() < MaxLockOnDistance;
     if (!bCloseToEnemy)
     {
-        UE_LOGFMT(LogLockOn, Log, "Target out of range, canceling lock on");
         CancelLockOn();
         return;
     }
 
-    SpringArmComponentRef->bUsePawnControlRotation = true;
-    SpringArmComponentRef->bEnableCameraRotationLag = true;
-    SpringArmComponentRef->CameraRotationLagSpeed = 17.5f;
+    //@Base Anim Instance, Base Input Component
+    if (!BaseAnimInstanceRef.IsValid() || !BaseInputComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "카메라 변환 실패: 애님 인스턴스 또는 입력 컴포넌트 유효하지 않음");
 
+        return;
+    }
+
+    //@Location
     FVector Start = PlayerCharacterRef->GetActorLocation();
-    FVector Target = TargetEnemy->GetActorLocation();
+    FVector Target = TargetEnemyRef->GetActorLocation();
+    
+    //@Rotation
     FRotator StartRotation = PlayerCharacterRef->GetControlRotation();
     FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
+    
+    //@Final Rotation
+    FRotator FinalRotation = UKismetMathLibrary::RInterpTo(StartRotation, TargetRotation, DeltaTime, InterpolationSpeed);
 
-    FRotator FinalRotation = UKismetMathLibrary::RInterpTo(StartRotation, TargetRotation, DeltaTime, 20.f);
+    //@RInterpTo
     PlayerCharacterRef->GetController()->SetControlRotation(FRotator(0.f, FinalRotation.Yaw, 0.f));
 
-    if (!BaseAnimInstanceRef.IsValid() || !BaseInputComponentRef.IsValid()) return;
+    //@Update Spring Arm
+    UpdateSpringArmTransform(DeltaTime, Target, FinalRotation);
+}
 
+void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& FinalRotation)
+{
+    //@Spring Arm Comp, Base Anim Intance, Base Input Comp
+    if (!SpringArmComponentRef.IsValid() || !BaseAnimInstanceRef.IsValid() || !BaseInputComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "스프링암 변환 실패: 필요한 컴포넌트가 유효하지 않음");
+        return;
+    }
+
+    //@Offset Coefficient
     float SocketOffsetCoefficient = (BaseAnimInstanceRef->GetMovementState() != EMovementState::Sprinting) ? 1.5f : 1.0f;
 
+    //@Input Vector
     if (BaseInputComponentRef->GetInputVector().Y > 0)
     {
         if (SpringArmComponentRef->SocketOffset.Y > -50)
@@ -302,14 +378,27 @@ void ULockOnComponent::AdjustCameraTransform(float DeltaTime)
         }
     }
 
+    //@Distance to Rotation
     float DistanceFromTargetEnemy = (PlayerCharacterRef->GetActorLocation() - Target).Length();
     DistanceFromTargetEnemy = FMath::Clamp((6000 / DistanceFromTargetEnemy) + 20, 0, 30);
     FRotator DistanceRotation = FRotator(-DistanceFromTargetEnemy, 0, 0);
 
+    //@Final Rotation
     FRotator CameraFinalRotation = DistanceRotation + FinalRotation;
-    FRotator SpringArmRotator = UKismetMathLibrary::RInterpTo(FinalRotation, CameraFinalRotation, DeltaTime, 5.f);
 
+    //@RInterpTo
+    FRotator SpringArmRotator = UKismetMathLibrary::RInterpTo(FinalRotation, CameraFinalRotation, DeltaTime, InterpolationSpeed);
+
+    // 스프링암 최종 변환 적용
     SpringArmComponentRef->SocketOffset.X = FMath::Lerp(0, -200, DistanceFromTargetEnemy / 70);
     SpringArmComponentRef->SetWorldRotation(CameraFinalRotation);
 }
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion

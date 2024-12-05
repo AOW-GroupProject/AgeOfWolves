@@ -30,8 +30,8 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
 	)
 {
-
 	PrimaryActorTick.bCanEverTick = true;
+
 	// @Input Component 
 	{
 		InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
@@ -88,6 +88,8 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		static ConstructorHelpers::FClassFinder<UAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/ABP_AkaOni_Base'"));
 		if (animInstance.Class != NULL)
 			GetMesh()->SetAnimInstanceClass(animInstance.Class);
+
+		AnimInstanceRef = nullptr;
 	}
 
 }
@@ -96,16 +98,20 @@ void APlayerCharacter::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
 
-	if (InventoryComponent)
+	//@비동기 초기화
+	if (!InventoryComponent || !LockOnComponent)
 	{
-		RequestStartInitByPlayerCharacter.AddUFunction(InventoryComponent, "InitializeInventory");
+		return;
 	}
+
+	RequestStartInitByPlayerCharacter.AddUFunction(InventoryComponent, "InitializeInventory");
+	RequestStartInitByPlayerCharacter.AddUFunction(LockOnComponent, "InitializeLockOnComp");
 }
 
 void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
-	SetAbilitySystemComponent(Cast<APlayerStateBase>(GetPlayerState())->GetAbilitySystemComponent());
+
 }
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -117,47 +123,27 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
-
-	//AdjustControllerRotation(DeltaSeconds);
 }
 
 void APlayerCharacter::PossessedBy(AController* NewController)
 {
 	check(NewController);
-
 	Super::PossessedBy(NewController);
 
-	//@초기화 알림 이벤트
 	RequestStartInitByPlayerCharacter.Broadcast(NewController);
 
+	if (UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(GetMesh()->GetAnimInstance()))
+	{
+		LockOnComponent->LockOnStateChanged.AddUFunction(BaseAnimInstance, "OnLockOnStateChanged");
+		AnimInstanceRef = BaseAnimInstance;
+	}
+
+	SetAbilitySystemComponent(Cast<APlayerStateBase>(GetPlayerState())->GetAbilitySystemComponent());
 }
 
 void APlayerCharacter::PawnClientRestart()
 {
 	Super::PawnClientRestart();
-
-}
-
-void APlayerCharacter::AdjustControllerRotation(float DeltaSeconds)
-{
-	check(DirectionCurve);
-
-	// 캐릭터의 현재 가속도 벡터를 기반으로 한 로테이션을 계산
-	FRotator Rotation1 = UKismetMathLibrary::MakeRotFromX(GetCharacterMovement()->GetCurrentAcceleration());
-
-	// 캐릭터가 바라보는 방향의 벡터를 기반으로 로테이션을 계산
-	FRotator Rotation2 = GetControlRotation();
-
-	// 두 방향 사이의 최소 각도 차이를 계산
-	float OffsetAngle = DirectionCurve->GetFloatValue(FMath::FindDeltaAngleDegrees(Rotation1.Yaw, Rotation2.Yaw));
-
-	FRotator Rotaion3 = UKismetMathLibrary::MakeRotator(0.f, 0.f, GetControlRotation().Yaw + OffsetAngle);
-
-	// 선형 보간
-	FRotator TargetRotation = UKismetMathLibrary::RInterpTo(GetActorRotation(), Rotaion3, DeltaSeconds, 10.f);
-
-	// 결과 값을 액터 객체의 회전 값으로 설정
-	SetActorRotation(TargetRotation);
 
 }
 
