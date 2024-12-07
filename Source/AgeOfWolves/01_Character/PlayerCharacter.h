@@ -19,6 +19,7 @@ class UInventoryComponent;
 class UUIComponent;
 class AController;
 class UBaseAnimInstance;
+class ULockOnComponent;
 #pragma endregion
 
 //@열거형
@@ -96,8 +97,8 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UInventoryComponent* InventoryComponent;
 
-	UPROPERTY(VisibleDefaultsOnly)
-		class ULockOnComponent* LockOnComponent;
+	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		ULockOnComponent* LockOnComponent;
 
 protected:
 	public:

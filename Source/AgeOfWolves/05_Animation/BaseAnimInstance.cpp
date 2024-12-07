@@ -3,6 +3,7 @@
 
 #include "01_Character/CharacterBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
+#include "MotionWarpingComponent.h"
 
 #include "KismetAnimationLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -17,6 +18,7 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , LastMovementState(EMovementState::Idle)
     , MovementState(EMovementState::Idle)
     , MovementDirection(EMovementDirection::Fwd)
+    , StopMotionType(EStopMotionType::MAX)
     , bFalling(false)
     , bShouldMove(false)
     , Velocity(FVector::ZeroVector)
@@ -34,6 +36,7 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
 {
     OwnerCharacterBase.Reset();
     CharacterMovementCompRef.Reset();
+    MotionWarpCompRef.Reset();
 }
 
 void UBaseAnimInstance::NativeBeginPlay()
@@ -46,23 +49,33 @@ void UBaseAnimInstance::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
 
+    //@바인딩
+    StopAnimationPlayed.AddDynamic(this, &UBaseAnimInstance::OnStopAnimationPlayed);
+
+    //@Character Base
     const auto CharacterBase = Cast<ACharacterBase>(TryGetPawnOwner());
     if(!CharacterBase)
 	{
         return;
 	}
-
-    //@캐싱
     OwnerCharacterBase = CharacterBase;
 
+    //@Character Movement Component
     UCharacterMovementComponent* CharacterMovementComp = OwnerCharacterBase->GetCharacterMovement();
     if (!CharacterMovementComp)
     {
         return;
     }
-
-    //@캐싱
     CharacterMovementCompRef = CharacterMovementComp;
+
+    //@Motion Warping Component
+    const auto MotionWarpComp = OwnerCharacterBase->FindComponentByClass<UMotionWarpingComponent>();
+    if (!MotionWarpComp)
+    {
+        return;
+    }
+    MotionWarpCompRef = MotionWarpComp;
+
 }
 
 void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -269,16 +282,57 @@ void UBaseAnimInstance::UpdateMovementSettings()
 
 void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
 {
-    // 사이클의 마지막 프레임에서 현재 상태를 LastMovementState에 저장
+    if (StopMotionType == Type) return;
+
+    //@Stop Motion Type
     StopMotionType = Type;
 
-    UE_LOGFMT(LogAnimInstance, Log, "Last Movement State 업데이트: {0}",
-        *UEnum::GetValueAsString(LastMovementState));
+    //@스탑 애니메이션 재생 이벤트
+    if (StopMotionType == EStopMotionType::None)
+    {
+        StopAnimationPlayed.Broadcast();
+    }
+
+    UE_LOGFMT(LogAnimInstance, Log, "Stop Motion Type 업데이트: {0}",
+        *UEnum::GetValueAsString(StopMotionType));
 }
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
+void UBaseAnimInstance::OnStopAnimationPlayed()
+{
+    if (StopMotionType != EStopMotionType::None) return;
+    if (!CharacterMovementCompRef.IsValid()) return;
+
+    float CurrentStateSpeed = (StopMotionType == EStopMotionType::SprintStop) ? SprintingSpeed : WalkingSpeed;
+    const float ForceMultiplier = 1.0f;
+
+    // 캐릭터의 전방 벡터 사용
+    FVector ForwardDirection = OwnerCharacterBase->GetActorForwardVector();
+    FVector Force = ForwardDirection * CurrentStateSpeed * ForceMultiplier;
+
+    // Root Motion Source 설정
+    FRootMotionSource_ConstantForce* ConstantForce = new FRootMotionSource_ConstantForce();
+    ConstantForce->InstanceName = FName("StopMotionForce");
+    ConstantForce->AccumulateMode = ERootMotionAccumulateMode::Additive;
+    ConstantForce->Priority = 5;
+    ConstantForce->Force = Force;
+    ConstantForce->Duration = 0.2f;
+
+    // Root Motion Source 적용
+    FVector CurrentLocation = OwnerCharacterBase->GetActorLocation();
+    FVector ExpectedLocation = CurrentLocation + (ForwardDirection * (CurrentStateSpeed * ForceMultiplier));
+
+    CharacterMovementCompRef->ApplyRootMotionSource(ConstantForce);
+
+    UE_LOGFMT(LogAnimInstance, Log, "Root Motion Source 적용 - Speed: {0}, Force: {1}, 현재 위치: {2}, 예상 위치: {3}",
+        CurrentStateSpeed,
+        *Force.ToString(),
+        *CurrentLocation.ToString(),
+        *ExpectedLocation.ToString());
+}
+
 void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
 {
     if (!OwnerCharacterBase.IsValid() || !CharacterMovementCompRef.IsValid())

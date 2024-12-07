@@ -13,6 +13,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAnimInstance, Log, All)
 #pragma region Forward Declaration
 class ACharacterBase;
 class UCharacterMovementComponent;
+class UMotionWarpingComponent;
 #pragma endregion
 
 //@열거형
@@ -49,7 +50,8 @@ enum class EMovementDirection : uint8
 UENUM(BlueprintType)
 enum class EStopMotionType : uint8
 {
-	WalkStop =0	UMETA(DisplayName = "Walk Stop"),
+	None=0		UMETA(DisplayName = "None"),
+	WalkStop	UMETA(DisplayName = "Walk Stop"),
 	SprintStop	UMETA(DisplayName = "Sprint Stop"),
 	MAX			UMETA(DisplayName = "MAX"),
 };
@@ -61,6 +63,8 @@ enum class EStopMotionType : uint8
 
 //@이벤트/델리게이트
 #pragma region Delegates
+//@Stop Animation 재생 이벤트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStopAnimationPlayed);
 #pragma endregion
 
 /**
@@ -112,7 +116,7 @@ protected:
 	UFUNCTION()
 		void UpdateMovementSettings();
 
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintCallable, Category = "Animation", meta = (BlueprintThreadSafe))
 		void UpdateStopMotionType(EStopMotionType Type);
 
 protected:
@@ -146,15 +150,16 @@ protected:
 		bool bEnableDirectionalMovement;
 
 protected:
+	const float WalkingSpeed = 200.f;
+	const float SprintingSpeed = 500.f;
+
+protected:
 	UPROPERTY()
 		bool bIsSprintingCooldown;
-
 	UPROPERTY()
 		float SprintingCooldownTime;
-
 	UPROPERTY(EditAnywhere, Category = "Movement|Sprint", meta = (AllowPrivateAccess = "true"))
 		float SprintingCooldownDuration;
-
 	// 현재 누적된 Cooldown 시간을 추적
 	float CurrentCooldownTime;
 
@@ -168,10 +173,17 @@ protected:
 
 //@Delegates
 #pragma region Delegates
+public:
+	//@스탑 애니메이션 재생 이벤트
+	FStopAnimationPlayed StopAnimationPlayed;
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
+protected:
+	UFUNCTION()
+		void OnStopAnimationPlayed();
+
 protected:
 	//@Lock On 상태 변화 이벤트 구독
 	UFUNCTION()
@@ -187,6 +199,9 @@ protected:
 	//@Character Movement 캐싱
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TWeakObjectPtr<UCharacterMovementComponent> CharacterMovementCompRef;
+	//@Motion Warp Comp 캐싱
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+		TWeakObjectPtr<UMotionWarpingComponent> MotionWarpCompRef;
 
 public:
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))

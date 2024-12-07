@@ -20,7 +20,7 @@ void UAN_UpdateStopMotionType::Notify(USkeletalMeshComponent* MeshComp, UAnimSeq
     //@Update Stop Motion Type
     BaseAnimInstance->UpdateStopMotionType(StopMotionType);
 
-    UE_LOGFMT(LogAN_UpdateStopMotionType, Log, "Sprint Stop 종료 - Stop Motion 업데이트: {0}",
+    UE_LOGFMT(LogAN_UpdateStopMotionType, Log, "Stop 종료 - Stop Motion 업데이트: {0}",
         *UEnum::GetValueAsString(StopMotionType));
 
 }
