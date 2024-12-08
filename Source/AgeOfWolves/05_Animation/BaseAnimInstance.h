@@ -63,8 +63,6 @@ enum class EStopMotionType : uint8
 
 //@이벤트/델리게이트
 #pragma region Delegates
-//@Stop Animation 재생 이벤트
-DECLARE_DYNAMIC_MULTICAST_DELEGATE(FStopAnimationPlayed);
 #pragma endregion
 
 /**
@@ -77,6 +75,7 @@ class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 {
 //@친추 클래스
 #pragma region Friend Class
+	friend class UANS_Deceleration;
 	friend class UAN_UpdateStopMotionType;
 #pragma endregion
 
@@ -164,6 +163,10 @@ protected:
 	float CurrentCooldownTime;
 
 protected:
+	UPROPERTY()
+		bool bIsInDeceleration;
+
+protected:
 	UPROPERTY(Transient, BlueprintReadOnly)
 		bool bModifyBoneTransform;
 
@@ -173,21 +176,18 @@ protected:
 
 //@Delegates
 #pragma region Delegates
-public:
-	//@스탑 애니메이션 재생 이벤트
-	FStopAnimationPlayed StopAnimationPlayed;
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
 protected:
-	UFUNCTION()
-		void OnStopAnimationPlayed();
-
-protected:
 	//@Lock On 상태 변화 이벤트 구독
 	UFUNCTION()
 		void OnLockOnStateChanged(bool bIsLockOn);
+
+protected:
+	UFUNCTION()
+		void OnDecelerationStateChanged(bool bIsDecelerating);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

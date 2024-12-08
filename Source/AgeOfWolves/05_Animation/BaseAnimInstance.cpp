@@ -18,13 +18,14 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , LastMovementState(EMovementState::Idle)
     , MovementState(EMovementState::Idle)
     , MovementDirection(EMovementDirection::Fwd)
-    , StopMotionType(EStopMotionType::MAX)
+    , StopMotionType(EStopMotionType::None)
     , bFalling(false)
     , bShouldMove(false)
     , Velocity(FVector::ZeroVector)
     , Speed(0.0f)
     , DirectionAngle(0.0f)
     , bEnableDirectionalMovement(false)
+    , bIsInDeceleration(false)
     , bModifyBoneTransform(false)
     , BoneTransformLerpSpeed(10.0f)
     , OwnerCharacterBase(nullptr)
@@ -48,9 +49,6 @@ void UBaseAnimInstance::NativeBeginPlay()
 void UBaseAnimInstance::NativeInitializeAnimation()
 {
 	Super::NativeInitializeAnimation();
-
-    //@바인딩
-    StopAnimationPlayed.AddDynamic(this, &UBaseAnimInstance::OnStopAnimationPlayed);
 
     //@Character Base
     const auto CharacterBase = Cast<ACharacterBase>(TryGetPawnOwner());
@@ -122,6 +120,13 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 #pragma region Property or Subwidgets or Infos...etc
 void UBaseAnimInstance::FindMovementState()
 {
+    //@감속 중
+    if (bIsInDeceleration)
+    {
+        MovementState = EMovementState::Idle;
+        return;
+    }
+
     //@이전 이동 상태 값 기억
     LastMovementState = MovementState;
 
@@ -287,12 +292,6 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
     //@Stop Motion Type
     StopMotionType = Type;
 
-    //@스탑 애니메이션 재생 이벤트
-    if (StopMotionType == EStopMotionType::None)
-    {
-        StopAnimationPlayed.Broadcast();
-    }
-
     UE_LOGFMT(LogAnimInstance, Log, "Stop Motion Type 업데이트: {0}",
         *UEnum::GetValueAsString(StopMotionType));
 }
@@ -300,39 +299,6 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
 
 //@Callbacks
 #pragma region Callbacks
-void UBaseAnimInstance::OnStopAnimationPlayed()
-{
-    if (StopMotionType != EStopMotionType::None) return;
-    if (!CharacterMovementCompRef.IsValid()) return;
-
-    float CurrentStateSpeed = (StopMotionType == EStopMotionType::SprintStop) ? SprintingSpeed : WalkingSpeed;
-    const float ForceMultiplier = 1.0f;
-
-    // 캐릭터의 전방 벡터 사용
-    FVector ForwardDirection = OwnerCharacterBase->GetActorForwardVector();
-    FVector Force = ForwardDirection * CurrentStateSpeed * ForceMultiplier;
-
-    // Root Motion Source 설정
-    FRootMotionSource_ConstantForce* ConstantForce = new FRootMotionSource_ConstantForce();
-    ConstantForce->InstanceName = FName("StopMotionForce");
-    ConstantForce->AccumulateMode = ERootMotionAccumulateMode::Additive;
-    ConstantForce->Priority = 5;
-    ConstantForce->Force = Force;
-    ConstantForce->Duration = 0.2f;
-
-    // Root Motion Source 적용
-    FVector CurrentLocation = OwnerCharacterBase->GetActorLocation();
-    FVector ExpectedLocation = CurrentLocation + (ForwardDirection * (CurrentStateSpeed * ForceMultiplier));
-
-    CharacterMovementCompRef->ApplyRootMotionSource(ConstantForce);
-
-    UE_LOGFMT(LogAnimInstance, Log, "Root Motion Source 적용 - Speed: {0}, Force: {1}, 현재 위치: {2}, 예상 위치: {3}",
-        CurrentStateSpeed,
-        *Force.ToString(),
-        *CurrentLocation.ToString(),
-        *ExpectedLocation.ToString());
-}
-
 void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
 {
     if (!OwnerCharacterBase.IsValid() || !CharacterMovementCompRef.IsValid())
@@ -346,6 +312,12 @@ void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
 
     //@이동 설정 업데이트
     UpdateMovementSettings();
+}
+
+void UBaseAnimInstance::OnDecelerationStateChanged(bool bIsDecelerating)
+{
+    bIsInDeceleration = bIsDecelerating;
+    UE_LOGFMT(LogAnimInstance, Log, "감속 상태 변경: {0}", bIsDecelerating);
 }
 #pragma endregion
 
