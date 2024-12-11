@@ -1,6 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
@@ -11,29 +9,31 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAnimInstance, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
+class ACharacterBase;
+class UCharacterMovementComponent;
+class UMotionWarpingComponent;
 #pragma endregion
 
 //@열거형
 #pragma region Enums
 /*
 *	@EMovementState
-* 
-*	캐릭터 이동 상태의 종류를 정의하는 열거형
+*
+*	현재 이동 상태 관련 열거형
 */
 UENUM(BlueprintType)
 enum class EMovementState : uint8
 {
-	Idle = 0	UMETA(DisplayName = "Idle"),
-	Walk		UMETA(DisplayName = "Walk"),
-	Run			UMETA(DisplayName = "Run"),
-	Pivoting	UMETA(DisplayName = "Pivoting"),
-	MAX			UMETA(DisplayName = "MAX"),
+	Idle = 0    UMETA(DisplayName = "Idle"),
+	Walking     UMETA(DisplayName = "Walking"),
+	Sprinting   UMETA(DisplayName = "Sprinting"),
+	MAX         UMETA(DisplayName = "MAX"),
 };
 
 /*
 *	@EMovementDirection
-* 
-*	캐릭터 이동 방향의 종류를 정의하는 열거형
+*
+*	이동 방향 관련 열거형
 */
 UENUM(BlueprintType)
 enum class EMovementDirection : uint8
@@ -42,6 +42,20 @@ enum class EMovementDirection : uint8
 	Bwd			UMETA(DisplayName = "Bwd"),
 	Left		UMETA(DisplayName = "Left"),
 	Right		UMETA(DisplayName = "Right"),
+	MAX			UMETA(DisplayName = "MAX"),
+};
+
+/*
+*	@EStopMotionType
+* 
+*	멈춤 상태 열거형
+*/
+UENUM(BlueprintType)
+enum class EStopMotionType : uint8
+{
+	None = 0		UMETA(DisplayName = "None"),
+	WalkStop	UMETA(DisplayName = "Walk Stop"),
+	SprintStop	UMETA(DisplayName = "Sprint Stop"),
 	MAX			UMETA(DisplayName = "MAX"),
 };
 #pragma endregion
@@ -54,24 +68,26 @@ enum class EMovementDirection : uint8
 #pragma region Delegates
 #pragma endregion
 
-
 /**
- * 
+ *	@UBaseAnimInstance
+ *
+ *	Anim Instance의 기본 유형을 정의합니다.
  */
 UCLASS()
 class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 {
-//@친추 클래스
+	//@친추 클래스
 #pragma region Friend Class
-	friend class UBaseGameplayAbility;
+	friend class UANS_Deceleration;
+	friend class UAN_UpdateStopMotionType;
 #pragma endregion
 
 	GENERATED_BODY()
 
-//@Defualt Setting
+		//@Defualt Setting
 #pragma region Default Setting
 public:
-	UBaseAnimInstance(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
+	UBaseAnimInstance(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void NativeBeginPlay() override;
@@ -79,23 +95,14 @@ protected:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 #pragma endregion
 
-//@Property/Info...etc
+	//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
-	//@현재 Movement State를 찾습니다.
 	UFUNCTION(BlueprintCallable)
 		void FindMovementState();
-	//@현재 Movement Direction을 찾습니다.
+
 	UFUNCTION(BlueprintCallable)
 		void FindMovementDirection();
-
-protected:
-	//@Combat State를 변경합니다.
-	UFUNCTION(BlueprintCallable)
-		void ChangeCombatState(bool bEnterCombat);
-
-	//@캐릭터의 상반신 애니메이션을 업데이트합니다.
-	void UpdateUpperBodyAnimation();
 
 protected:
 	UFUNCTION(BlueprintNativeEvent)
@@ -107,73 +114,123 @@ protected:
 	virtual void ClearBoneTransform_Implementation(float DeltaTime) { }
 
 protected:
-	//@이전 이동 상태
-	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Movement State", meta = (AlloPrivateAccess = "true"))
-		EMovementState LastMovementState = EMovementState::Idle;
+	//@Movement Setting 업데이트
+	UFUNCTION()
+		void UpdateMovementSettings();
 
-	//@현재 이동 상태
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement State", meta = (AlloPrivateAccess = "true"))
-		EMovementState MovementState = EMovementState::Idle;
-
-	//@현재 이동 방향
-	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Movement Direction", meta = (AlloPrivateAccess = "true"))
-		EMovementDirection MovementDirection = EMovementDirection::Fwd;
+	UFUNCTION(BlueprintCallable, Category = "Animation", meta = (BlueprintThreadSafe))
+		void UpdateStopMotionType(EStopMotionType Type);
 
 protected:
-	//@현재 공중에 있는지 체크합니다.
+	//@Combat State를 변경합니다.
+	UFUNCTION(BlueprintCallable)
+		void ChangeCombatState(bool bEnterCombat);
+
+	//@캐릭터의 상반신 애니메이션을 업데이트합니다.
+	void UpdateUpperBodyAnimation();
+
+protected:
+	//@직전 이동 상태에 따른 스탑 모션
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "이동 | 이동 상태", meta = (AlloPrivateAccess = "true"))
+		EStopMotionType StopMotionType;
+
+	//@직전 이동 상태
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "이동 | 이동 상태", meta = (AlloPrivateAccess = "true"))
+		EMovementState LastMovementState;
+
+	//@이동 상태
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "이동 | 이동 상태", meta = (AlloPrivateAccess = "true"))
+		EMovementState MovementState;
+	//@이동 방향
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "이동 | 이동 방향", meta = (AlloPrivateAccess = "true"))
+		EMovementDirection MovementDirection;
+
+protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		bool bFalling = false;
-	//@현재 이동중인지 체크합니다.
+		bool bFalling;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		bool bShouldMove = false;
-	//@현재 캐릭터에 가해진 가속도
+		bool bShouldMove;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		FVector Velocity = FVector();
-	//@현재 캐릭터의 속도
+		FVector Velocity;
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		float Speed;
-	//@락온 활성화 여부
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		bool bLockOn = false;
+		float DirectionAngle;
+	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
+		bool bEnableDirectionalMovement;
 
+protected:
+	const float WalkingSpeed = 200.f;
+	const float SprintingSpeed = 500.f;
+
+protected:
+	UPROPERTY()
+		bool bIsSprintingCooldown;
+	UPROPERTY()
+		float SprintingCooldownTime;
+	UPROPERTY(EditAnywhere, Category = "Movement|Sprint", meta = (AllowPrivateAccess = "true"))
+		float SprintingCooldownDuration;
+	// 현재 누적된 Cooldown 시간을 추적
+	float CurrentCooldownTime;
+
+protected:
+	UPROPERTY()
+		bool bIsInDeceleration;
+
+protected:
+	UPROPERTY(Transient, BlueprintReadOnly)
+		bool bModifyBoneTransform;
+
+	UPROPERTY(EditAnywhere, BlueprintReadOnly)
+		float BoneTransformLerpSpeed;
+
+protected:
 	//@전투/비전투 여부
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		bool bIsCombatState = false;
-
-protected:
-	//@본 수정 여부
-	UPROPERTY(Transient, BlueprintReadOnly)
-		bool bModifyBoneTransform;
-	//@보간 속도
-	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float BoneTransformLerpSpeed = 10.f;
 #pragma endregion
 
-//@Delegates
+	//@Delegates
 #pragma region Delegates
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
+protected:
+	//@Lock On 상태 변화 이벤트 구독
+	UFUNCTION()
+		void OnLockOnStateChanged(bool bIsLockOn);
+
+protected:
+	UFUNCTION()
+		void OnDecelerationStateChanged(bool bIsDecelerating);
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+	//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
-	//@캐싱
+	//@Owner Character 캐싱
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TWeakObjectPtr<class ACharacterBase> OwnerCharacterBaseRef;
+		TWeakObjectPtr<ACharacterBase> OwnerCharacterBaseRef;
+	//@Character Movement 캐싱
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
+		TWeakObjectPtr<UCharacterMovementComponent> CharacterMovementCompRef;
 
 public:
-	UFUNCTION(BlueprintCallable)
+	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE EMovementState GetMovementState() const { return MovementState; }
+
+	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
+		FORCEINLINE EMovementState GetLastMovementState() const { return LastMovementState; }
+
+	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
+		FORCEINLINE EStopMotionType GetStopMotionType() const { return StopMotionType; }
+
+	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
+		FORCEINLINE float GetDirectionAngle() const { return DirectionAngle; }
 
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE EMovementDirection GetMovementDirection() const { return MovementDirection; }
-
-public:
-	FORCEINLINE void SetbLockOn(bool LockOn) { bLockOn = LockOn; }
 #pragma endregion
 
 };
-

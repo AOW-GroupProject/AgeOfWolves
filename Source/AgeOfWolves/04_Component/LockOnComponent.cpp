@@ -1,322 +1,404 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "LockOnComponent.h"
+#include "Logging/StructuredLog.h"
 
 #include "01_Character/PlayerCharacter.h"
 #include "04_Component/BaseInputComponent.h"
 #include "05_Animation/BaseAnimInstance.h"
 #include "03_Player/BasePlayerController.h"
+#include "04_Component/BaseCharacterMovementComponent.h"
 
-#include "InputActionValue.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 
+DEFINE_LOG_CATEGORY(LogLockOn)
+
+//@Default Setting
+#pragma region Default Setting
 ULockOnComponent::ULockOnComponent()
 {
-	PrimaryComponentTick.bCanEverTick = true;
+    PrimaryComponentTick.bCanEverTick = true;
+
+    bLockOn = false;
+
+    NearByEnemies.Reset();
+    EnemyMap.Reset();
+
+    TargetEnemyRef.Reset();
+    PlayerCharacterRef.Reset();
+    BaseAnimInstanceRef.Reset();
+    SpringArmComponentRef.Reset();
+    FollowCameraComponentRef.Reset();
+    BaseInputComponentRef.Reset();
 }
 
 void ULockOnComponent::BeginPlay()
 {
-	Super::BeginPlay();
-	PlayerCharacter = Cast<APlayerCharacter>(GetOwner());
-	check(PlayerCharacter);
-	SpringArmComponent = PlayerCharacter->GetSpringArmComponent();
-	check(SpringArmComponent);
-	FollowCameraComponent = PlayerCharacter->GetCameraComponent();
-	check(FollowCameraComponent);
-	BaseAnimInstance = Cast<UBaseAnimInstance>(PlayerCharacter->GetMesh()->GetAnimInstance());
-	check(BaseAnimInstance);
-	ABasePlayerController* PlayerController = Cast<ABasePlayerController>(PlayerCharacter->GetController());
-	check(PlayerController);
+    Super::BeginPlay();
 
-	BaseInputComponent = PlayerController->GetBaseInputComponent();
-	check(BaseInputComponent);
 }
 
-
-// Called every frame
 void ULockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
-	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	AdjustCameraTransform(DeltaTime);
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    UpdateControllerRotation(DeltaTime);
 }
 
+void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
+{
+    if (!Controller)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ì»´í¬ë„ŒíŠ¸ ì´ˆê¸°í™” ì‹¤íŒ¨: ì»¨íŠ¸ë¡¤ëŸ¬ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+
+    const auto Owner = GetOwner();
+    if (!Owner)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "Owner Actorê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
+        return;
+    }
+
+    PlayerCharacterRef = Cast<APlayerCharacter>(Owner);
+    if (!PlayerCharacterRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ì»´í¬ë„ŒíŠ¸ ì´ˆê¸°í™” ì‹¤íŒ¨: í”Œë ˆì´ì–´ ìºë¦­í„°ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+
+    SpringArmComponentRef = PlayerCharacterRef->GetSpringArmComponent();
+    if (!SpringArmComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ì»´í¬ë„ŒíŠ¸ ì´ˆê¸°í™” ì‹¤íŒ¨: ìŠ¤í”„ë§ì•”ì´ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+
+    FollowCameraComponentRef = PlayerCharacterRef->GetCameraComponent();
+    if (!FollowCameraComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ì»´í¬ë„ŒíŠ¸ ì´ˆê¸°í™” ì‹¤íŒ¨: ì¹´ë©”ë¼ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+
+    BaseAnimInstanceRef = Cast<UBaseAnimInstance>(PlayerCharacterRef->GetMesh()->GetAnimInstance());
+    if (!BaseAnimInstanceRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ì»´í¬ë„ŒíŠ¸ ì´ˆê¸°í™” ì‹¤íŒ¨: ì• ë‹˜ ì¸ìŠ¤í„´ìŠ¤ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+
+    ABasePlayerController* PlayerController = Cast<ABasePlayerController>(PlayerCharacterRef->GetController());
+    if (!PlayerController)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ì»´í¬ë„ŒíŠ¸ ì´ˆê¸°í™” ì‹¤íŒ¨: í”Œë ˆì´ì–´ ì»¨íŠ¸ë¡¤ëŸ¬ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+
+    BaseInputComponentRef = PlayerController->GetBaseInputComponent();
+    if (!BaseInputComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ì»´í¬ë„ŒíŠ¸ ì´ˆê¸°í™” ì‹¤íŒ¨: ì…ë ¥ ì»´í¬ë„ŒíŠ¸ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+
+    UE_LOGFMT(LogLockOn, Log, "ë½ì˜¨ ì»´í¬ë„ŒíŠ¸ ì´ˆê¸°í™” ì™„ë£Œ");
+}
+
+#pragma endregion
+
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void ULockOnComponent::Input_LockOn()
 {
-	if (bLockOn == true) // LockOn ÁßÀÏ ¶§, ¸¶¿ì½º ÈÙ ÀÔ·Â½Ã LockOn Á¾·áÇÑ´Ù.
-	{
-		CancelLockOn();
-	}
-	else // LockOn ÁßÀÌ ¾Æ´Ò ¶§, ¸¶¿ì½º ÈÙ ÀÔ·Â½Ã LockOn ½ÃÀÛÇÑ´Ù.
-	{
-		StartLockOn();
-	}
+    if (!PlayerCharacterRef.IsValid()) return;
+
+    if (bLockOn)
+    {
+        CancelLockOn();
+        UE_LOGFMT(LogLockOn, Log, "Lock On Canceled");
+        return;
+    }
+
+    StartLockOn();
+    UE_LOGFMT(LogLockOn, Log, "Lock On Started");
+}
+
+void ULockOnComponent::Input_ChangeLockOnTarget(const FInputActionValue& Value)
+{
+    if (NearByEnemies.Num() == 0) return;
+
+    int32 TargetIndex = NearByEnemies.IndexOfByKey(TargetEnemyRef);
+    FVector2D ValueVector = Value.Get<FVector2D>();
+
+    if (ValueVector.X > 0)
+    {
+        TargetIndex = FMath::Clamp(TargetIndex + 1, 0, NearByEnemies.Num() - 1);
+        TargetEnemyRef = NearByEnemies[TargetIndex];
+        UE_LOGFMT(LogLockOn, Log, "Changed Target to next: {0}", *TargetEnemyRef->GetName());
+    }
+    else
+    {
+        TargetIndex = FMath::Clamp(TargetIndex - 1, 0, NearByEnemies.Num() - 1);
+        TargetEnemyRef = NearByEnemies[TargetIndex];
+        UE_LOGFMT(LogLockOn, Log, "Changed Target to previous: {0}", *TargetEnemyRef->GetName());
+    }
 
 }
 
 void ULockOnComponent::StartLockOn()
 {
 
-	// TargetEnemy¸¦ Ã£°í, ¸â¹öº¯¼öµéÀ» ÃÊ±âÈ­ ÇÑ´Ù.
-	if (FindTargetEnemy() == true)
-	{
-		bLockOn = true;
-		USpringArmComponent* SpringArm = GetOwner()->FindComponentByClass<USpringArmComponent>();
-		// To do : ±âÁ¸ °ªÀ» ºÒ·¯¿À°Ô
-		SpringArmComponent->CameraLagSpeed = 5;
-		SpringArmComponent->CameraRotationLagSpeed = 17.5;
-		BaseAnimInstance->SetbLockOn(true);
-		SetControllerRotationTowardTarget();
-	}
+    //@Ref 
+    if (!PlayerCharacterRef.IsValid() || !BaseAnimInstanceRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ë½ì˜¨ ì‹œì‘ ì‹¤íŒ¨: í”Œë ˆì´ì–´ ìºë¦­í„°ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+
+    //@Target Enemy ì°¾ê¸°
+    if (!FindTargetEnemy())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ë½ì˜¨ ì‹œì‘ ì‹¤íŒ¨: ì ì ˆí•œ íƒ€ê²Ÿì„ ì°¾ì„ ìˆ˜ ì—†ìŒ");
+        return;
+    }
+
+    //@Spring Arm(Camera) ì„¤ì • ì—…ë°ì´íŠ¸
+    UpdateSpringArmSettings(true);
+
+    //@Lock On ìƒíƒœ
+    bLockOn = true;
+
+    //@Lock On ìƒíƒœ ì´ë²¤íŠ¸
+    LockOnStateChanged.Broadcast(bLockOn);
 }
 
 void ULockOnComponent::CancelLockOn()
 {
+    //@Ref
+    if (!PlayerCharacterRef.IsValid() || !BaseAnimInstanceRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ë½ì˜¨ í•´ì œ ì‹¤íŒ¨: í”Œë ˆì´ì–´ ìºë¦­í„°ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+    //@Spring Arm ì„¤ì • ì—…ë°ì´íŠ¸
+    UpdateSpringArmSettings(false);
 
-	// To do : ±âÁ¸ °ªÀ» ºÒ·¯¿À°Ô
-	SpringArmComponent->CameraLagSpeed = 10;
-	SpringArmComponent->CameraRotationLagSpeed = 30;
-	// BaseAnimInstance  ¸â¹ö º¯¼ö ÃÊ±âÈ­
-	BaseAnimInstance->SetbLockOn(false);
+    //@Lock On ìƒíƒœ
+    bLockOn = false;
 
-	// Component ¸â¹ö º¯¼ö ÃÊ±âÈ­
-	InputVector = FVector2D(0, 0);
-	NearByEnemies.Empty();
-	EnemyMap.Empty();
-	TargetEnemy = nullptr;
-	bLockOn = false;
-}
+    //@Lock On ìƒíƒœ ì´ë²¤íŠ¸
+    LockOnStateChanged.Broadcast(bLockOn);
 
-void ULockOnComponent::Input_ChangeLockOnTarget(const FInputActionValue& Value)
-{
-	if (NearByEnemies.Num() == 0) return;
-	FVector2D ValueVector = Value.Get<FVector2D>();
-	int TargetIndex = NearByEnemies.IndexOfByKey(TargetEnemy);
-	if (ValueVector.X > 0) // ¸¶¿ì½º ÈÙ Ãà À§ ÀÔ·Â
-	{
-		TargetIndex = FMath::Clamp(TargetIndex + 1, 0, NearByEnemies.Num() - 1);
-		TargetEnemy = NearByEnemies[TargetIndex];
-	}
-	else // ¸¶¿ì½º ÈÙ Ãà ¾Æ·¡ ÀÔ·Â
-	{
-		TargetIndex = FMath::Clamp(TargetIndex - 1, 0, NearByEnemies.Num() - 1);
-		TargetEnemy = NearByEnemies[TargetIndex];
-	}
-	SetControllerRotationTowardTarget();
-
-}
-
-void ULockOnComponent::SetControllerRotationTowardTarget()
-{
-	FVector Start = PlayerCharacter->GetActorLocation();
-	FVector Target = TargetEnemy->GetActorLocation();
-	FRotator Rotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
-	//PlayerCharacter->SetActorRotation(FRotator(0.f, Rotation.Yaw, 0.f));
-	PlayerCharacter->GetController()->SetControlRotation(FRotator(0.f, Rotation.Yaw, 0.f));
-	DrawDebugSphere(GetWorld(), TargetEnemy->GetActorLocation(), 30, 12, FColor::Red, false, 1.5f);
-
+    //@ì´ˆê¸°í™”
+    NearByEnemies.Empty();
+    EnemyMap.Empty();
+    TargetEnemyRef.Reset();
 }
 
 bool ULockOnComponent::FindTargetEnemy()
 {
-	TArray<TEnumAsByte<EObjectTypeQuery>> NearByActors;
-	TEnumAsByte<EObjectTypeQuery> PawnObjectType = UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn);
-	NearByActors.Add(PawnObjectType);
+    if (!PlayerCharacterRef.IsValid()) return false;
+    if (!FollowCameraComponentRef.IsValid()) return false;
 
-	TArray<AActor*> IgnoreActors;
-	IgnoreActors.Add(PlayerCharacter);
+    TArray<TEnumAsByte<EObjectTypeQuery>> NearByActors;
+    NearByActors.Add(UEngineTypes::ConvertToObjectType(ECollisionChannel::ECC_Pawn));
 
-	// PlayerCharacter¸¦ ¹«½ÃÇÑ MaxDetectRadiusÀ» ¹İÁö¸§À¸·Î ÇÏ´Â ¿øÇü Æ®·¹ÀÌ½º¸¦ ½ÇÇàÇÔ.
-	TArray<FHitResult> HitResults;
-	bool SphereTraceHitResult = UKismetSystemLibrary::SphereTraceMultiForObjects(
-		GetWorld(),
-		PlayerCharacter->GetActorLocation(),
-		PlayerCharacter->GetActorLocation() + 100.f,
-		MaxDetectRadius,
-		NearByActors,
-		false,
-		IgnoreActors,
-		EDrawDebugTrace::None,
-		HitResults, true
-	);
-	if (SphereTraceHitResult == true)
-	{
-		// LineTraceSingleÀ» ÅëÇØ, LockOnÀÌ °¡´ÉÇÑÁö ÆÇ´Ü
-		FHitResult LineHitResults;
-		for (const auto& Hit : HitResults)
-		{
-			bool LineTraceHitResult = UKismetSystemLibrary::LineTraceSingleForObjects(
-				GetWorld(),
-				PlayerCharacter->GetActorLocation(),
-				Hit.GetActor()->GetActorLocation(),  // + 100 * (Hit.GetActor()->GetActorLocation() - PlayerCharacter->GetActorLocation()).Normalize(),
-				NearByActors,
-				false,
-				IgnoreActors,
-				EDrawDebugTrace::None,
-				LineHitResults, true
-			);
-			if (Hit.GetActor() == LineHitResults.GetActor())
-			{
-				NearByEnemies.AddUnique(Hit.GetActor());
-			}
-		}
-		float Min = 1000000.f;
-		// ¿ÜÀû/³»ÀûÀ» ÅëÇØ °Å¸®¿Í °¢µµ¿¡ µû¸¥ °ªÀ» °è»êÇØ ÀÌ¸¦ key, Enemy¸¦ Value·Î MapÀ» ¼³Á¤ÇÔ.
-		for (int i = 0; i < NearByEnemies.Num(); i++)
-		{
-			// Option 1 : Player CharacterÀÇ Forward Vector ±âÁØÀ¸·Î LockOn
-			// Option 2 : Camera¿¡ º¸ÀÌ´Â Enemy¸¦ (CameraÀÇ Forward Vector ±âÁØÀ¸·Î) LockOn <- ÇöÀç ¼±ÅÃµÊ
+    TArray<AActor*> IgnoreActors;
+    IgnoreActors.Add(PlayerCharacterRef.Get());
 
-			// FVector PlayerForwardVector = PlayerCharacter->GetActorForwardVector();
-			// FVector CameraToPlayer = PlayerCharacter->GetActorLocation() - PlayerCameraLocation;
+    TArray<FHitResult> HitResults;
+    bool SphereTraceHitResult = UKismetSystemLibrary::SphereTraceMultiForObjects(
+        GetWorld(),
+        PlayerCharacterRef->GetActorLocation(),
+        PlayerCharacterRef->GetActorLocation(),
+        MaxDetectRadius,
+        NearByActors,
+        false,
+        IgnoreActors,
+        EDrawDebugTrace::None,
+        HitResults,
+        true
+    );
 
-			FVector PlayerCameraLocation = FollowCameraComponent->GetComponentTransform().GetTranslation();
-			FVector CameraToPlayer = FollowCameraComponent->GetForwardVector();
+    if (!SphereTraceHitResult)
+    {
+        UE_LOGFMT(LogLockOn, Log, "No targets found in range");
+        return false;
+    }
 
-			FVector CameraToEnemy = NearByEnemies[i]->GetActorLocation() - PlayerCameraLocation;
-			FVector PlayerToEnemy = NearByEnemies[i]->GetActorLocation() - PlayerCharacter->GetActorLocation();
+    NearByEnemies.Empty();
+    EnemyMap.Empty();
+    float Min = MAX_FLT;
 
-			FVector CrossProduct = FVector::CrossProduct(CameraToPlayer, CameraToEnemy);
-			// FVector CrossProduct = FVector::CrossProduct(PlayerForwardVector, PlayerToEnemy);
-			float UpDotProduct = FVector::DotProduct(CameraToPlayer, CrossProduct);
-			// float UpDotProduct = FVector::DotProduct(PlayerForwardVector, CrossProduct);
+    for (const auto& Hit : HitResults)
+    {
+        FHitResult LineHitResults;
+        bool LineTraceHitResult = UKismetSystemLibrary::LineTraceSingleForObjects(
+            GetWorld(),
+            PlayerCharacterRef->GetActorLocation(),
+            Hit.GetActor()->GetActorLocation(),
+            NearByActors,
+            false,
+            IgnoreActors,
+            EDrawDebugTrace::None,
+            LineHitResults,
+            true
+        );
 
-			float TempDotProductResult = FVector::DotProduct(CameraToPlayer, CameraToEnemy);
+        if (Hit.GetActor() == LineHitResults.GetActor())
+        {
+            NearByEnemies.AddUnique(Hit.GetActor());
 
-			// FOV ¾È¿¡ ÀÖ´ÂÁö °è»êÇÑ´Ù.
-			float Cos = TempDotProductResult / (CameraToPlayer.Length() * CameraToEnemy.Length());
-			float HalfFOV = FMath::Cos(FMath::DegreesToRadians(FollowCameraComponent->FieldOfView / 1.5));
-			if (Cos > HalfFOV)
-			{
-				EnemyMap.Add(UpDotProduct, NearByEnemies[i]);
-				// DrawDebugSphere(GetWorld(), NearByEnemies[i]->GetActorLocation(), 25.f, 12, FColor::Blue, false, 3.f);
-				// °¡Àå °¡±î¿î ÀûÀ» Ã£±â À§ÇØ minÀ» °è»ê.
-				if (FMath::Abs(Min) > FMath::Abs(UpDotProduct))
-				{
-					Min = UpDotProduct;
-				}
-			}
-		}
-		if (EnemyMap.IsEmpty())
-		{
-			return false;
-		}
+            FVector PlayerCameraLocation = FollowCameraComponentRef->GetComponentTransform().GetTranslation();
+            FVector CameraToPlayer = FollowCameraComponentRef->GetForwardVector();
+            FVector CameraToEnemy = Hit.GetActor()->GetActorLocation() - PlayerCameraLocation;
 
-		// Target Enemy ÀüÈ¯À» À§ÇØ EnemyMapÀ» Á¤·ÄÇÔ.
-		TArray<float> DotProducts;
-		EnemyMap.GenerateKeyArray(DotProducts);
-		DotProducts.Sort();
-		NearByEnemies.Empty();
-		for (int i = 0; i < DotProducts.Num(); i++)
-		{
-			NearByEnemies.Add(*EnemyMap.Find(DotProducts[i]));
-		}
-		// °¡Àå °¡±î¿î ÀûÀ» Target Enemy·Î ¼³Á¤ÇÔ.
-		TargetEnemy = *EnemyMap.Find(Min);
-		if (IsValid(TargetEnemy)) return true;
-		else return false;
-	}
-	else
-	{
-		return false;
-	}
+            FVector CrossProduct = FVector::CrossProduct(CameraToPlayer, CameraToEnemy);
+            float UpDotProduct = FVector::DotProduct(CameraToPlayer, CrossProduct);
+            float TempDotProductResult = FVector::DotProduct(CameraToPlayer, CameraToEnemy);
 
+            float Cos = TempDotProductResult / (CameraToPlayer.Length() * CameraToEnemy.Length());
+            float HalfFOV = FMath::Cos(FMath::DegreesToRadians(FollowCameraComponentRef->FieldOfView / 1.5));
+
+            if (Cos > HalfFOV)
+            {
+                EnemyMap.Add(UpDotProduct, Hit.GetActor());
+                if (FMath::Abs(Min) > FMath::Abs(UpDotProduct))
+                {
+                    Min = UpDotProduct;
+                }
+            }
+        }
+    }
+
+    if (EnemyMap.IsEmpty())
+    {
+        UE_LOGFMT(LogLockOn, Log, "No valid targets in FOV");
+        return false;
+    }
+
+    TArray<float> DotProducts;
+    EnemyMap.GenerateKeyArray(DotProducts);
+    DotProducts.Sort();
+    NearByEnemies.Empty();
+
+    for (float DotProduct : DotProducts)
+    {
+        NearByEnemies.Add(*EnemyMap.Find(DotProduct));
+    }
+
+    TargetEnemyRef = *EnemyMap.Find(Min);
+    UE_LOGFMT(LogLockOn, Log, "Found target: {0}", *TargetEnemyRef->GetName());
+
+    return IsValid(TargetEnemyRef.Get());
 }
 
-void ULockOnComponent::AdjustCameraTransform(float DeltaTime)
+void ULockOnComponent::UpdateSpringArmSettings(bool bIsLockingOn)
 {
-	if (bLockOn == true)
-	{
-		SpringArmComponent->bUsePawnControlRotation = false;
-	
-		// MaxLockOnDistance º¸´Ù °¡±î¿ì¸é true
-		bool bCloseToEnemy = (PlayerCharacter->GetActorLocation() - TargetEnemy->GetActorLocation()).Length() < MaxLockOnDistance;
-		// °Å¸®°¡ °¡±õ°Å³ª TargetEnemy°¡ Á¸ÀçÇÏ´Â °æ¿ì true
-		if (IsValid(TargetEnemy) && bCloseToEnemy)
-		{
-			APlayerCameraManager* CameraManager = GetWorld()->GetFirstPlayerController()->PlayerCameraManager;
-			FVector CameraStart = CameraManager->GetCameraLocation();
-			FVector CharacterStart = PlayerCharacter->GetActorLocation();
-			FVector TargetPosition = TargetEnemy->GetActorLocation();
-			FRotator LookAtRotation = UKismetMathLibrary::FindLookAtRotation(CharacterStart, TargetPosition);
+    if (!SpringArmComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ìŠ¤í”„ë§ì•” ì„¤ì • ì—…ë°ì´íŠ¸ ì‹¤íŒ¨: ìŠ¤í”„ë§ì•”ì´ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
 
-			float SocketOffsetCoefficient = 1.0f;
-
-			// ÄÁÆ®·Ñ·¯ È¸Àü¿¡ ´ëÇÑ ¼±Çü º¸°£
-			FRotator TargetRotation = UKismetMathLibrary::RInterpTo(PlayerCharacter->GetController()->GetControlRotation(), LookAtRotation, DeltaTime, 10.f);
-			// °á°ú °ªÀ» ¾×ÅÍ °´Ã¼ÀÇ È¸Àü °ªÀ¸·Î ¼³Á¤
-			PlayerCharacter->GetController()->SetControlRotation(TargetRotation);
-
-			// GetController()->SetControlRotation(LookAtRotation);
-
-			// ´Ş¸®Áö ¾Ê´Â µ¿¾È¿¡¸¸ CharacterÀÇ RotationÀ» LockOn¹æÇâÀ¸·Î ¼³Á¤ÇÑ´Ù.
-			// ´Ş¸®´Â µ¿¾ÈÀº ¹æÇâÅ° ¹æÇâÀ¸·Î ¼³Á¤µÈ´Ù.
-			if (!(BaseAnimInstance->GetMovementState() == EMovementState::Run))
-			{
-				FRotator LooAtRotatoionYaw = FRotator(0.f, LookAtRotation.Yaw, 0.f);
-				// ¼±Çü º¸°£
-				FRotator TargetActorRotation = UKismetMathLibrary::RInterpTo(PlayerCharacter->GetActorRotation(), LooAtRotatoionYaw, DeltaTime, 40.f);
-				PlayerCharacter->SetActorRotation(TargetActorRotation);
-				SocketOffsetCoefficient = 1.5f;
-			}
-
-			// ¿À¸¥ÂÊ, ¿ŞÂÊÀ¸·Î ÀÌµ¿ÇÏ´Â °æ¿ì ½ºÇÁ¸µ¾ÏÀÇ Y¿ÀÇÁ¼ÂÀ» Á¶Àı
-			if (BaseInputComponent->GetInputVector().Y > 0) // ¿À¸¥ÂÊÀ¸·Î ÀÌµ¿
-			{
-				if (SpringArmComponent->SocketOffset.Y > -50)
-				{
-					SpringArmComponent->SocketOffset.Y -= (SocketOffsetCoefficient * BaseInputComponent->GetInputVector().Y);
-				}
-			}
-			else if (BaseInputComponent->GetInputVector().Y < 0) // ¿ŞÂÊÀ¸·Î ÀÌµ¿
-			{
-				if (SpringArmComponent->SocketOffset.Y < 50)
-				{
-					SpringArmComponent->SocketOffset.Y -= (SocketOffsetCoefficient * BaseInputComponent->GetInputVector().Y);
-				}
-			}
-			// TargetEnemy¿Í °Å¸®¿¡ µû¶ó Ä«¸Ş¶ó¸¦ À§·Î ÀÌµ¿ ½ÃÅ´
-			float DistanceFromTargetEnemy = (PlayerCharacter->GetActorLocation() - TargetPosition).Length();
-			DistanceFromTargetEnemy = FMath::Clamp((6000 / DistanceFromTargetEnemy) + 20, 0, 30);
-			FRotator DistanceRotation = FRotator(-DistanceFromTargetEnemy, 0, 0);
-
-			FRotator FinalRotation = DistanceRotation + LookAtRotation;
-			FRotator SpringArmRotator = UKismetMathLibrary::RInterpTo(LookAtRotation, FinalRotation, DeltaTime, 5.f);
-
-			SpringArmComponent->SocketOffset.X = FMath::Lerp(0, -200, DistanceFromTargetEnemy / 70);
-			SpringArmComponent->SetWorldRotation(FinalRotation);
-		}
-		else if (!bCloseToEnemy)// TargetEnemy¿Í ³Ê¹« ¸Ö¾îÁø°æ¿ì LockOnÀ» Ãë¼ÒÇÑ´Ù.
-		{
-			TargetEnemy = nullptr;
-			SpringArmComponent->bUsePawnControlRotation = true;
-			SpringArmComponent->SocketOffset.Y = 0;
-			SpringArmComponent->SocketOffset.X = 0;
-			CancelLockOn();
-		}
-		else if (!IsValid(TargetEnemy)) // TargetÀÌ Á×¾î À¯È¿ÇÏÁö ¾Ê´Â °æ¿ì LockOnÀ» Ãë¼ÒÇÏ°í, ´ÙÀ½ TargetÀ» Ã£´Â´Ù.
-		{
-			TargetEnemy = nullptr;
-			SpringArmComponent->bUsePawnControlRotation = true;
-			SpringArmComponent->SocketOffset.Y = 0;
-			SpringArmComponent->SocketOffset.X = 0;
-			CancelLockOn();
-			StartLockOn();
-		}
-	}
-	else
-	{
-		SpringArmComponent->bUsePawnControlRotation = true;
-		SpringArmComponent->SocketOffset.Y = 0;
-		SpringArmComponent->SocketOffset.X = 0;
-		CancelLockOn();
-	}
-
-
+    SpringArmComponentRef->bUsePawnControlRotation = !bIsLockingOn;
+    SpringArmComponentRef->CameraLagSpeed = bIsLockingOn ? 5.0f : 10.0f;
+    SpringArmComponentRef->CameraRotationLagSpeed = bIsLockingOn ? 17.5f : 30.0f;
 }
 
+void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
+{
+    //@ë½ì˜¨ ì²´í¬, Target Enemy ì²´í¬, Player Character ìœ íš¨ì„± ì²´í¬, Spring Arm Component ìœ íš¨ì„± ì²´í¬
+    if (!bLockOn || !TargetEnemyRef.IsValid() || !PlayerCharacterRef.IsValid() || !SpringArmComponentRef.IsValid())
+    {
+        return;
+    }
 
+    //@Max Lock On Distance
+    bool bCloseToEnemy = (PlayerCharacterRef->GetActorLocation() - TargetEnemyRef->GetActorLocation()).Length() < MaxLockOnDistance;
+    if (!bCloseToEnemy)
+    {
+        CancelLockOn();
+        return;
+    }
+
+    //@Base Anim Instance, Base Input Component
+    if (!BaseAnimInstanceRef.IsValid() || !BaseInputComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ì¹´ë©”ë¼ ë³€í™˜ ì‹¤íŒ¨: ì• ë‹˜ ì¸ìŠ¤í„´ìŠ¤ ë˜ëŠ” ì…ë ¥ ì»´í¬ë„ŒíŠ¸ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+
+        return;
+    }
+
+    //@Location
+    FVector Start = PlayerCharacterRef->GetActorLocation();
+    FVector Target = TargetEnemyRef->GetActorLocation();
+    
+    //@Rotation
+    FRotator StartRotation = PlayerCharacterRef->GetControlRotation();
+    FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
+    
+    //@Final Rotation
+    FRotator FinalRotation = UKismetMathLibrary::RInterpTo(StartRotation, TargetRotation, DeltaTime, InterpolationSpeed);
+
+    //@RInterpTo
+    PlayerCharacterRef->GetController()->SetControlRotation(FRotator(0.f, FinalRotation.Yaw, 0.f));
+
+    //@Update Spring Arm
+    UpdateSpringArmTransform(DeltaTime, Target, FinalRotation);
+}
+
+void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& FinalRotation)
+{
+    //@Spring Arm Comp, Base Anim Intance, Base Input Comp
+    if (!SpringArmComponentRef.IsValid() || !BaseAnimInstanceRef.IsValid() || !BaseInputComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ìŠ¤í”„ë§ì•” ë³€í™˜ ì‹¤íŒ¨: í•„ìš”í•œ ì»´í¬ë„ŒíŠ¸ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŒ");
+        return;
+    }
+
+    //@Offset Coefficient
+    float SocketOffsetCoefficient = (BaseAnimInstanceRef->GetMovementState() != EMovementState::Sprinting) ? 1.5f : 1.0f;
+
+    //@Input Vector
+    if (BaseInputComponentRef->GetInputVector().Y > 0)
+    {
+        if (SpringArmComponentRef->SocketOffset.Y > -50)
+        {
+            SpringArmComponentRef->SocketOffset.Y -= (SocketOffsetCoefficient * BaseInputComponentRef->GetInputVector().Y);
+        }
+    }
+    else if (BaseInputComponentRef->GetInputVector().Y < 0)
+    {
+        if (SpringArmComponentRef->SocketOffset.Y < 50)
+        {
+            SpringArmComponentRef->SocketOffset.Y -= (SocketOffsetCoefficient * BaseInputComponentRef->GetInputVector().Y);
+        }
+    }
+
+    //@Distance to Rotation
+    float DistanceFromTargetEnemy = (PlayerCharacterRef->GetActorLocation() - Target).Length();
+    DistanceFromTargetEnemy = FMath::Clamp((6000 / DistanceFromTargetEnemy) + 20, 0, 30);
+    FRotator DistanceRotation = FRotator(-DistanceFromTargetEnemy, 0, 0);
+
+    //@Final Rotation
+    FRotator CameraFinalRotation = DistanceRotation + FinalRotation;
+
+    //@RInterpTo
+    FRotator SpringArmRotator = UKismetMathLibrary::RInterpTo(FinalRotation, CameraFinalRotation, DeltaTime, InterpolationSpeed);
+
+    // ìŠ¤í”„ë§ì•” ìµœì¢… ë³€í™˜ ì ìš©
+    SpringArmComponentRef->SocketOffset.X = FMath::Lerp(0, -200, DistanceFromTargetEnemy / 70);
+    SpringArmComponentRef->SetWorldRotation(CameraFinalRotation);
+}
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+#pragma endregion

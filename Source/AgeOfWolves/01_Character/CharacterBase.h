@@ -12,48 +12,67 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogCharacter, Log, All)
 
+//@전방 선언
+#pragma region Forward Declaration
 class UPawnData;
 class UBaseAttributeSet;
 class UBaseAbilitySystemComponent;
+class UMotionWarpingComponent;
+#pragma endregion
+
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+#pragma endregion
 
 UCLASS()
 class AGEOFWOLVES_API ACharacterBase : public ACharacter, public IAbilitySystemInterface
 {
 	GENERATED_BODY()
 
+//@Defualt Setting
 #pragma region Default Setting
-
 public:
 	ACharacterBase(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	//~UObject interface
 	virtual void BeginPlay() override;
-	//~End Of UObject Interface
-
-	//~APawn interface
 	virtual void PossessedBy(AController* NewController) override;
-	//~End Of APawn interface
+	//~End Of UObject Interface
 #pragma endregion
 
-#pragma region Gameplay Ability System
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 protected:
-	/*
-	* @목적 : Player State로부터 가져온 ASC에 대한 약한 참조를 관리합니다.
-	* @설명 : 이후 ASC관련 내용을 정의할 것을 대비하여, 일단 약한 참조만 들고 있습니다.
-	* @참조 : -
-	*/
+	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		UMotionWarpingComponent* MotionWarpingComponent;
+#pragma endregion
+
+//@Delegates
+#pragma region Delegates
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+protected:
+	//@ASC 캐싱
 	TWeakObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
 
 public:
-	/*
-	* @목적 : IAbilitySystemInterface 인터페이스 클래스의 인터페이스 함수를 오버라이딩 합니다.
-	* @설명 : -
-	* @참조 : - 
-	*/
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	void SetAbilitySystemComponent(UAbilitySystemComponent* ASC);
 #pragma endregion
-
 };
 

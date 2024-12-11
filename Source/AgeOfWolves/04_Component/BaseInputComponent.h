@@ -128,10 +128,11 @@ protected:
 			BindAction(InputAction, TriggerEvent, Object, Func);
 		}
 	}
+
 	void BindNativeInputActions(const UInputConfig* InputConfig);
 	void BindAbilityInputActions(const UInputConfig* InputConfig);
 	void BindUIInputActions(const UInputConfig* InputConfig);
-	// @breif : Remove BindHandles Interacting with corressponding Ability Input Action
+
 	void RemoveBinds(TArray<uint32>& BindHandles);
 
 private:
