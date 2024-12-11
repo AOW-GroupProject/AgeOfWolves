@@ -28,9 +28,7 @@ void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorI
 
 	check(ActorInfo);
 
-	/*
-	* @목적: Activation Policy가 OnGranted일 경우, Passive GA이므로 ASC에 등록되는 시점에 활성화해줍니다.
-	*/
+    //@Activation Policy가 On Granted일 경우, 등록 직후 활성화 시도
 	if (ActivationPolicy == EAbilityActivationPolicy::OnGranted_Instant
         || ActivationPolicy == EAbilityActivationPolicy::OnGranted_ConditionalPeriodic)
 	{
