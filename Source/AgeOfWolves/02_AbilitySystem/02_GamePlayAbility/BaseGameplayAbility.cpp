@@ -14,45 +14,46 @@ DEFINE_LOG_CATEGORY(LogGA)
 
 // UE_LOGFMT(LogGA, Error, "");
 
+//@Defualt Setting
 #pragma region Default Setting
 UBaseGameplayAbility::UBaseGameplayAbility(const FObjectInitializer& ObjectInitializer)
-	:Super(ObjectInitializer)
+    :Super(ObjectInitializer)
 {
-	// @설명: Editor 상에서 BP 유형의 GA 생성 시 활성화 정책을 설정해줍니다.
-	ActivationPolicy = EAbilityActivationPolicy::MAX;
+    // @설명: Editor 상에서 BP 유형의 GA 생성 시 활성화 정책을 설정해줍니다.
+    ActivationPolicy = EAbilityActivationPolicy::MAX;
 }
 
 void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
-	Super::OnGiveAbility(ActorInfo, Spec);
+    Super::OnGiveAbility(ActorInfo, Spec);
 
-	check(ActorInfo);
+    check(ActorInfo);
 
-	/*
-	* @목적: Activation Policy가 OnGranted일 경우, Passive GA이므로 ASC에 등록되는 시점에 활성화해줍니다.
-	*/
-	if (ActivationPolicy == EAbilityActivationPolicy::OnGranted_Instant
+    /*
+    * @목적: Activation Policy가 OnGranted일 경우, Passive GA이므로 ASC에 등록되는 시점에 활성화해줍니다.
+    */
+    if (ActivationPolicy == EAbilityActivationPolicy::OnGranted_Instant
         || ActivationPolicy == EAbilityActivationPolicy::OnGranted_ConditionalPeriodic)
-	{
-		if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
+    {
+        if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
         {
-			if (!Spec.IsActive() && IsValid(Spec.Ability))
-			{
-				ASC->TryActivateAbility(Spec.Handle);
-			}
-		}
-	}
+            if (!Spec.IsActive() && IsValid(Spec.Ability))
+            {
+                ASC->TryActivateAbility(Spec.Handle);
+            }
+        }
+    }
 
 }
 
 void UBaseGameplayAbility::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
-	Super::OnRemoveAbility(ActorInfo, Spec);
+    Super::OnRemoveAbility(ActorInfo, Spec);
 }
 
 void UBaseGameplayAbility::OnAvatarSet(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
-	Super::OnAvatarSet(ActorInfo, Spec);
+    Super::OnAvatarSet(ActorInfo, Spec);
 }
 
 void UBaseGameplayAbility::ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData)
@@ -86,8 +87,8 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, c
 }
 #pragma endregion
 
-#pragma region Tag Requirements
-
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const
 {
     if (!ActorInfo || !ActorInfo->AbilitySystemComponent.IsValid())
@@ -99,17 +100,6 @@ bool UBaseGameplayAbility::CanActivateAbility(const FGameplayAbilitySpecHandle H
     {
         return false;
     }
-
-    // @TODO: Input Block 작업
-    // @Input Blocked
-    //if (ASC->IsAbilityInputBlocked(Spec->InputID))
-    //{
-    //    if (FScopedCanActivateAbilityLogEnabler::IsLoggingEnabled())
-    //    {
-    //        UE_LOGFMT(LogGA, Error, "Ability could not be activated due to blocked input ID {1}: {2}", Spec->InputID, *GetName());
-    //    }
-    //    return false;
-    //}
 
     return true;
 }
@@ -194,3 +184,35 @@ bool UBaseGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySyste
     return true;
 }
 
+// BaseGameplayAbility.cpp
+void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+    // 부모 클래스 호출
+    Super::InputPressed(Handle, ActorInfo, ActivationInfo);
+
+    // Blueprint 구현 함수 호출
+    K2_InputPressed();
+
+    UE_LOGFMT(LogGA, Log, "Ability Input Pressed - Ability: {0}", *GetName());
+}
+
+void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
+{
+    // 부모 클래스 호출
+    Super::InputReleased(Handle, ActorInfo, ActivationInfo);
+
+    // Blueprint 구현 함수 호출
+    K2_InputReleased();
+
+    UE_LOGFMT(LogGA, Log, "Ability Input Released - Ability: {0}", *GetName());
+}
+
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+#pragma endregion

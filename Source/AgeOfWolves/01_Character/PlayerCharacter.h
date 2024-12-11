@@ -10,15 +10,31 @@
 
 #include "PlayerCharacter.generated.h"
 
-class UCurveFloat;
+
+DECLARE_LOG_CATEGORY_EXTERN(LogPlayer, Log, All)
+
+//@전방 선언
+#pragma region Forward Declaration
 class UInventoryComponent;
 class UUIComponent;
 class AController;
+class UBaseAnimInstance;
+class ULockOnComponent;
+#pragma endregion
 
-DECLARE_LOG_CATEGORY_EXTERN(LogPlayer, Log, All)
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
 //@초기화 요청 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FRequestStartInitByPlayerCharacter, const AController*);
-
+#pragma endregion
 
 /**
  * @APlayerCharacter
@@ -28,103 +44,94 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FRequestStartInitByPlayerCharacter, const AC
 UCLASS()
 class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase, public IGenericTeamAgentInterface, public ICombatInterface
 {
-	GENERATED_BODY()
 	
+//@친추 클래스
+#pragma region Friend Class
+#pragma endregion
+
+	GENERATED_BODY()
+
+//@Defualt Setting
 #pragma region Default Setting
 public:
-	// Sets default values for this character's properties
 	APlayerCharacter(const FObjectInitializer& ObjectInitializer);
 
 protected:
-	//~Begin AActor interface
-	/*
-	* @목적: Actor Component가 모두 초기화 된 후, 각 Component 사이의 의존 관계를 정의합니다.
-	* @설명: 의존 관계의 두 Component 간 선후 관계 파악 후 Callback 등록 작업
-	* @참고: Event-driven 시스템 구축을 위한 작업
-	*/
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	virtual void Tick(float DeltaSeconds) override;
-	//~End AActor interface
-	//~Begin APawn interface
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void PawnClientRestart() override;
-	//~End APawn Interface.
+
+public:
+	//@Interface of ICombatInterface
+	virtual void Die() override;
+	virtual void HitReact(FGameplayTag HitDirectionTag) override;
+	//@End Of ICombatInterface
+
+protected:
+	//@내부 바인딩
+
+protected:
+	//@외부 바인딩
+
+protected:
+	//@초기화
+
 #pragma endregion
 
-#pragma region Components
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+protected:
+	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
+		void UpdateFacingTarget();
+
 protected:
 	UPROPERTY(VisibleAnywhere, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class USpringArmComponent* SpringArm;
+
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
+
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UInventoryComponent* InventoryComponent;
-	UPROPERTY(VisibleDefaultsOnly)
-		class ULockOnComponent* LockOnComponent;
-#pragma endregion
 
-#pragma region Controller Rotaion
+	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		ULockOnComponent* LockOnComponent;
+
 protected:
-	// TODO : LockOn 기능 구현 시 활용할 함수, 구현만 해놓은 상태로 직접적인 호출은 아직 없습니다.
-	/*
-	* @목적 : 매 프레임마다 캐릭터 객체의 회전 값에 대하여 Controller의 회전 값에 따른 보간 작업을 수행합니다.
-	* @설명 : 사용자 카메라가 바라보는 방향과 캐릭터 객체가 바라보는 방향의 조정 작업을 수행합니다.
-	* @참조 : -
-	*/ 
-	void AdjustControllerRotation(float DeltaSeconds);
+	public:
+		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
+			int32 ID = 1;
 
-	/*
-	* @목적 : 사용자의 카메라 회전에 따른 캐릭터 객체의 회전 보간 작업을 수행합니다.
-	* @설명 : Float Curve를 통해 캐릭터 회전 값 보간 작업 과정에 필요한 Offset 값을 가져옵니다.
-	* @참조 : APlayerCharacter::AdjustControllerRotation
-	*/
-	UPROPERTY(EditDefaultsOnly, Category = "Character Movement|Control Rotation")
-		UCurveFloat* DirectionCurve;
+protected:
+	FGenericTeamId TeamId;
 #pragma endregion
 
-#pragma region SpringArm & Camera
+//@Delegates
+#pragma region Delegates
+public:
+	FRequestStartInitByPlayerCharacter RequestStartInitByPlayerCharacter;
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+protected:
+	UPROPERTY()
+		TObjectPtr<UBaseAnimInstance> AnimInstanceRef;
+
 public:
 	FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
 	FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }
 	FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockOnComponent; }
-#pragma endregion
-
-#pragma region Delegates
-protected:
-	FRequestStartInitByPlayerCharacter RequestStartInitByPlayerCharacter;
-#pragma endregion
-
-#pragma endregion
-
-#pragma region TeamAgentInterface
 
 public:
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-	int32 ID = 1;
-
 	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
-
-protected:
-	FGenericTeamId TeamId;
-
-	//virtual UBaseMonsterASC* GetMonsterASC() override;
-
-	UFUNCTION(BlueprintImplementableEvent, BlueprintCallable)
-	void UpdateFacingTarget();
-
-#pragma endregion
-
-
-#pragma region CombatInterface
-
-public:
-
-	virtual void Die() override;
-
-	virtual void HitReact(FGameplayTag HitDirectionTag) override;
-
 #pragma endregion
 
 };

@@ -5,13 +5,17 @@
 #include "Logging/StructuredLog.h"
 
 #include "04_Component/BaseAbilitySystemComponent.h"
+#include "MotionWarpingComponent.h"
 
 DEFINE_LOG_CATEGORY(LogCharacter)
 
 ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
+	:Super(ObjectInitializer)
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
 	PrimaryActorTick.bCanEverTick = true;
+
+	//@Motion Warping Component
+	MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("Motion Warping Component"));
 
 }
 
