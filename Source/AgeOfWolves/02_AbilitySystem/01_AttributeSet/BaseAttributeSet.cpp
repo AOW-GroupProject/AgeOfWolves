@@ -49,6 +49,8 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 	AllAttributes.Add(GetXPBountyAttribute());
 	AllAttributes.Add(GetGoldBountyAttribute());
 
+	AllAttributes.Add(GetCombatStateAttribute());
+
 	return AllAttributes;
 }
 
@@ -77,9 +79,13 @@ void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 	{
 		NewValue = FMath::Clamp<float>(NewValue, 150, 1000);
 	}
-
+	// @CombatState - 0(비전투) 또는 1(전투) 상태만 가질 수 있도록 클램핑
+	else if (Attribute == GetCombatStateAttribute())
+	{
+		NewValue = FMath::Clamp<float>(FMath::RoundToFloat(NewValue), 0.f, 1.f);
+		UE_LOGFMT(LogAttributeSet, Log, "전투 상태 변경: {0}", NewValue > 0.f ? TEXT("전투") : TEXT("비전투"));
+	}
 }
-
 void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);

@@ -30,19 +30,24 @@ void UBaseAbilitySystemComponent::InitializeComponent()
 #pragma region Property or Subwidgets or Infos...etc
 FGameplayAbilitySpecHandle UBaseAbilitySystemComponent::GiveAbility(const FGameplayAbilitySpec& AbilitySpec)
 {
+	UE_LOGFMT(LogASC, Log, "GiveAbility 시작 - Ability: {0}",
+		IsValid(AbilitySpec.Ability) ? AbilitySpec.Ability->GetName() : TEXT("Invalid"));
+
 	if (!IsValid(AbilitySpec.Ability))
 	{
+		UE_LOGFMT(LogASC, Warning, "GiveAbility 실패 - 유효하지 않은 어빌리티");
 		return FGameplayAbilitySpecHandle();
 	}
 
 	if (!IsOwnerActorAuthoritative())
 	{
+		UE_LOGFMT(LogASC, Warning, "GiveAbility 실패 - 권한 없음");
 		return FGameplayAbilitySpecHandle();
 	}
 
-	// If locked, add to pending list. The Spec.Handle is not regenerated when we receive, so returning this is ok.
 	if (AbilityScopeLockCount > 0)
 	{
+		UE_LOGFMT(LogASC, Log, "어빌리티 보류 중 - Scope Lock 상태");
 		AbilityPendingAdds.Add(AbilitySpec);
 		return AbilitySpec.Handle;
 	}
@@ -52,7 +57,7 @@ FGameplayAbilitySpecHandle UBaseAbilitySystemComponent::GiveAbility(const FGamep
 
 	if (OwnedSpec.Ability->GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerActor)
 	{
-		// Create the instance at creation time
+		UE_LOGFMT(LogASC, Log, "어빌리티 인스턴스 생성 - Policy: InstancedPerActor");
 		CreateNewInstanceOfAbility(OwnedSpec, AbilitySpec.Ability);
 	}
 
@@ -83,7 +88,6 @@ void UBaseAbilitySystemComponent::CancelAbilitySpec(FGameplayAbilitySpec& Spec, 
 	}
 
 	Super::CancelAbilitySpec(Spec, Ignore);
-
 }
 
 void UBaseAbilitySystemComponent::ReactivateUnblockedPassiveAbility(const FGameplayTagContainer UnblockedAbilityTags)
