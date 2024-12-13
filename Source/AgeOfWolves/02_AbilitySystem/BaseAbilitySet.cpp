@@ -30,7 +30,6 @@ void FBaseAbilitySet_GrantedHandles::AddGameplayEffectHandle(const FActiveGamepl
 void FBaseAbilitySet_GrantedHandles::AddAttributeSet(UBaseAttributeSet* Set)
 {
 	GrantedAttributeSets.Add(Set);
-
 }
 
 UBaseAbilitySet::UBaseAbilitySet(const FObjectInitializer& ObjectInitializer)

@@ -106,6 +106,7 @@ protected:
 //@Delegates
 #pragma region Delegates
 public:
+	//@Ability Slot의 초기화 완료 이벤트
 	FAbilitySlotInitFinished AbilitySlotInitFinished;
 #pragma endregion
 

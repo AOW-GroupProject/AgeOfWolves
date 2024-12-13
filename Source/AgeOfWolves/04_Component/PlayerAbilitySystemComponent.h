@@ -7,7 +7,6 @@
 
 #include "PlayerAbilitySystemComponent.generated.h"
 
-
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayerASC, Log, All);
 
 /**

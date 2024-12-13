@@ -12,9 +12,9 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAttributeSet, Log, All);
 
 
 /*
-* @¸ñÀû : Gameplay Attribute °ªµéÀÇ Getter&Setter¸¦ À§ÇÑ ¸ÅÅ©·Î Á¤ÀÇ
-* @¼³¸í : Get(Attribute_Name)À» ÅëÇØ °£´ÜÈ÷ Attirbute ¼öÄ¡¸¦ °¡Á®¿Ã ¼ö ÀÖµµ·ÏÇÕ´Ï´Ù.
-* @ÁÖÀÇ : Á÷Á¢ÀûÀ¸·Î Getter¿Í Setter¸¦ È£ÃâÇÏ±â º¸´Ü, Gameplay Effect È°¿ëÀ» ÁöÇâÇÕ´Ï´Ù.
+* @ëª©ì  : Gameplay Attribute ê°’ë“¤ì˜ Getter&Setterë¥¼ ìœ„í•œ ë§¤í¬ë¡œ ì •ì˜
+* @ì„¤ëª… : Get(Attribute_Name)ì„ í†µí•´ ê°„ë‹¨íˆ Attirbute ìˆ˜ì¹˜ë¥¼ ê°€ì ¸ì˜¬ ìˆ˜ ìˆë„ë¡í•©ë‹ˆë‹¤.
+* @ì£¼ì˜ : ì§ì ‘ì ìœ¼ë¡œ Getterì™€ Setterë¥¼ í˜¸ì¶œí•˜ê¸° ë³´ë‹¨, Gameplay Effect í™œìš©ì„ ì§€í–¥í•©ë‹ˆë‹¤.
 */
 // Uses macros from AttributeSet.h
 #define ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
@@ -25,7 +25,9 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAttributeSet, Log, All);
 
 
 /**
- *
+ *	@UBaseAttributeSe
+ * 
+ *	ASCë¥¼ í™œìš©í•˜ëŠ” ìºë¦­í„°ì˜ ëŠ¥ë ¥ì¹˜ ì†ì„± ëª©ë¡ ì •ì˜
  */
 UCLASS()
 class AGEOFWOLVES_API UBaseAttributeSet: public UAttributeSet
@@ -34,9 +36,6 @@ class AGEOFWOLVES_API UBaseAttributeSet: public UAttributeSet
 
 
 public:
-	// Current Health, when 0 we expect owner to die unless prevented by an ability. Capped by MaxHealth.
-	// Positive changes can directly use this.
-	// Negative changes to Health should go through Damage meta attribute.
 	UPROPERTY(BlueprintReadOnly, Category = "Attribute | Health")
 		FGameplayAttributeData Health;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Health)
@@ -81,22 +80,22 @@ public:
 		FGameplayAttributeData StaminaRegenRate;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, StaminaRegenRate)
 
-		// @°­ÀÎµµ: 'ÇÇ°İ' ÀÌº¥Æ® ¹ß»ı ½Ã ÇÇ°İ ¹İÀÀ ¿©ºÎ¸¦ °áÁ¤ÇÕ´Ï´Ù.
+		// @ê°•ì¸ë„: 'í”¼ê²©' ì´ë²¤íŠ¸ ë°œìƒ ì‹œ í”¼ê²© ë°˜ì‘ ì—¬ë¶€ë¥¼ ê²°ì •í•©ë‹ˆë‹¤.
 		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Poise")
 		FGameplayAttributeData Poise;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Poise)
 
-		// @°ø°İ·Â: Àü´ŞÇÏ°íÀÚ ÇÏ´Â µ¥¹ÌÁö¸¦ ÀÏÁ¤ ¼öÄ¡ Áõ°¡½ÃÅµ´Ï´Ù.
+		// @ê³µê²©ë ¥: ì „ë‹¬í•˜ê³ ì í•˜ëŠ” ë°ë¯¸ì§€ë¥¼ ì¼ì • ìˆ˜ì¹˜ ì¦ê°€ì‹œí‚µë‹ˆë‹¤.
 		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Offense")
 		FGameplayAttributeData Offense;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Offense)
 
-		// @¹æ¾î·Â: Àü´Ş ¹ŞÀº µ¥¹ÌÁö¸¦ ÀÏÁ¤ ¼öÄ¡ °¨¼Ò½ÃÅµ´Ï´Ù.
+		// @ë°©ì–´ë ¥: ì „ë‹¬ ë°›ì€ ë°ë¯¸ì§€ë¥¼ ì¼ì • ìˆ˜ì¹˜ ê°ì†Œì‹œí‚µë‹ˆë‹¤.
 		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Defense")
 		FGameplayAttributeData Defense;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Defense)
 
-		// @Meta Attribute: ÃÖÁ¾ÀûÀ¸·Î °è»êµÈ µ¥¹ÌÁö ¼öÄ¡¸¦ ÀÓ½Ã ÀúÀåÇÏ°í, Health Attribute¿¡ ¿µÇâÀ» ÁÖ´Â ¿ëµµÀÔ´Ï´Ù.
+		// @Meta Attribute: ìµœì¢…ì ìœ¼ë¡œ ê³„ì‚°ëœ ë°ë¯¸ì§€ ìˆ˜ì¹˜ë¥¼ ì„ì‹œ ì €ì¥í•˜ê³ , Health Attributeì— ì˜í–¥ì„ ì£¼ëŠ” ìš©ë„ì…ë‹ˆë‹¤.
 		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Damage")
 		FGameplayAttributeData Damage;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Damage)
@@ -118,28 +117,30 @@ public:
 		FGameplayAttributeData Gold;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Gold)
 
-		// @ºÀÀÎ °¡´É ¼öÄ¡(»ó´ë°¡), ¸ó½ºÅÍ Àü¿ë
+		// @ë´‰ì¸ ê°€ëŠ¥ ìˆ˜ì¹˜(ìƒëŒ€ê°€), ëª¬ìŠ¤í„° ì „ìš©
 		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Seal Point")
 		FGameplayAttributeData SealPoint;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, SealPoint)
 
-		// @±×·Î±â ¼öÄ¡, ¸ó½ºÅÍ Àü¿ë: Àü´Ş ¹ŞÀº ±×·Î±â ¼öÄ¡°¡ ½×ÀÌ°í, ÀÏÁ¤ ÀÌ»ó Áõ°¡ÇÏ¸é ±×·Î±â ¹İÀÀ ¼öÇà
+		// @ê·¸ë¡œê¸° ìˆ˜ì¹˜, ëª¬ìŠ¤í„° ì „ìš©: ì „ë‹¬ ë°›ì€ ê·¸ë¡œê¸° ìˆ˜ì¹˜ê°€ ìŒ“ì´ê³ , ì¼ì • ì´ìƒ ì¦ê°€í•˜ë©´ ê·¸ë¡œê¸° ë°˜ì‘ ìˆ˜í–‰
 		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Groggy")
 		FGameplayAttributeData Groggy;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, Groggy)
 
-		// @Ã³Ä¡ ½Ã ¾ò´Â °æÇèÄ¡(»ó´ë°¡), ¸ó½ºÅÍ Àü¿ë
+		// @ì²˜ì¹˜ ì‹œ ì–»ëŠ” ê²½í—˜ì¹˜(ìƒëŒ€ê°€), ëª¬ìŠ¤í„° ì „ìš©
 		UPROPERTY(BlueprintReadOnly, Category = "Attribute | XP Bounty")
 		FGameplayAttributeData XPBounty;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, XPBounty)
 
-		// @Ã³Ä¡ ½Ã ¾ò´Â ±İÀü(»ó´ë°¡), ¸ó½ºÅÍ Àü¿ë
+		// @ì²˜ì¹˜ ì‹œ ì–»ëŠ” ê¸ˆì „(ìƒëŒ€ê°€), ëª¬ìŠ¤í„° ì „ìš©
 		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Gold Bounty")
 		FGameplayAttributeData GoldBounty;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, GoldBounty)
 
-	// @¸ñÀû : BaseAttributeSetÀÇ ¸ğµç Attribute Ç×¸ñÀ» ¹İÈ¯ÇÏ´Â ÇÔ¼ö
-	TArray<FGameplayAttribute> GetAllAttributes() const;
+		// @ì „íˆ¬/ë¹„ì „íˆ¬ ìƒíƒœ ì •ì˜
+		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Combat State")
+		FGameplayAttributeData CombatState;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, CombatState)
 
 public:
 	UBaseAttributeSet();
@@ -147,30 +148,37 @@ public:
 
 protected:
 	/*
-	* @¸ñÀû : Attribute ¼öÄ¡ º¯È­ ÀÌº¥Æ® ¹ß»ı ½Ã Ç×»ó È£ÃâµÇ´Â ÇÔ¼ö
-	* @¼³¸í : Attribute ¼öÄ¡ º¯È­ ¹ß»ı ½Ã ÇÏÇÑ°ú »óÇÑÀÌ °íÁ¤µÈ Attribute µé¿¡ ´ëÇÏ¿© Å¬·¥ÇÎÀ» ¼öÇàÇÕ´Ï´Ù.
+	* @ëª©ì  : Attribute ìˆ˜ì¹˜ ë³€í™” ì´ë²¤íŠ¸ ë°œìƒ ì‹œ í•­ìƒ í˜¸ì¶œë˜ëŠ” í•¨ìˆ˜
+	* @ì„¤ëª… : Attribute ìˆ˜ì¹˜ ë³€í™” ë°œìƒ ì‹œ í•˜í•œê³¼ ìƒí•œì´ ê³ ì •ëœ Attribute ë“¤ì— ëŒ€í•˜ì—¬ í´ë¨í•‘ì„ ìˆ˜í–‰í•©ë‹ˆë‹¤.
 	*/
 	// AttributeSet Overrides
 	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
 
 	/*
-	* @¸ñÀû : AttributeÀÇ º¯È­ ÀÌÈÄ¿¡ È£ÃâµÇ´Â Handling Logic
-	* @¼³¸í : Current HealthÀÇ Clmap ÀÛ¾÷ µî Attribute °ªÀÇ º¯È­°¡ ÀÏ¾î³­ ÀÌÈÄ¿¡ ¹ß»ıÇÏ´Â ÇÚµé¸µ ·ÎÁ÷À» Ã³¸®ÇÕ´Ï´Ù.
+	* @ëª©ì  : Attributeì˜ ë³€í™” ì´í›„ì— í˜¸ì¶œë˜ëŠ” Handling Logic
+	* @ì„¤ëª… : Current Healthì˜ Clmap ì‘ì—… ë“± Attribute ê°’ì˜ ë³€í™”ê°€ ì¼ì–´ë‚œ ì´í›„ì— ë°œìƒí•˜ëŠ” í•¸ë“¤ë§ ë¡œì§ì„ ì²˜ë¦¬í•©ë‹ˆë‹¤.
 	*/
 	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
 
 	/*
-	* @¸ñÀû : Attirbute Ç×¸ñÀÇ Max °ª º¯°æ¿¡ µû¸¥ Current/Max ÆÛ¼¾Æ¼Áö °ª º¯°æ
-	* @¼³¸í : Attribute Ç×¸ñÀÇ Max °ª º¯°æÀº Current °ª°ú Max °ªÀÇ ºñÀ² º¯°æ¿¡ ¿µÇâÀ» ³¢Ä¡¹Ç·Î, ÀÌ ³»¿ëÀ» º°µµÀÇ ÇÔ¼ö·Î Á¤ÀÇÇÕ´Ï´Ù.
+	* @ëª©ì  : Attirbute í•­ëª©ì˜ Max ê°’ ë³€ê²½ì— ë”°ë¥¸ Current/Max í¼ì„¼í‹°ì§€ ê°’ ë³€ê²½
+	* @ì„¤ëª… : Attribute í•­ëª©ì˜ Max ê°’ ë³€ê²½ì€ Current ê°’ê³¼ Max ê°’ì˜ ë¹„ìœ¨ ë³€ê²½ì— ì˜í–¥ì„ ë¼ì¹˜ë¯€ë¡œ, ì´ ë‚´ìš©ì„ ë³„ë„ì˜ í•¨ìˆ˜ë¡œ ì •ì˜í•©ë‹ˆë‹¤.
 	*/
 	void AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);
 
 	/*
-	* @¸ñÀû : Attirbute Ç×¸ñÀÇ ÇöÀç °ª º¯°æ¿¡ µû¸¥ ÇöÀç °ª Á¶Á¤
-	* @¼³¸í : Attribute Ç×¸ñÀÇ ÇöÀç °ª º¯°æÀº Current °ª°ú Max °ªÀÇ ºñÀ² º¯°æ¿¡ ¿µÇâÀ» ³¢Ä¡¹Ç·Î, ÀÌ ³»¿ëÀ» º°µµÀÇ ÇÔ¼ö·Î Á¤ÀÇÇÕ´Ï´Ù.
+	* @ëª©ì  : Attirbute í•­ëª©ì˜ í˜„ì¬ ê°’ ë³€ê²½ì— ë”°ë¥¸ í˜„ì¬ ê°’ ì¡°ì •
+	* @ì„¤ëª… : Attribute í•­ëª©ì˜ í˜„ì¬ ê°’ ë³€ê²½ì€ Current ê°’ê³¼ Max ê°’ì˜ ë¹„ìœ¨ ë³€ê²½ì— ì˜í–¥ì„ ë¼ì¹˜ë¯€ë¡œ, ì´ ë‚´ìš©ì„ ë³„ë„ì˜ í•¨ìˆ˜ë¡œ ì •ì˜í•©ë‹ˆë‹¤.
 	*/
 	void AdjustAttributeForCurrentChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);
 
+public:
+	// @ëª©ì  : BaseAttributeSetì˜ ëª¨ë“  Attribute í•­ëª©ì„ ë°˜í™˜í•˜ëŠ” í•¨ìˆ˜
+	TArray<FGameplayAttribute> GetAllAttributes() const;
 
+public:
+	// ë¸”ë£¨í”„ë¦°íŠ¸ì—ì„œ CombatState ê°’ì„ ì‰½ê²Œ ê°€ì ¸ì˜¬ ìˆ˜ ìˆëŠ” í•¨ìˆ˜
+	UFUNCTION(BlueprintPure, Category = "Attributes")
+		float GetCurrentCombatState() const { return GetCombatState(); }
 
 };
