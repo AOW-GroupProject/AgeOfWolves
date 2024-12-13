@@ -84,7 +84,7 @@ class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 
 	GENERATED_BODY()
 
-		//@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UBaseAnimInstance(const FObjectInitializer& ObjectInitializer);
@@ -95,7 +95,7 @@ protected:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 #pragma endregion
 
-	//@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
 	UFUNCTION(BlueprintCallable)
@@ -190,7 +190,7 @@ protected:
 		bool bIsCombatState = false;
 #pragma endregion
 
-	//@Delegates
+//@Delegates
 #pragma region Delegates
 #pragma endregion
 
@@ -206,7 +206,7 @@ protected:
 		void OnDecelerationStateChanged(bool bIsDecelerating);
 #pragma endregion
 
-	//@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
 	//@Owner Character 캐싱
@@ -223,14 +223,17 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE EMovementState GetLastMovementState() const { return LastMovementState; }
 
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE EMovementDirection GetMovementDirection() const { return MovementDirection; }
+
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE EStopMotionType GetStopMotionType() const { return StopMotionType; }
 
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE float GetDirectionAngle() const { return DirectionAngle; }
 
-	UFUNCTION(BlueprintCallable)
-		FORCEINLINE EMovementDirection GetMovementDirection() const { return MovementDirection; }
+	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
+		FORCEINLINE bool GetIsCombatState() const { return bIsCombatState; }
 #pragma endregion
 
 };

@@ -128,6 +128,7 @@ void UBaseAbilitySystemComponent::ApplyAbilityBlockAndCancelTags(const FGameplay
 #pragma region Callbacks
 void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 {
+
 	// @Ability
 	if (!Ability)
 	{
@@ -146,6 +147,7 @@ void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 			UE_LOGFMT(LogASC, Warning, "{0}가 활성화 목록에 추가되었습니다.", Ability->GetName());
 		}
 	}
+
 	UE_LOGFMT(LogASC, Warning, "{0}가 활성화 되었습니다.", Ability->GetName());
 
 	// @TODO: Ability 활성화 시점에 ASC에서 할 일들...
@@ -161,12 +163,14 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 		UE_LOGFMT(LogASC, Error, "{0}가 유효하지 않습니다", Ability->GetName());
 		return;
 	}
+
 	//@Activating Abilities
 	if (!ActivatingAbilityTags.IsEmpty() && ActivatingAbilityTags.HasAllExact(Ability->AbilityTags))
 	{
 		ActivatingAbilityTags.RemoveTags(Ability->AbilityTags);
 		UE_LOGFMT(LogASC, Warning, "{0}가 활성화 목록에서 제거되었습니다.", Ability->GetName());
 	}
+
 	// @UnBlock
 	if (AbilityTagRelationshipMapping)
 	{
@@ -216,12 +220,10 @@ void UBaseAbilitySystemComponent::GetAbilityBlockAndCancelTagsForAbilityTag(cons
 
 void UBaseAbilitySystemComponent::GetAbilityRelationshipActivationTags(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer* OutActivationRequired, FGameplayTagContainer* OutActivationBlocked) const
 {
-	//check(AbilityTagRelationship)
 
 	if (AbilityTagRelationshipMapping)
 	{
 		AbilityTagRelationshipMapping->GetRequiredAndBlockedActivationTags(AbilityTags, OutActivationRequired, OutActivationBlocked);
 	}
 }
-
 #pragma endregion
