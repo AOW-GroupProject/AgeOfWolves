@@ -102,40 +102,6 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 	{
 		SetStamina(FMath::Clamp(GetStamina(), 0.f, GetMaxStamina()));
 	}
-
-	float MinimumHealth = 0.f;
-	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
-	{
-		const float LocalIncomingDamage = GetDamage();
-		SetDamage(0.f);
-		if (LocalIncomingDamage > 0.f)
-		{
-			const float NewHealth = GetHealth() - LocalIncomingDamage;
-			SetHealth(FMath::Clamp(NewHealth, 0.f, GetMaxHealth()));
-
-			const bool bFatal = NewHealth <= 0.f;
-
-			ICombatInterface* CombatInterface = Cast<ICombatInterface>(Data.Target.AbilityActorInfo->AvatarActor.Get());
-			if (CombatInterface)
-			{
-				if (bFatal)
-				{
-					CombatInterface->Die();
-				}
-				else
-				{
-					FGameplayTagContainer TagContainer = Data.EffectSpec.GetDynamicAssetTags();
-					if (TagContainer.HasTag(AOWGameplayTags::TAG_EventTag_HitReact))
-					{
-						TArray<FGameplayTag> TagArray;
-						TagContainer.GetGameplayTagArray(TagArray);
-						CombatInterface->HitReact(TagArray[0]);
-					}
-				}
-			}
-			// ToDo : 그 외 로직 처리
-		}
-	}
 }
 
 void UBaseAttributeSet::AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty)

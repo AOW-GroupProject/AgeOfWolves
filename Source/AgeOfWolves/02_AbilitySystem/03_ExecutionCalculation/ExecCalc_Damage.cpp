@@ -2,44 +2,24 @@
 
 
 #include "ExecCalc_Damage.h"
-
-#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+#include "Logging/StructuredLog.h"
 
 #include "AbilitySystemComponent.h"
+#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+
+DEFINE_LOG_CATEGORY(LogExecCalc_Damage)
+
 
 struct FDamageStatics
 {
-	// 참고 : 1, 2 방법의 매크로 대신 아래와 같은 방법으로도 선언 및 정의 가능
-
-
-	/*
-	FGameplayEffectAttributeCaptureDefinition DamageDef;
-	FDamageStatics()
-	{
-		DamageDef = FGameplayEffectAttributeCaptureDefinition(UBaseAttributeSet::GetDamageAttribute(), 
-		EGameplayEffectAttributeCaptureSource::Source, 
-		true
-		);
-	}
-	*/
-
-
-	// 1. 데미지 계산시 사용할 Attribute들을 매크로를 통해 선언한다.
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Damage);
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Poise);
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Offense);
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Defense);
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Groggy);
 	
-	// Todo : 전투와 관련된 Attribute들에 대해서 Gameplay Tag 추가하여 Map에 등록 및 사용
-	// TMap<FGameplayTag, FGameplayEffectAttributeCaptureDefinition> TagsToCaptureDefs;
-
-	// 2. 사용할 Attribute들을 매크로를 통해 정의한다.
 	FDamageStatics()
 	{
-		// bSnapshot = true인 경우, Attribute가 GameplayEffectSpec이 생성될때, Attribute가 캡처된다.
-		// bSnapshot = false인 경우, Attribute는 GameplayEffectSpec이 적용될 때, Attribute가 캡처된다.
-		// 예시: 파이어볼을 발사했을 때, 발사를 시작했을때(true) vs 적이 맞았을 때(false)
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UBaseAttributeSet, Damage, Source, false);
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UBaseAttributeSet, Poise, Target, false);
 		DEFINE_ATTRIBUTE_CAPTUREDEF(UBaseAttributeSet, Offense, Source, false);
@@ -55,7 +35,6 @@ static const FDamageStatics& DamageStatics()
 }
 UExecCalc_Damage::UExecCalc_Damage()
 {
-	//FDamageStatics에서 정의된 Attribute들을 RelevantAttributesToCapture에 추가한다.
 	RelevantAttributesToCapture.Add(DamageStatics().DamageDef);
 	RelevantAttributesToCapture.Add(DamageStatics().PoiseDef);
 	RelevantAttributesToCapture.Add(DamageStatics().OffenseDef);
@@ -66,8 +45,6 @@ UExecCalc_Damage::UExecCalc_Damage()
 
 void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecutionParameters& ExecutionParams, FGameplayEffectCustomExecutionOutput& OutExecutionOutput) const
 {
-	// 4. 전투 기획에서 작성된 데미지와 관련된 로직은 여기서 코드로 구현된다.
-	
 	// Source, Target 관련 멤버 변수 설정
 	const UAbilitySystemComponent* SourceASC = ExecutionParams.GetSourceAbilitySystemComponent();
 	const UAbilitySystemComponent* TargetASC = ExecutionParams.GetTargetAbilitySystemComponent();
@@ -75,7 +52,11 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	AActor* SourceAvatar = SourceASC ? SourceASC->GetAvatarActor() : nullptr;
 	AActor* TargetAvatar = TargetASC ? TargetASC->GetAvatarActor() : nullptr;
 
-	// ToDo : 추가할 Source, Target 관련 멤버 변수 설정 ...
+	// Source, Target 정보 로그
+	UE_LOGFMT(LogExecCalc_Damage, Log, "데미지 계산 시작 - Source: {0}, Target: {1}",
+		IsValid(SourceAvatar) ? SourceAvatar->GetName() : TEXT("Invalid"),
+		IsValid(TargetAvatar) ? TargetAvatar->GetName() : TEXT("Invalid"));
+
 	const FGameplayEffectSpec& Spec = ExecutionParams.GetOwningSpec();
 	const FGameplayTagContainer* SourceTags = Spec.CapturedSourceTags.GetAggregatedTags();
 	const FGameplayTagContainer* TargetTags = Spec.CapturedTargetTags.GetAggregatedTags();
@@ -84,23 +65,30 @@ void UExecCalc_Damage::Execute_Implementation(const FGameplayEffectCustomExecuti
 	EvaluationParameters.SourceTags = SourceTags;
 	EvaluationParameters.TargetTags = TargetTags;
 
-	// 계산결과 target에게 적용 될 Damage 변수
 	float Damage = 0.f;
-	
+
+	//@Source의 공격력
 	float SourceOffense = 0.f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().OffenseDef, EvaluationParameters, SourceOffense);
 	Damage += SourceOffense;
+	UE_LOGFMT(LogExecCalc_Damage, Log, "Source의 공격력: {0}", SourceOffense);
 
-	// ToDo : 스킬판정배율을 피해량(Damage)에 반영, 그로기 적용
+	//@Target의 방어력
 	float TargetDefense = 0.f;
 	ExecutionParams.AttemptCalculateCapturedAttributeMagnitude(DamageStatics().DefenseDef, EvaluationParameters, TargetDefense);
 	TargetDefense = FMath::Max<float>(TargetDefense, 0.f);
+	UE_LOGFMT(LogExecCalc_Damage, Log, "Target의 방어력: {0}", TargetDefense);
 
-	// ToDo : 방어력이 Damage보다 더 높은 경우 로직 추가?
+	//@최종 데미지 계산
 	Damage -= TargetDefense;
-	// 0 이하면 1로 표기
-	Damage = FMath::Max<float>(Damage, 1.f);
+	Damage = FMath::Max<float>(Damage, 0.f);
+	UE_LOGFMT(LogExecCalc_Damage, Log, "최종 데미지 계산 결과: {0} (공격력: {1} - 방어력: {2})",
+		Damage, SourceOffense, TargetDefense);
 
-	const FGameplayModifierEvaluatedData EvaluatedData(UBaseAttributeSet::GetDamageAttribute(), EGameplayModOp::Additive, Damage);
-	OutExecutionOutput.AddOutputModifier(EvaluatedData);
+	//@Damage 업데이트
+	const FGameplayModifierEvaluatedData DamageEvaluatedData(UBaseAttributeSet::GetDamageAttribute(), EGameplayModOp::Additive, Damage);
+	OutExecutionOutput.AddOutputModifier(DamageEvaluatedData);
+
+	UE_LOGFMT(LogExecCalc_Damage, Log, "데미지 계산 완료 - Target {0}에게 {1} 데미지 적용",
+		IsValid(TargetAvatar) ? TargetAvatar->GetName() : TEXT("Invalid"), Damage);
 }

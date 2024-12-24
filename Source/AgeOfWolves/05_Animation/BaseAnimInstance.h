@@ -168,6 +168,7 @@ protected:
 		bool bIsSprintingCooldown;
 	UPROPERTY()
 		float SprintingCooldownTime;
+
 	UPROPERTY(EditAnywhere, Category = "Movement|Sprint", meta = (AllowPrivateAccess = "true"))
 		float SprintingCooldownDuration;
 	// 현재 누적된 Cooldown 시간을 추적
@@ -187,7 +188,7 @@ protected:
 protected:
 	//@전투/비전투 여부
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		bool bIsCombatState = false;
+		bool bIsCombatState;
 #pragma endregion
 
 //@Delegates
@@ -217,6 +218,9 @@ protected:
 		TWeakObjectPtr<UCharacterMovementComponent> CharacterMovementCompRef;
 
 public:
+	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
+		FORCEINLINE float GetSpeed() const { return Speed; }
+
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE EMovementState GetMovementState() const { return MovementState; }
 

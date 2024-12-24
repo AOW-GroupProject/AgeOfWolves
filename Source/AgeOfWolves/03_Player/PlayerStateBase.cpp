@@ -11,7 +11,7 @@
 
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "04_Component/PlayerAbilitySystemComponent.h"
-
+#include "14_Subsystem/AbilityManagerSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 
@@ -22,7 +22,14 @@ DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 #pragma region Default Setting
 APlayerStateBase::APlayerStateBase()
 {
-    PawnData = nullptr;
+
+    //@Character Tag
+    CharacterTag = FGameplayTag::RequestGameplayTag("Character.AkaOni");
+
+    //@Ability Manger Subsystem
+    AbilityManagerSubsystemRef.Reset();
+
+    //@ASC
     AbilitySystemComponent = CreateDefaultSubobject<UPlayerAbilitySystemComponent>(TEXT("Ability System Component"));
 
 }
@@ -30,6 +37,22 @@ APlayerStateBase::APlayerStateBase()
 void APlayerStateBase::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
+
+    //@Ability Manager Subsystem
+    const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
+    if (!GameInstance)
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "GameInstance가 유효하지 않음");
+        return;
+    }
+
+    //@캐싱
+    AbilityManagerSubsystemRef = GameInstance->GetSubsystem<UAbilityManagerSubsystem>();
+    if (!AbilityManagerSubsystemRef.IsValid())
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "AbilityManagerSubsystem 캐싱 실패");
+        return;
+    }
 
 }
 
@@ -41,13 +64,15 @@ void APlayerStateBase::BeginPlay()
 
 void APlayerStateBase::InitializePlayerState()
 {
-    //@Controlelr
+
+    //@Controller
     const auto& Controller = Cast<AController>(GetOwner());
     if (!Controller)
     {
         UE_LOGFMT(LogPlayerStateBase, Warning, "Controller가 유효하지 않음");
         return;
     }
+
     //@Pawn
     const auto& Pawn = Controller->GetPawn();
     if (!Pawn)
@@ -55,17 +80,12 @@ void APlayerStateBase::InitializePlayerState()
         UE_LOGFMT(LogPlayerStateBase, Warning, "Pawn이 유효하지 않음");
         return;
     }
-    //@Pawn Data
-    if (!PawnData->IsValidLowLevel())
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "PawnData가 유효하지 않음");
-        return;
-    }
-    //@Base Ability Set
-    UBaseAbilitySet* SetToGrant = PawnData->AbilitySet;
+
+    // AbilityManagerSubsystem으로부터 AbilitySet 가져오기
+    UBaseAbilitySet* SetToGrant = AbilityManagerSubsystemRef->GetAbilitySet(CharacterTag);
     if (!IsValid(SetToGrant))
     {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "AbilitySet이 유효하지 않음");
+        UE_LOGFMT(LogPlayerStateBase, Warning, "AbilitySet이 유효하지 않음 - Tag: {0}", CharacterTag.ToString());
         return;
     }
 
@@ -92,13 +112,21 @@ void APlayerStateBase::InitializePlayerState()
         }
     }
 
-    //@태그 관계 초기화
-    if (PawnData->TagRelationship)
+    //@ATMR
+    auto* ATMR = SetToGrant->GetATMR();
+    if (!ATMR)
     {
-        PawnData->TagRelationship->InitializeCacheMaps();
-        AbilitySystemComponent->SetAbilityTagRelationshipMapping(PawnData->TagRelationship);
-        UE_LOGFMT(LogPlayerStateBase, Log, "태그 관계 매핑 완료");
+        UE_LOGFMT(LogPlayerStateBase, Warning, "ATMR이 유효하지 않음");
+        return;
     }
+
+    //@ATMR 초기화
+    ATMR->InitializeCacheMaps();
+
+    //@SetAbilityTagRelationshipMapping
+    AbilitySystemComponent->SetAbilityTagRelationshipMapping(ATMR);
+
+    UE_LOGFMT(LogPlayerStateBase, Log, "태그 관계 매핑 완료");
 }
 #pragma endregion
 
@@ -134,27 +162,27 @@ void APlayerStateBase::LoadDefaultAbilitySystemFromAbilityManager()
         return;
     }
 
-    if (const auto& Controller = Cast<AController>(GetOwner()))
+    if (!AbilityManagerSubsystemRef.IsValid())
     {
-        if (const auto& Pawn = Controller->GetPawn())
-        {
-            if (PawnData->IsValidLowLevel())
-            {
-                UBaseAbilitySet* SetToGrant = PawnData->AbilitySet;
-                if (IsValid(SetToGrant))
-                {
-                    // 캐릭터의 기본 Gameplay Effect를 ASC에 최초 등록/적용합니다.
-                    SetToGrant->GiveStartupGameplayEffectToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
-
-                    // 캐릭터의 기본 Gameplay Ability를 ASC에 최초 등록/적용합니다.
-                    SetToGrant->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
-
-                    // ASC에 Startup GA, GE, AttributeSet의 등록 완료 이벤트 호출
-                    OnAttributeSetInitialized.Broadcast();
-                }
-            }
-        }
+        UE_LOGFMT(LogPlayerStateBase, Warning, "AbilityManagerSubsystem이 유효하지 않음");
+        return;
     }
+
+    UBaseAbilitySet* SetToGrant = AbilityManagerSubsystemRef->GetAbilitySet(CharacterTag);
+    if (!IsValid(SetToGrant))
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "AbilitySet이 유효하지 않음 - Tag: {0}", CharacterTag.ToString());
+        return;
+    }
+
+    // 캐릭터의 기본 Gameplay Effect를 ASC에 최초 등록/적용합니다.
+    SetToGrant->GiveStartupGameplayEffectToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+
+    // 캐릭터의 기본 Gameplay Ability를 ASC에 최초 등록/적용합니다.
+    SetToGrant->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+
+    // ASC에 Startup GA, GE, AttributeSet의 등록 완료 이벤트 호출
+    OnAttributeSetInitialized.Broadcast();
 }
 
 void APlayerStateBase::LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame)
@@ -169,7 +197,6 @@ void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Dat
 {
     OnAnyAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);
 }
-
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -183,10 +210,4 @@ TSoftObjectPtr<UBaseAttributeSet> APlayerStateBase::GetAttributeSet() const
 {
     return AttributeSet;
 }
-
-UPawnData* APlayerStateBase::GetPawnData() const
-{
-    return PawnData.Get();
-}
-
 #pragma endregion

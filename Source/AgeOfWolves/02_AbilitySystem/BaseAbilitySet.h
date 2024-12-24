@@ -18,8 +18,10 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAbilitySet, Log, All)
 class UBaseAttributeSet;
 class UBaseGameplayAbility;
 class UGameplayEffect;
+class UAbilityTagRelationshipMapping;
 class UBaseAbilitySystemComponent;
 class APlayerStateBase;
+class UInputConfig;
 #pragma endregion
 
 //@열거형
@@ -28,30 +30,10 @@ class APlayerStateBase;
 
 //@구조체
 #pragma region Structs
-#pragma endregion
-
-//@이벤트/델리게이트
-#pragma region Delegates
-#pragma endregion
-
 /**
- * FAbilitySet_GameplayAbility
+ *	@FAbilitySet_GameplayAbility
  *
- *	@목적: GA 관련 구조체입니다. 모든 GA는 고유의 Gameplay Tag를 갖습니다. 
- *	
- *	@설명: 해당 구조체는 그 특징에 따라서 두 개의 종류가 되며, 구분점은 IsAcive(bool형)입니다.
- * 
- *	1. Passive GA: 외부 환경 혹은 다른 GA를 통해 활성화되며, GE 구현에 중점을 두어 캐릭터의 Attribute 수치 변화 혹은 다른 GA의 '행동 제어'의 기반이 됩니다.
- *	-> Trigger 매개가 다른 GA 혹은 외부 환경입니다.
- *	-> Input Tag 관련 정보가 필요없습니다.
- *	-> 별도의 활성화 함수를 블루프린트에서 정의하고, 캐릭터의 Attribute 수치 변화에 중점을 두어 다른 GA의 '행동 제어'를 목표합니다.
- * 
- *	2. Active GA: 사용자 입력에 의해 활성화되어, GA 구현에 중점을 두어 캐릭터의 특정 '행동 개시'를 정의합니다.
- *	-> Trigger 매개가 사용자 입력입니다.
- *	-> Input Tag 관련 정보가 필요합니다.
- *	-> 별도의 활성화 함수를 블루프린트에서 정의하고, GA 구현에 중점을 두어 GE를 통한 캐릭터의 Attribute 수치 변화에 부가적인 영향을 끼쳐 캐릭터의 '행동 개시'의 기반이 됩니다. 
- * 
- *	@참고: Native Action으로 활성화 함수가 정의되는 GA들의 경우, 특정 GE에 의해 모두가 함께 영향을 받거나, 영향을 받지 않을 수 있습니다.
+ *	Gameplay Ability 와 함께 관리할 정보들을 정의한 구조체
  */
 USTRUCT(BlueprintType)
 struct FBaseAbilitySet_GameplayAbility
@@ -157,11 +139,17 @@ protected:
 	UPROPERTY()
 		TArray<TObjectPtr<UBaseAttributeSet>> GrantedAttributeSets;
 };
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+#pragma endregion
+
 
 /**
- * @목적	: 사용자 캐릭터가 부여받을 Gameplay Ability System 관련 정보들을 한데 묶어 놓은 Data Asset입니다.
- * @설명	: Gameplay Ability, Gameplay Effect, 그리고 Attribute Set과 각 항목에 대한 부가 정보들을 구조체 형식으로 한데 묶어 놓습니다.
- * @참조 : APlayerStateBase::InitializeGameplayAbilitySystem()
+*	@UBaseAbilitySet
+* 
+*	Attribute Set, GA, GE 목록을 담는 Data Asset
  */
 UCLASS()
 class AGEOFWOLVES_API UBaseAbilitySet : public UPrimaryDataAsset
@@ -181,6 +169,14 @@ public:
 	void GiveStartupGameplayAbilityToAbilitySystem(UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles, UObject* SourceObject) const;
 
 protected:
+	UPROPERTY(EditDefaultsOnly, Category = "캐릭터 태그")
+		FGameplayTag CharacterTag;
+
+protected:
+	// Attribute sets to grant when this ability set is granted.
+	UPROPERTY(EditDefaultsOnly, Category = "어트리뷰트 목록")
+		TArray<FBaseAbilitySet_AttributeSet> AttributeSets;
+
 	// Gameplay abilities to grant when this ability set is granted.
 	UPROPERTY(EditDefaultsOnly, Category = "GA 목록")
 		TArray<FBaseAbilitySet_GameplayAbility> GameplayAbilities;
@@ -189,13 +185,21 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "GE 목록")
 		TArray<FBaseAbilitySet_GameplayEffect> GameplayEffects;
 
-	// Attribute sets to grant when this ability set is granted.
-	UPROPERTY(EditDefaultsOnly, Category = "어트리뷰트 목록")
-		TArray<FBaseAbilitySet_AttributeSet> AttributeSets;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 관계성")
+		TObjectPtr<UAbilityTagRelationshipMapping> TagRelationship;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "입력")
+		TObjectPtr<UInputConfig> InputConfig;
 
 public:
+	FGameplayTag GetCharacterTag() const { return CharacterTag; }
+
+public:
+	TArray<FBaseAbilitySet_AttributeSet> GetAttributeSets() const { return AttributeSets; }
 	const TArray<FBaseAbilitySet_GameplayAbility>& GetGameplayAbilities() const { return GameplayAbilities; }
 	TArray<FBaseAbilitySet_GameplayEffect> GetGameplayEffects() const { return GameplayEffects; }
-	TArray<FBaseAbilitySet_AttributeSet> GetAttributeSets() const { return AttributeSets; }
+	UAbilityTagRelationshipMapping* GetATMR() const{ return TagRelationship; }
+	UInputConfig* GetInputConfig() const { return InputConfig; }
 
 };

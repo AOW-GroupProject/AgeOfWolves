@@ -7,13 +7,15 @@
 
 #include "BaseGameplayAbility.generated.h"
 
-class UGameplayEffect;
-class UAbilityTagRelationshipMapping;
+
 
 DECLARE_LOG_CATEGORY_EXTERN(LogGA, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
+class UGameplayEffect;
+class UAbilityTagRelationshipMapping;
+class UAttackGameplayAbility;
 #pragma endregion
 
 //@열거형
@@ -55,6 +57,19 @@ enum class EAbilityActivationPolicy : uint8
 
 //@구조체
 #pragma region Structs
+USTRUCT(BlueprintType)
+struct FDamageInformation : public FGameplayEventData
+{
+	GENERATED_BODY()
+
+public:
+	//@Outgoing GE Spec
+	UPROPERTY(BlueprintReadWrite)
+		FGameplayEffectSpecHandle OutgoingGESpecHandle;
+	//@히트 위치
+	UPROPERTY(BlueprintReadWrite)
+		FVector ImpactLocation;
+};
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -145,6 +160,33 @@ public:
 	FORCEINLINE EAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
 	FORCEINLINE TSubclassOf<UGameplayEffect> GetApplyGameplayEffectClass() { return ApplyGameplayEffectClass; }
 	FORCEINLINE FGameplayTagContainer GetRequiredTags() const { return ActivationRequiredTags; }
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Gameplay Event", meta = (DisplayName = "Convert Event Data to Damage Info"))
+		static FDamageInformation ConvertEventDataToDamageInfo(const FGameplayEventData& EventData)
+	{
+		FDamageInformation DamageInfo;
+
+		// FGameplayEventData의 기본 멤버들 복사
+		DamageInfo.EventTag = EventData.EventTag;
+		DamageInfo.Instigator = EventData.Instigator;
+		DamageInfo.Target = EventData.Target;
+		DamageInfo.OptionalObject = EventData.OptionalObject;
+		DamageInfo.OptionalObject2 = EventData.OptionalObject2;
+		DamageInfo.EventMagnitude = EventData.EventMagnitude;
+		DamageInfo.ContextHandle = EventData.ContextHandle;
+		DamageInfo.InstigatorTags = EventData.InstigatorTags;
+		DamageInfo.TargetTags = EventData.TargetTags;
+
+		// 추가 멤버들
+		if (const FDamageInformation* SourceDamageInfo = static_cast<const FDamageInformation*>(&EventData))
+		{
+			DamageInfo.OutgoingGESpecHandle = SourceDamageInfo->OutgoingGESpecHandle;
+			DamageInfo.ImpactLocation = SourceDamageInfo->ImpactLocation;
+		}
+
+		return DamageInfo;
+	}
 #pragma endregion
 
 };
