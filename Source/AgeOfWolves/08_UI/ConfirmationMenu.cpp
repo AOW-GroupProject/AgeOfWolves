@@ -259,7 +259,7 @@ void UConfirmationMenu::CreateButton()
 void UConfirmationMenu::OpenConfirmationMenu_Implementation()
 {
 
-    UE_LOGFMT(LogConfirmationMenu, Verbose, "Confirmation Menu 열기 완료");
+    UE_LOGFMT(LogConfirmationMenu, Log, "Confirmation Menu 열기 완료");
 
     //@첫 번째 버튼(OK 버튼)의 Hover 상태 전환
     UCustomButton* OkButton = MConfirmationMenuButtons.FindRef(FName("OK"));
@@ -285,7 +285,7 @@ void UConfirmationMenu::OpenConfirmationMenu_Implementation()
 
     //@Animation 작업 등 블루프린트에서 오버라이딩...
 
-    UE_LOGFMT(LogConfirmationMenu, Verbose, "Confirmation Menu 열기 및 초기 설정 완료. 추가 애니메이션은 블루프린트에서 처리될 수 있습니다.");
+    UE_LOGFMT(LogConfirmationMenu, Log, "Confirmation Menu 열기 및 초기 설정 완료. 추가 애니메이션은 블루프린트에서 처리될 수 있습니다.");
 }
 
 void UConfirmationMenu::CloseConfirmationMenu_Implementation()
@@ -298,7 +298,7 @@ void UConfirmationMenu::CloseConfirmationMenu_Implementation()
 
     //@Animation 작업 등 블루프린트에서 오버라이딩...
 
-    UE_LOGFMT(LogConfirmationMenu, Verbose, "Confirmation Menu 닫기 완료. 추가 애니메이션은 블루프린트에서 처리될 수 있습니다.");
+    UE_LOGFMT(LogConfirmationMenu, Log, "Confirmation Menu 닫기 완료. 추가 애니메이션은 블루프린트에서 처리될 수 있습니다.");
 
 }
 
@@ -385,7 +385,7 @@ void UConfirmationMenu::OnConfirmationMenuButtonHovered_Implementation(EInteract
     //@현재 호버된 버튼과 새로 호버된 버튼이 같은 경우 처리 중단
     if (CurrentHoveredConfirmationButton.IsValid() && CurrentHoveredConfirmationButton.Get() == HoveredButton)
     {
-        UE_LOGFMT(LogConfirmationMenu, Verbose, "이미 호버된 버튼입니다. 처리를 무시합니다: {0}", MenuButtonName.ToString());
+        UE_LOGFMT(LogConfirmationMenu, Log, "이미 호버된 버튼입니다. 처리를 무시합니다: {0}", MenuButtonName.ToString());
         return;
     }
 
@@ -435,13 +435,13 @@ void UConfirmationMenu::OnConfirmationMenuButtonUnhovered_Implementation(FName M
 
         if (CurrentHoveredButtonName != MenuButtonName)
         {
-            UE_LOGFMT(LogConfirmationMenu, Verbose, "언호버된 버튼이 현재 호버된 버튼과 일치하지 않음: 버튼 {0}", MenuButtonName.ToString());
+            UE_LOGFMT(LogConfirmationMenu, Log, "언호버된 버튼이 현재 호버된 버튼과 일치하지 않음: 버튼 {0}", MenuButtonName.ToString());
             return;
         }
 
         CurrentHoveredConfirmationButton.Reset();
 
-        UE_LOGFMT(LogConfirmationMenu, Verbose, "현재 호버된 버튼 리셋됨: 버튼 {0}", MenuButtonName.ToString());
+        UE_LOGFMT(LogConfirmationMenu, Log, "현재 호버된 버튼 리셋됨: 버튼 {0}", MenuButtonName.ToString());
     }
 
     //@TODO: Unhover 상태 처리
@@ -478,7 +478,7 @@ void UConfirmationMenu::SetConfirmationMenuDialogueText(FText Text)
     FText ArrangedText = ArrangeDialogueText(Text);
     ConfirmationMenuDialogue->SetText(ArrangedText);
 
-    UE_LOGFMT(LogConfirmationMenu, Verbose, "ConfirmationMenu 대화 텍스트가 설정되었습니다.");
+    UE_LOGFMT(LogConfirmationMenu, Log, "ConfirmationMenu 대화 텍스트가 설정되었습니다.");
 }
 
 FText UConfirmationMenu::GetConfirmationMenuDialogueText() const

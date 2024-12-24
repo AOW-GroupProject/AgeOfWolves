@@ -1,176 +1,269 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#include "01_Character/BaseMonster.h"
+﻿#include "01_Character/BaseMonster.h"
+#include "Logging/StructuredLog.h"
 
 #include "Kismet/GameplayStatics.h"
-
+#include "GameFramework/CharacterMovementComponent.h"
 
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "02_AbilitySystem/BaseAbilitySet.h"
-#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "10_Monster/BaseMonsterAIController.h"
 #include "10_Monster/MonsterDataSubsystem.h"
-//#include "MotionWarpingComponent.h"
 
+#include "00_GameInstance/AOWGameInstance.h"
+#include "14_Subsystem/AbilityManagerSubsystem.h"
 
+#include "AIController.h"
 
+DEFINE_LOG_CATEGORY(LogBaseMonster)
 
-// Sets default values
+//@기본 설정
+#pragma region Default Setting
 ABaseMonster::ABaseMonster()
 {
- 	// Set this character to call Tick() every frame.  You can turn this off to improve performance if you don't need it.
-	PrimaryActorTick.bCanEverTick = true;
+    PrimaryActorTick.bCanEverTick = true;
 
-	bAbilitiesInitialized = false;
-	AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
-	
+    //@Components
+    AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("어빌리티 시스템 컴포넌트"));
 
-	//싱글이 아닌 서버를 할 때 해줘야 할 것
-	//AbilitySystemComponent->SetIsReplicated(true);
-	//AbilitySystemComponent->SetReplicationMode(EGameplayEffectReplicationMode::Minimal);
-
-	AttributeSet = CreateDefaultSubobject<UBaseAttributeSet>(TEXT("AttributSet"));
-
-	//MotionWarpingComp = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("MotionWarpingComp_Monster"));
-	
-	
-	
+    //@Attribute Set
+    AttributeSet.Reset();
+    //@Ability Manger Subsystem
+    AbilityManagerSubsystemRef.Reset();
 
 }
 
 void ABaseMonster::PostInitializeComponents()
 {
-	Super::PostInitializeComponents();
+    Super::PostInitializeComponents();
 
-	//여기서 서브시스템 호출하면 BP_Wolf 켜기만 하면 에디터 꺼져서 BeginPlay로 옮김
-
-	if (UGameplayStatics::GetGameInstance(GetWorld()))
-	{
-
-		UMonsterDataSubsystem* MonsterDataSubSystem = UGameplayStatics::GetGameInstance(GetWorld())->GetSubsystem<UMonsterDataSubsystem>();
-
-		if (MonsterDataSubSystem)
-		{
-			MonsterDataSubSystem->CustomFunction(MonsterName, SingleMonsterData, AbilitySystemComponent, SetGrantedHandles);
-			//GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("CustomFunction"));
-		}
-	}
-	
 }
 
-// Called when the game starts or when spawned
 void ABaseMonster::BeginPlay()
 {
-	Super::BeginPlay();
-
-	
-	
-	
+    Super::BeginPlay();
 }
 
-// Called every frame
 void ABaseMonster::Tick(float DeltaTime)
 {
-	Super::Tick(DeltaTime);
-
-
-
+    Super::Tick(DeltaTime);
 }
 
 void ABaseMonster::PossessedBy(AController* NewController)
 {
-	Super::PossessedBy(NewController);
-	InitializeGameplayAbilitySystem();
-	
+    Super::PossessedBy(NewController);
 
+    //@ASC 초기화
+    InitializeMonster();
+
+    //@TODO: 추후에 타이밍 재기
+    //@로드
+    LoadGameAbilitySystem();
 }
 
-EMonsterState ABaseMonster::GetCurrentState()
+void ABaseMonster::InitializeMonster()
 {
-	return CurrentState;
+
+    //@Ability Manager Subsystem
+    const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
+    if (!GameInstance)
+    {
+        UE_LOGFMT(LogBaseMonster, Warning, "GameInstance가 유효하지 않음");
+        return;
+    }
+
+    //@캐싱
+    AbilityManagerSubsystemRef = GameInstance->GetSubsystem<UAbilityManagerSubsystem>();
+    if (!AbilityManagerSubsystemRef.IsValid())
+    {
+        UE_LOGFMT(LogBaseMonster, Warning, "AbilityManagerSubsystem 캐싱 실패");
+        return;
+    }
+    
+    //@ASC
+    if (!AbilitySystemComponent)
+    {
+        UE_LOGFMT(LogBaseMonster, Warning, "어빌리티 시스템 컴포넌트가 유효하지 않음");
+        return;
+    }
+    
+    //@AbilityManagerSubsystem
+    if (!AbilityManagerSubsystemRef.IsValid())
+    {
+        UE_LOGFMT(LogBaseMonster, Warning, "AbilityManagerSubsystem이 유효하지 않음");
+        return;
+    }
+
+    //@BaseAbilitySet
+    UBaseAbilitySet* SetToGrant = AbilityManagerSubsystemRef->GetAbilitySet(CharacterTag);
+    if (!IsValid(SetToGrant))
+    {
+        UE_LOGFMT(LogBaseMonster, Warning, "AbilitySet이 유효하지 않음 - Tag: {0}", CharacterTag.ToString());
+        return;
+    }
+
+    //@ActorInfo 초기화
+    AbilitySystemComponent->InitAbilityActorInfo(this, this);
+
+    //@기본 AttributeSet 등록
+    SetToGrant->GiveStartupAttributeSetToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+    UE_LOGFMT(LogBaseMonster, Log, "기본 AttributeSet 등록 완료");
+
+    //@Attribute 변경 콜백 함수 등록
+    for (auto& AS : AbilitySystemComponent->GetSpawnedAttributes())
+    {
+        if (IsValid(AS))
+        {
+            AttributeSet = AS;
+            TArray<FGameplayAttribute> Attributes = AttributeSet->GetAllAttributes();
+            for (const FGameplayAttribute& Attribute : Attributes)
+            {
+                AbilitySystemComponent->GetGameplayAttributeValueChangeDelegate(Attribute).AddUObject(this, &ABaseMonster::OnAttributeValueChanged);
+            }
+            UE_LOGFMT(LogBaseMonster, Log, "Attribute 변경 콜백 등록 완료");
+            break;
+        }
+    }
+
+    //@ATMR
+    auto* ATMR = SetToGrant->GetATMR();
+    if (!ATMR)
+    {
+        UE_LOGFMT(LogBaseMonster, Warning, "ATMR이 유효하지 않음");
+        return;
+    }
+
+    //@ATMR 초기화
+    ATMR->InitializeCacheMaps();
+
+    //@SetAbilityTagRelationshipMapping
+    AbilitySystemComponent->SetAbilityTagRelationshipMapping(ATMR);
+
+    UE_LOGFMT(LogBaseMonster, Log, "태그 관계 매핑 완료");
+}
+#pragma endregion
+
+//@속성/정보
+#pragma region Property or Subwidgets or Infos...etc
+void ABaseMonster::LoadGameAbilitySystem()
+{
+    UE_LOGFMT(LogBaseMonster, Warning, "몬스터 어빌리티 시스템의 Load 작업을 시작합니다 : {0}", __FUNCTION__);
+
+    //@GameInstance
+    if (const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this)))
+    {
+        //@SaveFile
+        if (GameInstance->DoesSaveGameExist())
+        {
+            auto* SaveGameInstance = GameInstance->GetSaveGameInstance();
+            LoadAbilitySystemFromSaveGame(SaveGameInstance);
+        }
+        //@Ability Manager
+        else
+        {
+            LoadDefaultAbilitySystemFromAbilityManager();
+        }
+    }
 }
 
-void ABaseMonster::ChangeState(EMonsterState inValue)
+void ABaseMonster::LoadDefaultAbilitySystemFromAbilityManager()
 {
-	
-	WhenEndState();
-	CurrentState = inValue;
+    // @ASC와 AttributeSet 초기화 검증
+    if (!AbilitySystemComponent || !AttributeSet.Get())
+    {
+        UE_LOGFMT(LogBaseMonster, Warning, "LoadGameAbilitySystem 실패: ASC 또는 AttributeSet이 초기화되지 않음");
+        return;
+    }
+
+    if (!AbilityManagerSubsystemRef.IsValid())
+    {
+        UE_LOGFMT(LogBaseMonster, Warning, "AbilityManagerSubsystem이 유효하지 않음");
+        return;
+    }
+
+    UBaseAbilitySet* SetToGrant = AbilityManagerSubsystemRef->GetAbilitySet(CharacterTag);
+    if (!IsValid(SetToGrant))
+    {
+        UE_LOGFMT(LogBaseMonster, Warning, "AbilitySet이 유효하지 않음 - Tag: {0}", CharacterTag.ToString());
+        return;
+    }
+
+    // 몬스터의 기본 Gameplay Effect를 ASC에 최초 등록/적용
+    SetToGrant->GiveStartupGameplayEffectToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+
+    // 몬스터의 기본 Gameplay Ability를 ASC에 최초 등록/적용
+    SetToGrant->GiveStartupGameplayAbilityToAbilitySystem(AbilitySystemComponent, SetGrantedHandles, this);
+
+    // ASC에 Startup GA, GE, AttributeSet의 등록 완료 이벤트 호출
+    // 델리게이트 추가 필요
+    MonsterAttributeSetInitialized.Broadcast();
+
+    UE_LOGFMT(LogBaseMonster, Log, "몬스터 어빌리티 시스템 로드 완료");
+}
+
+void ABaseMonster::LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame)
+{
+    // 세이브 게임으로부터 몬스터 어빌리티 시스템 로드
+    // 추후 구현
 }
 
 void ABaseMonster::WhenEndState()
 {
-	switch (CurrentState)
-	{
-	case EMonsterState::Patrol:
-
-		break;
-	case EMonsterState::Strafe:
-		GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Yellow, TEXT("ClearFocus"));
-		Cast<AAIController>(GetController())->ClearFocus(EAIFocusPriority::Gameplay);
-		break;
-	case EMonsterState::Attacking:
-		CurrentState = EMonsterState::DetectingPlayer;
-		GetMesh()->GetAnimInstance()->Montage_Stop(0.5);
-		break;
-	
-	case EMonsterState::DetectingPlayer:
-
-		break;
-	case EMonsterState::Stunned:
-
-		break;
-	
-	}
+    switch (CurrentState)
+    {
+    case EMonsterState::Patrol:
+        UE_LOG(LogBaseMonster, Log, TEXT("순찰 상태 종료"));
+        break;
+    case EMonsterState::Strafe:
+        if (AAIController* AIController = Cast<AAIController>(GetController()))
+        {
+            UE_LOG(LogBaseMonster, Log, TEXT("배회 상태 종료: 포커스 해제"));
+            AIController->ClearFocus(EAIFocusPriority::Gameplay);
+        }
+        break;
+    case EMonsterState::Attacking:
+        CurrentState = EMonsterState::DetectingPlayer;
+        if (UAnimInstance* AnimInstance = GetMesh()->GetAnimInstance())
+        {
+            UE_LOG(LogBaseMonster, Log, TEXT("공격 상태 종료: 몽타주 중지"));
+            AnimInstance->Montage_Stop(0.5f);
+        }
+        break;
+    case EMonsterState::DetectingPlayer:
+        UE_LOG(LogBaseMonster, Log, TEXT("플레이어 감지 상태 종료"));
+        break;
+    case EMonsterState::Stunned:
+        UE_LOG(LogBaseMonster, Log, TEXT("기절 상태 종료"));
+        break;
+    }
 }
+#pragma endregion
 
+//@콜백
+#pragma region Callbacks
+#pragma endregion
 
-void ABaseMonster::ControllRotation()
-{
-	
-}
-
-void ABaseMonster::OnWarpMontageEnded(UAnimMontage* Montage, bool bInterrupted)
-{
-}
-
-void ABaseMonster::SetWarpTarget(FName name, FVector vector)
-{
-}
-
-
-
-
-UAbilitySystemComponent* ABaseMonster::GetAbilitySystemComponent() const
-{
-	return AbilitySystemComponent.Get();
-}
-
-void ABaseMonster::InitializeGameplayAbilitySystem()
-{
-	
-	if (AbilitySystemComponent)
-	{
-		AbilitySystemComponent->InitAbilityActorInfo(this, this);
-	}
-
-}
-
-FSingleMonsterData ABaseMonster::GetSingleMonsterData()
-{
-	return SingleMonsterData;
-}
-
+//@유틸리티
+#pragma region Utility
 void ABaseMonster::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
 {
-	if (OnAnyMonsterAttributeValueChanged.IsBound())
-	{
-		OnAnyMonsterAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);
-	}
+    AnyMonsterAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);
+}
+UAbilitySystemComponent* ABaseMonster::GetAbilitySystemComponent() const
+{
+    return AbilitySystemComponent.Get();
 }
 
+EMonsterState ABaseMonster::GetCurrentState()
+{
+    return CurrentState;
+}
 
-
-
-
-
+void ABaseMonster::ChangeState(EMonsterState inValue)
+{
+    UE_LOG(LogBaseMonster, Log, TEXT("상태 변경: %s -> %s"),
+        *UEnum::GetValueAsString(CurrentState), *UEnum::GetValueAsString(inValue));
+    WhenEndState();
+    CurrentState = inValue;
+}
+#pragma endregion

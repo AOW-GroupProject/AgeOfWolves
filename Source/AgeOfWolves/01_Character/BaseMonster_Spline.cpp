@@ -14,10 +14,8 @@
 ABaseMonster_Spline::ABaseMonster_Spline()
 {
 	PrimaryActorTick.bCanEverTick = true;
+
 	GetCharacterMovement()->bOrientRotationToMovement = true;
-
-	//SplineComponent = Cast<ABaseSpline>(SplineBP)->GetSplineComponent();
-
 }
 
 void ABaseMonster_Spline::BeginPlay()
@@ -114,38 +112,6 @@ void ABaseMonster_Spline::MoveAlongSplinePoint(float delta)
 	{
 		FVector tang = SplineActor->GetSplineComponent()->FindTangentClosestToWorldLocation(GetActorLocation(), ESplineCoordinateSpace::World);
 		GetCharacterMovement()->Velocity = tang.GetSafeNormal() * GetCharacterMovement()->MaxWalkSpeed;
-
-#pragma region Distance에 따른 Tangent 활용해보기(나중에)
-
-		//수정하고 싶은 점: 만약 거리가 굉장히 가까운 두 점이 있다면 경로를 건너뛰는 오류를 막기 위해 Distance를 사용하기
-
-		//CurrentTime += delta;
-		//Distance = FMath::Lerp(0, SplineActor->GetSplineComponent()->GetSplineLength(), CurrentTime / MaxTime);
-		//BetweenDistance += delta;
-		//Distance += GetCharacterMovement()->MaxWalkSpeed * delta; //1초에 200미터 이동
-		////현재 진행거리가 다음 인덱스까지의 거리를 넘었다면
-		//if (BetweenDistance > SplineIndexDistance)
-		//{
-		//	BetweenDistance = 0;
-		//	SplineActor->IncreaseSplineIndex();
-		//	SplineIndexDistance = SplineActor->CalculateDistanceBetweenIndex(SplineActor->SplineIndex, SplineActor->SplineIndex + 1);
-		//}
-		
-		//FVector tang = SplineActor->GetSplineComponent()->GetTangentAtDistanceAlongSpline(Distance, ESplineCoordinateSpace::World);
-		//DrawDebugLine(GetWorld(), GetActorLocation(), GetActorLocation() + tang, FColor::Green);
-
-		
-		
-		
-		/*if (CurrentTime >= MaxTime)
-		{
-			CurrentTime = 0;
-		}*/
-		/*if (Distance > SplineActor->GetSplineComponent()->GetSplineLength())
-		{
-			Distance = 0;
-		}*/
-#pragma endregion
 	}
 }
 

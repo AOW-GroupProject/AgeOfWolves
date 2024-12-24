@@ -35,6 +35,7 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , SprintingCooldownTime(0.0f)
     , SprintingCooldownDuration(1.5f)
     , CurrentCooldownTime(0.0f)
+    , bIsCombatState(false)
 {
     OwnerCharacterBaseRef.Reset();
     CharacterMovementCompRef.Reset();
@@ -172,9 +173,7 @@ void UBaseAnimInstance::FindMovementDirection()
         return;
     }
 
-    // [방향 전환 로직은 그대로 유지]
 
-    // 방향이 변경되었을 때만 로그 출력
     if (PrevDirection != MovementDirection)
     {
         UE_LOGFMT(LogAnimInstance, Log, "이동 방향 변경: {0} -> {1}",
@@ -195,15 +194,24 @@ void UBaseAnimInstance::UpdateMovementSettings()
         MovementState != EMovementState::Sprinting &&
         !bIsSprintingCooldown;
 
+    UE_LOGFMT(LogAnimInstance, Log, "이동 방향 설정 값: DirectionalMovement({0}), MovementState({1}), SprintingCooldown({2})",
+        bEnableDirectionalMovement,
+        *UEnum::GetValueAsString(MovementState),
+        bIsSprintingCooldown);
+
     if (bShouldUseDirectionalMovement)
     {
         CharacterMovementCompRef->bUseControllerDesiredRotation = true;
         CharacterMovementCompRef->bOrientRotationToMovement = false;
+
+        UE_LOGFMT(LogAnimInstance, Log, "방향 이동 설정: ControllerDesiredRotation(true), OrientRotationToMovement(false)");
     }
     else
     {
         CharacterMovementCompRef->bUseControllerDesiredRotation = false;
         CharacterMovementCompRef->bOrientRotationToMovement = true;
+
+        UE_LOGFMT(LogAnimInstance, Log, "일반 이동 설정: ControllerDesiredRotation(false), OrientRotationToMovement(true)");
     }
 }
 

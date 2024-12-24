@@ -14,6 +14,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAbilityManager, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
+class UBaseAbilitySetInfos;
 class UBaseAbilitySet;
 #pragma endregion
 
@@ -49,15 +50,25 @@ class AGEOFWOLVES_API UAbilityManagerSubsystem : public UGameInstanceSubsystem
 public:
 	UAbilityManagerSubsystem();
 
+protected:
+	//@내부 바인딩
+
+protected:
+	//@외부 바인딩
+
+protected:
+	//@초기화
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
-	//@Ability 정보를 담은 Data Asset
 	UPROPERTY()
-		TObjectPtr<UBaseAbilitySet> AbilitySet;
+		TObjectPtr<UBaseAbilitySetInfos> AbilitySetInfos;
+
+	UPROPERTY()
+		TMap<FGameplayTag, TObjectPtr<UBaseAbilitySet>> MAbilitySets;
 #pragma endregion
 
 //@Delegates
@@ -71,7 +82,13 @@ protected:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
-	UTexture2D* GetAbilityIconTexture2D(FGameplayTag AbilityTag);
+	UBaseAbilitySet* GetAbilitySet(FGameplayTag CharacterTag) const;
+
+public:
+	UFUNCTION()
+		UTexture2D* GetAbilityIconTexture2D(
+			const FGameplayTag& AbilityTag,
+			const FGameplayTag& CharacterTag = FGameplayTag::RequestGameplayTag("Character.AkaOni")) const;
 #pragma endregion
 
 };

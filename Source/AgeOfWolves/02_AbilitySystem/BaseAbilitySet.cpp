@@ -32,94 +32,177 @@ void FBaseAbilitySet_GrantedHandles::AddAttributeSet(UBaseAttributeSet* Set)
 	GrantedAttributeSets.Add(Set);
 }
 
+
+//@Defualt Setting
+#pragma region Default Setting
 UBaseAbilitySet::UBaseAbilitySet(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {}
+#pragma endregion
 
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UBaseAbilitySet::GiveStartupAttributeSetToAbilitySystem(UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles, UObject* SourceObject) const
 {
-	check(ASC);
+    if (!ASC)
+    {
+        UE_LOGFMT(LogAbilitySet, Error, "AttributeSet 등록 실패 - ASC가 유효하지 않음");
+        return;
+    }
 
-	// Attribute Set
-	for (int32 SetIndex = 0; SetIndex < AttributeSets.Num(); ++SetIndex)
-	{
-		const FBaseAbilitySet_AttributeSet& SetToGrant = AttributeSets[SetIndex];
+    UE_LOGFMT(LogAbilitySet, Log, "AttributeSet 등록 시작 - ASC Owner: {0}",
+        ASC->GetOwner() ? ASC->GetOwner()->GetName() : TEXT("Invalid"));
 
-		if (!IsValid(SetToGrant.AttributeSet))
-		{
-			UE_LOGFMT(LogAbilitySet, Error, "Ability Set�� Attribute Set�� ��ȿ���� �ʽ��ϴ�!");
-			continue;
-		}
-		// #1. ASC�� AttributeSet ���
-		UBaseAttributeSet* NewSet = NewObject<UBaseAttributeSet>(ASC->GetOwner(), SetToGrant.AttributeSet);
-		ASC->AddAttributeSetSubobject(NewSet);
-		// #2. BaseAilitySet�� GrantedHandle �߰�
-		if (OutGrantedHandles)
-		{
-			OutGrantedHandles->AddAttributeSet(NewSet);
-		}
-	}
+    // Attribute Set
+    for (int32 SetIndex = 0; SetIndex < AttributeSets.Num(); ++SetIndex)
+    {
+        const FBaseAbilitySet_AttributeSet& SetToGrant = AttributeSets[SetIndex];
+
+        if (!IsValid(SetToGrant.AttributeSet))
+        {
+            UE_LOGFMT(LogAbilitySet, Error, "AttributeSet 등록 실패 - 인덱스: {0}, 사유: AttributeSet이 유효하지 않음", SetIndex);
+            continue;
+        }
+
+        UBaseAttributeSet* NewSet = NewObject<UBaseAttributeSet>(ASC->GetOwner(), SetToGrant.AttributeSet);
+        if (!NewSet)
+        {
+            UE_LOGFMT(LogAbilitySet, Error, "AttributeSet 생성 실패 - 인덱스: {0}", SetIndex);
+            continue;
+        }
+
+        ASC->AddAttributeSetSubobject(NewSet);
+        UE_LOGFMT(LogAbilitySet, Log, "AttributeSet 등록 완료 - 타입: {0}", NewSet->GetClass()->GetName());
+
+        if (!OutGrantedHandles)
+        {
+            UE_LOGFMT(LogAbilitySet, Warning, "OutGrantedHandles가 유효하지 않음 - AttributeSet Handle을 저장할 수 없음");
+            continue;
+        }
+
+        OutGrantedHandles->AddAttributeSet(NewSet);
+        UE_LOGFMT(LogAbilitySet, Log, "AttributeSet Handle 추가됨");
+    }
 }
 
 void UBaseAbilitySet::GiveStartupGameplayEffectToAbilitySystem(UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles, UObject* SourceObject) const
 {
-	check(ASC);
+    if (!ASC)
+    {
+        UE_LOGFMT(LogAbilitySet, Error, "GameplayEffect 등록 실패 - ASC가 유효하지 않음");
+        return;
+    }
 
-	// GE
-	for (int32 EffectIndex = 0; EffectIndex < GameplayEffects.Num(); ++EffectIndex)
-	{
-		const FBaseAbilitySet_GameplayEffect& EffectToGrant = GameplayEffects[EffectIndex];
+    UE_LOGFMT(LogAbilitySet, Log, "GameplayEffect 등록 시작 - ASC Owner: {0}",
+        ASC->GetOwner() ? ASC->GetOwner()->GetName() : TEXT("Invalid"));
 
-		if (!IsValid(EffectToGrant.GameplayEffect))
-		{
-			UE_LOGFMT(LogAbilitySet, Error, "Ability Set�� {0}��° Gameplay Effect�� ��ȿ���� �ʽ��ϴ�!", FString::FromInt(EffectIndex));
-			continue;
-		}
+    for (int32 EffectIndex = 0; EffectIndex < GameplayEffects.Num(); ++EffectIndex)
+    {
+        const FBaseAbilitySet_GameplayEffect& EffectToGrant = GameplayEffects[EffectIndex];
 
-		const UGameplayEffect* GameplayEffect = EffectToGrant.GameplayEffect->GetDefaultObject<UGameplayEffect>();
-		const FActiveGameplayEffectHandle GameplayEffectHandle = ASC->ApplyGameplayEffectToSelf(GameplayEffect, EffectToGrant.EffectLevel, ASC->MakeEffectContext());
+        if (!IsValid(EffectToGrant.GameplayEffect))
+        {
+            UE_LOGFMT(LogAbilitySet, Error, "GameplayEffect 등록 실패 - 인덱스: {0}, 사유: GameplayEffect가 유효하지 않음", EffectIndex);
+            continue;
+        }
 
-		if (OutGrantedHandles)
-		{
-			OutGrantedHandles->AddGameplayEffectHandle(GameplayEffectHandle);
-		}
-	}
+        const UGameplayEffect* GameplayEffect = EffectToGrant.GameplayEffect->GetDefaultObject<UGameplayEffect>();
+        if (!GameplayEffect)
+        {
+            UE_LOGFMT(LogAbilitySet, Error, "GameplayEffect CDO 가져오기 실패 - 인덱스: {0}", EffectIndex);
+            continue;
+        }
+
+        const FActiveGameplayEffectHandle GameplayEffectHandle = ASC->ApplyGameplayEffectToSelf(GameplayEffect, EffectToGrant.EffectLevel, ASC->MakeEffectContext());
+        if (!GameplayEffectHandle.WasSuccessfullyApplied())
+        {
+            UE_LOGFMT(LogAbilitySet, Warning, "GameplayEffect 적용 실패 - 타입: {0}", GameplayEffect->GetName());
+            continue;
+        }
+
+        UE_LOGFMT(LogAbilitySet, Log, "GameplayEffect 적용 완료 - 타입: {0}, 레벨: {1}",
+            GameplayEffect->GetName(), EffectToGrant.EffectLevel);
+
+        if (!OutGrantedHandles)
+        {
+            UE_LOGFMT(LogAbilitySet, Warning, "OutGrantedHandles가 유효하지 않음 - GameplayEffect Handle을 저장할 수 없음");
+            continue;
+        }
+
+        OutGrantedHandles->AddGameplayEffectHandle(GameplayEffectHandle);
+        UE_LOGFMT(LogAbilitySet, Log, "GameplayEffect Handle 추가됨");
+    }
 }
 
 void UBaseAbilitySet::GiveStartupGameplayAbilityToAbilitySystem(UBaseAbilitySystemComponent* ASC, FBaseAbilitySet_GrantedHandles* OutGrantedHandles, UObject* SourceObject) const
 {
-	// Grant the gameplay abilities.
-	for (int32 AbilityIndex = 0; AbilityIndex < GameplayAbilities.Num(); ++AbilityIndex)
-	{
-		const FBaseAbilitySet_GameplayAbility& AbilityToGrant = GameplayAbilities[AbilityIndex];
+    if (!ASC)
+    {
+        UE_LOGFMT(LogAbilitySet, Error, "GameplayAbility 등록 실패 - ASC가 유효하지 않음");
+        return;
+    }
 
-		if (!IsValid(AbilityToGrant.Ability))
-		{
-			UE_LOGFMT(LogAbilitySet, Error, "Ability Set�� {0}��° Input Binded Gameplay Ability�� ��ȿ���� �ʽ��ϴ�!", FString::FromInt(AbilityIndex));
-			continue;
-		}
+    UE_LOGFMT(LogAbilitySet, Log, "GameplayAbility 등록 시작 - ASC Owner: {0}",
+        ASC->GetOwner() ? ASC->GetOwner()->GetName() : TEXT("Invalid"));
 
-		// 1. Ability CDO
-		UBaseGameplayAbility* AbilityCDO = AbilityToGrant.Ability->GetDefaultObject<UBaseGameplayAbility>();
+    for (int32 AbilityIndex = 0; AbilityIndex < GameplayAbilities.Num(); ++AbilityIndex)
+    {
+        const FBaseAbilitySet_GameplayAbility& AbilityToGrant = GameplayAbilities[AbilityIndex];
 
-		// 2. AbilitySpec ����
-		FGameplayAbilitySpec AbilitySpec(AbilityCDO, AbilityToGrant.AbilityLevel);
-		AbilitySpec.SourceObject = SourceObject;
+        if (!IsValid(AbilityToGrant.Ability))
+        {
+            UE_LOGFMT(LogAbilitySet, Error, "GameplayAbility 등록 실패 - 인덱스: {0}, 사유: Ability가 유효하지 않음", AbilityIndex);
+            continue;
+        }
 
-		// 3. Active GA�� ������ Input Tag�� AbilitySpec�� �����մϴ�. 
-		if (AbilityToGrant.bActive && AbilityToGrant.bInputBinded)
-			AbilitySpec.DynamicAbilityTags.AddTag(AbilityToGrant.InputTag);
+        UBaseGameplayAbility* AbilityCDO = AbilityToGrant.Ability->GetDefaultObject<UBaseGameplayAbility>();
+        if (!AbilityCDO)
+        {
+            UE_LOGFMT(LogAbilitySet, Error, "GameplayAbility CDO 가져오기 실패 - 인덱스: {0}", AbilityIndex);
+            continue;
+        }
 
-		// 4. ASC ���
-		const FGameplayAbilitySpecHandle AbilitySpecHandle = ASC->GiveAbility(AbilitySpec);
+        FGameplayAbilitySpec AbilitySpec(AbilityCDO, AbilityToGrant.AbilityLevel);
+        AbilitySpec.SourceObject = SourceObject;
 
-		// 5. Passive GA
+        if (AbilityToGrant.bActive && AbilityToGrant.bInputBinded)
+        {
+            AbilitySpec.DynamicAbilityTags.AddTag(AbilityToGrant.InputTag);
+            UE_LOGFMT(LogAbilitySet, Log, "Input Tag 추가됨 - Ability: {0}, Tag: {1}",
+                AbilityCDO->GetName(), AbilityToGrant.InputTag.ToString());
+        }
 
-		// 6. Handle ����
-		if (OutGrantedHandles)
-		{
-			OutGrantedHandles->AddAbilitySpecHandle(AbilitySpecHandle);
-		}
-	}
+        const FGameplayAbilitySpecHandle AbilitySpecHandle = ASC->GiveAbility(AbilitySpec);
+        if (!AbilitySpecHandle.IsValid())
+        {
+            UE_LOGFMT(LogAbilitySet, Warning, "GameplayAbility 등록 실패 - 타입: {0}", AbilityCDO->GetName());
+            continue;
+        }
 
+        UE_LOGFMT(LogAbilitySet, Log, "GameplayAbility 등록 완료 - 타입: {0}, 레벨: {1}",
+            AbilityCDO->GetName(), AbilityToGrant.AbilityLevel);
+
+        if (!OutGrantedHandles)
+        {
+            UE_LOGFMT(LogAbilitySet, Warning, "OutGrantedHandles가 유효하지 않음 - GameplayAbility Handle을 저장할 수 없음");
+            continue;
+        }
+
+        OutGrantedHandles->AddAbilitySpecHandle(AbilitySpecHandle);
+        UE_LOGFMT(LogAbilitySet, Log, "GameplayAbility Handle 추가됨");
+    }
 }
+
+#pragma endregion
+
+//@Delegates
+#pragma region Delegates
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+#pragma endregion

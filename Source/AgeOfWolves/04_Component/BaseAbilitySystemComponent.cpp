@@ -28,6 +28,7 @@ void UBaseAbilitySystemComponent::InitializeComponent()
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+
 FGameplayAbilitySpecHandle UBaseAbilitySystemComponent::GiveAbility(const FGameplayAbilitySpec& AbilitySpec)
 {
 	UE_LOGFMT(LogASC, Log, "GiveAbility 시작 - Ability: {0}",
@@ -121,6 +122,41 @@ void UBaseAbilitySystemComponent::ApplyAbilityBlockAndCancelTags(const FGameplay
 	}
 
 	Super::ApplyAbilityBlockAndCancelTags(AbilityTags, RequestingAbility, bEnableBlockTags, AbilityTagsToBlock, bExecuteCancelTags, AbilityTagsToCancel);
+}
+
+int32 UBaseAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
+{
+	return Super::HandleGameplayEvent(EventTag, Payload);
+}
+
+bool UBaseAbilitySystemComponent::TriggerDamageEvent(const FGameplayTag& EventTag, const FGameplayEventData* Payload)
+{
+	UE_LOGFMT(LogASC, Log, "데미지 이벤트 트리거 시작 - EventTag: {0}", EventTag.ToString());
+
+	if (!EventTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "데미지 이벤트 트리거 실패 - 유효하지 않은 이벤트 태그");
+		return false;
+	}
+
+	if (!IsOwnerActorAuthoritative())
+	{
+		UE_LOGFMT(LogASC, Warning, "데미지 이벤트 트리거 실패 - 권한 없음");
+		return false;
+	}
+
+	FGameplayAbilityActorInfo* ActorInfo = AbilityActorInfo.Get();
+	if (!ActorInfo)
+	{
+		UE_LOGFMT(LogASC, Warning, "데미지 이벤트 트리거 실패 - ActorInfo가 유효하지 않음");
+		return false;
+	}
+
+	int32 Count = HandleGameplayEvent(EventTag, Payload);
+
+	UE_LOGFMT(LogASC, Log, "데미지 이벤트 트리거 완료: 활성화된 어빌리티 수 {0}", Count);
+
+	return true;
 }
 #pragma endregion
 
