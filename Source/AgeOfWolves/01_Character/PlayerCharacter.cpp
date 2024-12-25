@@ -26,6 +26,8 @@
 DEFINE_LOG_CATEGORY(LogPlayer)
 // UE_LOGFMT(LogPlayer, Log, "");
 
+//@Defualt Setting
+#pragma region Default Setting
 APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer.SetDefaultSubobjectClass<UBaseCharacterMovementComponent>(ACharacter::CharacterMovementComponentName)
 	)
@@ -51,14 +53,14 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	// @Character Movement
 	{
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
-		GetCharacterMovement()->bOrientRotationToMovement = true; // Character moves in the direction of input...	
+		GetCharacterMovement()->bOrientRotationToMovement = true;
 
-		GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.f, 0.0f); // ...at this rotation rate
+		GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.f, 0.0f);
 		GetCharacterMovement()->JumpZVelocity = 700.f;
 		GetCharacterMovement()->AirControl = 0.35f;
 		GetCharacterMovement()->MaxWalkSpeed = 200.f;
 
-		GetCharacterMovement()->MaxAcceleration = 600.f;
+		GetCharacterMovement()->MaxAcceleration = 1024.f;
 		GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 		GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
 		GetCharacterMovement()->GroundFriction = 8.0f;
@@ -68,8 +70,8 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	{
 		SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 		SpringArm->SetupAttachment(RootComponent);
-		SpringArm->TargetArmLength = 400.0f; 
-		SpringArm->bUsePawnControlRotation = true; 
+		SpringArm->TargetArmLength = 400.0f;
+		SpringArm->bUsePawnControlRotation = true;
 
 		SpringArm->bEnableCameraLag = true;
 		SpringArm->bEnableCameraRotationLag = true;
@@ -120,7 +122,6 @@ void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
 	Super::EndPlay(EndPlayReason);
 }
 
-
 void APlayerCharacter::Tick(float DeltaSeconds)
 {
 	Super::Tick(DeltaSeconds);
@@ -150,7 +151,7 @@ void APlayerCharacter::PawnClientRestart()
 
 void APlayerCharacter::Die()
 {
-	
+
 }
 
 void APlayerCharacter::HitReact(FGameplayTag HitDirectionTag)
@@ -158,9 +159,22 @@ void APlayerCharacter::HitReact(FGameplayTag HitDirectionTag)
 	FGameplayEventData GameplayEventData;
 	GameplayEventData.EventTag = AOWGameplayTags::Ability_Active_HitReact;
 	GameplayEventData.Instigator = this;
-	GameplayEventData.Target = this; 
-	GameplayEventData.OptionalObject = nullptr; 
-	GameplayEventData.ContextHandle = FGameplayEffectContextHandle(); 
+	GameplayEventData.Target = this;
+	GameplayEventData.OptionalObject = nullptr;
+	GameplayEventData.ContextHandle = FGameplayEffectContextHandle();
 	GameplayEventData.TargetTags.AddTag(HitDirectionTag); // HitDirectionTag 전달
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, AOWGameplayTags::Ability_Active_HitReact, GameplayEventData);
 }
+#pragma endregion
+
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+#pragma endregion

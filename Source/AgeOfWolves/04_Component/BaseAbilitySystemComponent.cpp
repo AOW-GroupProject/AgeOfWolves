@@ -28,21 +28,27 @@ void UBaseAbilitySystemComponent::InitializeComponent()
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+
 FGameplayAbilitySpecHandle UBaseAbilitySystemComponent::GiveAbility(const FGameplayAbilitySpec& AbilitySpec)
 {
+	UE_LOGFMT(LogASC, Log, "GiveAbility 시작 - Ability: {0}",
+		IsValid(AbilitySpec.Ability) ? AbilitySpec.Ability->GetName() : TEXT("Invalid"));
+
 	if (!IsValid(AbilitySpec.Ability))
 	{
+		UE_LOGFMT(LogASC, Warning, "GiveAbility 실패 - 유효하지 않은 어빌리티");
 		return FGameplayAbilitySpecHandle();
 	}
 
 	if (!IsOwnerActorAuthoritative())
 	{
+		UE_LOGFMT(LogASC, Warning, "GiveAbility 실패 - 권한 없음");
 		return FGameplayAbilitySpecHandle();
 	}
 
-	// If locked, add to pending list. The Spec.Handle is not regenerated when we receive, so returning this is ok.
 	if (AbilityScopeLockCount > 0)
 	{
+		UE_LOGFMT(LogASC, Log, "어빌리티 보류 중 - Scope Lock 상태");
 		AbilityPendingAdds.Add(AbilitySpec);
 		return AbilitySpec.Handle;
 	}
@@ -52,7 +58,7 @@ FGameplayAbilitySpecHandle UBaseAbilitySystemComponent::GiveAbility(const FGamep
 
 	if (OwnedSpec.Ability->GetInstancingPolicy() == EGameplayAbilityInstancingPolicy::InstancedPerActor)
 	{
-		// Create the instance at creation time
+		UE_LOGFMT(LogASC, Log, "어빌리티 인스턴스 생성 - Policy: InstancedPerActor");
 		CreateNewInstanceOfAbility(OwnedSpec, AbilitySpec.Ability);
 	}
 
@@ -83,7 +89,6 @@ void UBaseAbilitySystemComponent::CancelAbilitySpec(FGameplayAbilitySpec& Spec, 
 	}
 
 	Super::CancelAbilitySpec(Spec, Ignore);
-
 }
 
 void UBaseAbilitySystemComponent::ReactivateUnblockedPassiveAbility(const FGameplayTagContainer UnblockedAbilityTags)
@@ -118,12 +123,48 @@ void UBaseAbilitySystemComponent::ApplyAbilityBlockAndCancelTags(const FGameplay
 
 	Super::ApplyAbilityBlockAndCancelTags(AbilityTags, RequestingAbility, bEnableBlockTags, AbilityTagsToBlock, bExecuteCancelTags, AbilityTagsToCancel);
 }
+
+int32 UBaseAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
+{
+	return Super::HandleGameplayEvent(EventTag, Payload);
+}
+
+bool UBaseAbilitySystemComponent::TriggerDamageEvent(const FGameplayTag& EventTag, const FGameplayEventData* Payload)
+{
+	UE_LOGFMT(LogASC, Log, "데미지 이벤트 트리거 시작 - EventTag: {0}", EventTag.ToString());
+
+	if (!EventTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "데미지 이벤트 트리거 실패 - 유효하지 않은 이벤트 태그");
+		return false;
+	}
+
+	if (!IsOwnerActorAuthoritative())
+	{
+		UE_LOGFMT(LogASC, Warning, "데미지 이벤트 트리거 실패 - 권한 없음");
+		return false;
+	}
+
+	FGameplayAbilityActorInfo* ActorInfo = AbilityActorInfo.Get();
+	if (!ActorInfo)
+	{
+		UE_LOGFMT(LogASC, Warning, "데미지 이벤트 트리거 실패 - ActorInfo가 유효하지 않음");
+		return false;
+	}
+
+	int32 Count = HandleGameplayEvent(EventTag, Payload);
+
+	UE_LOGFMT(LogASC, Log, "데미지 이벤트 트리거 완료: 활성화된 어빌리티 수 {0}", Count);
+
+	return true;
+}
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
 void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 {
+
 	// @Ability
 	if (!Ability)
 	{
@@ -142,6 +183,7 @@ void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 			UE_LOGFMT(LogASC, Warning, "{0}가 활성화 목록에 추가되었습니다.", Ability->GetName());
 		}
 	}
+
 	UE_LOGFMT(LogASC, Warning, "{0}가 활성화 되었습니다.", Ability->GetName());
 
 	// @TODO: Ability 활성화 시점에 ASC에서 할 일들...
@@ -157,12 +199,14 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 		UE_LOGFMT(LogASC, Error, "{0}가 유효하지 않습니다", Ability->GetName());
 		return;
 	}
+
 	//@Activating Abilities
 	if (!ActivatingAbilityTags.IsEmpty() && ActivatingAbilityTags.HasAllExact(Ability->AbilityTags))
 	{
 		ActivatingAbilityTags.RemoveTags(Ability->AbilityTags);
 		UE_LOGFMT(LogASC, Warning, "{0}가 활성화 목록에서 제거되었습니다.", Ability->GetName());
 	}
+
 	// @UnBlock
 	if (AbilityTagRelationshipMapping)
 	{
@@ -212,12 +256,10 @@ void UBaseAbilitySystemComponent::GetAbilityBlockAndCancelTagsForAbilityTag(cons
 
 void UBaseAbilitySystemComponent::GetAbilityRelationshipActivationTags(const FGameplayTagContainer& AbilityTags, FGameplayTagContainer* OutActivationRequired, FGameplayTagContainer* OutActivationBlocked) const
 {
-	//check(AbilityTagRelationship)
 
 	if (AbilityTagRelationshipMapping)
 	{
 		AbilityTagRelationshipMapping->GetRequiredAndBlockedActivationTags(AbilityTags, OutActivationRequired, OutActivationBlocked);
 	}
 }
-
 #pragma endregion

@@ -86,9 +86,6 @@ public:
 	void LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame);
 
 protected:
-	UPROPERTY(EditDefaultsOnly, Category = "Gameplay Ability System|Pawn Data")
-		TObjectPtr<UPawnData> PawnData;
-
 	FBaseAbilitySet_GrantedHandles* SetGrantedHandles;
 
 	UPROPERTY()
@@ -96,6 +93,11 @@ protected:
 
 	UPROPERTY()
 		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
+
+protected:
+	//@캐릭터 태그
+	FGameplayTag CharacterTag;
+
 #pragma endregion
 
 //@Delegates
@@ -114,8 +116,11 @@ protected:
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+protected:
+	UPROPERTY()
+		TWeakObjectPtr<UAbilityManagerSubsystem> AbilityManagerSubsystemRef;
+
 public:
-	UPawnData* GetPawnData() const;
 	//~IAbilitySystemInterface Interface
 	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	//~End Of IAbilitySystemInterface Interface

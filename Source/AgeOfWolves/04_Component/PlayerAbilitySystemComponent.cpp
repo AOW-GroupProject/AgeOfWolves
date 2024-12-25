@@ -108,12 +108,18 @@ void UPlayerAbilitySystemComponent::ClearAbilityInput()
 
 void UPlayerAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
 {
+	UE_LOGFMT(LogPlayerASC, Log, "입력된 Input Tag: {0}", InputTag.ToString());
+
 	if (InputTag.IsValid())
 	{
 		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 		{
 			if (AbilitySpec.Ability && (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag)))
 			{
+				UE_LOGFMT(LogPlayerASC, Log, "입력 Tag에 매칭된 어빌리티: {0} | 입력 Tag: {1}",
+					AbilitySpec.Ability->GetName(),
+					InputTag.ToString());
+
 				InputPressedSpecHandles.AddUnique(AbilitySpec.Handle);
 				InputHeldSpecHandles.AddUnique(AbilitySpec.Handle);
 			}
@@ -123,12 +129,18 @@ void UPlayerAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& I
 
 void UPlayerAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
 {
+	UE_LOGFMT(LogPlayerASC, Log, "해제된 Input Tag: {0}", InputTag.ToString());
+
 	if (InputTag.IsValid())
 	{
 		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 		{
 			if (AbilitySpec.Ability && (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag)))
 			{
+				UE_LOGFMT(LogPlayerASC, Log, "입력 해제된 어빌리티: {0} | 해제된 Tag: {1}",
+					AbilitySpec.Ability->GetName(),
+					InputTag.ToString());
+
 				InputReleasedSpecHandles.AddUnique(AbilitySpec.Handle);
 				InputHeldSpecHandles.Remove(AbilitySpec.Handle);
 			}

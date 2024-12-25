@@ -49,6 +49,8 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 	AllAttributes.Add(GetXPBountyAttribute());
 	AllAttributes.Add(GetGoldBountyAttribute());
 
+	AllAttributes.Add(GetCombatStateAttribute());
+
 	return AllAttributes;
 }
 
@@ -77,9 +79,13 @@ void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 	{
 		NewValue = FMath::Clamp<float>(NewValue, 150, 1000);
 	}
-
+	// @CombatState - 0(비전투) 또는 1(전투) 상태만 가질 수 있도록 클램핑
+	else if (Attribute == GetCombatStateAttribute())
+	{
+		NewValue = FMath::Clamp<float>(FMath::RoundToFloat(NewValue), 0.f, 1.f);
+		UE_LOGFMT(LogAttributeSet, Log, "전투 상태 변경: {0}", NewValue > 0.f ? TEXT("전투") : TEXT("비전투"));
+	}
 }
-
 void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);
@@ -95,40 +101,6 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 	if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
 	{
 		SetStamina(FMath::Clamp(GetStamina(), 0.f, GetMaxStamina()));
-	}
-
-	float MinimumHealth = 0.f;
-	if (Data.EvaluatedData.Attribute == GetDamageAttribute())
-	{
-		const float LocalIncomingDamage = GetDamage();
-		SetDamage(0.f);
-		if (LocalIncomingDamage > 0.f)
-		{
-			const float NewHealth = GetHealth() - LocalIncomingDamage;
-			SetHealth(FMath::Clamp(NewHealth, 0.f, GetMaxHealth()));
-
-			const bool bFatal = NewHealth <= 0.f;
-
-			ICombatInterface* CombatInterface = Cast<ICombatInterface>(Data.Target.AbilityActorInfo->AvatarActor.Get());
-			if (CombatInterface)
-			{
-				if (bFatal)
-				{
-					CombatInterface->Die();
-				}
-				else
-				{
-					FGameplayTagContainer TagContainer = Data.EffectSpec.GetDynamicAssetTags();
-					if (TagContainer.HasTag(AOWGameplayTags::TAG_EventTag_HitReact))
-					{
-						TArray<FGameplayTag> TagArray;
-						TagContainer.GetGameplayTagArray(TagArray);
-						CombatInterface->HitReact(TagArray[0]);
-					}
-				}
-			}
-			// ToDo : 그 외 로직 처리
-		}
 	}
 }
 

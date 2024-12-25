@@ -4,11 +4,13 @@
 #include "BaseGameplayAbility.h"
 #include "Logging/StructuredLog.h"
 
+#include "AbilitySystemGlobals.h"
+
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "02_AbilitySystem/AOWGameplayTags.h"
-#include "AbilitySystemGlobals.h"
 
+#include "GameplayEffectCustomApplicationRequirement.h"
 
 DEFINE_LOG_CATEGORY(LogGA)
 
@@ -29,10 +31,8 @@ void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorI
 
     check(ActorInfo);
 
-    /*
-    * @목적: Activation Policy가 OnGranted일 경우, Passive GA이므로 ASC에 등록되는 시점에 활성화해줍니다.
-    */
-    if (ActivationPolicy == EAbilityActivationPolicy::OnGranted_Instant
+    //@Activation Policy가 On Granted일 경우, 등록 직후 활성화 시도
+	if (ActivationPolicy == EAbilityActivationPolicy::OnGranted_Instant
         || ActivationPolicy == EAbilityActivationPolicy::OnGranted_ConditionalPeriodic)
     {
         if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
@@ -184,7 +184,64 @@ bool UBaseGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySyste
     return true;
 }
 
-// BaseGameplayAbility.cpp
+bool UBaseGameplayAbility::CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, OUT FGameplayTagContainer* OptionalRelevantTags) const
+{
+    // 기본 비용 체크
+    if (!Super::CheckCost(Handle, ActorInfo, OptionalRelevantTags))
+    {
+        UE_LOGFMT(LogGA, Warning, "{0} 기본 비용 체크 실패", GetName());
+        return false;
+    }
+
+    // Cost GE 유효성 체크
+    UGameplayEffect* CostGE = GetCostGameplayEffect();
+    if (!CostGE || !ActorInfo || !ActorInfo->AbilitySystemComponent.IsValid())
+    {
+        UE_LOGFMT(LogGA, Warning, "{0} Cost GE 또는 ActorInfo가 유효하지 않음", GetName());
+        return false;
+    }
+
+    // Spec 생성
+    UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get();
+    FGameplayEffectContextHandle ContextHandle = MakeEffectContext(Handle, ActorInfo);
+    FGameplayEffectSpecHandle SpecHandle = ASC->MakeOutgoingSpec(CostGE->GetClass(), GetAbilityLevel(), ContextHandle);
+    const FGameplayEffectSpec* Spec = SpecHandle.Data.Get();
+
+    if (!Spec)
+    {
+        UE_LOGFMT(LogGA, Error, "{0} GameplayEffectSpec 생성 실패", GetName());
+        return false;
+    }
+
+    // Application Requirements 체크
+    for (const TSubclassOf<UGameplayEffectCustomApplicationRequirement>& RequirementClass : CostGE->ApplicationRequirements)
+    {
+        if (!RequirementClass)
+        {
+            continue;
+        }
+
+        const UGameplayEffectCustomApplicationRequirement* RequirementCDO = RequirementClass->GetDefaultObject<UGameplayEffectCustomApplicationRequirement>();
+        if (!RequirementCDO)
+        {
+            continue;
+        }
+
+        if (!RequirementCDO->CanApplyGameplayEffect_Implementation(CostGE, *Spec, ASC))
+        {
+            if (OptionalRelevantTags)
+            {
+                OptionalRelevantTags->AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.ActivateFail.CustomRequirement")));
+            }
+            UE_LOGFMT(LogGA, Warning, "{0} 커스텀 적용 요구사항 체크 실패", GetName());
+            return false;
+        }
+    }
+
+    UE_LOGFMT(LogGA, Log, "{0} 비용 체크 성공", GetName());
+    return true;
+}
+
 void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
     // 부모 클래스 호출
@@ -206,7 +263,6 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
 
     UE_LOGFMT(LogGA, Log, "Ability Input Released - Ability: {0}", *GetName());
 }
-
 #pragma endregion
 
 //@Callbacks

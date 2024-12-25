@@ -1,4 +1,6 @@
-﻿#include "BaseAnimInstance.h"
+﻿#pragma once
+
+#include "BaseAnimInstance.h"
 #include "Logging/StructuredLog.h"
 
 #include "01_Character/CharacterBase.h"
@@ -28,51 +30,42 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , bIsInDeceleration(false)
     , bModifyBoneTransform(false)
     , BoneTransformLerpSpeed(10.0f)
-    , OwnerCharacterBase(nullptr)
     , CharacterMovementCompRef(nullptr)
     , bIsSprintingCooldown(false)
     , SprintingCooldownTime(0.0f)
     , SprintingCooldownDuration(1.5f)
     , CurrentCooldownTime(0.0f)
+    , bIsCombatState(false)
 {
-    OwnerCharacterBase.Reset();
+    OwnerCharacterBaseRef.Reset();
     CharacterMovementCompRef.Reset();
-    MotionWarpCompRef.Reset();
 }
 
 void UBaseAnimInstance::NativeBeginPlay()
 {
-	Super::NativeBeginPlay();
+    Super::NativeBeginPlay();
 
 }
 
 void UBaseAnimInstance::NativeInitializeAnimation()
 {
-	Super::NativeInitializeAnimation();
+    Super::NativeInitializeAnimation();
 
     //@Character Base
     const auto CharacterBase = Cast<ACharacterBase>(TryGetPawnOwner());
-    if(!CharacterBase)
-	{
+    if (!CharacterBase)
+    {
         return;
-	}
-    OwnerCharacterBase = CharacterBase;
+    }
+    OwnerCharacterBaseRef = CharacterBase;
 
     //@Character Movement Component
-    UCharacterMovementComponent* CharacterMovementComp = OwnerCharacterBase->GetCharacterMovement();
+    UCharacterMovementComponent* CharacterMovementComp = OwnerCharacterBaseRef->GetCharacterMovement();
     if (!CharacterMovementComp)
     {
         return;
     }
     CharacterMovementCompRef = CharacterMovementComp;
-
-    //@Motion Warping Component
-    const auto MotionWarpComp = OwnerCharacterBase->FindComponentByClass<UMotionWarpingComponent>();
-    if (!MotionWarpComp)
-    {
-        return;
-    }
-    MotionWarpCompRef = MotionWarpComp;
 
 }
 
@@ -80,7 +73,7 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
     Super::NativeUpdateAnimation(DeltaSeconds);
 
-    if (!OwnerCharacterBase.IsValid() || !OwnerCharacterBase->GetController())
+    if (!OwnerCharacterBaseRef.IsValid() || !OwnerCharacterBaseRef->GetController())
     {
         return;
     }
@@ -101,18 +94,21 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
         }
     }
 
-	// 떨어지는 중인가 저장합니다.
-	bFalling = OwnerCharacterBase->GetMovementComponent()->IsFalling();
-	// 캐릭터의 가속도를 가져옵니다.
-	Velocity = OwnerCharacterBase->GetVelocity();
-	// 캐릭터으 현재 속도를 정의합니다.
-	Speed = OwnerCharacterBase->GetVelocity().Length();
-	// 캐릭터의 이동/비이동 상태를 확인합니다.
-	bShouldMove = Speed > 3.f && OwnerCharacterBase->GetCharacterMovement()->GetCurrentAcceleration() != FVector::ZeroVector;
-	// 캐릭터의 이동 상태를 정의합니다. EMovementState(열거형) 유형의 변수로 나타냅니다.
-	FindMovementState();
-	// 캐릭터의 이동 방향을 정의합니다.
-	FindMovementDirection();
+    //@떨어지는 중인가 저장합니다.
+    bFalling = OwnerCharacterBaseRef->GetMovementComponent()->IsFalling();
+    //@캐릭터의 가속도를 가져옵니다.
+    Velocity = OwnerCharacterBaseRef->GetVelocity();
+    //@캐릭터으 현재 속도를 정의합니다.
+    Speed = OwnerCharacterBaseRef->GetVelocity().Length();
+    //@캐릭터의 이동/비이동 상태를 확인합니다.
+    bShouldMove = Speed > 3.f && OwnerCharacterBaseRef->GetCharacterMovement()->GetCurrentAcceleration() != FVector::ZeroVector;
+    //@캐릭터의 이동 상태를 정의합니다. EMovementState(열거형) 유형의 변수로 나타냅니다.
+    FindMovementState();
+    //@캐릭터의 이동 방향을 정의합니다.
+    FindMovementDirection();
+    //@Upper Body Slot 업데이트 여부
+    if (bIsCombatState) UpdateUpperBodyAnimation();
+    
 }
 #pragma endregion
 
@@ -133,38 +129,26 @@ void UBaseAnimInstance::FindMovementState()
     //@현재 스피드
     float CurrentSpeed = Speed;
     //@최대 속도
-    float MaxWalkSpeed = OwnerCharacterBase->GetCharacterMovement()->MaxWalkSpeed;
-
+    float MaxWalkSpeed = OwnerCharacterBaseRef->GetCharacterMovement()->MaxWalkSpeed;
     //@달리기 여부
     bool bIsSprinting = MaxWalkSpeed >= 550.f;
 
-    //@EMovementState::Idle
+    //@상태 결정
     if (CurrentSpeed < 0.05f)
     {
         MovementState = EMovementState::Idle;
     }
-    //@EMovementState::Sprinting or Walking
     else
     {
         MovementState = bIsSprinting ? EMovementState::Sprinting : EMovementState::Walking;
     }
 
-    // Sprinting에서 다른 상태로 전환되었을 때 쿨다운 시작
-    if (LastMovementState == EMovementState::Sprinting && MovementState != EMovementState::Sprinting)
-    {
-        bIsSprintingCooldown = true;
-        CurrentCooldownTime = 0.0f;
-        UE_LOGFMT(LogAnimInstance, Log, "Sprinting 종료 - 쿨다운 시작");
-    }
-
-    // MovementState가 변경되었다면 이동 설정 업데이트
+    // 상태가 변경되었을 때만 로그 출력
     if (LastMovementState != MovementState)
     {
-        UE_LOGFMT(LogAnimInstance, Log, "이동 상태 변경: {0} -> {1}, 현재 속도: {2}, 최대 속도: {3}",
+        UE_LOGFMT(LogAnimInstance, Log, "이동 상태 변경: {0} -> {1}",
             *UEnum::GetValueAsString(LastMovementState),
-            *UEnum::GetValueAsString(MovementState),
-            CurrentSpeed,
-            MaxWalkSpeed);
+            *UEnum::GetValueAsString(MovementState));
 
         UpdateMovementSettings();
     }
@@ -172,9 +156,6 @@ void UBaseAnimInstance::FindMovementState()
 
 void UBaseAnimInstance::FindMovementDirection()
 {
-    EMovementDirection PrevDirection = MovementDirection;
-
-    //@방향 별 이동 가능 여부 체크 - Lock On 상태이며 Sprinting이 아닐 때만 방향별 이동 가능
     if (!bEnableDirectionalMovement || MovementState == EMovementState::Sprinting || bIsSprintingCooldown)
     {
         DirectionAngle = 0.f;
@@ -182,75 +163,20 @@ void UBaseAnimInstance::FindMovementDirection()
         return;
     }
 
-    FRotator Rotation = OwnerCharacterBase->GetControlRotation();
+    EMovementDirection PrevDirection = MovementDirection;
+    FRotator Rotation = OwnerCharacterBaseRef->GetControlRotation();
     DirectionAngle = CalculateDirection(Velocity, Rotation);
 
-    // 속도가 너무 낮으면 전방으로 설정
     if (Velocity.SizeSquared() < 25.0f)
     {
         MovementDirection = EMovementDirection::Fwd;
         return;
     }
 
-    UE_LOGFMT(LogAnimInstance, Log, "Angle Update - DirectionAngle: {0}, Movement: {1}",
-        DirectionAngle,
-        *UEnum::GetValueAsString(MovementDirection));
-
-    const float HYSTERESIS = 15.f;
-
-    // 현재 상태에 따른 방향 전환 결정
-    if (MovementDirection == EMovementDirection::Bwd)
-    {
-        // Backward 상태에서는 더 큰 각도 변화가 있어야 상태 전환
-        if (FMath::Abs(DirectionAngle) < (135.f - HYSTERESIS))
-        {
-            MovementDirection = (DirectionAngle > 0.f) ? EMovementDirection::Right : EMovementDirection::Left;
-        }
-    }
-    else if (MovementDirection == EMovementDirection::Right)
-    {
-        // Right 상태에서는 각도가 더 커야 Backward로 전환
-        if (DirectionAngle > (135.f + HYSTERESIS))
-        {
-            MovementDirection = EMovementDirection::Bwd;
-        }
-        else if (DirectionAngle <= 45.f)
-        {
-            MovementDirection = EMovementDirection::Fwd;
-        }
-    }
-    else if (MovementDirection == EMovementDirection::Left)
-    {
-        // Left 상태에서는 각도가 더 작아야 Backward로 전환
-        if (DirectionAngle < -(135.f + HYSTERESIS))
-        {
-            MovementDirection = EMovementDirection::Bwd;
-        }
-        else if (DirectionAngle >= -45.f)
-        {
-            MovementDirection = EMovementDirection::Fwd;
-        }
-    }
-    else  // Forward 상태
-    {
-        if (DirectionAngle > 45.f && DirectionAngle <= 135.f)
-        {
-            MovementDirection = EMovementDirection::Right;
-        }
-        else if (DirectionAngle < -45.f && DirectionAngle >= -135.f)
-        {
-            MovementDirection = EMovementDirection::Left;
-        }
-        else if (FMath::Abs(DirectionAngle) > 135.f)
-        {
-            MovementDirection = EMovementDirection::Bwd;
-        }
-    }
 
     if (PrevDirection != MovementDirection)
     {
-        UE_LOGFMT(LogAnimInstance, Log, "Direction Changed - Angle: {0}, From: {1} To: {2}",
-            DirectionAngle,
+        UE_LOGFMT(LogAnimInstance, Log, "이동 방향 변경: {0} -> {1}",
             *UEnum::GetValueAsString(PrevDirection),
             *UEnum::GetValueAsString(MovementDirection));
     }
@@ -258,30 +184,34 @@ void UBaseAnimInstance::FindMovementDirection()
 
 void UBaseAnimInstance::UpdateMovementSettings()
 {
-    if (!CharacterMovementCompRef.IsValid()) return;
+    if (!CharacterMovementCompRef.IsValid())
+    {
+        UE_LOGFMT(LogAnimInstance, Error, "Movement Component가 유효하지 않습니다.");
+        return;
+    }
 
-    // Sprinting 중이거나 쿨다운 중일 때는 항상 정면 이동
     bool bShouldUseDirectionalMovement = bEnableDirectionalMovement &&
         MovementState != EMovementState::Sprinting &&
         !bIsSprintingCooldown;
 
+    UE_LOGFMT(LogAnimInstance, Log, "이동 방향 설정 값: DirectionalMovement({0}), MovementState({1}), SprintingCooldown({2})",
+        bEnableDirectionalMovement,
+        *UEnum::GetValueAsString(MovementState),
+        bIsSprintingCooldown);
+
     if (bShouldUseDirectionalMovement)
     {
-        //@방향별 이동 설정
         CharacterMovementCompRef->bUseControllerDesiredRotation = true;
         CharacterMovementCompRef->bOrientRotationToMovement = false;
 
-        UE_LOGFMT(LogAnimInstance, Log, "방향별 이동 설정 적용");
+        UE_LOGFMT(LogAnimInstance, Log, "방향 이동 설정: ControllerDesiredRotation(true), OrientRotationToMovement(false)");
     }
     else
     {
-        //@정면 이동 설정
         CharacterMovementCompRef->bUseControllerDesiredRotation = false;
         CharacterMovementCompRef->bOrientRotationToMovement = true;
 
-        const FString Reason = MovementState == EMovementState::Sprinting ?
-            "Sprinting" : (bIsSprintingCooldown ? "Sprint Cooldown" : "Not Lock On");
-        UE_LOGFMT(LogAnimInstance, Log, "정면 이동 설정 적용 - 사유: {0}", Reason);
+        UE_LOGFMT(LogAnimInstance, Log, "일반 이동 설정: ControllerDesiredRotation(false), OrientRotationToMovement(true)");
     }
 }
 
@@ -289,11 +219,41 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
 {
     if (StopMotionType == Type) return;
 
-    //@Stop Motion Type
     StopMotionType = Type;
+    UE_LOGFMT(LogAnimInstance, Log, "정지 모션 변경: {0}", *UEnum::GetValueAsString(StopMotionType));
+}
 
-    UE_LOGFMT(LogAnimInstance, Log, "Stop Motion Type 업데이트: {0}",
-        *UEnum::GetValueAsString(StopMotionType));
+void UBaseAnimInstance::ChangeCombatState(bool bEnterCombat)
+{
+    // 상태 변경이 필요한지 체크
+    if (bIsCombatState == bEnterCombat)
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "전투 상태가 이미 {0} 상태입니다.",
+            bEnterCombat ? TEXT("전투") : TEXT("비전투"));
+        return;
+    }
+
+    // 상태 변경 및 로깅
+    bIsCombatState = bEnterCombat;
+    UE_LOGFMT(LogAnimInstance, Log, "전투 상태가 {0}(으)로 변경되었습니다.",
+        bEnterCombat ? TEXT("전투") : TEXT("비전투"));
+}
+
+void UBaseAnimInstance::UpdateUpperBodyAnimation()
+{
+    // 전제 조건 체크
+    if (!ensureMsgf(OwnerCharacterBaseRef.IsValid(),
+        TEXT("상반신 애니메이션 업데이트 실패: 캐릭터가 유효하지 않습니다.")))
+    {
+        return;
+    }
+
+    // 애니메이션 업데이트 시작
+    UE_LOGFMT(LogAnimInstance, Log, "상반신 애니메이션 업데이트 시작");
+
+    //@TODO: Upper Body Slot의 상반신 애님 몽타주 재생
+
+    UE_LOGFMT(LogAnimInstance, Log, "상반신 애니메이션 업데이트 완료");
 }
 #pragma endregion
 
@@ -301,7 +261,7 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
 #pragma region Callbacks
 void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
 {
-    if (!OwnerCharacterBase.IsValid() || !CharacterMovementCompRef.IsValid())
+    if (!OwnerCharacterBaseRef.IsValid() || !CharacterMovementCompRef.IsValid())
     {
         UE_LOGFMT(LogAnimInstance, Log, "Owner Character가 유효하지 않습니다.");
         return;

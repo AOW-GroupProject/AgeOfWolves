@@ -7,11 +7,17 @@
 
 #include "AttackGameplayAbility.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogAttackGA, Log, All);
+
+//@전방 선언
+#pragma region Forward Declaration
 class APlayerCharacter;
 class UCombatComponent;
 class UAnimMontage;
+#pragma endregion
 
-
+//@열거형
+#pragma region Enums
 UENUM(BlueprintType)
 enum class EAkoniAttackType : uint8
 {
@@ -27,48 +33,79 @@ enum class EAkoniAttackType : uint8
 	ATT_MAX  UMETA(Hidden),
 };
 
-
 UENUM(BlueprintType)
 enum class EEnemyAttackType : uint8
 {
 	EAT_MAX  UMETA(Hidden),
 };
+#pragma endregion
 
+//@구조체
+#pragma region Structs
+
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+#pragma endregion
 
 UCLASS()
 class AGEOFWOLVES_API UAttackGameplayAbility : public UBaseGameplayAbility
 {
+//@친추 클래스
+#pragma region Friend Class
+#pragma endregion
+
 	GENERATED_BODY()
 
+//@Defualt Setting
+#pragma region Default Setting
 public:
-	UAttackGameplayAbility();
+	UAttackGameplayAbility(const FObjectInitializer& ObjectInitializer);
+#pragma endregion
+
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+protected:
+	//@BP 에서 Damage Info 멤버 설정 필수
+	UFUNCTION(BlueprintCallable, Category = "Ability | Damage")
+		void SendDamageEvent(const FHitResult& HitResult);
 
 protected:
-
+	//@공격 유형
 	UPROPERTY(EditDefaultsOnly, meta = (Category = "AttackAbilityInfo"))
-	EAkoniAttackType AkoniAttackType;
+		EAkoniAttackType AkoniAttackType;
 
+	//@첫 공격 여부
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AttackAbilityInfo")
-	bool bFirstAttack = false;
+		bool bFirstAttack = false;
 
+	//@Damage 유형
 	UPROPERTY(EditDefaultsOnly, Category = "AttackAbilityInfo")
-	TMap<FGameplayTag, FScalableFloat> DamageTypes;
+		TMap<FGameplayTag, FScalableFloat> DamageTypes;
 
+	//@Anim Montage
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (Category = "AttackAbilityInfo"))
-	TArray<UAnimMontage*> AttackMontages;
+		TArray<UAnimMontage*> AttackMontages;
 
+	//@Anim Montage 재생 속도
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (Category = "AttackAbilityInfo"))
-	float MontagePlayRate = 1.0f;
+		float MontagePlayRate = 1.0f;
+#pragma endregion
 
+//@Delegates
+#pragma region Delegates
+#pragma endregion
 
-	UFUNCTION(BlueprintCallable)
-	void CauseDamageToTarget(AActor* TargetActor, FGameplayTag HitDirectionTag = FGameplayTag());
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
 
-	UFUNCTION(BlueprintCallable)
-	static FGameplayTag CalculateHitDirection(const FVector& HitLocation, const AActor* HitActor);
-
-public: 
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+public:
 	UFUNCTION(BlueprintCallable, Category = "Ability|Getter")
-	APlayerCharacter* GetPlayerCharacterFromActorInfo() const;
+		APlayerCharacter* GetPlayerCharacterFromActorInfo() const;
+#pragma endregion
 	
 };

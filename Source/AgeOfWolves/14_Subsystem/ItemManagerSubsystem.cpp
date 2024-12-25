@@ -18,7 +18,7 @@ void UItemManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 
     //@Tool Data Table
     ToolItemTable = LoadObject<UDataTable>(nullptr, TEXT("/Game/Blueprints/09_Item/DT_ToolItem"));
-    if (ToolItemTable)
+    if(ToolItemTable)
     {
         UE_LOGFMT(LogItemManager, Log, "Tool Item 관련 정보 로드 성공");
     }

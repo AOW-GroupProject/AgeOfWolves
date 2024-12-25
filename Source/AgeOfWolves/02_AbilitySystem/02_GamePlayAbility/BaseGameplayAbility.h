@@ -7,13 +7,15 @@
 
 #include "BaseGameplayAbility.generated.h"
 
-class UGameplayEffect;
-class UAbilityTagRelationshipMapping;
+
 
 DECLARE_LOG_CATEGORY_EXTERN(LogGA, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
+class UGameplayEffect;
+class UAbilityTagRelationshipMapping;
+class UAttackGameplayAbility;
 #pragma endregion
 
 //@열거형
@@ -55,6 +57,19 @@ enum class EAbilityActivationPolicy : uint8
 
 //@구조체
 #pragma region Structs
+USTRUCT(BlueprintType)
+struct FDamageInformation : public FGameplayEventData
+{
+	GENERATED_BODY()
+
+public:
+	//@Outgoing GE Spec
+	UPROPERTY(BlueprintReadWrite)
+		FGameplayEffectSpecHandle OutgoingGESpecHandle;
+	//@히트 위치
+	UPROPERTY(BlueprintReadWrite)
+		FVector ImpactLocation;
+};
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -97,17 +112,17 @@ protected:
 #pragma region Property or Subwidgets or Infos...etc
 protected:
 	//~UGameplayAbility interface, Overloading
-	//@활성화 가능 여부 체크
 	virtual bool CanActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayTagContainer* SourceTags, const FGameplayTagContainer* TargetTags, FGameplayTagContainer* OptionalRelevantTags) const override;
-	//@활성화 조건 충족 여부
 	virtual bool DoesAbilitySatisfyTagRequirements(const UAbilitySystemComponent& AbilitySystemComponent, const FGameplayTagContainer* SourceTags = nullptr, const FGameplayTagContainer* TargetTags = nullptr, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
+	virtual bool CheckCost(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, OUT FGameplayTagContainer* OptionalRelevantTags = nullptr) const override;
 	//~End of Interface
 
 protected:
-	/** Input binding stub. */
-	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
+	bool CheckGameplayEffectApplicationRequirements(const UGameplayEffect* GameplayEffect,
+		const FGameplayAbilityActorInfo* ActorInfo, FGameplayTagContainer* OptionalRelevantTags) const;
 
-	/** Input binding stub. */
+protected:
+	virtual void InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 	virtual void InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo) override;
 
 	// Input Pressed 이벤트를 Blueprint에서 구현할 수 있도록 함
@@ -145,6 +160,33 @@ public:
 	FORCEINLINE EAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
 	FORCEINLINE TSubclassOf<UGameplayEffect> GetApplyGameplayEffectClass() { return ApplyGameplayEffectClass; }
 	FORCEINLINE FGameplayTagContainer GetRequiredTags() const { return ActivationRequiredTags; }
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "Gameplay Event", meta = (DisplayName = "Convert Event Data to Damage Info"))
+		static FDamageInformation ConvertEventDataToDamageInfo(const FGameplayEventData& EventData)
+	{
+		FDamageInformation DamageInfo;
+
+		// FGameplayEventData의 기본 멤버들 복사
+		DamageInfo.EventTag = EventData.EventTag;
+		DamageInfo.Instigator = EventData.Instigator;
+		DamageInfo.Target = EventData.Target;
+		DamageInfo.OptionalObject = EventData.OptionalObject;
+		DamageInfo.OptionalObject2 = EventData.OptionalObject2;
+		DamageInfo.EventMagnitude = EventData.EventMagnitude;
+		DamageInfo.ContextHandle = EventData.ContextHandle;
+		DamageInfo.InstigatorTags = EventData.InstigatorTags;
+		DamageInfo.TargetTags = EventData.TargetTags;
+
+		// 추가 멤버들
+		if (const FDamageInformation* SourceDamageInfo = static_cast<const FDamageInformation*>(&EventData))
+		{
+			DamageInfo.OutgoingGESpecHandle = SourceDamageInfo->OutgoingGESpecHandle;
+			DamageInfo.ImpactLocation = SourceDamageInfo->ImpactLocation;
+		}
+
+		return DamageInfo;
+	}
 #pragma endregion
 
 };
