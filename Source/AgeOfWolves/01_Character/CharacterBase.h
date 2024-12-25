@@ -52,8 +52,8 @@ protected:
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
-	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		UMotionWarpingComponent* MotionWarpingComponent;
+	//UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+	//	UMotionWarpingComponent* MotionWarpingComponent;
 #pragma endregion
 
 //@Delegates
