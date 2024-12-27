@@ -3,9 +3,12 @@
 #include "BaseAnimInstance.h"
 #include "Logging/StructuredLog.h"
 
-#include "01_Character/CharacterBase.h"
+#include "01_Character/PlayerCharacter.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "MotionWarpingComponent.h"
+
+#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+#include "07_BlueprintNode/AsyncTaskAttributeChanged.h"
 
 #include "KismetAnimationLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -39,11 +42,15 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
 {
     OwnerCharacterBaseRef.Reset();
     CharacterMovementCompRef.Reset();
+    CombatStateAttributeListenerRef.Reset();
 }
 
 void UBaseAnimInstance::NativeBeginPlay()
 {
     Super::NativeBeginPlay();
+
+    //@Combat State 속성 수치 변화 관찰
+    ListenToCombatStateAttributeChange();
 
 }
 
@@ -73,12 +80,13 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
     Super::NativeUpdateAnimation(DeltaSeconds);
 
+    //@Character Base, Controller
     if (!OwnerCharacterBaseRef.IsValid() || !OwnerCharacterBaseRef->GetController())
     {
         return;
     }
 
-    // 쿨다운 타이머 업데이트
+    //@Sprinting 쿨 다운 타이머
     if (bIsSprintingCooldown)
     {
         CurrentCooldownTime += DeltaSeconds;
@@ -106,9 +114,6 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     FindMovementState();
     //@캐릭터의 이동 방향을 정의합니다.
     FindMovementDirection();
-    //@Upper Body Slot 업데이트 여부
-    if (bIsCombatState) UpdateUpperBodyAnimation();
-    
 }
 #pragma endregion
 
@@ -223,37 +228,55 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
     UE_LOGFMT(LogAnimInstance, Log, "정지 모션 변경: {0}", *UEnum::GetValueAsString(StopMotionType));
 }
 
-void UBaseAnimInstance::ChangeCombatState(bool bEnterCombat)
+void UBaseAnimInstance::ListenToCombatStateAttributeChange()
 {
-    // 상태 변경이 필요한지 체크
-    if (bIsCombatState == bEnterCombat)
+    //@Player Character
+    APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(TryGetPawnOwner());
+    if (!PlayerCharacter)
     {
-        UE_LOGFMT(LogAnimInstance, Warning, "전투 상태가 이미 {0} 상태입니다.",
-            bEnterCombat ? TEXT("전투") : TEXT("비전투"));
+        UE_LOGFMT(LogAnimInstance, Error, "PlayerCharacter가 유효하지 않습니다.");
         return;
     }
 
-    // 상태 변경 및 로깅
-    bIsCombatState = bEnterCombat;
-    UE_LOGFMT(LogAnimInstance, Log, "전투 상태가 {0}(으)로 변경되었습니다.",
-        bEnterCombat ? TEXT("전투") : TEXT("비전투"));
-}
+    //@ASC
+    const auto ASC = PlayerCharacter->GetAbilitySystemComponent();
+    if (!ASC)
+    {
+        UE_LOGFMT(LogAnimInstance, Error, "어빌리티 시스템 컴포넌트가 유효하지 않습니다.");
+        return;
+    }
 
-void UBaseAnimInstance::UpdateUpperBodyAnimation()
-{
-    // 전제 조건 체크
-    if (!ensureMsgf(OwnerCharacterBaseRef.IsValid(),
-        TEXT("상반신 애니메이션 업데이트 실패: 캐릭터가 유효하지 않습니다.")))
+    //@AttributeSet
+    const UAttributeSet* AttributeSet = ASC->GetAttributeSet(UBaseAttributeSet::StaticClass());
+    if (!AttributeSet)
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "어트리뷰트 셋이 유효하지 않습니다.");
+        return;
+    }
+
+    //@Base Attribute Set
+    const auto BaseAttributeSet = Cast<UBaseAttributeSet>(AttributeSet);
+    if (!BaseAttributeSet)
     {
         return;
     }
 
-    // 애니메이션 업데이트 시작
-    UE_LOGFMT(LogAnimInstance, Log, "상반신 애니메이션 업데이트 시작");
+    //@Combat State 속성 관찰
+    FGameplayAttribute CombatStateAttribute = BaseAttributeSet->GetCombatStateAttribute();
+    if (CombatStateAttribute.IsValid())
+    {
+        CombatStateAttributeListenerRef = UAsyncTaskAttributeChanged::ListenToAttributeValueChange(
+            ASC,
+            CombatStateAttribute);
 
-    //@TODO: Upper Body Slot의 상반신 애님 몽타주 재생
-
-    UE_LOGFMT(LogAnimInstance, Log, "상반신 애니메이션 업데이트 완료");
+        if (CombatStateAttributeListenerRef.IsValid())
+        {
+            CombatStateAttributeListenerRef->OnAttributeValueChanged.AddDynamic(
+                this,
+                &UBaseAnimInstance::OnCombatStateAttributeValueChanged);
+            UE_LOGFMT(LogAnimInstance, Log, "전투 상태 어트리뷰트 리스너가 생성되었습니다.");
+        }
+    }
 }
 #pragma endregion
 
@@ -278,6 +301,17 @@ void UBaseAnimInstance::OnDecelerationStateChanged(bool bIsDecelerating)
 {
     bIsInDeceleration = bIsDecelerating;
     UE_LOGFMT(LogAnimInstance, Log, "감속 상태 변경: {0}", bIsDecelerating);
+}
+
+void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
+{
+    //@bIsCombatState
+    bIsCombatState = NewValue > 0.f;
+
+    UE_LOGFMT(LogAnimInstance, Log, "전투 상태 변경: {0} -> {1} (값: {2})",
+        OldValue > 0.f,
+        NewValue > 0.f,
+        NewValue);
 }
 #pragma endregion
 

@@ -4,9 +4,7 @@
 
 #include "CoreMinimal.h"
 #include "CharacterBase.h"
-
 #include "GenericTeamAgentInterface.h"
-#include "CombatInterface.h"
 
 #include "PlayerCharacter.generated.h"
 
@@ -42,7 +40,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FRequestStartInitByPlayerCharacter, const AC
  * 사용자 캐릭터를 구현하는 ACharacterBase 유형의 객체
  */
 UCLASS()
-class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase, public IGenericTeamAgentInterface, public ICombatInterface
+class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase, public IGenericTeamAgentInterface
 {
 	
 //@친추 클래스
@@ -63,12 +61,6 @@ protected:
 	virtual void Tick(float DeltaSeconds) override;
 	virtual void PossessedBy(AController* NewController) override;
 	virtual void PawnClientRestart() override;
-
-public:
-	//@Interface of ICombatInterface
-	virtual void Die() override;
-	virtual void HitReact(FGameplayTag HitDirectionTag) override;
-	//@End Of ICombatInterface
 
 protected:
 	//@내부 바인딩

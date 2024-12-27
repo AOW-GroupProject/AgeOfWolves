@@ -79,17 +79,21 @@ protected:
 	virtual void BeginPlay() override;
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	//~ End of UActorComponent Interface
+
 private:
 	//@외부 바인딩
 	void ExternalBindingToInputComponent(const APlayerController* PlayerController);
+
 private:
 	//@내부 바인딩
 	void InternalBindToHUDUI();
 	void InternalBindToMenuUI();
+
 public:
 	//@초기화
 	UFUNCTION()
 		void InitializeUIComponent();
+
 protected:
 	//@Player HUD, Menu UI들의 초기화 작업 완료를 체크합니다.
 	bool bHUDInitFinished = false;

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
+#include "GameplayEffectTypes.h"
 
 #include "BaseAnimInstance.generated.h"
 
@@ -12,6 +13,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAnimInstance, Log, All)
 class ACharacterBase;
 class UCharacterMovementComponent;
 class UMotionWarpingComponent;
+class UAsyncTaskAttributeChanged;
 #pragma endregion
 
 //@열거형
@@ -93,6 +95,15 @@ protected:
 	virtual void NativeBeginPlay() override;
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+
+protected:
+	//@내부 바인딩
+
+protected:
+	//@외부 바인딩
+
+protected:
+	//@초기화
 #pragma endregion
 
 //@Property/Info...etc
@@ -122,12 +133,8 @@ protected:
 		void UpdateStopMotionType(EStopMotionType Type);
 
 protected:
-	//@Combat State를 변경합니다.
-	UFUNCTION(BlueprintCallable)
-		void ChangeCombatState(bool bEnterCombat);
-
-	//@캐릭터의 상반신 애니메이션을 업데이트합니다.
-	void UpdateUpperBodyAnimation();
+	//@Combat State 속성 변화 이벤트 관찰
+	void ListenToCombatStateAttributeChange();
 
 protected:
 	//@직전 이동 상태에 따른 스탑 모션
@@ -205,6 +212,11 @@ protected:
 protected:
 	UFUNCTION()
 		void OnDecelerationStateChanged(bool bIsDecelerating);
+
+protected:
+	//@Attribute 변화 이벤트 구독
+	UFUNCTION()
+		void OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -213,9 +225,14 @@ protected:
 	//@Owner Character 캐싱
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TWeakObjectPtr<ACharacterBase> OwnerCharacterBaseRef;
+	
 	//@Character Movement 캐싱
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TWeakObjectPtr<UCharacterMovementComponent> CharacterMovementCompRef;
+
+	//@Combat State 속성 수치 변화 이벤트 관찰자
+	UPROPERTY()
+		TWeakObjectPtr<UAsyncTaskAttributeChanged> CombatStateAttributeListenerRef;
 
 public:
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))

@@ -64,7 +64,6 @@ void APlayerStateBase::BeginPlay()
 
 void APlayerStateBase::InitializePlayerState()
 {
-
     //@Controller
     const auto& Controller = Cast<AController>(GetOwner());
     if (!Controller)
