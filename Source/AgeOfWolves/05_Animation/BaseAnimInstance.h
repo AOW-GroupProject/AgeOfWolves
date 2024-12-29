@@ -60,6 +60,20 @@ enum class EStopMotionType : uint8
 	SprintStop	UMETA(DisplayName = "Sprint Stop"),
 	MAX			UMETA(DisplayName = "MAX"),
 };
+
+/*
+*	@ECombatType
+*
+*	전투 상태 열거형
+*/
+UENUM(BlueprintType)
+enum class ECombatType : uint8
+{
+	NonCombat = 0		UMETA(DisplayName = "NonCombat"),
+	NormalCombat		UMETA(DisplayName = "NormalCombat"),
+	BattoujutsuCombat	UMETA(DisplayName = "BattoujutsuCombat"),
+	MAX			UMETA(DisplayName = "MAX"),
+};
 #pragma endregion
 
 //@구조체
@@ -195,7 +209,7 @@ protected:
 protected:
 	//@전투/비전투 여부
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		bool bIsCombatState;
+		ECombatType CombatType;
 #pragma endregion
 
 //@Delegates
@@ -253,8 +267,8 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE float GetDirectionAngle() const { return DirectionAngle; }
 
-	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
-		FORCEINLINE bool GetIsCombatState() const { return bIsCombatState; }
+	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
+		ECombatType GetCombatType() const { return CombatType; }
 #pragma endregion
 
 };

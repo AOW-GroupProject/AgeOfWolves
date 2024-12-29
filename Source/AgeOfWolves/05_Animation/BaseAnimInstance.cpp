@@ -38,7 +38,7 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , SprintingCooldownTime(0.0f)
     , SprintingCooldownDuration(1.5f)
     , CurrentCooldownTime(0.0f)
-    , bIsCombatState(false)
+    , CombatType(ECombatType::NonCombat)
 {
     OwnerCharacterBaseRef.Reset();
     CharacterMovementCompRef.Reset();
@@ -230,8 +230,14 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
 
 void UBaseAnimInstance::ListenToCombatStateAttributeChange()
 {
+    //@Owner Character Ref
+    if (!OwnerCharacterBaseRef.IsValid())
+    {
+        return;
+    }
+
     //@Player Character
-    APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(TryGetPawnOwner());
+    APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(OwnerCharacterBaseRef.Get());
     if (!PlayerCharacter)
     {
         UE_LOGFMT(LogAnimInstance, Error, "PlayerCharacter가 유효하지 않습니다.");
@@ -305,12 +311,15 @@ void UBaseAnimInstance::OnDecelerationStateChanged(bool bIsDecelerating)
 
 void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
 {
-    //@bIsCombatState
-    bIsCombatState = NewValue > 0.f;
+    //@Old Combat Type
+    const ECombatType OldCombatType = OldValue > 0.f ? ECombatType::NormalCombat : ECombatType::NonCombat;
+
+    //@Combat Type
+    CombatType = NewValue > 0.f ? ECombatType::NormalCombat : ECombatType::NonCombat;
 
     UE_LOGFMT(LogAnimInstance, Log, "전투 상태 변경: {0} -> {1} (값: {2})",
-        OldValue > 0.f,
-        NewValue > 0.f,
+        static_cast<uint8>(OldCombatType),
+        static_cast<uint8>(CombatType),
         NewValue);
 }
 #pragma endregion
