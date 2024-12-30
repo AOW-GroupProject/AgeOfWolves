@@ -112,8 +112,8 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     bShouldMove = Speed > 3.f && OwnerCharacterBaseRef->GetCharacterMovement()->GetCurrentAcceleration() != FVector::ZeroVector;
     //@캐릭터의 이동 상태를 정의합니다. EMovementState(열거형) 유형의 변수로 나타냅니다.
     FindMovementState();
-    //@캐릭터의 이동 방향을 정의합니다.
-    FindMovementDirection();
+    //@캐릭터의 이동 방향 각도를 정의합니다.
+    FindMovementDirectionAngle();
 }
 #pragma endregion
 
@@ -142,13 +142,29 @@ void UBaseAnimInstance::FindMovementState()
     if (CurrentSpeed < 0.05f)
     {
         MovementState = EMovementState::Idle;
+
+        // Idle로 전환될 때 이전 상태에 따라 정지 모션 타입 결정
+        if (LastMovementState == EMovementState::Walking)
+        {
+            UpdateStopMotionType(EStopMotionType::WalkStop);
+        }
+        else if (LastMovementState == EMovementState::Sprinting)
+        {
+            UpdateStopMotionType(EStopMotionType::SprintStop);
+        }
     }
     else
     {
         MovementState = bIsSprinting ? EMovementState::Sprinting : EMovementState::Walking;
+
+        // 이동 시작할 때는 정지 모션 초기화
+        if (LastMovementState == EMovementState::Idle)
+        {
+            UpdateStopMotionType(EStopMotionType::None);
+        }
     }
 
-    // 상태가 변경되었을 때만 로그 출력
+    //@상태가 변경되었을 때만 로그 출력
     if (LastMovementState != MovementState)
     {
         UE_LOGFMT(LogAnimInstance, Log, "이동 상태 변경: {0} -> {1}",
@@ -159,7 +175,7 @@ void UBaseAnimInstance::FindMovementState()
     }
 }
 
-void UBaseAnimInstance::FindMovementDirection()
+void UBaseAnimInstance::FindMovementDirectionAngle()
 {
     if (!bEnableDirectionalMovement || MovementState == EMovementState::Sprinting || bIsSprintingCooldown)
     {
@@ -178,6 +194,23 @@ void UBaseAnimInstance::FindMovementDirection()
         return;
     }
 
+    // 방향 각도에 따른 이동 방향 설정
+    if (DirectionAngle >= -45.f && DirectionAngle < 45.f)
+    {
+        MovementDirection = EMovementDirection::Fwd;
+    }
+    else if (DirectionAngle >= 45.f && DirectionAngle < 135.f)
+    {
+        MovementDirection = EMovementDirection::Right;
+    }
+    else if (DirectionAngle >= -135.f && DirectionAngle < -45.f)
+    {
+        MovementDirection = EMovementDirection::Left;
+    }
+    else
+    {
+        MovementDirection = EMovementDirection::Bwd;
+    }
 
     if (PrevDirection != MovementDirection)
     {

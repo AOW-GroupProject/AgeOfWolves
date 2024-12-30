@@ -32,6 +32,7 @@ enum class EMovementState : uint8
 	MAX         UMETA(DisplayName = "MAX"),
 };
 
+//@TODO: FL, FR, BL, BR 추가 예정 -> Start 애니메이션 추가 시
 /*
 *	@EMovementDirection
 *
@@ -127,7 +128,7 @@ protected:
 		void FindMovementState();
 
 	UFUNCTION(BlueprintCallable)
-		void FindMovementDirection();
+		void FindMovementDirectionAngle();
 
 protected:
 	UFUNCTION(BlueprintNativeEvent)
@@ -162,6 +163,7 @@ protected:
 	//@이동 상태
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "이동 | 이동 상태", meta = (AlloPrivateAccess = "true"))
 		EMovementState MovementState;
+
 	//@이동 방향
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "이동 | 이동 방향", meta = (AlloPrivateAccess = "true"))
 		EMovementDirection MovementDirection;
