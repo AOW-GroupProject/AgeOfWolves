@@ -9,11 +9,29 @@
 
 
 
-USpellGameplayAbility::USpellGameplayAbility()
-    : bMoveNone(true)
+USpellGameplayAbility::USpellGameplayAbility(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
+    , bMoveNone(true)
     , bPlayMontageAndWait(true)
 {
     ActivationPolicy = EAbilityActivationPolicy::OnInputTriggered;
+
+    //static FName FuncName = FName(TEXT("K2_ActivateAbility"));
+    //UFunction* ActivateFunction = GetClass()->FindFunctionByName(FuncName);
+    //// FIXME: temp to work around crash
+    //if (ActivateFunction && (HasAnyFlags(RF_ClassDefaultObject) || ActivateFunction->IsValidLowLevelFast()))
+    //{
+    //    if (ActivateFunction)
+    //    {
+    //        if (ensure(ActivateFunction->GetOuter()))
+    //        {
+    //            if (ActivateFunction->GetOuter()->IsA(UBlueprintGeneratedClass::StaticClass()))
+    //            {
+    //                bHasBlueprintActivate = true;
+    //            }
+    //        }
+    //    }
+    //}
 }
 
 
@@ -71,6 +89,11 @@ void USpellGameplayAbility::OnInterruptedCallback()
     bool bReplicateCancelAbility = true;
     bool bWasCancelled = true;
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, bReplicateCancelAbility, bWasCancelled);
+}
+
+void USpellGameplayAbility::ExecuteGameplayCueWithParams(FGameplayTag GameplayCueTag, const FGameplayCueParameters& GameplayCueParameters)
+{
+    K2_ExecuteGameplayCueWithParams(GameplayCueTag, GameplayCueParameters);
 }
 
 void USpellGameplayAbility::CreateTask_PlayMontageAndWait()

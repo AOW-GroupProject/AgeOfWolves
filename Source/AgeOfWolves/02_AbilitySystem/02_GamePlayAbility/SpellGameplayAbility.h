@@ -35,7 +35,7 @@ class AGEOFWOLVES_API USpellGameplayAbility : public UBaseGameplayAbility
 
 #pragma region Default Setting
 public:
-	USpellGameplayAbility();
+	USpellGameplayAbility(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 	virtual void ActivateAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, const FGameplayEventData* TriggerEventData) override;
 	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
@@ -79,8 +79,13 @@ protected:
 
 
 #pragma region Utility
+public:
+	void ExecuteGameplayCueWithParams(FGameplayTag GameplayCueTag, const FGameplayCueParameters& GameplayCueParameters);
+	
+
 private:
 	void CreateTask_PlayMontageAndWait();
+
 #pragma endregion
 
 };

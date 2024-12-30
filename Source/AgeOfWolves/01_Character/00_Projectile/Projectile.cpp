@@ -6,8 +6,12 @@
 #include "Components/StaticMeshComponent.h"
 #include "GameFramework/ProjectileMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
+#include "GameplayTagContainer.h"
+#include "02_AbilitySystem/02_GamePlayAbility/SpellGameplayAbility.h"
+#include "GameplayCueFunctionLibrary.h"
+#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 
-AProjectile::AProjectile() : DamageAmount(10.f)
+AProjectile::AProjectile()
 {
 	PrimaryActorTick.bCanEverTick = true;
 
@@ -28,6 +32,9 @@ AProjectile::AProjectile() : DamageAmount(10.f)
 
 	MeshComponent = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StaticMesh"));
 	MeshComponent->SetupAttachment(RootComponent);
+
+    ASC = CreateDefaultSubobject<UAbilitySystemComponent>(TEXT("Ability System Component"));
+    AS = CreateDefaultSubobject<UBaseAttributeSet>(TEXT("Base AttributeSet"));
 }
 
 void AProjectile::BeginPlay()
@@ -39,6 +46,7 @@ void AProjectile::BeginPlay()
         // Delegate 바인딩
         ProjectileMovementComponent->OnProjectileStop.AddDynamic(this, &AProjectile::OnProjectileImpact);
     }
+
 }
 
 
@@ -52,17 +60,40 @@ void AProjectile::OnProjectileImpact(const FHitResult& Hit)
     
 }
 
+void AProjectile::ExecuteGameplayCueWithParams(FGameplayTag GameplayCueTag, const FGameplayCueParameters& GameplayCueParameters)
+{
+    UGameplayCueFunctionLibrary::ExecuteGameplayCueOnActor(GetOwner(), GameplayCueTag, GameplayCueParameters);
+
+   /* if (ParentGameAbility)
+    {
+        ParentGameAbility->ExecuteGameplayCueWithParams(GameplayCueTag, GameplayCueParameters);
+    }
+    else
+    {
+        UE_LOG(LogTemp, Error, TEXT("ParentGameAbility Is Not Valid"));
+    }*/
+}
+
+void AProjectile::InitProjectile(FProjectileInfo ProjectileStat)
+{
+    ProjectileMovementComponent->InitialSpeed = ProjectileStat.InitialSpeed;
+    ProjectileMovementComponent->MaxSpeed = ProjectileStat.InitialSpeed;
+    ProjectileMovementComponent->bRotationFollowsVelocity = ProjectileStat.bRotationFollowsVelocity;
+    ProjectileMovementComponent->bShouldBounce = ProjectileStat.bShouldBounce;
+    ProjectileMovementComponent->Velocity = ProjectileMovementComponent->Velocity.GetSafeNormal() * ProjectileStat.InitialSpeed;
+    ProjectileMovementComponent->ProjectileGravityScale = ProjectileStat.Gravity;
+    AS->InitOffense(ProjectileStat.DamageAmount);
+}
+
+
 void AProjectile::SetFriction(float InFriction)
 {
     ProjectileMovementComponent->Friction =  InFriction;
 }
 
-void AProjectile::InitProjectile()
+
+void AProjectile::SetDamage(float InDamage)
 {
-    ProjectileMovementComponent->InitialSpeed = InitialSpeed;
-    ProjectileMovementComponent->MaxSpeed = InitialSpeed;
-    ProjectileMovementComponent->bRotationFollowsVelocity = bRotationFollowsVelocity;
-    ProjectileMovementComponent->bShouldBounce = bShouldBounce;
-    ProjectileMovementComponent->Velocity = ProjectileMovementComponent->Velocity.GetSafeNormal() * InitialSpeed;
+    AS->InitOffense(InDamage);
 }
 
