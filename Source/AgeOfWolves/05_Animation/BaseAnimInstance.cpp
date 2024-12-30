@@ -142,26 +142,10 @@ void UBaseAnimInstance::FindMovementState()
     if (CurrentSpeed < 0.05f)
     {
         MovementState = EMovementState::Idle;
-
-        // Idle로 전환될 때 이전 상태에 따라 정지 모션 타입 결정
-        if (LastMovementState == EMovementState::Walking)
-        {
-            UpdateStopMotionType(EStopMotionType::WalkStop);
-        }
-        else if (LastMovementState == EMovementState::Sprinting)
-        {
-            UpdateStopMotionType(EStopMotionType::SprintStop);
-        }
     }
     else
     {
         MovementState = bIsSprinting ? EMovementState::Sprinting : EMovementState::Walking;
-
-        // 이동 시작할 때는 정지 모션 초기화
-        if (LastMovementState == EMovementState::Idle)
-        {
-            UpdateStopMotionType(EStopMotionType::None);
-        }
     }
 
     //@상태가 변경되었을 때만 로그 출력
