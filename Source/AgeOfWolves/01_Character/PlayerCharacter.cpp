@@ -88,11 +88,20 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	}
 	// @Anim Instance
 	{
-		static ConstructorHelpers::FClassFinder<UAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/ABP_AkaOni_Base'"));
+		static ConstructorHelpers::FClassFinder<UBaseAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/ABP_AkaOni_Base'"));
 		if (animInstance.Class != NULL)
 			GetMesh()->SetAnimInstanceClass(animInstance.Class);
 
 		AnimInstanceRef = nullptr;
+	}
+	//@TODO: 추후에 삭제 예정
+	//@임시 무기
+	{
+		WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+		WeaponMesh->SetupAttachment(GetMesh(), "Weapon_R");
+
+		ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
+		ShealthedWeaponMesh->SetupAttachment(GetMesh(), "ShealthedWeapon");
 	}
 
 }
@@ -129,41 +138,52 @@ void APlayerCharacter::Tick(float DeltaSeconds)
 
 void APlayerCharacter::PossessedBy(AController* NewController)
 {
-	check(NewController);
-	Super::PossessedBy(NewController);
-
-	RequestStartInitByPlayerCharacter.Broadcast(NewController);
-
-	if (UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(GetMesh()->GetAnimInstance()))
+	if (!NewController)
 	{
-		LockOnComponent->LockOnStateChanged.AddUFunction(BaseAnimInstance, "OnLockOnStateChanged");
-		AnimInstanceRef = BaseAnimInstance;
+		UE_LOGFMT(LogPlayer, Error, "NewController가 유효하지 않습니다.");
+		return;
 	}
 
-	SetAbilitySystemComponent(Cast<APlayerStateBase>(GetPlayerState())->GetAbilitySystemComponent());
+	Super::PossessedBy(NewController);
+
+	//@Base Anim Instance
+	UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(GetMesh()->GetAnimInstance());
+	if (!BaseAnimInstance)
+	{
+		UE_LOGFMT(LogPlayer, Warning, "BaseAnimInstance가 유효하지 않습니다.");
+		return;
+	}
+
+	LockOnComponent->LockOnStateChanged.AddUFunction(BaseAnimInstance, "OnLockOnStateChanged");
+	AnimInstanceRef = BaseAnimInstance;
+
+	//@ASC
+	APlayerStateBase* PS = Cast<APlayerStateBase>(GetPlayerState());
+	if (!PS)
+	{
+		UE_LOGFMT(LogPlayer, Error, "PlayerState가 유효하지 않습니다.");
+		return;
+	}
+
+	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+	if (!ASC)
+	{
+		UE_LOGFMT(LogPlayer, Error, "AbilitySystemComponent가 유효하지 않습니다.");
+		return;
+	}
+
+	SetAbilitySystemComponent(ASC);
+
+	//@초기화 요청 이벤트
+	RequestStartInitByPlayerCharacter.Broadcast(NewController);
+
+	UE_LOGFMT(LogPlayer, Log, "캐릭터가 성공적으로 빙의되었습니다.");
 }
 
 void APlayerCharacter::PawnClientRestart()
 {
 	Super::PawnClientRestart();
 
-}
-
-void APlayerCharacter::Die()
-{
-
-}
-
-void APlayerCharacter::HitReact(FGameplayTag HitDirectionTag)
-{
-	FGameplayEventData GameplayEventData;
-	GameplayEventData.EventTag = AOWGameplayTags::Ability_Active_HitReact;
-	GameplayEventData.Instigator = this;
-	GameplayEventData.Target = this;
-	GameplayEventData.OptionalObject = nullptr;
-	GameplayEventData.ContextHandle = FGameplayEffectContextHandle();
-	GameplayEventData.TargetTags.AddTag(HitDirectionTag); // HitDirectionTag 전달
-	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, AOWGameplayTags::Ability_Active_HitReact, GameplayEventData);
 }
 #pragma endregion
 

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
+#include "GameplayEffectTypes.h"
 
 #include "BaseAnimInstance.generated.h"
 
@@ -12,6 +13,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAnimInstance, Log, All)
 class ACharacterBase;
 class UCharacterMovementComponent;
 class UMotionWarpingComponent;
+class UAsyncTaskAttributeChanged;
 #pragma endregion
 
 //@열거형
@@ -30,6 +32,7 @@ enum class EMovementState : uint8
 	MAX         UMETA(DisplayName = "MAX"),
 };
 
+//@TODO: FL, FR, BL, BR 추가 예정 -> Start 애니메이션 추가 시
 /*
 *	@EMovementDirection
 *
@@ -56,6 +59,20 @@ enum class EStopMotionType : uint8
 	None = 0		UMETA(DisplayName = "None"),
 	WalkStop	UMETA(DisplayName = "Walk Stop"),
 	SprintStop	UMETA(DisplayName = "Sprint Stop"),
+	MAX			UMETA(DisplayName = "MAX"),
+};
+
+/*
+*	@ECombatType
+*
+*	전투 상태 열거형
+*/
+UENUM(BlueprintType)
+enum class ECombatType : uint8
+{
+	NonCombat = 0		UMETA(DisplayName = "NonCombat"),
+	NormalCombat		UMETA(DisplayName = "NormalCombat"),
+	BattoujutsuCombat	UMETA(DisplayName = "BattoujutsuCombat"),
 	MAX			UMETA(DisplayName = "MAX"),
 };
 #pragma endregion
@@ -93,6 +110,15 @@ protected:
 	virtual void NativeBeginPlay() override;
 	virtual void NativeInitializeAnimation() override;
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
+
+protected:
+	//@내부 바인딩
+
+protected:
+	//@외부 바인딩
+
+protected:
+	//@초기화
 #pragma endregion
 
 //@Property/Info...etc
@@ -102,7 +128,7 @@ protected:
 		void FindMovementState();
 
 	UFUNCTION(BlueprintCallable)
-		void FindMovementDirection();
+		void FindMovementDirectionAngle();
 
 protected:
 	UFUNCTION(BlueprintNativeEvent)
@@ -122,12 +148,8 @@ protected:
 		void UpdateStopMotionType(EStopMotionType Type);
 
 protected:
-	//@Combat State를 변경합니다.
-	UFUNCTION(BlueprintCallable)
-		void ChangeCombatState(bool bEnterCombat);
-
-	//@캐릭터의 상반신 애니메이션을 업데이트합니다.
-	void UpdateUpperBodyAnimation();
+	//@Combat State 속성 변화 이벤트 관찰
+	void ListenToCombatStateAttributeChange();
 
 protected:
 	//@직전 이동 상태에 따른 스탑 모션
@@ -141,6 +163,7 @@ protected:
 	//@이동 상태
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "이동 | 이동 상태", meta = (AlloPrivateAccess = "true"))
 		EMovementState MovementState;
+
 	//@이동 방향
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "이동 | 이동 방향", meta = (AlloPrivateAccess = "true"))
 		EMovementDirection MovementDirection;
@@ -188,7 +211,13 @@ protected:
 protected:
 	//@전투/비전투 여부
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		bool bIsCombatState;
+		ECombatType CombatType;
+
+protected:
+	//@루트 모션 재생 여부
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+		bool bIsPlayingRootMotionMontage;
+
 #pragma endregion
 
 //@Delegates
@@ -205,6 +234,11 @@ protected:
 protected:
 	UFUNCTION()
 		void OnDecelerationStateChanged(bool bIsDecelerating);
+
+protected:
+	//@Attribute 변화 이벤트 구독
+	UFUNCTION()
+		void OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -213,9 +247,14 @@ protected:
 	//@Owner Character 캐싱
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TWeakObjectPtr<ACharacterBase> OwnerCharacterBaseRef;
+	
 	//@Character Movement 캐싱
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TWeakObjectPtr<UCharacterMovementComponent> CharacterMovementCompRef;
+
+	//@Combat State 속성 수치 변화 이벤트 관찰자
+	UPROPERTY()
+		TObjectPtr<UAsyncTaskAttributeChanged> CombatStateAttributeListenerRef;
 
 public:
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
@@ -236,8 +275,11 @@ public:
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE float GetDirectionAngle() const { return DirectionAngle; }
 
-	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
-		FORCEINLINE bool GetIsCombatState() const { return bIsCombatState; }
+	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
+		ECombatType GetCombatType() const { return CombatType; }
+
+	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
+		FORCEINLINE void SetIsPlayingRootMotionMontage(bool InBool) { bIsPlayingRootMotionMontage = InBool; }
 #pragma endregion
 
 };

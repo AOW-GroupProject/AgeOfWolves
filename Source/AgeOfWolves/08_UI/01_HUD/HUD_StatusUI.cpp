@@ -41,7 +41,7 @@ void UHUD_StatusUI::NativeOnInitialized()
 {
     Super::NativeOnInitialized();
 
-    // MStateBars 초기화
+    //@MStateBars
     FStateBarInfo& HealthInfo = MStateBars.Add("Health");
     HealthInfo.MainBar = HP;
     HealthInfo.OriginalColor = HP->GetFillColorAndOpacity();
@@ -50,6 +50,7 @@ void UHUD_StatusUI::NativeOnInitialized()
     StaminaInfo.MainBar = SP;
     StaminaInfo.OriginalColor = SP->GetFillColorAndOpacity();
 
+    //@외부 바인딩
     ExternalBindingToAttributeSet();
 }
 
