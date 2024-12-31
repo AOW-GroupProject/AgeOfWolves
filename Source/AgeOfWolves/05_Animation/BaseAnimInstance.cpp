@@ -39,10 +39,11 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , SprintingCooldownDuration(1.5f)
     , CurrentCooldownTime(0.0f)
     , CombatType(ECombatType::NonCombat)
+    , bIsPlayingRootMotionMontage(false)
 {
     OwnerCharacterBaseRef.Reset();
     CharacterMovementCompRef.Reset();
-    CombatStateAttributeListenerRef.Reset();
+    CombatStateAttributeListenerRef = nullptr;
 }
 
 void UBaseAnimInstance::NativeBeginPlay()
@@ -121,24 +122,25 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 #pragma region Property or Subwidgets or Infos...etc
 void UBaseAnimInstance::FindMovementState()
 {
-    //@감속 중
+    //@루트 모션 여부
+    if (bIsPlayingRootMotionMontage)
+    {
+        return;
+    }
+
+    //@감속 여부
     if (bIsInDeceleration)
     {
         MovementState = EMovementState::Idle;
         return;
     }
 
-    //@이전 이동 상태 값 기억
     LastMovementState = MovementState;
 
-    //@현재 스피드
     float CurrentSpeed = Speed;
-    //@최대 속도
     float MaxWalkSpeed = OwnerCharacterBaseRef->GetCharacterMovement()->MaxWalkSpeed;
-    //@달리기 여부
     bool bIsSprinting = MaxWalkSpeed >= 550.f;
 
-    //@상태 결정
     if (CurrentSpeed < 0.05f)
     {
         MovementState = EMovementState::Idle;
@@ -148,7 +150,6 @@ void UBaseAnimInstance::FindMovementState()
         MovementState = bIsSprinting ? EMovementState::Sprinting : EMovementState::Walking;
     }
 
-    //@상태가 변경되었을 때만 로그 출력
     if (LastMovementState != MovementState)
     {
         UE_LOGFMT(LogAnimInstance, Log, "이동 상태 변경: {0} -> {1}",
@@ -292,7 +293,7 @@ void UBaseAnimInstance::ListenToCombatStateAttributeChange()
             ASC,
             CombatStateAttribute);
 
-        if (CombatStateAttributeListenerRef.IsValid())
+        if (CombatStateAttributeListenerRef)
         {
             CombatStateAttributeListenerRef->OnAttributeValueChanged.AddDynamic(
                 this,

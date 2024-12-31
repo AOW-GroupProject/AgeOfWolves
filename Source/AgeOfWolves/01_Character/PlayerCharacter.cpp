@@ -94,6 +94,15 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 
 		AnimInstanceRef = nullptr;
 	}
+	//@TODO: 추후에 삭제 예정
+	//@임시 무기
+	{
+		WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+		WeaponMesh->SetupAttachment(GetMesh(), "Weapon_R");
+
+		ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
+		ShealthedWeaponMesh->SetupAttachment(GetMesh(), "ShealthedWeapon");
+	}
 
 }
 

@@ -92,6 +92,12 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		ULockOnComponent* LockOnComponent;
 
+	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		UStaticMeshComponent* WeaponMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		UStaticMeshComponent* ShealthedWeaponMesh;
+
 protected:
 	public:
 		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")

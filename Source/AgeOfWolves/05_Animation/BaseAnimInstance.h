@@ -212,6 +212,12 @@ protected:
 	//@전투/비전투 여부
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		ECombatType CombatType;
+
+protected:
+	//@루트 모션 재생 여부
+	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
+		bool bIsPlayingRootMotionMontage;
+
 #pragma endregion
 
 //@Delegates
@@ -248,7 +254,7 @@ protected:
 
 	//@Combat State 속성 수치 변화 이벤트 관찰자
 	UPROPERTY()
-		TWeakObjectPtr<UAsyncTaskAttributeChanged> CombatStateAttributeListenerRef;
+		TObjectPtr<UAsyncTaskAttributeChanged> CombatStateAttributeListenerRef;
 
 public:
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
@@ -271,6 +277,9 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
 		ECombatType GetCombatType() const { return CombatType; }
+
+	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
+		FORCEINLINE void SetIsPlayingRootMotionMontage(bool InBool) { bIsPlayingRootMotionMontage = InBool; }
 #pragma endregion
 
 };
