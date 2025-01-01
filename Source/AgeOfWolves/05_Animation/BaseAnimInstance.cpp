@@ -122,16 +122,8 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 #pragma region Property or Subwidgets or Infos...etc
 void UBaseAnimInstance::FindMovementState()
 {
-    //@루트 모션 여부
     if (bIsPlayingRootMotionMontage)
     {
-        return;
-    }
-
-    //@감속 여부
-    if (bIsInDeceleration)
-    {
-        MovementState = EMovementState::Idle;
         return;
     }
 
@@ -155,6 +147,14 @@ void UBaseAnimInstance::FindMovementState()
         UE_LOGFMT(LogAnimInstance, Log, "이동 상태 변경: {0} -> {1}",
             *UEnum::GetValueAsString(LastMovementState),
             *UEnum::GetValueAsString(MovementState));
+
+        //@Idle로 전환 시 이전 상태에 따라 StopMotion 결정
+        if (LastMovementState == EMovementState::Walking || LastMovementState == EMovementState::Sprinting)
+        {
+            LastMovementState == EMovementState::Walking ?
+                UpdateStopMotionType(EStopMotionType::WalkStop)
+                : UpdateStopMotionType(EStopMotionType::SprintStop);
+        }
 
         UpdateMovementSettings();
     }
@@ -324,6 +324,7 @@ void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
 void UBaseAnimInstance::OnDecelerationStateChanged(bool bIsDecelerating)
 {
     bIsInDeceleration = bIsDecelerating;
+
     UE_LOGFMT(LogAnimInstance, Log, "감속 상태 변경: {0}", bIsDecelerating);
 }
 
