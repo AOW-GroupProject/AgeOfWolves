@@ -278,7 +278,11 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
 		ECombatType GetCombatType() const { return CombatType; }
 
-	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
+public:
+	UFUNCTION(BlueprintCallable, Category = "Animation", meta = (BlueprintThreadSafe))
+		FORCEINLINE void SetIsSprintingCoolDown(bool InBool) { bIsSprintingCooldown = InBool; }
+
+	UFUNCTION(BlueprintCallable, Category = "Animation")
 		FORCEINLINE void SetIsPlayingRootMotionMontage(bool InBool) { bIsPlayingRootMotionMontage = InBool; }
 #pragma endregion
 

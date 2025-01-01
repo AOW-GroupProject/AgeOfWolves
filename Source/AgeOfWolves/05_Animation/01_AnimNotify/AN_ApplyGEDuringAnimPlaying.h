@@ -10,27 +10,27 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogAN_ApplyGEDuringAnimPlaying, Log, All)
 
-//@Àü¹æ ¼±¾ğ
+//@ì „ë°© ì„ ì–¸
 #pragma region Forward Declaration
 class UGameplayEffect;
 #pragma endregion
 
-//@¿­°ÅÇü
+//@ì—´ê±°í˜•
 #pragma region Enums
 #pragma endregion
 
-//@±¸Á¶Ã¼
+//@êµ¬ì¡°ì²´
 #pragma region Structs
 #pragma endregion
 
-//@ÀÌº¥Æ®/µ¨¸®°ÔÀÌÆ®
+//@ì´ë²¤íŠ¸/ë¸ë¦¬ê²Œì´íŠ¸
 #pragma region Delegates
 #pragma endregion
 
 /**
  *	@UAN_ApplyGEDuringAnimPlaying
  * 
- *	Anim Montage ÇÃ·¹ÀÌ Áß GE¸¦ Àû¿ëÇÒ ¶§ È°¿ëÇÏ´Â Anim Notify
+ *	Anim Montage í”Œë ˆì´ ì¤‘ GEë¥¼ ì ìš©í•  ë•Œ í™œìš©í•˜ëŠ” Anim Notify
  */
 UCLASS()
 class AGEOFWOLVES_API UAN_ApplyGEDuringAnimPlaying : public UAnimNotify
@@ -46,8 +46,8 @@ public:
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
-	//@GEÀÇ Blueprint Å¬·¡½º
-	UPROPERTY(EditAnywhere, Category = "Apply Gameplay Effect Å¬·¡½º")
+	//@GEì˜ Blueprint í´ë˜ìŠ¤
+	UPROPERTY(EditAnywhere, Category = "Apply Gameplay Effect í´ë˜ìŠ¤")
 		TSubclassOf<UGameplayEffect> ApplyGEClass;
 #pragma endregion
 

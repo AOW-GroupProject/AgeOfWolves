@@ -12,7 +12,7 @@ void UAN_ApplyGEDuringAnimPlaying::Notify(USkeletalMeshComponent* MeshComp, UAni
     //@Mesh, GE
     if (!MeshComp || !ApplyGEClass)
     {
-        UE_LOGFMT(LogAN_ApplyGEDuringAnimPlaying, Error, "MeshComp ¶Ç´Â GE Å¬·¡½º°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.");
+        UE_LOGFMT(LogAN_ApplyGEDuringAnimPlaying, Error, "MeshComp ë˜ëŠ” GE í´ëž˜ìŠ¤ê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
         return;
     }
 
@@ -20,7 +20,7 @@ void UAN_ApplyGEDuringAnimPlaying::Notify(USkeletalMeshComponent* MeshComp, UAni
     AActor* Owner = MeshComp->GetOwner();
     if (!Owner)
     {
-        UE_LOGFMT(LogAN_ApplyGEDuringAnimPlaying, Error, "Owner°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.");
+        UE_LOGFMT(LogAN_ApplyGEDuringAnimPlaying, Error, "Ownerê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
         return;
     }
 
@@ -28,7 +28,7 @@ void UAN_ApplyGEDuringAnimPlaying::Notify(USkeletalMeshComponent* MeshComp, UAni
     APlayerCharacter* PC = Cast<APlayerCharacter>(Owner);
     if (!PC)
     {
-        UE_LOGFMT(LogAN_ApplyGEDuringAnimPlaying, Error, "Player Character Ä³½ºÆÃ ½ÇÆÐ.");
+        UE_LOGFMT(LogAN_ApplyGEDuringAnimPlaying, Error, "Player Character ìºìŠ¤íŒ… ì‹¤íŒ¨.");
         return;
     }
 
@@ -36,7 +36,7 @@ void UAN_ApplyGEDuringAnimPlaying::Notify(USkeletalMeshComponent* MeshComp, UAni
     UAbilitySystemComponent* ASC = PC->GetAbilitySystemComponent();
     if (!ASC)
     {
-        UE_LOGFMT(LogAN_ApplyGEDuringAnimPlaying, Error, "ASC°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.");
+        UE_LOGFMT(LogAN_ApplyGEDuringAnimPlaying, Error, "ASCê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
         return;
     }
 
@@ -51,5 +51,5 @@ void UAN_ApplyGEDuringAnimPlaying::Notify(USkeletalMeshComponent* MeshComp, UAni
 
     //@Apply GE
     ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
-    UE_LOGFMT(LogAN_ApplyGEDuringAnimPlaying, Log, "GE({0})°¡ Àû¿ëµÇ¾ú½À´Ï´Ù.", *ApplyGEClass->GetName());
+    UE_LOGFMT(LogAN_ApplyGEDuringAnimPlaying, Log, "GE({0})ê°€ ì ìš©ë˜ì—ˆìŠµë‹ˆë‹¤.", *ApplyGEClass->GetName());
 }
