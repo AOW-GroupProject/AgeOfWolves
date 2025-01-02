@@ -10,16 +10,12 @@
 DEFINE_LOG_CATEGORY(LogCharacter)
 
 ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
-	:Super(ObjectInitializer)
+	: Super(ObjectInitializer)
+	, TeamId(FGenericTeamId::NoTeam)
 {
 	PrimaryActorTick.bCanEverTick = true;
-
-	//@Motion Warping Component
-	//MotionWarpingComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("Motion Warping Component"));
-
 }
 
-// Called when the game starts or when spawned
 void ACharacterBase::BeginPlay()
 {
 	Super::BeginPlay();

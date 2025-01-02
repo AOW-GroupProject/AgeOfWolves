@@ -10,20 +10,70 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogItemManager, Log, All)
 
+
+//@전방 선언
+#pragma region Forward Declaration
 class UDataTable;
+#pragma endregion
+
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+#pragma endregion
 
 /**
+ *  @UItemManagerSubsystem
  * 
+ *  Item 리소스 관리를 수행하는 Subsystem 정의
  */
 UCLASS()
 class AGEOFWOLVES_API UItemManagerSubsystem : public UGameInstanceSubsystem
 {
+    //@친추 클래스
+#pragma region Friend Class
+#pragma endregion
+
     GENERATED_BODY()
 
+        //@Defualt Setting
+#pragma region Default Setting
 public:
     UItemManagerSubsystem();
 
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+#pragma endregion
+
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+#pragma endregion
+
+//@Delegates
+#pragma region Delegates
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+private:
+    //@Tool Item 정보를 담은 Data Table
+    UPROPERTY()
+        TObjectPtr<UDataTable> ToolItemTable = nullptr;
+    //@Equipment Item 정보를 담은 Data Table
+    UPROPERTY()
+        TObjectPtr<UDataTable> EquipmentItemTable = nullptr;
+    //@Material Item 정보를 담은 Data Table
+    UPROPERTY()
+        TObjectPtr<UDataTable> MaterialItemTable = nullptr;
 
 public:
     //@Default Item 들을 반환합니다.(아이템 갯수, 아이템 클래스)
@@ -65,15 +115,7 @@ public:
 
         return RowData;
     }
+#pragma endregion
 
-private:
-    //@Tool Item 정보를 담은 Data Table
-    UPROPERTY()
-        TObjectPtr<UDataTable> ToolItemTable = nullptr;
-    //@Equipment Item 정보를 담은 Data Table
-    UPROPERTY()
-        TObjectPtr<UDataTable> EquipmentItemTable = nullptr;
-    //@Material Item 정보를 담은 Data Table
-    UPROPERTY()
-        TObjectPtr<UDataTable> MaterialItemTable = nullptr;
+
 };

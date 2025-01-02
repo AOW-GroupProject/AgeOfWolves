@@ -4,7 +4,6 @@
 
 #include "CoreMinimal.h"
 #include "CharacterBase.h"
-#include "GenericTeamAgentInterface.h"
 
 #include "PlayerCharacter.generated.h"
 
@@ -40,7 +39,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FRequestStartInitByPlayerCharacter, const AC
  * 사용자 캐릭터를 구현하는 ACharacterBase 유형의 객체
  */
 UCLASS()
-class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase, public IGenericTeamAgentInterface
+class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase
 {
 	
 //@친추 클래스
@@ -97,14 +96,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UStaticMeshComponent* ShealthedWeaponMesh;
-
-protected:
-	public:
-		UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI")
-			int32 ID = 1;
-
-protected:
-	FGenericTeamId TeamId;
 #pragma endregion
 
 //@Delegates
@@ -127,9 +118,6 @@ public:
 	FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
 	FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }
 	FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockOnComponent; }
-
-public:
-	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
 #pragma endregion
 
 };

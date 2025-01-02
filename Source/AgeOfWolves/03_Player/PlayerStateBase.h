@@ -17,7 +17,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogPlayerStateBase, Log, All)
 //@전방 선언
 #pragma region Forward Declaration
 class ABasePlayerController;
-class UPawnData;
 class UPlayerAbilitySystemComponent;
 class UUserWidget;
 class UAOWSaveGame;
