@@ -7,6 +7,7 @@
 #include "InputActionValue.h"
 #include "AbilitySystemInterface.h"
 #include "GameplayTagContainer.h"
+#include "GenericTeamAgentInterface.h"
 
 #include "CharacterBase.generated.h"
 
@@ -14,7 +15,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCharacter, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
-class UPawnData;
 class UBaseAttributeSet;
 class UBaseAbilitySystemComponent;
 class UMotionWarpingComponent;
@@ -33,7 +33,7 @@ class UMotionWarpingComponent;
 #pragma endregion
 
 UCLASS()
-class AGEOFWOLVES_API ACharacterBase : public ACharacter, public IAbilitySystemInterface
+class AGEOFWOLVES_API ACharacterBase : public ACharacter, public IAbilitySystemInterface, public IGenericTeamAgentInterface
 {
 	GENERATED_BODY()
 
@@ -52,8 +52,8 @@ protected:
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
-	//UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
-	//	UMotionWarpingComponent* MotionWarpingComponent;
+	UPROPERTY(EditDefaultsOnly, Category = "팀 설정")
+		FGenericTeamId TeamId;
 #pragma endregion
 
 //@Delegates
@@ -72,7 +72,14 @@ protected:
 
 public:
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
+	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
+
+public:
 	void SetAbilitySystemComponent(UAbilitySystemComponent* ASC);
+	void SetTeamId(const FGenericTeamId& NewTeamId)
+	{
+		TeamId = NewTeamId;
+	}
 #pragma endregion
 };
 

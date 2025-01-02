@@ -4,7 +4,6 @@
 #include "BaseAttributeSet.h"
 #include "Logging/StructuredLog.h"
 
-#include "01_Character/CombatInterface.h"
 #include "02_AbilitySystem/AOWGameplayTags.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 

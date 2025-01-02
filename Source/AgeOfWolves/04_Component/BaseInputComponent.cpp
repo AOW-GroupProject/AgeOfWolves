@@ -4,7 +4,6 @@
 #include "BaseInputComponent.h"
 #include "Logging/StructuredLog.h"
 
-#include "01_Character/PawnData.h"
 #include "01_Character/PlayerCharacter.h"
 
 #include "03_Player/PlayerStateBase.h"

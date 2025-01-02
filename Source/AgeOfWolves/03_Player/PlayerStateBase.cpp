@@ -5,7 +5,6 @@
 #include "Kismet/GameplayStatics.h"
 #include "00_GameInstance/AOWGameInstance.h"
 
-#include "01_Character/PawnData.h"
 #include "01_Character/CharacterBase.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
 

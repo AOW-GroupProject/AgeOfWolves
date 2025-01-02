@@ -104,6 +104,10 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		ShealthedWeaponMesh->SetupAttachment(GetMesh(), "ShealthedWeapon");
 	}
 
+	//@Team ID
+	{
+		TeamId = 1;
+	}
 }
 
 void APlayerCharacter::PostInitializeComponents()
