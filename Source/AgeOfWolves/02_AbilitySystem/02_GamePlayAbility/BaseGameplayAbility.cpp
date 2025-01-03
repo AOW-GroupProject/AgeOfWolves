@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "BaseGameplayAbility.h"
 #include "Logging/StructuredLog.h"
 
@@ -21,8 +18,10 @@ DEFINE_LOG_CATEGORY(LogGA)
 UBaseGameplayAbility::UBaseGameplayAbility(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
 {
-    // @설명: Editor 상에서 BP 유형의 GA 생성 시 활성화 정책을 설정해줍니다.
+    //@Editor 상에서 BP 유형의 GA 생성 시 활성화 정책을 설정해줍니다.
     ActivationPolicy = EAbilityActivationPolicy::MAX;
+    //@체인 시스템
+    bUseChainSystem = false;
 }
 
 void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
@@ -31,15 +30,27 @@ void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorI
 
     check(ActorInfo);
 
+
+    auto* ASC = ActorInfo->AbilitySystemComponent.Get();
+    if(!ASC)
+    {
+        return;
+    }
+
+    auto BaseASC = Cast<UBaseAbilitySystemComponent>(ASC);
+    if (!BaseASC)
+    {
+        return;
+    }
+
     //@Activation Policy가 On Granted일 경우, 등록 직후 활성화 시도
-	if (ActivationPolicy == EAbilityActivationPolicy::OnGranted_Instant
+    if (ActivationPolicy == EAbilityActivationPolicy::OnGranted_Instant
         || ActivationPolicy == EAbilityActivationPolicy::OnGranted_ConditionalPeriodic)
     {
-        if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
         {
             if (!Spec.IsActive() && IsValid(Spec.Ability))
             {
-                ASC->TryActivateAbility(Spec.Handle);
+                BaseASC->TryActivateAbility(Spec.Handle);
             }
         }
     }
@@ -240,6 +251,7 @@ bool UBaseGameplayAbility::CheckCost(const FGameplayAbilitySpecHandle Handle, co
 
     UE_LOGFMT(LogGA, Log, "{0} 비용 체크 성공", GetName());
     return true;
+
 }
 
 void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
@@ -267,6 +279,22 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
 
 //@Callbacks
 #pragma region Callbacks
+void UBaseGameplayAbility::OnChainActionActivated_Implementation(FGameplayTag ChainActionAbilityTag)
+{
+    UE_LOGFMT(LogGA, Log, "체인 액션 활성화 이벤트 수신 - 어빌리티: {0} | 체인 액션 태그: {1} | 체인 가능 태그: {2}",
+        *GetName(),
+        *ChainActionAbilityTag.ToString(),
+        *ChainableAbilityTags.ToString());
+
+    if (ChainableAbilityTags.HasTag(ChainActionAbilityTag))
+    {
+        UE_LOGFMT(LogGA, Log, "체인 액션 매칭 성공 - 어빌리티: {0} | 매칭된 태그: {1}",
+            *GetName(),
+            *ChainActionAbilityTag.ToString());
+    }
+
+    //@블루프린트에서 오버라이딩
+}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

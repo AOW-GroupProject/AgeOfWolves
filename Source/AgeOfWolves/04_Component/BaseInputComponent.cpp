@@ -9,7 +9,7 @@
 #include "03_Player/PlayerStateBase.h"
 #include "03_Player/BasePlayerController.h"
 
-#include "04_Component/PlayerAbilitySystemComponent.h"
+#include "04_Component/BaseAbilitySystemComponent.h"
 #include "04_Component/LockOnComponent.h"
 #include "04_Component/UIComponent.h"
 
@@ -372,7 +372,7 @@ void UBaseInputComponent::OnAbilityInputTagPressed(FGameplayTag InputTag)
 		{
 			if (APlayerStateBase* PS = Cast<APlayerStateBase>(PC->PlayerState))
 			{
-				if (UPlayerAbilitySystemComponent* ASC = Cast<UPlayerAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
+				if (UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
 				{
 					ASC->AbilityInputTagPressed(InputTag);
 
@@ -390,7 +390,7 @@ void UBaseInputComponent::OnAbilityInputTagReleased(FGameplayTag InputTag)
 		{
 			if (APlayerStateBase* PS = Cast<APlayerStateBase>(PC->PlayerState))
 			{
-				if (UPlayerAbilitySystemComponent* ASC = Cast<UPlayerAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
+				if (UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
 				{
 					ASC->AbilityInputTagReleased(InputTag);
 				}

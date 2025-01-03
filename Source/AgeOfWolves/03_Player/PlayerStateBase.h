@@ -17,7 +17,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogPlayerStateBase, Log, All)
 //@전방 선언
 #pragma region Forward Declaration
 class ABasePlayerController;
-class UPlayerAbilitySystemComponent;
+class UBaseAbilitySystemComponent;
 class UUserWidget;
 class UAOWSaveGame;
 class UAbilityManagerSubsystem;
@@ -88,7 +88,7 @@ protected:
 	FBaseAbilitySet_GrantedHandles* SetGrantedHandles;
 
 	UPROPERTY()
-		UPlayerAbilitySystemComponent* AbilitySystemComponent;
+		UBaseAbilitySystemComponent* AbilitySystemComponent;
 
 	UPROPERTY()
 		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;

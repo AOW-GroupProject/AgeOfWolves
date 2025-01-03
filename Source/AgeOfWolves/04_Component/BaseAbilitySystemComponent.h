@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -12,6 +10,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 
 //@전방 선언
 #pragma region Forward Declaration
+class UANS_AllowChainAction;
 #pragma endregion
 
 //@열거형
@@ -24,7 +23,10 @@ DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 
 //@이벤트/델리게이트
 #pragma region Delegates
+//@어빌리티 스펙 등록 완료 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FAbilitySpecGiven, FGameplayAbilitySpec)
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionActivated, FGameplayTag, ChainActionAbilityTag);
 #pragma endregion
 
 /**	
@@ -39,6 +41,7 @@ class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemCompone
 //@친추 클래스
 #pragma region Friend Class
 	friend class UAttackGameplayAbility;
+	friend class UANS_AllowChainAction;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -61,10 +64,20 @@ protected:
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-
 public:
 	//@오버로딩
 	FGameplayAbilitySpecHandle GiveAbility(const FGameplayAbilitySpec& AbilitySpec);
+
+public:
+	void ProcessAbilityInput(float DeltaTime, bool bGamePaused);
+	void ClearAbilityInput();
+
+	void AbilityInputTagPressed(const FGameplayTag& InputTag);
+	void AbilityInputTagReleased(const FGameplayTag& InputTag);
+
+protected:
+	virtual void AbilitySpecInputPressed(FGameplayAbilitySpec& Spec) override;
+	virtual void AbilitySpecInputReleased(FGameplayAbilitySpec& Spec) override;
 
 protected:
 	//@Cancel 작업
@@ -83,12 +96,29 @@ protected:
 	bool TriggerDamageEvent(const FGameplayTag& EventTag, const FGameplayEventData* Payload);
 
 protected:
+	//@Chain System 활성화
+	void StartChainWindow();
+	//@Chain Sytsem 종료
+	void EndChainWindow();
+
+protected:
 	UPROPERTY(EditAnywhere)
 		TObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
 
 protected:
 	//@현재 활성화 중인 Ability 들의 Tag
 	FGameplayTagContainer ActivatingAbilityTags;
+
+protected:
+	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
+	TArray<FGameplayAbilitySpecHandle> InputHeldSpecHandles;
+	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
+
+protected:
+	bool bChainWindowActive;
+	FGameplayTagContainer AllowedAbilityTags;
+	FGameplayTag StoredChainabilityTag;
+
 #pragma endregion
 
 //@Delegates
@@ -96,6 +126,10 @@ protected:
 public:
 	//@어빌리티 등록 이벤트
 	FAbilitySpecGiven AbilitySpecGiven;
+
+public:
+	//@체인 액션 활성화 이벤트
+	FChainActionActivated ChainActionActivated;
 #pragma endregion
 
 //@Callbacks
