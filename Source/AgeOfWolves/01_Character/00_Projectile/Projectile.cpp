@@ -45,8 +45,16 @@ void AProjectile::BeginPlay()
     {
         // Delegate 바인딩
         ProjectileMovementComponent->OnProjectileStop.AddDynamic(this, &AProjectile::OnProjectileImpact);
+        ProjectileMovementComponent->OnProjectileBounce.AddDynamic(this, &AProjectile::OnProjectileBounce);
     }
+}
 
+void AProjectile::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    // 이전 타이머 취소
+    GetWorld()->GetTimerManager().ClearTimer(TargetHandle);  
+
+    Super::EndPlay(EndPlayReason);
 }
 
 
@@ -57,7 +65,26 @@ void AProjectile::Tick(float DeltaTime)
 
 void AProjectile::OnProjectileImpact(const FHitResult& Hit)
 {
-    
+
+}
+
+void AProjectile::OnProjectileBounce(const FHitResult& ImpactResult, const FVector& ImpactVelocity)
+{
+
+}
+
+void AProjectile::HandleTarget()
+{
+    GetWorld()->GetTimerManager().ClearTimer(TargetHandle);
+    GetWorld()->GetTimerManager().SetTimer(TargetHandle, this, &AProjectile::SetTarget, TargetInfo.TargetChaseDelay, false);
+}
+
+
+void AProjectile::SetTarget()
+{
+    InitTarget();
+
+    //UE_LOG(LogTemp, Warning, TEXT("AProjectile::SetTarget_Implementation TestTestTest"));
 }
 
 void AProjectile::ExecuteGameplayCueWithParams(FGameplayTag GameplayCueTag, const FGameplayCueParameters& GameplayCueParameters)
@@ -66,6 +93,7 @@ void AProjectile::ExecuteGameplayCueWithParams(FGameplayTag GameplayCueTag, cons
 
    /* if (ParentGameAbility)
     {
+
         ParentGameAbility->ExecuteGameplayCueWithParams(GameplayCueTag, GameplayCueParameters);
     }
     else
@@ -76,19 +104,42 @@ void AProjectile::ExecuteGameplayCueWithParams(FGameplayTag GameplayCueTag, cons
 
 void AProjectile::InitProjectile(FProjectileInfo ProjectileStat)
 {
+    /** 투사체 컴포넌트 초기화 */
     ProjectileMovementComponent->InitialSpeed = ProjectileStat.InitialSpeed;
     ProjectileMovementComponent->MaxSpeed = ProjectileStat.InitialSpeed;
     ProjectileMovementComponent->bRotationFollowsVelocity = ProjectileStat.bRotationFollowsVelocity;
     ProjectileMovementComponent->bShouldBounce = ProjectileStat.bShouldBounce;
     ProjectileMovementComponent->Velocity = ProjectileMovementComponent->Velocity.GetSafeNormal() * ProjectileStat.InitialSpeed;
     ProjectileMovementComponent->ProjectileGravityScale = ProjectileStat.Gravity;
+    
+    /** 투사체 데미지 초기화 */
     AS->InitOffense(ProjectileStat.DamageAmount);
+    
+    /** Offset 조정 */
+    //SetActorRelativeLocation(ProjectileStat.OffsetPos);
+
+    // 타겟팅을 한다면?
+    if (ProjectileStat.TargetInfo.bUseTargeting)
+    {
+        // 무브 시멘틱을 통해 전달한다 TargetInfo를 전달한다
+        TargetInfo = MoveTemp(ProjectileStat.TargetInfo);
+        check(TargetInfo.bUseTargeting);
+
+        // Timer로 타겟을 언제 찾아갈 지 시간을 정해준다
+        HandleTarget();
+    }
+    else
+    {
+        // 타겟팅을 수행하지 않는다.
+        TargetInfo.bUseTargeting = false;
+    }
+    
 }
 
 
 void AProjectile::SetFriction(float InFriction)
 {
-    ProjectileMovementComponent->Friction =  InFriction;
+    ProjectileMovementComponent->Friction = InFriction;
 }
 
 

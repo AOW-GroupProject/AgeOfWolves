@@ -8,6 +8,8 @@
 #include "GenericTeamAgentInterface.h"
 #include "CombatInterface.h"
 
+#include "01_Character/01_Spell/UseAttachedMeshInterface.h"
+
 #include "PlayerCharacter.generated.h"
 
 
@@ -42,7 +44,7 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FRequestStartInitByPlayerCharacter, const AC
  * 사용자 캐릭터를 구현하는 ACharacterBase 유형의 객체
  */
 UCLASS()
-class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase, public IGenericTeamAgentInterface, public ICombatInterface
+class AGEOFWOLVES_API APlayerCharacter : public ACharacterBase, public IGenericTeamAgentInterface, public ICombatInterface, public IUseAttachedMeshInterface
 {
 	
 //@친추 클래스
@@ -69,6 +71,15 @@ public:
 	virtual void Die() override;
 	virtual void HitReact(FGameplayTag HitDirectionTag) override;
 	//@End Of ICombatInterface
+
+	//@Interface of IUseAttachedMeshInterface
+	virtual USkeletalMeshComponent* GetWeaponSkeletalMeshComponent() override;
+	virtual void AttachToWeapon(AActor* Other, FName BoneSocket) override;
+	//@End Of IUseAttachedMeshInterface
+
+	// 테스트용 나중에 Weapon 사용한다고 하면 바꿔야함
+	UPROPERTY(EditAnywhere)
+	USkeletalMeshComponent* WeaponComp;
 
 protected:
 	//@내부 바인딩

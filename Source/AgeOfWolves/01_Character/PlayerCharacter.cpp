@@ -165,6 +165,17 @@ void APlayerCharacter::HitReact(FGameplayTag HitDirectionTag)
 	GameplayEventData.TargetTags.AddTag(HitDirectionTag); // HitDirectionTag 전달
 	UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(this, AOWGameplayTags::Ability_Active_HitReact, GameplayEventData);
 }
+
+USkeletalMeshComponent* APlayerCharacter::GetWeaponSkeletalMeshComponent()
+{
+	return WeaponComp;
+}
+
+void APlayerCharacter::AttachToWeapon(AActor* Other, FName BoneSocket)
+{
+	Other->AttachToComponent(WeaponComp, FAttachmentTransformRules::SnapToTargetIncludingScale, BoneSocket);
+}
+
 #pragma endregion
 
 //@Property/Info...etc
