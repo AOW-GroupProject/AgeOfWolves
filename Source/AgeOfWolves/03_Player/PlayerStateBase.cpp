@@ -9,7 +9,7 @@
 #include "04_Component/BaseCharacterMovementComponent.h"
 
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
-#include "04_Component/PlayerAbilitySystemComponent.h"
+#include "04_Component/BaseAbilitySystemComponent.h"
 #include "14_Subsystem/AbilityManagerSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
@@ -29,7 +29,7 @@ APlayerStateBase::APlayerStateBase()
     AbilityManagerSubsystemRef.Reset();
 
     //@ASC
-    AbilitySystemComponent = CreateDefaultSubobject<UPlayerAbilitySystemComponent>(TEXT("Ability System Component"));
+    AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
 
 }
 

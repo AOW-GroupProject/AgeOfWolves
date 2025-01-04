@@ -1,3 +1,4 @@
+#pragma once
 // Fill out your copyright notice in the Description page of Project Settings.
 
 #pragma once
@@ -6,8 +7,6 @@
 #include "Abilities/GameplayAbility.h"
 
 #include "BaseGameplayAbility.generated.h"
-
-
 
 DECLARE_LOG_CATEGORY_EXTERN(LogGA, Log, All)
 
@@ -22,7 +21,7 @@ class UAttackGameplayAbility;
 #pragma region Enums
 /*
 *	@EAbilityActivationPolicy
-* 
+*
 *	활성화 정책
 */
 UENUM(BlueprintType)
@@ -77,13 +76,13 @@ public:
 #pragma endregion
 
 /**
- * 
+ *
  */
 UCLASS()
 class AGEOFWOLVES_API UBaseGameplayAbility : public UGameplayAbility
 {
 
-//@친추 클래스
+	//@친추 클래스
 #pragma region Friend Class
 	friend class UBaseAbilitySystemComponent;
 	friend class UPlayerAbilitySystemComponent;
@@ -92,7 +91,7 @@ class AGEOFWOLVES_API UBaseGameplayAbility : public UGameplayAbility
 
 	GENERATED_BODY()
 
-//@Defualt Setting
+		//@Defualt Setting
 #pragma region Default Setting
 public:
 	UBaseGameplayAbility(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
@@ -136,22 +135,37 @@ protected:
 	virtual void K2_InputReleased_Implementation() { }
 
 protected:
-	// @목적: Gameplay Ability의 발동 조건입니다.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gameplay Ability | Ability Activation")
+	//@Gameplay Ability의 발동 조건입니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | 어빌리티 활성화 설정")
 		EAbilityActivationPolicy ActivationPolicy;
-	// @설명: 해당 Gameplay Ability의 활성화 과정에서 Target(GA의 적용 대상)에게 전달하는 Gameplay Effect입니다.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "Gameplay Ability | Gameplay Effect")
+
+	//@해당 Gameplay Ability의 활성화 과정에서 Target(GA의 적용 대상)에게 전달하는 Gameplay Effect입니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | Gameplay Effect")
 		TSubclassOf<UGameplayEffect> ApplyGameplayEffectClass;
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Gameplay Ability | Gameplay Effect")
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | Gameplay Effect")
 		FActiveGameplayEffectHandle ActiveApplyGameplayEffectHandle;
+
+protected:
+	//@체인 시스템 활용 여부
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템")
+		bool bUseChainSystem;
+
+	//@체인 액션 허용 가능한 어빌리티 태그 목록
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
+		FGameplayTagContainer ChainableAbilityTags;
 #pragma endregion
 
-//@Delegates
+	//@Delegates
 #pragma region Delegates
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
+public:
+	UFUNCTION(BlueprintNativeEvent, category = "체인 시스템")
+		void OnChainActionActivated(FGameplayTag ChainActionAbilityTag);
+	virtual void OnChainActionActivated_Implementation(FGameplayTag ChainActionAbilityTag); 
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -187,6 +201,10 @@ public:
 
 		return DamageInfo;
 	}
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "체인 시스템")
+		FGameplayTagContainer GetChainableAbilityTags() { return ChainableAbilityTags; }
 #pragma endregion
 
 };

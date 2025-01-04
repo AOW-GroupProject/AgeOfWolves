@@ -5,10 +5,9 @@
 
 #include "03_Player/PlayerStateBase.h"
 
-#include "04_Component/PlayerAbilitySystemComponent.h"
+#include "04_Component/BaseAbilitySystemComponent.h"
 #include "04_Component/UIComponent.h"
 #include "04_Component/BaseInputComponent.h"
-
 
 
 DEFINE_LOG_CATEGORY(LogBasePC)
@@ -87,7 +86,7 @@ void ABasePlayerController::PostProcessInput(const float DeltaTime, const bool b
 		if (UAbilitySystemComponent* ASC = Cast<APlayerStateBase>(PlayerState)->GetAbilitySystemComponent())
 		{
             //@Actove GA
-			if (const auto& PlayerASC = CastChecked<UPlayerAbilitySystemComponent>(ASC))
+			if (const auto& PlayerASC = CastChecked<UBaseAbilitySystemComponent>(ASC))
 			{
                 PlayerASC->ProcessAbilityInput(DeltaTime, bGamePaused);
 			}

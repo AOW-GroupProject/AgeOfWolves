@@ -12,6 +12,11 @@ DEFINE_LOG_CATEGORY(LogASC)
 UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
+	InputPressedSpecHandles.Reset();
+	InputReleasedSpecHandles.Reset();
+	InputHeldSpecHandles.Reset();
+
+	bChainWindowActive = false;
 }
 
 void UBaseAbilitySystemComponent::InitializeComponent()
@@ -28,7 +33,6 @@ void UBaseAbilitySystemComponent::InitializeComponent()
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-
 FGameplayAbilitySpecHandle UBaseAbilitySystemComponent::GiveAbility(const FGameplayAbilitySpec& AbilitySpec)
 {
 	UE_LOGFMT(LogASC, Log, "GiveAbility 시작 - Ability: {0}",
@@ -68,6 +72,172 @@ FGameplayAbilitySpecHandle UBaseAbilitySystemComponent::GiveAbility(const FGamep
 	AbilitySpecGiven.Broadcast(AbilitySpec);
 
 	return OwnedSpec.Handle;
+}
+
+void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGamePaused)
+{
+	static TArray<FGameplayAbilitySpecHandle> AbilitiesToActivate;
+	AbilitiesToActivate.Reset();
+
+	// @Held 입력 처리
+	for (const FGameplayAbilitySpecHandle& SpecHandle : InputHeldSpecHandles)
+	{
+		if (const FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
+		{
+			if (AbilitySpec->Ability && !AbilitySpec->IsActive())
+			{
+				const UBaseGameplayAbility* BaseAbilityCDO = Cast<UBaseGameplayAbility>(AbilitySpec->Ability);
+				if (BaseAbilityCDO)
+				{
+					if (BaseAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::WhileInputActive)
+					{
+						AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+					}
+				}
+			}
+		}
+	}
+
+	// @Press입력 처리
+	for (const FGameplayAbilitySpecHandle& SpecHandle : InputPressedSpecHandles)
+	{
+		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
+		{
+			if (AbilitySpec->Ability)
+			{
+				AbilitySpec->InputPressed = true;
+				// @InputPressed + 다중 키 입력
+				if (AbilitySpec->IsActive())
+				{
+					AbilitySpecInputPressed(*AbilitySpec);
+				}
+				// @InputPressed 활성화
+				else
+				{
+					const UBaseGameplayAbility* BaseAbilityCDO = Cast<UBaseGameplayAbility>(AbilitySpec->Ability);
+					if (BaseAbilityCDO && BaseAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::OnInputTriggered)
+					{
+						AbilitiesToActivate.AddUnique(AbilitySpec->Handle);
+					}
+				}
+			}
+		}
+	}
+
+	for (const FGameplayAbilitySpecHandle& AbilitySpecHandle : AbilitiesToActivate)
+	{
+		TryActivateAbility(AbilitySpecHandle);
+	}
+
+	// @InputReleased
+	for (const FGameplayAbilitySpecHandle& SpecHandle : InputReleasedSpecHandles)
+	{
+		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
+		{
+			if (AbilitySpec->Ability)
+			{
+				// @InputRelased 활성화
+				if (AbilitySpec->IsActive())
+				{
+					AbilitySpecInputReleased(*AbilitySpec);
+				}
+			}
+		}
+	}
+
+	InputPressedSpecHandles.Reset();
+	InputReleasedSpecHandles.Reset();
+}
+
+void UBaseAbilitySystemComponent::ClearAbilityInput()
+{
+	InputPressedSpecHandles.Reset();
+	InputReleasedSpecHandles.Reset();
+	InputHeldSpecHandles.Reset();
+}
+
+void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
+{
+	UE_LOGFMT(LogASC, Log, "입력된 Input Tag: {0}", InputTag.ToString());
+
+	//@Chain System 활성화 중
+	if (bChainWindowActive && !StoredChainabilityTag.IsValid())
+	{
+		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+		{
+			if (AbilitySpec.Ability && AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
+			{
+				//@입력된 어빌리티의 AbilityTag가 허용된 AbilityTag 목록에 있는지 확인
+				if (AllowedAbilityTags.HasTag(AbilitySpec.Ability->AbilityTags.First()))
+				{
+					StoredChainabilityTag = AbilitySpec.Ability->AbilityTags.First();
+					UE_LOGFMT(LogASC, Log, "체인 어빌리티 감지 - InputTag: {0}, AbilityTag: {1}",
+						InputTag.ToString(), StoredChainabilityTag.ToString());
+					break;
+				}
+			}
+		}
+	}
+
+	//@입력 처리
+	if (InputTag.IsValid())
+	{
+		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+		{
+			if (AbilitySpec.Ability && (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag)))
+			{
+				UE_LOGFMT(LogASC, Log, "입력 Tag에 매칭된 어빌리티: {0} | 입력 Tag: {1}",
+					AbilitySpec.Ability->GetName(),
+					InputTag.ToString());
+
+				InputPressedSpecHandles.AddUnique(AbilitySpec.Handle);
+				InputHeldSpecHandles.AddUnique(AbilitySpec.Handle);
+			}
+		}
+	}
+}
+
+void UBaseAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& InputTag)
+{
+	UE_LOGFMT(LogASC, Log, "해제된 Input Tag: {0}", InputTag.ToString());
+
+	if (InputTag.IsValid())
+	{
+		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
+		{
+			if (AbilitySpec.Ability && (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag)))
+			{
+				UE_LOGFMT(LogASC, Log, "입력 해제된 어빌리티: {0} | 해제된 Tag: {1}",
+					AbilitySpec.Ability->GetName(),
+					InputTag.ToString());
+
+				InputReleasedSpecHandles.AddUnique(AbilitySpec.Handle);
+				InputHeldSpecHandles.Remove(AbilitySpec.Handle);
+			}
+		}
+	}
+}
+
+void UBaseAbilitySystemComponent::AbilitySpecInputPressed(FGameplayAbilitySpec& Spec)
+{
+	// 로그 추가
+	UE_LOGFMT(LogASC, Log, "AbilitySpecInputPressed - Ability: {0}",
+		*Spec.Ability->GetName());
+
+	// 부모 클래스의 InputPressed 처리 (여기서 Spec.InputPressed = true 설정)
+	Super::AbilitySpecInputPressed(Spec);
+
+}
+
+void UBaseAbilitySystemComponent::AbilitySpecInputReleased(FGameplayAbilitySpec& Spec)
+{
+	// 로그 추가
+	UE_LOGFMT(LogASC, Log, "AbilitySpecInputReleased - Ability: {0}",
+		*Spec.Ability->GetName());
+
+	// 부모 클래스의 InputReleased 처리 (여기서 Spec.InputPressed = false 설정)
+	Super::AbilitySpecInputReleased(Spec);
+
 }
 
 void UBaseAbilitySystemComponent::CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore)
@@ -157,6 +327,69 @@ bool UBaseAbilitySystemComponent::TriggerDamageEvent(const FGameplayTag& EventTa
 	UE_LOGFMT(LogASC, Log, "데미지 이벤트 트리거 완료: 활성화된 어빌리티 수 {0}", Count);
 
 	return true;
+}
+
+void UBaseAbilitySystemComponent::StartChainWindow()
+{
+	//@GA
+	UGameplayAbility* CurrentGA = GetAnimatingAbility();
+	if (!CurrentGA)
+	{
+		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 - 현재 실행 중인 어빌리티 없음");
+		return;
+	}
+
+	//@Base GA
+	UBaseGameplayAbility* BaseGA = Cast<UBaseGameplayAbility>(CurrentGA);
+	if (!BaseGA)
+	{
+		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 현재 실행 중인 어빌리티가 BaseGameplayAbility가 아님: {0}",
+			*CurrentGA->GetName());
+		return;
+	}
+
+	//@Chain System 여부
+	if (!BaseGA->bUseChainSystem)
+	{
+		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 어빌리티가 체인 시스템을 사용하지 않음: {0}",
+			*BaseGA->GetName());
+		return;
+	}
+
+	//@바인딩
+	ChainActionActivated.BindUFunction(BaseGA, "OnChainActionActivated");
+
+	//@Chain Window 활성화
+	bChainWindowActive = true;
+	//@Chain Action 허용한 어빌리티 목록
+	AllowedAbilityTags = BaseGA->GetChainableAbilityTags();
+	//@Chain Action 수행할 어빌리티
+	StoredChainabilityTag = FGameplayTag();
+
+	UE_LOGFMT(LogASC, Log, "체인 윈도우 시작 - 현재 실행 중인 어빌리티: {0}, 허용된 어빌리티 태그: {1}",
+		*BaseGA->GetName(), AllowedAbilityTags.ToString());
+}
+
+void UBaseAbilitySystemComponent::EndChainWindow()
+{
+	if (bChainWindowActive && StoredChainabilityTag.IsValid())
+	{
+		if (UGameplayAbility* CurrentGA = GetAnimatingAbility())
+		{
+			if (UBaseGameplayAbility* BaseGA = Cast<UBaseGameplayAbility>(CurrentGA))
+			{
+				UE_LOGFMT(LogASC, Log, "체인 어빌리티 전달 - AbilityTag: {0}, Source: {1}", StoredChainabilityTag.ToString(),
+					CurrentGA->GetName());
+
+				ChainActionActivated.ExecuteIfBound(StoredChainabilityTag);
+			}
+		}
+	}
+
+	ChainActionActivated.Clear();
+	bChainWindowActive = false;
+	StoredChainabilityTag = FGameplayTag();
+	AllowedAbilityTags.Reset();
 }
 #pragma endregion
 
