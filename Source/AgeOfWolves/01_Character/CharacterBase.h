@@ -18,6 +18,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCharacter, Log, All)
 class UBaseAttributeSet;
 class UBaseAbilitySystemComponent;
 class UMotionWarpingComponent;
+class UBaseAnimInstance;
 #pragma endregion
 
 //@열거형
@@ -46,6 +47,11 @@ protected:
 	//~UObject interface
 	virtual void BeginPlay() override;
 	virtual void PossessedBy(AController* NewController) override;
+	virtual bool CanBeSeenFrom(
+		const FVector& ObserverLocation, FVector& OutSeenLocation,
+		int32& NumberOfLoSChecksPerformed, float& OutSightStrength,
+		const AActor* IgnoreActor = nullptr, const bool* bWasVisible = nullptr,
+		int32* UserData = nullptr) const;
 	//~End Of UObject Interface
 #pragma endregion
 
@@ -54,6 +60,10 @@ protected:
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "팀 설정")
 		FGenericTeamId TeamId;
+
+private:
+	//@인지 타겟
+	FName PerceptionTarget = FName("spine_02");
 #pragma endregion
 
 //@Delegates
@@ -66,6 +76,10 @@ protected:
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+protected:
+	UPROPERTY()
+		TObjectPtr<UBaseAnimInstance> AnimInstanceRef;
+
 protected:
 	//@ASC 캐싱
 	TWeakObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;

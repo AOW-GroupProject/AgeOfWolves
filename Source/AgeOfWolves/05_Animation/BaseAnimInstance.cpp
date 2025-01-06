@@ -3,7 +3,7 @@
 #include "BaseAnimInstance.h"
 #include "Logging/StructuredLog.h"
 
-#include "01_Character/PlayerCharacter.h"
+#include "01_Character/CharacterBase.h"
 #include "GameFramework/CharacterMovementComponent.h"
 #include "MotionWarpingComponent.h"
 
@@ -144,7 +144,9 @@ void UBaseAnimInstance::FindMovementState()
 
     if (LastMovementState != MovementState)
     {
-        UE_LOGFMT(LogAnimInstance, Log, "이동 상태 변경: {0} -> {1}",
+        // Owner 이름과 함께 이동 상태 변경 로그 출력
+        UE_LOGFMT(LogAnimInstance, Log, "{0} - 이동 상태 변경: {1} -> {2}",
+            *OwnerCharacterBaseRef->GetName(),
             *UEnum::GetValueAsString(LastMovementState),
             *UEnum::GetValueAsString(MovementState));
 
@@ -254,16 +256,8 @@ void UBaseAnimInstance::ListenToCombatStateAttributeChange()
         return;
     }
 
-    //@Player Character
-    APlayerCharacter* PlayerCharacter = Cast<APlayerCharacter>(OwnerCharacterBaseRef.Get());
-    if (!PlayerCharacter)
-    {
-        UE_LOGFMT(LogAnimInstance, Error, "PlayerCharacter가 유효하지 않습니다.");
-        return;
-    }
-
     //@ASC
-    const auto ASC = PlayerCharacter->GetAbilitySystemComponent();
+    const auto ASC = OwnerCharacterBaseRef->GetAbilitySystemComponent();
     if (!ASC)
     {
         UE_LOGFMT(LogAnimInstance, Error, "어빌리티 시스템 컴포넌트가 유효하지 않습니다.");

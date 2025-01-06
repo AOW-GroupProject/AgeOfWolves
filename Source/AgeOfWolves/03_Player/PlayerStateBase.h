@@ -62,6 +62,7 @@ protected:
 	virtual void PostInitializeComponents() override;
 	virtual void BeginPlay() override;
 	//~End Of APlayerState Interface
+
 protected:
 	//@내부 바인딩
 

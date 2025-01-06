@@ -13,6 +13,7 @@ UANS_AllowChainAction::UANS_AllowChainAction()
 
 void UANS_AllowChainAction::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration)
 {
+    //@Owner
     AActor* Owner = MeshComp->GetOwner();
     if (!Owner)
     {
@@ -20,6 +21,7 @@ void UANS_AllowChainAction::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimS
         return;
     }
 
+    //@Character
     ACharacterBase* Character = Cast<ACharacterBase>(Owner);
     if (!Character)
     {
@@ -28,6 +30,7 @@ void UANS_AllowChainAction::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimS
         return;
     }
 
+    //@ASC
     UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
     if (!ASC)
     {
@@ -36,6 +39,7 @@ void UANS_AllowChainAction::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimS
         return;
     }
 
+    //@Base ASC
     UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(ASC);
     if (!BaseASC)
     {
@@ -53,6 +57,7 @@ void UANS_AllowChainAction::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimS
 
 void UANS_AllowChainAction::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
 {
+    //@Base ASC Ref
     if (!BaseASCRef.IsValid())
     {
         UE_LOGFMT(LogANS_AllowChainAction, Warning, "체인 윈도우 종료 실패 - 유효하지 않은 AbilitySystemComponent 레퍼런스");
@@ -63,5 +68,7 @@ void UANS_AllowChainAction::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSeq
 
     //@Chain Window 종료
     BaseASCRef->EndChainWindow();
+
+    //@Reset
     BaseASCRef.Reset();
 }
