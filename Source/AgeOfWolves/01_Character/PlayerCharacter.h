@@ -110,10 +110,6 @@ public:
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
-protected:
-	UPROPERTY()
-		TObjectPtr<UBaseAnimInstance> AnimInstanceRef;
-
 public:
 	FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
 	FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }

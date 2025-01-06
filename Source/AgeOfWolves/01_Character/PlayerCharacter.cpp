@@ -161,22 +161,25 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 	LockOnComponent->LockOnStateChanged.AddUFunction(BaseAnimInstance, "OnLockOnStateChanged");
 	AnimInstanceRef = BaseAnimInstance;
 
-	//@ASC
-	APlayerStateBase* PS = Cast<APlayerStateBase>(GetPlayerState());
-	if (!PS)
+	if (!AbilitySystemComponent.IsValid())
 	{
-		UE_LOGFMT(LogPlayer, Error, "PlayerState가 유효하지 않습니다.");
-		return;
-	}
+		//@ASC
+		APlayerStateBase* PS = Cast<APlayerStateBase>(GetPlayerState());
+		if (!PS)
+		{
+			UE_LOGFMT(LogCharacter, Error, "PlayerState가 유효하지 않습니다.");
+			return;
+		}
 
-	UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
-	if (!ASC)
-	{
-		UE_LOGFMT(LogPlayer, Error, "AbilitySystemComponent가 유효하지 않습니다.");
-		return;
-	}
+		UAbilitySystemComponent* ASC = PS->GetAbilitySystemComponent();
+		if (!ASC)
+		{
+			UE_LOGFMT(LogCharacter, Error, "AbilitySystemComponent가 유효하지 않습니다.");
+			return;
+		}
 
-	SetAbilitySystemComponent(ASC);
+		SetAbilitySystemComponent(ASC);
+	}
 
 	//@초기화 요청 이벤트
 	RequestStartInitByPlayerCharacter.Broadcast(NewController);
