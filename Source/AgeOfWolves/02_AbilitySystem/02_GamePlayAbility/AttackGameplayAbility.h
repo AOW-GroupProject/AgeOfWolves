@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -11,33 +9,13 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAttackGA, Log, All);
 
 //@전방 선언
 #pragma region Forward Declaration
-class APlayerCharacter;
+class ACharacterBase;
 class UCombatComponent;
 class UAnimMontage;
 #pragma endregion
 
 //@열거형
 #pragma region Enums
-UENUM(BlueprintType)
-enum class EAkoniAttackType : uint8
-{
-	// Normal Attack
-	AAT_NormalAttack  UMETA(DisplayName = "Normal Attack"),
-
-	// Baldo Attack
-	AAT_Baldo UMETA(DisplayName = "Baldo Attack"),
-
-	// Magic
-	ATT_Magic  UMETA(DisplayName = "Magic Attack"),
-
-	ATT_MAX  UMETA(Hidden),
-};
-
-UENUM(BlueprintType)
-enum class EEnemyAttackType : uint8
-{
-	EAT_MAX  UMETA(Hidden),
-};
 #pragma endregion
 
 //@구조체
@@ -54,6 +32,7 @@ class AGEOFWOLVES_API UAttackGameplayAbility : public UBaseGameplayAbility
 {
 //@친추 클래스
 #pragma region Friend Class
+	friend class UANS_AttackTrace;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -72,18 +51,6 @@ protected:
 		void SendDamageEvent(const FHitResult& HitResult);
 
 protected:
-	//@공격 유형
-	UPROPERTY(EditDefaultsOnly, meta = (Category = "AttackAbilityInfo"))
-		EAkoniAttackType AkoniAttackType;
-
-	//@첫 공격 여부
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "AttackAbilityInfo")
-		bool bFirstAttack = false;
-
-	//@Damage 유형
-	UPROPERTY(EditDefaultsOnly, Category = "AttackAbilityInfo")
-		TMap<FGameplayTag, FScalableFloat> DamageTypes;
-
 	//@Anim Montage
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (Category = "AttackAbilityInfo"))
 		TArray<UAnimMontage*> AttackMontages;
@@ -91,6 +58,34 @@ protected:
 	//@Anim Montage 재생 속도
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (Category = "AttackAbilityInfo"))
 		float MontagePlayRate = 1.0f;
+
+protected:
+	// 트레이스 이벤트 함수들
+	UFUNCTION(BlueprintCallable, Category = "Ability|Trace")
+		virtual void StartWeaponTrace();
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Trace")
+		virtual void ProcessWeaponTrace();
+
+	UFUNCTION(BlueprintCallable, Category = "Ability|Trace")
+		virtual void EndWeaponTrace();
+
+protected:
+	// 트레이스에 사용될 소켓 이름들
+	UPROPERTY(EditDefaultsOnly, Category = "Ability|Trace")
+		FName WeaponTraceStartSocket;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Ability|Trace")
+		FName WeaponTraceEndSocket;
+
+	UPROPERTY(EditDefaultsOnly, Category = "Ability|Trace")
+		float TraceRadius = 20.0f;
+
+	// 트레이스 활성화 여부
+	bool bIsTracing = false;
+
+	UPROPERTY()
+		TArray<AActor*> ActorsToIgnore;
 #pragma endregion
 
 //@Delegates
@@ -105,7 +100,7 @@ protected:
 #pragma region Utility
 public:
 	UFUNCTION(BlueprintCallable, Category = "Ability|Getter")
-		APlayerCharacter* GetPlayerCharacterFromActorInfo() const;
+		ACharacterBase* GetCharacterFromActorInfo() const;
 #pragma endregion
 	
 };
