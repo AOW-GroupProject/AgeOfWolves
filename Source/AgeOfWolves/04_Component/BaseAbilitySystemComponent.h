@@ -116,9 +116,9 @@ protected:
 
 protected:
 	bool bChainWindowActive;
+	bool bCanChainAction;
 	FGameplayTagContainer AllowedAbilityTags;
-	FGameplayTag StoredChainabilityTag;
-
+	FGameplayTag ChainActionEventTag;
 #pragma endregion
 
 //@Delegates

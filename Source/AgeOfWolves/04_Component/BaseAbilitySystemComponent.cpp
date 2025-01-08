@@ -107,12 +107,7 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 			{
 				AbilitySpec->InputPressed = true;
 				// @InputPressed + 다중 키 입력
-				if (AbilitySpec->IsActive())
-				{
-					AbilitySpecInputPressed(*AbilitySpec);
-				}
-				// @InputPressed 활성화
-				else
+				if (!AbilitySpec->IsActive())
 				{
 					const UBaseGameplayAbility* BaseAbilityCDO = Cast<UBaseGameplayAbility>(AbilitySpec->Ability);
 					if (BaseAbilityCDO && BaseAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::OnInputTriggered)
@@ -161,7 +156,7 @@ void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Inp
 	UE_LOGFMT(LogASC, Log, "입력된 Input Tag: {0}", InputTag.ToString());
 
 	//@Chain System 활성화 중
-	if (bChainWindowActive && !StoredChainabilityTag.IsValid())
+	if (bChainWindowActive && !bCanChainAction)
 	{
 		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 		{
@@ -170,9 +165,9 @@ void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Inp
 				//@입력된 어빌리티의 AbilityTag가 허용된 AbilityTag 목록에 있는지 확인
 				if (AllowedAbilityTags.HasTag(AbilitySpec.Ability->AbilityTags.First()))
 				{
-					StoredChainabilityTag = AbilitySpec.Ability->AbilityTags.First();
+					bCanChainAction = true;
 					UE_LOGFMT(LogASC, Log, "체인 어빌리티 감지 - InputTag: {0}, AbilityTag: {1}",
-						InputTag.ToString(), StoredChainabilityTag.ToString());
+						InputTag.ToString(), AbilitySpec.Ability->AbilityTags.First().ToString());
 					break;
 				}
 			}
@@ -366,8 +361,10 @@ void UBaseAbilitySystemComponent::StartChainWindow()
 	bChainWindowActive = true;
 	//@Chain Action 허용한 어빌리티 목록
 	AllowedAbilityTags = BaseGA->GetChainableAbilityTags();
+	//@Cain Action Event Tag
+	ChainActionEventTag = BaseGA->GetChainActionEventTag();
 	//@Chain Action 수행할 어빌리티
-	StoredChainabilityTag = FGameplayTag();
+	bCanChainAction = false;
 
 	UE_LOGFMT(LogASC, Log, "체인 윈도우 시작 - 현재 실행 중인 어빌리티: {0}, 허용된 어빌리티 태그: {1}",
 		*BaseGA->GetName(), AllowedAbilityTags.ToString());
@@ -375,24 +372,24 @@ void UBaseAbilitySystemComponent::StartChainWindow()
 
 void UBaseAbilitySystemComponent::EndChainWindow()
 {
-	if (bChainWindowActive && StoredChainabilityTag.IsValid())
+	if (bChainWindowActive && bCanChainAction)
 	{
 		if (UGameplayAbility* CurrentGA = GetAnimatingAbility())
 		{
 			if (UBaseGameplayAbility* BaseGA = Cast<UBaseGameplayAbility>(CurrentGA))
 			{
-				UE_LOGFMT(LogASC, Log, "체인 어빌리티 전달 - AbilityTag: {0}, Source: {1}", StoredChainabilityTag.ToString(),
+				UE_LOGFMT(LogASC, Log, "체인 어빌리티 전달 - AbilityTag: {0}, Source: {1}", ChainActionEventTag.ToString(),
 					CurrentGA->GetName());
 
-				ChainActionActivated.ExecuteIfBound(StoredChainabilityTag);
+				ChainActionActivated.ExecuteIfBound(ChainActionEventTag);
 			}
 		}
 	}
 
 	ChainActionActivated.Clear();
 	bChainWindowActive = false;
-	StoredChainabilityTag = FGameplayTag();
 	AllowedAbilityTags.Reset();
+	ChainActionEventTag = FGameplayTag();
 }
 #pragma endregion
 
@@ -428,7 +425,6 @@ void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 
 void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 {
-
 	//@Ability
 	if (!Ability)
 	{

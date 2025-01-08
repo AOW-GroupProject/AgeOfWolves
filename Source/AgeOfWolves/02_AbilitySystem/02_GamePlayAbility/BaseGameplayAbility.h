@@ -153,16 +153,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템")
 		bool bUseChainSystem;
 
-	//@체인 시스템 활용 여부
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
-		bool bIsPassiveAbility;
-
 	//@체인 액션 허용 가능한 어빌리티 태그 목록
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true && bIsPassiveAbility == false"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
 		FGameplayTagContainer ChainableAbilityTags;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true && bIsPassiveAbility == true"))
-		FGameplayTagContainer ChainablePassiveAbilityTags;
+	//@체인 액션 활성화 시 전달 받는 Gameplay Event Tag
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
+		FGameplayTag ChainActionEventTag;
 #pragma endregion
 
 	//@Delegates
@@ -216,7 +213,7 @@ public:
 		FGameplayTagContainer GetChainableAbilityTags() { return ChainableAbilityTags; }
 
 	UFUNCTION(BlueprintCallable, Category = "체인 시스템")
-		FGameplayTagContainer GetChainablePassiveAbilityTags() { return ChainablePassiveAbilityTags; }
+		FGameplayTag GetChainActionEventTag() { return ChainActionEventTag; }
 #pragma endregion
 
 };

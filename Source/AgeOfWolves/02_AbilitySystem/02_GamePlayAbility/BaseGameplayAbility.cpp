@@ -240,7 +240,7 @@ bool UBaseGameplayAbility::CheckCost(const FGameplayAbilitySpecHandle Handle, co
 
         if (!RequirementCDO->CanApplyGameplayEffect_Implementation(CostGE, *Spec, ASC))
         {
-            if (OptionalRelevantTags)
+            if (OptionalRelevantTags && FGameplayTag::IsValidGameplayTagString("Ability.ActivateFail.CustomRequirement"))
             {
                 OptionalRelevantTags->AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.ActivateFail.CustomRequirement")));
             }
