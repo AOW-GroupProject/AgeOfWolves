@@ -124,6 +124,7 @@ void UBaseAnimInstance::FindMovementState()
 {
     if (bIsPlayingRootMotionMontage)
     {
+        MovementState = EMovementState::Idle;
         return;
     }
 

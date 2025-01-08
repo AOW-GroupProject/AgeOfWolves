@@ -76,7 +76,9 @@ public:
 #pragma endregion
 
 /**
- *
+ *	@UBaseGameplayAbility
+ * 
+ *	Gameplay Ability의 기본 유형을 정의합니다.
  */
 UCLASS()
 class AGEOFWOLVES_API UBaseGameplayAbility : public UGameplayAbility
@@ -151,9 +153,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템")
 		bool bUseChainSystem;
 
-	//@체인 액션 허용 가능한 어빌리티 태그 목록
+	//@체인 시스템 활용 여부
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
+		bool bIsPassiveAbility;
+
+	//@체인 액션 허용 가능한 어빌리티 태그 목록
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true && bIsPassiveAbility == false"))
 		FGameplayTagContainer ChainableAbilityTags;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true && bIsPassiveAbility == true"))
+		FGameplayTagContainer ChainablePassiveAbilityTags;
 #pragma endregion
 
 	//@Delegates
@@ -205,6 +214,9 @@ public:
 public:
 	UFUNCTION(BlueprintCallable, Category = "체인 시스템")
 		FGameplayTagContainer GetChainableAbilityTags() { return ChainableAbilityTags; }
+
+	UFUNCTION(BlueprintCallable, Category = "체인 시스템")
+		FGameplayTagContainer GetChainablePassiveAbilityTags() { return ChainablePassiveAbilityTags; }
 #pragma endregion
 
 };

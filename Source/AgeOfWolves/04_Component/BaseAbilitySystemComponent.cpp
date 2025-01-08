@@ -353,6 +353,9 @@ void UBaseAbilitySystemComponent::StartChainWindow()
 	{
 		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 어빌리티가 체인 시스템을 사용하지 않음: {0}",
 			*BaseGA->GetName());
+
+		EndChainWindow();
+
 		return;
 	}
 

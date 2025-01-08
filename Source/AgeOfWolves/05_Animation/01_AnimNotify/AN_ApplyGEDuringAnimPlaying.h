@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -45,10 +43,6 @@ public:
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-protected:
-	//@GE의 Blueprint 클래스
-	UPROPERTY(EditAnywhere, Category = "Apply Gameplay Effect 클래스")
-		TSubclassOf<UGameplayEffect> ApplyGEClass;
 #pragma endregion
 
 //@Delegates

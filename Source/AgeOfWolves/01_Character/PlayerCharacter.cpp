@@ -88,7 +88,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	}
 	// @Anim Instance
 	{
-		static ConstructorHelpers::FClassFinder<UBaseAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/ABP_AkaOni_Base'"));
+		static ConstructorHelpers::FClassFinder<UBaseAnimInstance> animInstance(TEXT("/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/00_UE4Mannequin/ABP_Temp_Base"));
 		if (animInstance.Class != NULL)
 			GetMesh()->SetAnimInstanceClass(animInstance.Class);
 

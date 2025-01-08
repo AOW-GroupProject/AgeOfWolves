@@ -198,6 +198,7 @@ protected:
 #pragma region Utility
 private:
 	FVector2D InputVector;
+
 public:
 	UFUNCTION(BlueprintCallable	)
 	FORCEINLINE FVector2D GetInputVector() { return InputVector; }
