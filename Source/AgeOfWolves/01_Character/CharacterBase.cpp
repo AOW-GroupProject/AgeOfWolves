@@ -96,15 +96,10 @@ bool ACharacterBase::CanBeSeenFrom(const FVector& ObserverLocation, FVector& Out
 	OutSightStrength = 0;
 	return false;
 }
-
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-#pragma endregion
-
-//@Delegates
-#pragma region Delegates
 #pragma endregion
 
 //@Callbacks

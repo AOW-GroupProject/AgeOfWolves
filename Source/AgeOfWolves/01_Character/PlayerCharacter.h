@@ -1,12 +1,9 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-#pragma once
+﻿#pragma once
 
 #include "CoreMinimal.h"
 #include "CharacterBase.h"
 
 #include "PlayerCharacter.generated.h"
-
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayer, Log, All)
 
@@ -91,11 +88,16 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		ULockOnComponent* LockOnComponent;
 
+	//@TODO: 지울 예정
+protected:
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UStaticMeshComponent* WeaponMesh;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UStaticMeshComponent* ShealthedWeaponMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		UStaticMeshComponent* FullWeaponMesh;
 #pragma endregion
 
 //@Delegates
@@ -114,6 +116,12 @@ public:
 	FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
 	FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }
 	FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockOnComponent; }
+
+	//@TODO: 지울 예정
+public:
+	FORCEINLINE UStaticMeshComponent* GetWeaponMesh() { return WeaponMesh; }
+	FORCEINLINE UStaticMeshComponent* GetShealthMesh() { return ShealthedWeaponMesh; }
+	FORCEINLINE UStaticMeshComponent* GetFullWeaponMesh() { return FullWeaponMesh; }
 #pragma endregion
 
 };

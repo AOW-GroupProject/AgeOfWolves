@@ -130,7 +130,7 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
 
     // 디버그 드로우
 #if ENABLE_DRAW_DEBUG
-    DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, -1.0f, 0, 2.0f);
+    //DrawDebugLine(GetWorld(), StartLocation, EndLocation, FColor::Red, false, -1.0f, 0, 2.0f);
 #endif
 
     if (!bHit)

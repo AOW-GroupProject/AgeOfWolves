@@ -50,7 +50,7 @@ enum class EMovementDirection : uint8
 
 /*
 *	@EStopMotionType
-* 
+*
 *	멈춤 상태 열거형
 */
 UENUM(BlueprintType)
@@ -95,13 +95,13 @@ class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 {
 	//@친추 클래스
 #pragma region Friend Class
-	friend class UANS_Deceleration;
 	friend class UAN_UpdateStopMotionType;
+	friend class UANS_NotifyPlayingRootMotion;
 #pragma endregion
 
 	GENERATED_BODY()
 
-//@Defualt Setting
+		//@Defualt Setting
 #pragma region Default Setting
 public:
 	UBaseAnimInstance(const FObjectInitializer& ObjectInitializer);
@@ -146,6 +146,10 @@ protected:
 
 	UFUNCTION(BlueprintCallable, Category = "Animation", meta = (BlueprintThreadSafe))
 		void UpdateStopMotionType(EStopMotionType Type);
+
+protected:
+	void HandleStartRootMotion();
+	void HandleEndRootMotion();
 
 protected:
 	//@Combat State 속성 변화 이벤트 관찰
@@ -198,10 +202,6 @@ protected:
 	float CurrentCooldownTime;
 
 protected:
-	UPROPERTY()
-		bool bIsInDeceleration;
-
-protected:
 	UPROPERTY(Transient, BlueprintReadOnly)
 		bool bModifyBoneTransform;
 
@@ -218,9 +218,19 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
 		bool bIsPlayingRootMotionMontage;
 
+	UPROPERTY()
+		bool bIsRootMotionCooldown;
+
+	UPROPERTY()
+		float RootMotionCooldownTime;
+
+	UPROPERTY(EditAnywhere, Category = "Movement|RootMotion", meta = (AllowPrivateAccess = "true"))
+		float RootMotionCooldownDuration;
+
+	float CurrentRootMotionCooldownTime;
 #pragma endregion
 
-//@Delegates
+	//@Delegates
 #pragma region Delegates
 #pragma endregion
 
@@ -232,22 +242,18 @@ protected:
 		void OnLockOnStateChanged(bool bIsLockOn);
 
 protected:
-	UFUNCTION()
-		void OnDecelerationStateChanged(bool bIsDecelerating);
-
-protected:
 	//@Attribute 변화 이벤트 구독
 	UFUNCTION()
 		void OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue);
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+	//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
 	//@Owner Character 캐싱
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TWeakObjectPtr<ACharacterBase> OwnerCharacterBaseRef;
-	
+
 	//@Character Movement 캐싱
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
 		TWeakObjectPtr<UCharacterMovementComponent> CharacterMovementCompRef;
