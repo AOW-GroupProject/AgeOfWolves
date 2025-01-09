@@ -18,10 +18,15 @@
 #include "05_Animation/BaseAnimInstance.h"
 #include "00_GameInstance/AOWGameInstance.h"
 #include "02_AbilitySystem/AOWGameplayTags.h"
+#include "02_AbilitySystem/99_Test/GameplayCue_Actor.h"
+#include "GameplayCueNotify_Looping.h"
 
 #include "AbilitySystemBlueprintLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
 #include "Kismet/GameplayStatics.h"
+
+#include "NiagaraSystem.h"
+
 
 DEFINE_LOG_CATEGORY(LogPlayer)
 // UE_LOGFMT(LogPlayer, Log, "");
@@ -115,6 +120,8 @@ void APlayerCharacter::BeginPlay()
 {
 	Super::BeginPlay();
 
+	InitAttachParticleActor();
+	//PlayParticleActor();
 }
 
 void APlayerCharacter::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -174,6 +181,54 @@ USkeletalMeshComponent* APlayerCharacter::GetWeaponSkeletalMeshComponent()
 void APlayerCharacter::AttachToWeapon(AActor* Other, FName BoneSocket)
 {
 	Other->AttachToComponent(WeaponComp, FAttachmentTransformRules::SnapToTargetIncludingScale, BoneSocket);
+}
+
+void APlayerCharacter::InitAttachParticleActor()
+{
+	for (const FName& SocketName : ParticleSocketNameSet)
+	{
+		AGameplayCue_Actor* CueActor = GetWorld()->SpawnActor<AGameplayCue_Actor>(AGameplayCue_Actor::StaticClass());
+		if (CueActor)
+		{
+			CueActor->AddApplicationEffects();
+			CueActor->SetAttachSocketName(SocketName);
+			CueActor->SetOwner(this);
+
+			ParticleSet.Emplace(SocketName, CueActor);
+		}
+		else
+		{
+			// 생성되지 않음의 로그 작성 error
+		}
+		
+	}
+}
+
+void APlayerCharacter::PlayBurstParticleActor(FName InAttachSocket, UNiagaraSystem* NiagaraSystem)
+{
+	AGameplayCue_Actor* CueActor = ParticleSet[InAttachSocket];
+
+	if (CueActor)
+	{
+		if (NiagaraSystem)
+		{
+			CueActor->SetNiagaraEffectTemplate(NiagaraSystem);
+		}
+
+		CueActor->SpawnBurstEffects();
+
+	}
+
+}
+
+void APlayerCharacter::StopBurstParticleActor(FName InAttachSocket)
+{
+	AGameplayCue_Actor* CueActor = ParticleSet[InAttachSocket];
+
+	if (CueActor)
+	{
+		CueActor->StopBurstEffects();
+	}
 }
 
 #pragma endregion

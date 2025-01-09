@@ -10,6 +10,7 @@
 class UAbilitySystemComponent;
 class USkeletalMeshComponent;
 class AActor;
+class UNiagaraSystem;
 
 /**
  * 
@@ -35,7 +36,7 @@ protected:
 
 	// 이후 End시 이벤트 다시 호출해 나이아가라 삭제
 	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
-	TSubclassOf<AActor> ProjectileEffectFactory;
+	UNiagaraSystem* Niagara;
 
 	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	TSet<FGameplayTag> TrackedGameplayCues;
@@ -46,6 +47,11 @@ protected:
 	UPROPERTY()
 	AActor* EffectActor;
 
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
+	TSubclassOf<AActor> ProjectileEndEffectFactory;
+
+	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
+	bool bUseEndedEffect;
 
 	UPROPERTY(EditAnywhere, meta = (AllowPrivateAccess = "true"))
 	bool bAttachToWeapon = false;

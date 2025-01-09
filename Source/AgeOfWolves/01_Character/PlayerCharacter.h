@@ -15,6 +15,7 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayer, Log, All)
 
+
 //@전방 선언
 #pragma region Forward Declaration
 class UInventoryComponent;
@@ -22,6 +23,8 @@ class UUIComponent;
 class AController;
 class UBaseAnimInstance;
 class ULockOnComponent;
+class AGameplayCue_Actor;
+class UNiagaraSystem;
 #pragma endregion
 
 //@열거형
@@ -80,6 +83,21 @@ public:
 	// 테스트용 나중에 Weapon 사용한다고 하면 바꿔야함
 	UPROPERTY(EditAnywhere)
 	USkeletalMeshComponent* WeaponComp;
+
+	// 테스트용
+	UPROPERTY(EditAnywhere, Category = "GameplayCue Actors")
+	TSet<FName> ParticleSocketNameSet;
+
+
+	UPROPERTY(VisibleAnywhere, Category = "GameplayCue Actors")
+	TMap<FName, AGameplayCue_Actor*> ParticleSet;
+
+
+
+	void InitAttachParticleActor();
+	void PlayBurstParticleActor(FName InAttachSocket, UNiagaraSystem* NiagaraSystem);
+	void StopBurstParticleActor(FName InAttachSocket);
+
 
 protected:
 	//@내부 바인딩

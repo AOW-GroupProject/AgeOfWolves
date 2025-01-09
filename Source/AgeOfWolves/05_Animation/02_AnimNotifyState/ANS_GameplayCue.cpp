@@ -5,6 +5,7 @@
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemGlobals.h"
 #include "01_Character/01_Spell/UseAttachedMeshInterface.h"
+#include "01_Character/PlayerCharacter.h"
 
 void UANS_GameplayCue::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration, const FAnimNotifyEventReference& EventReference)
 {
@@ -24,7 +25,7 @@ void UANS_GameplayCue::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequen
                 if (OwnerMeshComp)
                 {
                     // 초기화 시켜준다
-                    Init(MyOwner, MeshComp, ASC);
+                    Init(MyOwner, OwnerMeshComp, ASC);
                 }
             }
         }
@@ -46,9 +47,14 @@ void UANS_GameplayCue::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequence
         {
             UAbilitySystemComponent* ASC = UAbilitySystemGlobals::GetAbilitySystemComponentFromActor(MyOwner);
 
-            if(ensure(ASC))
+            if(ASC)
             {
                 Reset(ASC);
+            }
+
+            if (APlayerCharacter* Character = Cast<APlayerCharacter>(MyOwner))
+            {
+                Character->StopBurstParticleActor(SocketName);
             }
         }
     }
@@ -66,11 +72,16 @@ void UANS_GameplayCue::Init(AActor* Owner, USkeletalMeshComponent* MeshComp, UAb
 
     if (UWorld* World = Owner->GetWorld())
     {
-        if (ProjectileEffectFactory)
+        if (APlayerCharacter* Character = Cast<APlayerCharacter>(Owner))
         {
-            EffectActor = World->SpawnActor<AActor>(ProjectileEffectFactory);
-            EffectActor->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+            Character->PlayBurstParticleActor(SocketName, Niagara);
         }
+
+        //if (ProjectileEffectFactory)
+        //{
+        //    EffectActor = World->SpawnActor<AActor>(ProjectileEffectFactory);
+        //    EffectActor->AttachToComponent(MeshComp, FAttachmentTransformRules::SnapToTargetNotIncludingScale, SocketName);
+        //}
     }
 }
 
@@ -82,6 +93,7 @@ void UANS_GameplayCue::Reset(UAbilitySystemComponent* ASC)
     {
         ASC->RemoveGameplayCue(GameplayCueTag);
     }
+
 
     TrackedGameplayCues.Empty();
 

@@ -19,6 +19,7 @@ public class AgeOfWolves : ModuleRules
             "UMG", 
             "AIModule", 
             "MotionWarping",
+            "Niagara",
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] {
