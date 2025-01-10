@@ -113,11 +113,14 @@ public:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
-	FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
-	FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }
-	FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockOnComponent; }
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockOnComponent; }
 
-	//@TODO: 지울 예정
+//@TODO: 지울 예정
 public:
 	FORCEINLINE UStaticMeshComponent* GetWeaponMesh() { return WeaponMesh; }
 	FORCEINLINE UStaticMeshComponent* GetShealthMesh() { return ShealthedWeaponMesh; }

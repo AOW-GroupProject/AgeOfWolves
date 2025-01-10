@@ -56,6 +56,10 @@ protected:
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Component | Motion Warp")
+		UMotionWarpingComponent* MotionWarpComponent;
+
+protected:
 	UPROPERTY(EditDefaultsOnly, Category = "팀 설정")
 		FGenericTeamId TeamId;
 
@@ -81,6 +85,10 @@ protected:
 protected:
 	//@ASC 캐싱
 	TWeakObjectPtr<UAbilitySystemComponent> AbilitySystemComponent;
+
+public:
+	UFUNCTION(BlueprintCallable)
+		UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpComponent; }
 
 public:
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;

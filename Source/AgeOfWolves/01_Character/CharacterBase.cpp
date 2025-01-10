@@ -17,6 +17,9 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
 	, TeamId(FGenericTeamId::NoTeam)
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	MotionWarpComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("Motion Warp Component"));
+
 }
 
 void ACharacterBase::BeginPlay()

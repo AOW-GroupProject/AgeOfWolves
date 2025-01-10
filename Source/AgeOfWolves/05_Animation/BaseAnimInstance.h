@@ -284,6 +284,9 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
 		ECombatType GetCombatType() const { return CombatType; }
 
+	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
+		FORCEINLINE bool GetIsPlayingRootMotion() const { return bIsPlayingRootMotionMontage; }
+
 public:
 	UFUNCTION(BlueprintCallable, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE void SetIsSprintingCoolDown(bool InBool) { bIsSprintingCooldown = InBool; }

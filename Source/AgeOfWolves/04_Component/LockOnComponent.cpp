@@ -341,7 +341,7 @@ void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
     FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
     
     //@Final Rotation
-    FRotator FinalRotation = UKismetMathLibrary::RInterpTo(StartRotation, TargetRotation, DeltaTime, InterpolationSpeed);
+    FinalRotation = UKismetMathLibrary::RInterpTo(StartRotation, TargetRotation, DeltaTime, InterpolationSpeed);
 
     //@RInterpTo
     PlayerCharacterRef->GetController()->SetControlRotation(FRotator(0.f, FinalRotation.Yaw, 0.f));
@@ -350,7 +350,7 @@ void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
     UpdateSpringArmTransform(DeltaTime, Target, FinalRotation);
 }
 
-void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& FinalRotation)
+void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& TargetRotation)
 {
     //@Spring Arm Comp, Base Anim Intance, Base Input Comp
     if (!SpringArmComponentRef.IsValid() || !BaseAnimInstanceRef.IsValid() || !BaseInputComponentRef.IsValid())
