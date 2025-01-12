@@ -8,6 +8,7 @@
 #include "MotionWarpingComponent.h"
 
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+#include "AbilitySystemComponent.h"
 #include "07_BlueprintNode/AsyncTaskAttributeChanged.h"
 
 #include "KismetAnimationLibrary.h"
@@ -359,41 +360,40 @@ void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
 
 void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
 {
-    //@Old Combat Type
-    const ECombatType OldCombatType = OldValue > 0.f ? ECombatType::NormalCombat : ECombatType::NonCombat;
+    const ECombatType OldCombatType = CombatType;
 
-    //@Combat Type
-    CombatType = NewValue > 0.f ? ECombatType::NormalCombat : ECombatType::NonCombat;
+    if (NewValue == 0.f)
+    {
+        CombatType = ECombatType::NonCombat;
+    }
+    else if (NewValue == 1.f)
+    {
+        CombatType = ECombatType::NormalCombat;
+    }
+    else if (NewValue == 2.f)
+    {
+        CombatType = ECombatType::BattoujutsuCombat;
+    }
 
     UE_LOGFMT(LogAnimInstance, Log, "전투 상태 변경: {0} -> {1} (값: {2})",
         static_cast<uint8>(OldCombatType),
         static_cast<uint8>(CombatType),
         NewValue);
 
-
-    //@TODO: 임시 무기 착용 시에만 활용하는 코드
     auto OwnerPlayer = Cast<APlayerCharacter>(OwnerCharacterBaseRef.Get());
-    if (!OwnerPlayer)
-    {
-        return;
-    }
+    if (!OwnerPlayer) return;
 
-    //@임시 코드
     UStaticMeshComponent* WeaponMesh = OwnerPlayer->GetWeaponMesh();
     UStaticMeshComponent* ShealthMesh = OwnerPlayer->GetShealthMesh();
     UStaticMeshComponent* FullMesh = OwnerPlayer->GetFullWeaponMesh();
 
-    if (!WeaponMesh || !ShealthMesh || !FullMesh)
-    {
-        return;
-    }
+    if (!WeaponMesh || !ShealthMesh || !FullMesh) return;
 
-    //@TODO: 지울 예정
     const float VisibilityDelay = 0.5f;
 
+    FTimerHandle TimerHandle;
     if (NewValue > 0.f)
     {
-        FTimerHandle TimerHandle;
         GetWorld()->GetTimerManager().SetTimer(
             TimerHandle,
             [=]()
@@ -408,7 +408,6 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
     }
     else
     {
-        FTimerHandle TimerHandle;
         GetWorld()->GetTimerManager().SetTimer(
             TimerHandle,
             [=]()

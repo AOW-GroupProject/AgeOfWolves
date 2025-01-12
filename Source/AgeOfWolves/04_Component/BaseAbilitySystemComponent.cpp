@@ -2,7 +2,6 @@
 #include "Logging/StructuredLog.h"
 
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
-#include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
 
 DEFINE_LOG_CATEGORY(LogASC)
 // UE_LOGFMT(LogASC, Warning, "");
@@ -17,6 +16,7 @@ UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitialize
 	InputHeldSpecHandles.Reset();
 
 	bChainWindowActive = false;
+	AllowedChainMappings.Empty();
 }
 
 void UBaseAbilitySystemComponent::InitializeComponent()
@@ -162,13 +162,14 @@ void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Inp
 		{
 			if (AbilitySpec.Ability && AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
 			{
-				//@입력된 어빌리티의 AbilityTag가 허용된 AbilityTag 목록에 있는지 확인
-				if (AllowedAbilityTags.HasTag(AbilitySpec.Ability->AbilityTags.First()))
+				for (const auto& Mapping : AllowedChainMappings)
 				{
-					bCanChainAction = true;
-					UE_LOGFMT(LogASC, Log, "체인 어빌리티 감지 - InputTag: {0}, AbilityTag: {1}",
-						InputTag.ToString(), AbilitySpec.Ability->AbilityTags.First().ToString());
-					break;
+					if (Mapping.Find(AbilitySpec.Ability->AbilityTags.First()))
+					{
+						bCanChainAction = true;
+						ChainActionEventTag = Mapping.EventTag;
+						break;
+					}
 				}
 			}
 		}
@@ -326,69 +327,35 @@ bool UBaseAbilitySystemComponent::TriggerDamageEvent(const FGameplayTag& EventTa
 
 void UBaseAbilitySystemComponent::StartChainWindow()
 {
-	//@GA
-	UGameplayAbility* CurrentGA = GetAnimatingAbility();
-	if (!CurrentGA)
+	if (auto BaseGA = Cast<UBaseGameplayAbility>(GetAnimatingAbility()))
 	{
-		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 - 현재 실행 중인 어빌리티 없음");
-		return;
+		if (!BaseGA->bUseChainSystem)
+		{
+			UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 체인 시스템 미사용: {0}", *BaseGA->GetName());
+			EndChainWindow();
+			return;
+		}
+
+		ChainActionActivated.BindUFunction(BaseGA, "OnChainActionActivated");
+		bChainWindowActive = true;
+		AllowedChainMappings = BaseGA->GetChainActionMappings();
+		bCanChainAction = false;
+
+		UE_LOGFMT(LogASC, Log, "체인 윈도우 시작 - 어빌리티: {0}", *BaseGA->GetName());
 	}
-
-	//@Base GA
-	UBaseGameplayAbility* BaseGA = Cast<UBaseGameplayAbility>(CurrentGA);
-	if (!BaseGA)
-	{
-		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 현재 실행 중인 어빌리티가 BaseGameplayAbility가 아님: {0}",
-			*CurrentGA->GetName());
-		return;
-	}
-
-	//@Chain System 여부
-	if (!BaseGA->bUseChainSystem)
-	{
-		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 어빌리티가 체인 시스템을 사용하지 않음: {0}",
-			*BaseGA->GetName());
-
-		EndChainWindow();
-
-		return;
-	}
-
-	//@바인딩
-	ChainActionActivated.BindUFunction(BaseGA, "OnChainActionActivated");
-
-	//@Chain Window 활성화
-	bChainWindowActive = true;
-	//@Chain Action 허용한 어빌리티 목록
-	AllowedAbilityTags = BaseGA->GetChainableAbilityTags();
-	//@Cain Action Event Tag
-	ChainActionEventTag = BaseGA->GetChainActionEventTag();
-	//@Chain Action 수행할 어빌리티
-	bCanChainAction = false;
-
-	UE_LOGFMT(LogASC, Log, "체인 윈도우 시작 - 현재 실행 중인 어빌리티: {0}, 허용된 어빌리티 태그: {1}",
-		*BaseGA->GetName(), AllowedAbilityTags.ToString());
 }
 
 void UBaseAbilitySystemComponent::EndChainWindow()
 {
+
 	if (bChainWindowActive && bCanChainAction)
 	{
-		if (UGameplayAbility* CurrentGA = GetAnimatingAbility())
-		{
-			if (UBaseGameplayAbility* BaseGA = Cast<UBaseGameplayAbility>(CurrentGA))
-			{
-				UE_LOGFMT(LogASC, Log, "체인 어빌리티 전달 - AbilityTag: {0}, Source: {1}", ChainActionEventTag.ToString(),
-					CurrentGA->GetName());
-
-				ChainActionActivated.ExecuteIfBound(ChainActionEventTag);
-			}
-		}
+		ChainActionActivated.ExecuteIfBound(ChainActionEventTag);
 	}
 
 	ChainActionActivated.Clear();
 	bChainWindowActive = false;
-	AllowedAbilityTags.Reset();
+	AllowedChainMappings.Empty();
 	ChainActionEventTag = FGameplayTag();
 }
 #pragma endregion

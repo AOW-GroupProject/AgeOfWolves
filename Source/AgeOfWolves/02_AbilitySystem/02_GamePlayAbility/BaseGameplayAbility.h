@@ -15,6 +15,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogGA, Log, All)
 class UGameplayEffect;
 class UAbilityTagRelationshipMapping;
 class UAttackGameplayAbility;
+class UAnimMontage;
 #pragma endregion
 
 //@열거형
@@ -68,6 +69,30 @@ public:
 	//@히트 위치
 	UPROPERTY(BlueprintReadWrite)
 		FVector ImpactLocation;
+};
+
+/*
+*	@FChainActionMapping
+* 
+*	Chain Action 활성화를 위해 필요한 Ability Tag 정보와 Event Tag 정보
+*/
+USTRUCT(BlueprintType)
+struct FChainActionMapping
+{
+	GENERATED_BODY()
+
+public:
+	UPROPERTY(EditDefaultsOnly)
+		FGameplayTag AbilityTag;
+
+	UPROPERTY(EditDefaultsOnly)
+		FGameplayTag EventTag;
+
+public:
+	bool Find (const FGameplayTag& Tag) const
+	{
+		return Tag.MatchesTagExact(AbilityTag);
+	}
 };
 #pragma endregion
 
@@ -141,6 +166,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | 어빌리티 활성화 설정")
 		EAbilityActivationPolicy ActivationPolicy;
 
+protected:
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | 애니메이션")
+		TArray<UAnimMontage*> AnimMontages;
+
+protected:
 	//@해당 Gameplay Ability의 활성화 과정에서 Target(GA의 적용 대상)에게 전달하는 Gameplay Effect입니다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | Gameplay Effect")
 		TSubclassOf<UGameplayEffect> ApplyGameplayEffectClass;
@@ -152,14 +182,10 @@ protected:
 	//@체인 시스템 활용 여부
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템")
 		bool bUseChainSystem;
-
-	//@체인 액션 허용 가능한 어빌리티 태그 목록
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
-		FGameplayTagContainer ChainableAbilityTags;
-
-	//@체인 액션 활성화 시 전달 받는 Gameplay Event Tag
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
-		FGameplayTag ChainActionEventTag;
+	
+	//@체인 액션 가능한 어빌리티 태그와 이에 대응되는 이벤트 태그 목록
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
+		TArray<FChainActionMapping> ChainActionMappings;
 #pragma endregion
 
 	//@Delegates
@@ -170,14 +196,22 @@ protected:
 #pragma region Callbacks
 public:
 	UFUNCTION(BlueprintNativeEvent, category = "체인 시스템")
-		void OnChainActionActivated(FGameplayTag ChainActionAbilityTag);
-	virtual void OnChainActionActivated_Implementation(FGameplayTag ChainActionAbilityTag); 
+		void OnChainActionActivated(FGameplayTag ChainActionEventTag);
+	virtual void OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
 	FORCEINLINE EAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 애니메이션", meta = (DisplayName = "Get Anim Montages"))
+		FORCEINLINE TArray<UAnimMontage*>GetAnimMontages() const { return AnimMontages; }
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 애니메이션", meta = (DisplayName = "Get Anim Montage"))
+		FORCEINLINE UAnimMontage* GetAnimMontage(int Index) const { return AnimMontages.IsValidIndex(Index) ? AnimMontages[Index] : nullptr; }
+
+public:
 	FORCEINLINE TSubclassOf<UGameplayEffect> GetApplyGameplayEffectClass() { return ApplyGameplayEffectClass; }
 	FORCEINLINE FGameplayTagContainer GetRequiredTags() const { return ActivationRequiredTags; }
 
@@ -210,10 +244,7 @@ public:
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "체인 시스템")
-		FGameplayTagContainer GetChainableAbilityTags() { return ChainableAbilityTags; }
-
-	UFUNCTION(BlueprintCallable, Category = "체인 시스템")
-		FGameplayTag GetChainActionEventTag() { return ChainActionEventTag; }
+		TArray<FChainActionMapping> GetChainActionMappings() const;
 #pragma endregion
 
 };

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
+#include "02_AbilitySystem/02_GameplayAbility/BaseGameplayAbility.h"
 
 #include "BaseAbilitySystemComponent.generated.h"
 
@@ -117,7 +118,8 @@ protected:
 protected:
 	bool bChainWindowActive;
 	bool bCanChainAction;
-	FGameplayTagContainer AllowedAbilityTags;
+
+	TArray<FChainActionMapping> AllowedChainMappings;
 	FGameplayTag ChainActionEventTag;
 #pragma endregion
 
