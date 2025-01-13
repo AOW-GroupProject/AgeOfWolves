@@ -85,11 +85,11 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	}
 	// @Anim Instance
 	{
-		static ConstructorHelpers::FClassFinder<UBaseAnimInstance> animInstance(TEXT("/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/00_UE4Mannequin/ABP_Temp_Base"));
-		if (animInstance.Class != NULL)
-			GetMesh()->SetAnimInstanceClass(animInstance.Class);
+		//static ConstructorHelpers::FClassFinder<UBaseAnimInstance> animInstance(TEXT("/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/00_UE4Mannequin/ABP_Temp_Base"));
+		//if (animInstance.Class != NULL)
+		//	GetMesh()->SetAnimInstanceClass(animInstance.Class);
 
-		AnimInstanceRef = nullptr;
+		//AnimInstanceRef = nullptr;
 	}
 	//@TODO: 추후에 삭제 예정
 	//@임시 무기

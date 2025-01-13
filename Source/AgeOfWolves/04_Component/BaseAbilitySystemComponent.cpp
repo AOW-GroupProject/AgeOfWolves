@@ -162,10 +162,20 @@ void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Inp
 		{
 			if (AbilitySpec.Ability && AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag))
 			{
+				UE_LOGFMT(LogASC, Log, "체인 시스템 - 입력된 어빌리티 태그: {0}",
+					AbilitySpec.Ability->AbilityTags.First().ToString());
+
 				for (const auto& Mapping : AllowedChainMappings)
 				{
+					UE_LOGFMT(LogASC, Log, "체인 매핑 체크 중 - 허용된 다음 어빌리티: {0}",
+						Mapping.AbilityTag.ToString());
+
 					if (Mapping.Find(AbilitySpec.Ability->AbilityTags.First()))
 					{
+						UE_LOGFMT(LogASC, Log, "체인 액션 매칭 성공 - 어빌리티: {0} | 이벤트 태그: {1}",
+							AbilitySpec.Ability->GetName(),
+							Mapping.EventTag.ToString());
+
 						bCanChainAction = true;
 						ChainActionEventTag = Mapping.EventTag;
 						break;
