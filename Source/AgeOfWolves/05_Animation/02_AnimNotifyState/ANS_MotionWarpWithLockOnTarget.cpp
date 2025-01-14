@@ -23,21 +23,58 @@ void UANS_MotionWarpWithLockOnTarget::NotifyTick(USkeletalMeshComponent* MeshCom
 {
     Super::NotifyTick(MeshComp, Animation, FrameDeltaTime);
 
-    if (auto Character = Cast<APlayerCharacter>(MeshComp->GetOwner()))
+    if (!MeshComp)
     {
-        if (auto LockOnComp = Character->GetLockOnComponent())
-        {
-            if (auto MotionWarpingComp = Character->GetMotionWarpingComponent())
-            {
-                FMotionWarpingTarget WarpTarget;
-                WarpTarget.Name = FName("LockOnTarget");
-                WarpTarget.Rotation = LockOnComp->GetFinalRotation();
-                WarpTarget.Location = LockOnComp->GetTargetEnemy()->GetActorLocation();
-
-                MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
-            }
-        }
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - MeshComp가 유효하지 않음");
+        return;
     }
+
+    auto Character = Cast<APlayerCharacter>(MeshComp->GetOwner());
+    if (!Character)
+    {
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - Character 캐스팅 실패. Owner: {0}",
+            *GetNameSafe(MeshComp->GetOwner()));
+        return;
+    }
+
+    auto LockOnComp = Character->GetLockOnComponent();
+    if (!LockOnComp)
+    {
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - LockOnComponent가 없음");
+        return;
+    }
+
+    if (!LockOnComp->GetbLockOn())
+    {
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - LockOn 상태가 아님");
+        return;
+    }
+
+    auto MotionWarpingComp = Character->GetMotionWarpingComponent();
+    if (!MotionWarpingComp)
+    {
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - MotionWarpingComponent가 없음");
+        return;
+    }
+
+    auto TargetEnemy = LockOnComp->GetTargetEnemy();
+    if (!TargetEnemy)
+    {
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - 타겟 적이 없음");
+        return;
+    }
+
+    FMotionWarpingTarget WarpTarget;
+    WarpTarget.Name = FName("LockOnTarget");
+    WarpTarget.Rotation = LockOnComp->GetFinalRotation();
+    WarpTarget.Location = TargetEnemy->GetActorLocation();
+
+    MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
+
+    UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Log, "WarpTarget 업데이트 - 타겟: {0} | 위치: {1} | 회전: {2}",
+        *TargetEnemy->GetName(),
+        *WarpTarget.Location.ToString(),
+        *WarpTarget.Rotation.ToString());
 }
 
 void UANS_MotionWarpWithLockOnTarget::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)

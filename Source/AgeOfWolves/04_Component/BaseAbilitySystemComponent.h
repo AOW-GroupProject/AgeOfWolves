@@ -101,6 +101,9 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Chain System")
 		void StartChainWindow();
 
+	UFUNCTION(BlueprintCallable, Category = "Chain System")
+		void StartChainWindowWithTag(const FGameplayTag& InAbilityToBindTag);
+
 	//@Chain Sytsem 종료
 	UFUNCTION(BlueprintCallable, Category = "Chain System")
 		void EndChainWindow();
@@ -119,10 +122,17 @@ protected:
 	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
 
 protected:
+	//@체인 시스템 활성화 여부
 	bool bChainWindowActive;
+	//@체인 액션 허용 여부
 	bool bCanChainAction;
-
+	//@체인 액션 시작한 원본 어빌리티
+	FGameplayTag OriginAbilityTag;
+	//@체인 액션 실행 모드
+	EChainActionMode CurrentChainMode;
+	//@허용 받은 체인 액션들
 	TArray<FChainActionMapping> AllowedChainMappings;
+	//@다음 실행할 체인 액션의 이벤트 태그
 	FGameplayTag ChainActionEventTag;
 #pragma endregion
 

@@ -298,6 +298,16 @@ void UBaseGameplayAbility::OnChainActionActivated_Implementation(FGameplayTag Ch
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+FGameplayTag UBaseGameplayAbility::GetAbilityTag() const
+{
+    if (AbilityTags.Num() > 0)
+    {
+        return AbilityTags.First();
+    }
+
+    return FGameplayTag();
+}
+
 TArray<FChainActionMapping> UBaseGameplayAbility::GetChainActionMappings() const
 {
     return ChainActionMappings;

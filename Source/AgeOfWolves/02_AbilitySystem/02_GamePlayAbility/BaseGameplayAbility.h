@@ -53,6 +53,22 @@ enum class EAbilityActivationPolicy : uint8
 
 	MAX
 };
+
+/*
+*	@EChainActionMode
+* 
+*	체인 액션 실행 모드를 정의합니다.
+*/
+UENUM(BlueprintType)
+enum class EChainActionMode : uint8
+{
+	//@ ANS가 종료될 때 체인 액션 실행
+	DelayedActivation UMETA(DisplayName = "Delayed Activation"),
+
+	//@입력이 들어오면 즉시 체인 액션 실행
+	ImmediateActivation UMETA(DisplayName = "Immediate Activation")
+};
+
 #pragma endregion
 
 //@구조체
@@ -183,6 +199,10 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템")
 		bool bUseChainSystem;
 	
+	//@체인 액션 실행 모드
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
+		EChainActionMode ChainActionMode;
+
 	//@체인 액션 가능한 어빌리티 태그와 이에 대응되는 이벤트 태그 목록
 	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
 		TArray<FChainActionMapping> ChainActionMappings;
@@ -202,6 +222,10 @@ public:
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+public:
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 태그")
+		FGameplayTag GetAbilityTag() const;
+
 public:
 	FORCEINLINE EAbilityActivationPolicy GetActivationPolicy() const { return ActivationPolicy; }
 
@@ -243,7 +267,10 @@ public:
 	}
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "체인 시스템")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
+		FORCEINLINE EChainActionMode GetChainActionMode() const { return ChainActionMode; }
+
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
 		TArray<FChainActionMapping> GetChainActionMappings() const;
 #pragma endregion
 
