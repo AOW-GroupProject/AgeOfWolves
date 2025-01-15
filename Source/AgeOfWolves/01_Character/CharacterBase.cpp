@@ -17,6 +17,9 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
 	, TeamId(FGenericTeamId::NoTeam)
 {
 	PrimaryActorTick.bCanEverTick = true;
+
+	MotionWarpComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("Motion Warp Component"));
+
 }
 
 void ACharacterBase::BeginPlay()
@@ -96,15 +99,10 @@ bool ACharacterBase::CanBeSeenFrom(const FVector& ObserverLocation, FVector& Out
 	OutSightStrength = 0;
 	return false;
 }
-
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-#pragma endregion
-
-//@Delegates
-#pragma region Delegates
 #pragma endregion
 
 //@Callbacks

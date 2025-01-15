@@ -240,7 +240,7 @@ bool UBaseGameplayAbility::CheckCost(const FGameplayAbilitySpecHandle Handle, co
 
         if (!RequirementCDO->CanApplyGameplayEffect_Implementation(CostGE, *Spec, ASC))
         {
-            if (OptionalRelevantTags)
+            if (OptionalRelevantTags && FGameplayTag::IsValidGameplayTagString("Ability.ActivateFail.CustomRequirement"))
             {
                 OptionalRelevantTags->AddTag(FGameplayTag::RequestGameplayTag(TEXT("Ability.ActivateFail.CustomRequirement")));
             }
@@ -279,18 +279,17 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
 
 //@Callbacks
 #pragma region Callbacks
-void UBaseGameplayAbility::OnChainActionActivated_Implementation(FGameplayTag ChainActionAbilityTag)
+void UBaseGameplayAbility::OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag)
 {
-    UE_LOGFMT(LogGA, Log, "체인 액션 활성화 이벤트 수신 - 어빌리티: {0} | 체인 액션 태그: {1} | 체인 가능 태그: {2}",
-        *GetName(),
-        *ChainActionAbilityTag.ToString(),
-        *ChainableAbilityTags.ToString());
-
-    if (ChainableAbilityTags.HasTag(ChainActionAbilityTag))
+    for (const auto& Mapping : ChainActionMappings)
     {
-        UE_LOGFMT(LogGA, Log, "체인 액션 매칭 성공 - 어빌리티: {0} | 매칭된 태그: {1}",
-            *GetName(),
-            *ChainActionAbilityTag.ToString());
+        if (Mapping.EventTag == ChainActionEventTag)
+        {
+            UE_LOGFMT(LogGA, Log, "체인 액션 매칭 성공 - 어빌리티: {0} | 매칭된 태그: {1}",
+                *GetName(),
+                *ChainActionEventTag.ToString());
+            break;
+        }
     }
 
     //@블루프린트에서 오버라이딩
@@ -299,4 +298,18 @@ void UBaseGameplayAbility::OnChainActionActivated_Implementation(FGameplayTag Ch
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+FGameplayTag UBaseGameplayAbility::GetAbilityTag() const
+{
+    if (AbilityTags.Num() > 0)
+    {
+        return AbilityTags.First();
+    }
+
+    return FGameplayTag();
+}
+
+TArray<FChainActionMapping> UBaseGameplayAbility::GetChainActionMappings() const
+{
+    return ChainActionMappings;
+}
 #pragma endregion

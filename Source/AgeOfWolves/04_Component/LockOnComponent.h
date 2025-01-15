@@ -81,9 +81,12 @@ private:
 
 protected:
     void UpdateControllerRotation(float DeltaTime);
-    void UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& FinalRotation);
+    void UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& TargetRotation);
 
 protected:
+    UPROPERTY(BlueprintReadWrite, Category = "Lock On")
+        FRotator FinalRotation;
+
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Lock On")
         float MaxDetectRadius = 1000.f;
 
@@ -91,7 +94,7 @@ protected:
         float MaxLockOnDistance = 2000.f;
 
     UPROPERTY(EditDefaultsOnly, Category = "Lock On")
-        float InterpolationSpeed = 40.f;
+        float InterpolationSpeed = 50.f;
 
 protected:
     bool bLockOn;
@@ -108,7 +111,6 @@ protected:
     //@Target으로 설정한 적의 약한 참조
     UPROPERTY()
         TWeakObjectPtr<AActor> TargetEnemyRef;
-
 #pragma endregion
 
 //@Delegates
@@ -141,6 +143,13 @@ protected:
         TWeakObjectPtr<UBaseInputComponent> BaseInputComponentRef;
 
 public:
-    FORCEINLINE bool GetbLockOn() const { return bLockOn; }
+    UFUNCTION(BlueprintCallable)
+        FORCEINLINE bool GetbLockOn() const { return bLockOn; }
+    UFUNCTION(BlueprintCallable)
+        FORCEINLINE AActor* GetTargetEnemy() const { return TargetEnemyRef.Get(); }
+    FORCEINLINE FRotator GetFinalRotation() const
+    {
+        return FinalRotation;
+    }
 #pragma endregion
 };

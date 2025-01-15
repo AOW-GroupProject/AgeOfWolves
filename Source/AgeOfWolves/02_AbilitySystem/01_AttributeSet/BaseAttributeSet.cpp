@@ -1,7 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "BaseAttributeSet.h"
+﻿#include "BaseAttributeSet.h"
 #include "Logging/StructuredLog.h"
 
 #include "02_AbilitySystem/AOWGameplayTags.h"
@@ -57,34 +54,38 @@ void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 {
 	Super::PreAttributeChange(Attribute, NewValue);
 
+	//@Max Health
 	if (Attribute == GetMaxHealthAttribute())
 	{
 		AdjustAttributeForMaxChange(Health, MaxHealth, NewValue, GetHealthAttribute());
 	}
-	// @Max MP
+	//@Max MP
 	else if (Attribute == GetMaxManaAttribute())
 	{
 		AdjustAttributeForMaxChange(Mana, MaxMana, NewValue, GetManaAttribute());
 	}
-	// @Max SP
+	//@Max SP
 	else if (Attribute == GetMaxStaminaAttribute())
 	{
 		AdjustAttributeForMaxChange(Stamina, MaxStamina, NewValue, GetStaminaAttribute());
 
 		UE_LOGFMT(LogAttributeSet, Error, "{0} : Stamina", NewValue);
 	}
-	// @Move Speed
+	//@Move Speed
 	else if (Attribute == GetMoveSpeedAttribute())
 	{
 		NewValue = FMath::Clamp<float>(NewValue, 150, 1000);
 	}
-	// @CombatState - 0(비전투) 또는 1(전투) 상태만 가질 수 있도록 클램핑
+	// @CombatState - 0(비전투), 1(전투), 2(발도 준비) 상태만 가질 수 있도록 클램핑
 	else if (Attribute == GetCombatStateAttribute())
 	{
-		NewValue = FMath::Clamp<float>(FMath::RoundToFloat(NewValue), 0.f, 1.f);
-		UE_LOGFMT(LogAttributeSet, Log, "전투 상태 변경: {0}", NewValue > 0.f ? TEXT("전투") : TEXT("비전투"));
+		NewValue = FMath::Clamp<float>(FMath::RoundToFloat(NewValue), 0.f, 2.f);
+		UE_LOGFMT(LogAttributeSet, Log, "전투 상태 변경: {0}",
+			NewValue == 0.f ? TEXT("비전투") :
+			NewValue == 1.f ? TEXT("전투") : TEXT("전투-발도"));
 	}
 }
+
 void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data)
 {
 	Super::PostGameplayEffectExecute(Data);

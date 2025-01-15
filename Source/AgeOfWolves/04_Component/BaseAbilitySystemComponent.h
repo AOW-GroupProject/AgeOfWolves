@@ -3,27 +3,28 @@
 #include "CoreMinimal.h"
 #include "AbilitySystemComponent.h"
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
+#include "02_AbilitySystem/02_GameplayAbility/BaseGameplayAbility.h"
 
 #include "BaseAbilitySystemComponent.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 
-//@Àü¹æ ¼±¾ğ
+//@ì „ë°© ì„ ì–¸
 #pragma region Forward Declaration
 class UANS_AllowChainAction;
 #pragma endregion
 
-//@¿­°ÅÇü
+//@ì—´ê±°í˜•
 #pragma region Enums
 #pragma endregion
 
-//@±¸Á¶Ã¼
+//@êµ¬ì¡°ì²´
 #pragma region Structs
 #pragma endregion
 
-//@ÀÌº¥Æ®/µ¨¸®°ÔÀÌÆ®
+//@ì´ë²¤íŠ¸/ë¸ë¦¬ê²Œì´íŠ¸
 #pragma region Delegates
-//@¾îºô¸®Æ¼ ½ºÆå µî·Ï ¿Ï·á ÀÌº¥Æ®
+//@ì–´ë¹Œë¦¬í‹° ìŠ¤í™ ë“±ë¡ ì™„ë£Œ ì´ë²¤íŠ¸
 DECLARE_MULTICAST_DELEGATE_OneParam(FAbilitySpecGiven, FGameplayAbilitySpec)
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionActivated, FGameplayTag, ChainActionAbilityTag);
@@ -32,15 +33,15 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionActivated, FGameplayTag, ChainActi
 /**	
  *	@UBaseAbilitySystemComponent
  * 
- *	AOWÀÇ Ä³¸¯ÅÍ ±âº» ASC À¯ÇüÀÔ´Ï´Ù.
+ *	AOWì˜ ìºë¦­í„° ê¸°ë³¸ ASC ìœ í˜•ì…ë‹ˆë‹¤.
  */	
 UCLASS(meta = (BlueprintSpawnableComponent))
 class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemComponent
 {
 
-//@Ä£Ãß Å¬·¡½º
+//@ì¹œì¶” í´ë˜ìŠ¤
 #pragma region Friend Class
-	friend class UAttackGameplayAbility;
+	friend class UBaseGameplayAbility;
 	friend class UANS_AllowChainAction;
 #pragma endregion
 
@@ -52,20 +53,20 @@ public:
 	UBaseAbilitySystemComponent(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
 
 protected:
-	//@³»ºÎ ¹ÙÀÎµù
+	//@ë‚´ë¶€ ë°”ì¸ë”©
 
 protected:
-	//@¿ÜºÎ ¹ÙÀÎµù
+	//@ì™¸ë¶€ ë°”ì¸ë”©
 
 protected:
-	//@ÃÊ±âÈ­
+	//@ì´ˆê¸°í™”
 	virtual void InitializeComponent() override;
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
-	//@¿À¹ö·Îµù
+	//@ì˜¤ë²„ë¡œë”©
 	FGameplayAbilitySpecHandle GiveAbility(const FGameplayAbilitySpec& AbilitySpec);
 
 public:
@@ -80,33 +81,39 @@ protected:
 	virtual void AbilitySpecInputReleased(FGameplayAbilitySpec& Spec) override;
 
 protected:
-	//@Cancel ÀÛ¾÷
+	//@Cancel ì‘ì—…
 	virtual void CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore) override;
-	//@Block µÇ¾ú´ø Passive GAÀÇ Àç È°¼ºÈ­ ÀÛ¾÷
+	//@Block ë˜ì—ˆë˜ Passive GAì˜ ì¬ í™œì„±í™” ì‘ì—…
 	void ReactivateUnblockedPassiveAbility(const FGameplayTagContainer UnblockedAbilityTags);
 
 public:
-	//@Block, Cancel ÅÂ±×¿¡ ÇØ´çµÇ´Â GAµé¿¡ ´ëÇÏ¿© Block, Cancel Àû¿ë
+	//@Block, Cancel íƒœê·¸ì— í•´ë‹¹ë˜ëŠ” GAë“¤ì— ëŒ€í•˜ì—¬ Block, Cancel ì ìš©
 	virtual void ApplyAbilityBlockAndCancelTags(const FGameplayTagContainer& AbilityTags, UGameplayAbility* RequestingAbility, bool bEnableBlockTags, const FGameplayTagContainer& BlockTags, bool bExecuteCancelTags, const FGameplayTagContainer& CancelTags) override;
 
 protected:
-	//@Gameplay Event¿¡ ÀÇÇÑ GA È°¼ºÈ­ ÀÛ¾÷ Ã³¸®
+	//@Gameplay Eventì— ì˜í•œ GA í™œì„±í™” ì‘ì—… ì²˜ë¦¬
 	virtual int32 HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload) override;
-	//@Damage Event ¹ß»ı ½Ã Armor ¾îºô¸®Æ¼ È°¼ºÈ­
+	//@Damage Event ë°œìƒ ì‹œ Armor ì–´ë¹Œë¦¬í‹° í™œì„±í™”
 	bool TriggerDamageEvent(const FGameplayTag& EventTag, const FGameplayEventData* Payload);
 
 protected:
-	//@Chain System È°¼ºÈ­
-	void StartChainWindow();
-	//@Chain Sytsem Á¾·á
-	void EndChainWindow();
+	//@Chain System í™œì„±í™”
+	UFUNCTION(BlueprintCallable, Category = "Chain System")
+		void StartChainWindow();
+
+	UFUNCTION(BlueprintCallable, Category = "Chain System")
+		void StartChainWindowWithTag(const FGameplayTag& InAbilityToBindTag);
+
+	//@Chain Sytsem ì¢…ë£Œ
+	UFUNCTION(BlueprintCallable, Category = "Chain System")
+		void EndChainWindow();
 
 protected:
 	UPROPERTY(EditAnywhere)
 		TObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
 
 protected:
-	//@ÇöÀç È°¼ºÈ­ ÁßÀÎ Ability µéÀÇ Tag
+	//@í˜„ì¬ í™œì„±í™” ì¤‘ì¸ Ability ë“¤ì˜ Tag
 	FGameplayTagContainer ActivatingAbilityTags;
 
 protected:
@@ -115,29 +122,37 @@ protected:
 	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
 
 protected:
+	//@ì²´ì¸ ì‹œìŠ¤í…œ í™œì„±í™” ì—¬ë¶€
 	bool bChainWindowActive;
-	FGameplayTagContainer AllowedAbilityTags;
-	FGameplayTag StoredChainabilityTag;
-
+	//@ì²´ì¸ ì•¡ì…˜ í—ˆìš© ì—¬ë¶€
+	bool bCanChainAction;
+	//@ì²´ì¸ ì•¡ì…˜ ì‹œì‘í•œ ì›ë³¸ ì–´ë¹Œë¦¬í‹°
+	FGameplayTag OriginAbilityTag;
+	//@ì²´ì¸ ì•¡ì…˜ ì‹¤í–‰ ëª¨ë“œ
+	EChainActionMode CurrentChainMode;
+	//@í—ˆìš© ë°›ì€ ì²´ì¸ ì•¡ì…˜ë“¤
+	TArray<FChainActionMapping> AllowedChainMappings;
+	//@ë‹¤ìŒ ì‹¤í–‰í•  ì²´ì¸ ì•¡ì…˜ì˜ ì´ë²¤íŠ¸ íƒœê·¸
+	FGameplayTag ChainActionEventTag;
 #pragma endregion
 
 //@Delegates
 #pragma region Delegates
 public:
-	//@¾îºô¸®Æ¼ µî·Ï ÀÌº¥Æ®
+	//@ì–´ë¹Œë¦¬í‹° ë“±ë¡ ì´ë²¤íŠ¸
 	FAbilitySpecGiven AbilitySpecGiven;
 
 public:
-	//@Ã¼ÀÎ ¾×¼Ç È°¼ºÈ­ ÀÌº¥Æ®
+	//@ì²´ì¸ ì•¡ì…˜ í™œì„±í™” ì´ë²¤íŠ¸
 	FChainActionActivated ChainActionActivated;
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
 protected:
-	//@GA È°¼ºÈ­ ÀÌº¥Æ® ±¸µ¶
+	//@GA í™œì„±í™” ì´ë²¤íŠ¸ êµ¬ë…
 	void OnAbilityActivated(UGameplayAbility* Ability);
-	//@GA Á¾·á ÀÌº¥Æ® ±¸µ¶
+	//@GA ì¢…ë£Œ ì´ë²¤íŠ¸ êµ¬ë…
 	virtual void OnAbilityEnded(UGameplayAbility* Ability);
 #pragma endregion
 

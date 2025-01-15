@@ -1,7 +1,4 @@
 ﻿
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "PlayerCharacter.h"
 #include "Logging/StructuredLog.h"
 
@@ -55,7 +52,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 
-		GetCharacterMovement()->RotationRate = FRotator(0.0f, 540.f, 0.0f);
+		GetCharacterMovement()->RotationRate = FRotator(0.0f, 480.f, 0.0f);
 		GetCharacterMovement()->JumpZVelocity = 700.f;
 		GetCharacterMovement()->AirControl = 0.35f;
 		GetCharacterMovement()->MaxWalkSpeed = 200.f;
@@ -88,20 +85,25 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	}
 	// @Anim Instance
 	{
-		static ConstructorHelpers::FClassFinder<UBaseAnimInstance> animInstance(TEXT("AnimBlueprint'/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/ABP_AkaOni_Base'"));
-		if (animInstance.Class != NULL)
-			GetMesh()->SetAnimInstanceClass(animInstance.Class);
+		//static ConstructorHelpers::FClassFinder<UBaseAnimInstance> animInstance(TEXT("/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/00_UE4Mannequin/ABP_Temp_Base"));
+		//if (animInstance.Class != NULL)
+		//	GetMesh()->SetAnimInstanceClass(animInstance.Class);
 
-		AnimInstanceRef = nullptr;
+		//AnimInstanceRef = nullptr;
 	}
 	//@TODO: 추후에 삭제 예정
 	//@임시 무기
 	{
 		WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
-		WeaponMesh->SetupAttachment(GetMesh(), "Weapon_R");
+		WeaponMesh->SetupAttachment(GetMesh(), "TempKatana");
+		WeaponMesh->SetVisibility(false);
 
 		ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
-		ShealthedWeaponMesh->SetupAttachment(GetMesh(), "ShealthedWeapon");
+		ShealthedWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
+		ShealthedWeaponMesh->SetVisibility(false);
+
+		FullWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));
+		FullWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
 	}
 
 	//@Team ID
