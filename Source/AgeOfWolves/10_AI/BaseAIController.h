@@ -175,8 +175,10 @@ protected:
 	UAISenseConfig_Hearing* Hearing;
 
 protected:
-	TTuple<float, float> AttackRange;
-	TTuple<float, float> SkillRange;
+	UPROPERTY(EditDefaultsOnly)
+		float MinAttackRange;
+	UPROPERTY(EditDefaultsOnly)
+		float MaxAttackRange;
 #pragma endregion
 
 //@Delegates
@@ -220,7 +222,8 @@ public:
 	//~End Of IAbilitySystemInterface Interface
 
 public:
-	FORCEINLINE TTuple<float, float> GetAttackRange() { return AttackRange; }
+	FORCEINLINE float GetMinAttackRange() { return MinAttackRange; }
+	FORCEINLINE float GetMaxAttackRange() { return MaxAttackRange; }
 
 public:
 	virtual FGenericTeamId GetGenericTeamId() const override;
