@@ -9,6 +9,8 @@
 
 #include "GameplayEffectCustomApplicationRequirement.h"
 
+#include "Abilities/Tasks/AbilityTask_PlayMontageAndWait.h"
+
 DEFINE_LOG_CATEGORY(LogGA)
 
 // UE_LOGFMT(LogGA, Error, "");
@@ -20,8 +22,16 @@ UBaseGameplayAbility::UBaseGameplayAbility(const FObjectInitializer& ObjectIniti
 {
     //@Editor 상에서 BP 유형의 GA 생성 시 활성화 정책을 설정해줍니다.
     ActivationPolicy = EAbilityActivationPolicy::MAX;
+
+    //@애님 몽타주 재생 속도
+    MontagePlayRate = 1.0f;
+
     //@체인 시스템
     bUseChainSystem = false;
+    bIsCanceledByChainAction = false;
+
+    //@Play Montage 캐싱
+    //CurrentMontageTaskRef = nullptr;
 }
 
 void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
@@ -82,19 +92,27 @@ void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, c
 {
     check(ActorInfo);
 
+    UE_LOGFMT(LogGA, Log, "어빌리티 종료 시작 - 어빌리티: {0} | 취소 여부: {1}",
+        *GetName(),
+        bWasCancelled ? TEXT("취소됨") : TEXT("정상 종료"));
+
     // @GE 제거(Cost, CoolDown 제외 별도의 GE)
+    if (ActiveApplyGameplayEffectHandle.IsValid())
     {
-        if (ActiveApplyGameplayEffectHandle.IsValid())
+        if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
         {
-            if (UAbilitySystemComponent* ASC = ActorInfo->AbilitySystemComponent.Get())
-            {
-                ASC->RemoveActiveGameplayEffect(ActiveApplyGameplayEffectHandle);
-            }
+            ASC->RemoveActiveGameplayEffect(ActiveApplyGameplayEffectHandle);
+            UE_LOGFMT(LogGA, Log, "활성화된 GE 제거됨 - 어빌리티: {0}", *GetName());
         }
+    }
+    else
+    {
+        UE_LOGFMT(LogGA, Log, "제거할 활성화된 GE 없음 - 어빌리티: {0}", *GetName());
     }
 
     Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 
+    UE_LOGFMT(LogGA, Log, "어빌리티 종료 완료 - 어빌리티: {0}", *GetName());
 }
 #pragma endregion
 
@@ -275,6 +293,49 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
 
     UE_LOGFMT(LogGA, Log, "Ability Input Released - Ability: {0}", *GetName());
 }
+
+UAbilityTask_PlayMontageAndWait* UBaseGameplayAbility::PlayMontageWithCallback(
+    UAnimMontage* MontageToPlay,
+    float Rate,
+    FName StartSection,
+    bool bStopWhenAbilityEnds)
+{
+    if (!MontageToPlay)
+    {
+        return nullptr;
+    }
+
+    UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+    if (!ASC)
+    {
+        return nullptr;
+    }
+
+    // 몽타주 태스크 생성
+    UAbilityTask_PlayMontageAndWait* Task = UAbilityTask_PlayMontageAndWait::CreatePlayMontageAndWaitProxy(
+        this,
+        NAME_None,
+        MontageToPlay,
+        Rate,
+        StartSection,
+        bStopWhenAbilityEnds);
+
+    if (!Task)
+    {
+        return nullptr;
+    }
+
+    // 콜백 바인딩
+    Task->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnMontageCompleted);
+    Task->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnMontageBlendOut);
+    Task->OnInterrupted.AddDynamic(this, &UBaseGameplayAbility::OnMontageInterrupted);
+    Task->OnCancelled.AddDynamic(this, &UBaseGameplayAbility::OnMontageCancelled);
+
+    // 태스크 활성화
+    Task->Activate();
+
+    return Task;
+}
 #pragma endregion
 
 //@Callbacks
@@ -288,11 +349,50 @@ void UBaseGameplayAbility::OnChainActionActivated_Implementation(FGameplayTag Ch
             UE_LOGFMT(LogGA, Log, "체인 액션 매칭 성공 - 어빌리티: {0} | 매칭된 태그: {1}",
                 *GetName(),
                 *ChainActionEventTag.ToString());
+
+            //@체인 액션으로 인한 중단임을 표시
+            bIsCanceledByChainAction = true;
             break;
         }
     }
+}
 
-    //@블루프린트에서 오버라이딩
+void UBaseGameplayAbility::OnMontageCompleted_Implementation()
+{
+    UE_LOGFMT(LogGA, Log, "{0} Montage Completed", *GetName());
+
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+}
+
+void UBaseGameplayAbility::OnMontageBlendOut_Implementation()
+{
+    UE_LOGFMT(LogGA, Log, "{0} Montage BlendOut", *GetName());
+}
+
+void UBaseGameplayAbility::OnMontageInterrupted_Implementation()
+{
+    if (!IsActive())
+    {
+        UE_LOGFMT(LogGA, Log, "이미 종료된 어빌리티 - 추가 EndAbility 호출 방지: {0}", *GetName());
+        return;
+    }
+
+    //@체인 액션에 의한 중단이면 플래그만 리셋하고 종료
+    if (bIsCanceledByChainAction)
+    {
+        UE_LOGFMT(LogGA, Log, "체인 액션으로 인한 중단 - 어빌리티 유지: {0}", *GetName());
+        bIsCanceledByChainAction = false;
+        return;
+    }
+
+    //@일반 중단인 경우 어빌리티 종료
+    UE_LOGFMT(LogGA, Log, "일반 중단으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
+}
+
+void UBaseGameplayAbility::OnMontageCancelled_Implementation()
+{
+    UE_LOGFMT(LogGA, Log, "{0} Montage Cancelled", *GetName());
 }
 #pragma endregion
 

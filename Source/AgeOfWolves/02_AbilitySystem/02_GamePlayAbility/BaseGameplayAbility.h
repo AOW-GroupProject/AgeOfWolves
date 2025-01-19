@@ -16,6 +16,7 @@ class UGameplayEffect;
 class UAbilityTagRelationshipMapping;
 class UAttackGameplayAbility;
 class UAnimMontage;
+class UAbilityTask_PlayMontageAndWait;
 #pragma endregion
 
 //@열거형
@@ -178,6 +179,14 @@ protected:
 	virtual void K2_InputReleased_Implementation() { }
 
 protected:
+	UFUNCTION(BlueprintCallable, Category = "Ability|Montage")
+		UAbilityTask_PlayMontageAndWait* PlayMontageWithCallback(
+			UAnimMontage* MontageToPlay,
+			float Rate = 1.0f,
+			FName StartSection = NAME_None,
+			bool bStopWhenAbilityEnds = true);
+
+protected:
 	//@Gameplay Ability의 발동 조건입니다.
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | 어빌리티 활성화 설정")
 		EAbilityActivationPolicy ActivationPolicy;
@@ -185,6 +194,9 @@ protected:
 protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | 애니메이션")
 		TArray<UAnimMontage*> AnimMontages;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | 애니메이션", meta = (EditCondition = "AnimMontages.Num() > 0"))
+		float MontagePlayRate;
 
 protected:
 	//@해당 Gameplay Ability의 활성화 과정에서 Target(GA의 적용 대상)에게 전달하는 Gameplay Effect입니다.
@@ -199,6 +211,9 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템")
 		bool bUseChainSystem;
 	
+	//@Chain Action 실행으로인한 취소 여부
+	bool bIsCanceledByChainAction;
+
 	//@체인 액션 실행 모드
 	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
 		EChainActionMode ChainActionMode;
@@ -218,6 +233,23 @@ public:
 	UFUNCTION(BlueprintNativeEvent, category = "체인 시스템")
 		void OnChainActionActivated(FGameplayTag ChainActionEventTag);
 	virtual void OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag);
+
+protected:
+	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
+		void OnMontageCompleted();
+	virtual void OnMontageCompleted_Implementation();
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
+		void OnMontageBlendOut();
+	virtual void OnMontageBlendOut_Implementation();
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
+		void OnMontageInterrupted();
+	virtual void OnMontageInterrupted_Implementation();
+
+	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
+		void OnMontageCancelled();
+	virtual void OnMontageCancelled_Implementation();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -232,6 +264,7 @@ public:
 public:
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 애니메이션", meta = (DisplayName = "Get Anim Montages"))
 		FORCEINLINE TArray<UAnimMontage*>GetAnimMontages() const { return AnimMontages; }
+
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 애니메이션", meta = (DisplayName = "Get Anim Montage"))
 		FORCEINLINE UAnimMontage* GetAnimMontage(int Index) const { return AnimMontages.IsValidIndex(Index) ? AnimMontages[Index] : nullptr; }
 

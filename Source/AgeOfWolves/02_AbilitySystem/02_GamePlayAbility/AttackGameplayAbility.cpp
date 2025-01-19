@@ -140,114 +140,114 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
     }
     }
 
-#if ENABLE_DRAW_DEBUG
-    const float DrawDuration = 2.0f;  // 디버그 라인이 표시될 시간
-    const FColor TraceColor = FColor::Red;  // 트레이스 색상
-
-    switch (TraceType)
-    {
-    case EWeaponTraceType::Line:
-    {
-        // 라인 트레이스의 경우 시작점과 끝점을 잇는 선만 그립니다
-        DrawDebugLine(
-            GetWorld(),
-            StartLocation,
-            EndLocation,
-            TraceColor,
-            false,
-            DrawDuration,
-            0,
-            2.0f
-        );
-        break;
-    }
-    case EWeaponTraceType::Sphere:
-    {
-        // 구체 트레이스의 경우 시작점과 끝점에 구체를, 그 사이를 잇는 선을 그립니다
-        DrawDebugSphere(
-            GetWorld(),
-            StartLocation,
-            SphereTraceRadius,
-            12,  // 구체의 세그먼트 수
-            TraceColor,
-            false,
-            DrawDuration
-        );
-        DrawDebugSphere(
-            GetWorld(),
-            EndLocation,
-            SphereTraceRadius,
-            12,
-            TraceColor,
-            false,
-            DrawDuration
-        );
-        DrawDebugLine(
-            GetWorld(),
-            StartLocation,
-            EndLocation,
-            TraceColor,
-            false,
-            DrawDuration,
-            0,
-            2.0f
-        );
-        break;
-    }
-    case EWeaponTraceType::Box:
-    {
-        // 박스 트레이스의 경우 시작점과 끝점에 박스를, 그 사이를 잇는 선을 그립니다
-        FQuat Rotation = FRotationMatrix::MakeFromZ(EndLocation - StartLocation).ToQuat();
-        DrawDebugBox(
-            GetWorld(),
-            StartLocation,
-            BoxTraceHalfSize,
-            Rotation,
-            TraceColor,
-            false,
-            DrawDuration,
-            0,
-            2.0f
-        );
-        DrawDebugBox(
-            GetWorld(),
-            EndLocation,
-            BoxTraceHalfSize,
-            Rotation,
-            TraceColor,
-            false,
-            DrawDuration,
-            0,
-            2.0f
-        );
-        DrawDebugLine(
-            GetWorld(),
-            StartLocation,
-            EndLocation,
-            TraceColor,
-            false,
-            DrawDuration,
-            0,
-            2.0f
-        );
-        break;
-    }
-    }
-
-    // Hit 발생 시 Hit 위치에 점 표시
-    for (const FHitResult& Hit : HitResults)
-    {
-        DrawDebugPoint(
-            GetWorld(),
-            Hit.ImpactPoint,
-            10.0f,  // 점 크기
-            FColor::Green,  // Hit 위치는 녹색으로 표시
-            false,
-            DrawDuration,
-            0
-        );
-    }
-#endif
+//#if ENABLE_DRAW_DEBUG
+//    const float DrawDuration = 2.0f;  // 디버그 라인이 표시될 시간
+//    const FColor TraceColor = FColor::Red;  // 트레이스 색상
+//
+//    switch (TraceType)
+//    {
+//    case EWeaponTraceType::Line:
+//    {
+//        // 라인 트레이스의 경우 시작점과 끝점을 잇는 선만 그립니다
+//        DrawDebugLine(
+//            GetWorld(),
+//            StartLocation,
+//            EndLocation,
+//            TraceColor,
+//            false,
+//            DrawDuration,
+//            0,
+//            2.0f
+//        );
+//        break;
+//    }
+//    case EWeaponTraceType::Sphere:
+//    {
+//        // 구체 트레이스의 경우 시작점과 끝점에 구체를, 그 사이를 잇는 선을 그립니다
+//        DrawDebugSphere(
+//            GetWorld(),
+//            StartLocation,
+//            SphereTraceRadius,
+//            12,  // 구체의 세그먼트 수
+//            TraceColor,
+//            false,
+//            DrawDuration
+//        );
+//        DrawDebugSphere(
+//            GetWorld(),
+//            EndLocation,
+//            SphereTraceRadius,
+//            12,
+//            TraceColor,
+//            false,
+//            DrawDuration
+//        );
+//        DrawDebugLine(
+//            GetWorld(),
+//            StartLocation,
+//            EndLocation,
+//            TraceColor,
+//            false,
+//            DrawDuration,
+//            0,
+//            2.0f
+//        );
+//        break;
+//    }
+//    case EWeaponTraceType::Box:
+//    {
+//        // 박스 트레이스의 경우 시작점과 끝점에 박스를, 그 사이를 잇는 선을 그립니다
+//        FQuat Rotation = FRotationMatrix::MakeFromZ(EndLocation - StartLocation).ToQuat();
+//        DrawDebugBox(
+//            GetWorld(),
+//            StartLocation,
+//            BoxTraceHalfSize,
+//            Rotation,
+//            TraceColor,
+//            false,
+//            DrawDuration,
+//            0,
+//            2.0f
+//        );
+//        DrawDebugBox(
+//            GetWorld(),
+//            EndLocation,
+//            BoxTraceHalfSize,
+//            Rotation,
+//            TraceColor,
+//            false,
+//            DrawDuration,
+//            0,
+//            2.0f
+//        );
+//        DrawDebugLine(
+//            GetWorld(),
+//            StartLocation,
+//            EndLocation,
+//            TraceColor,
+//            false,
+//            DrawDuration,
+//            0,
+//            2.0f
+//        );
+//        break;
+//    }
+//    }
+//
+//    // Hit 발생 시 Hit 위치에 점 표시
+//    for (const FHitResult& Hit : HitResults)
+//    {
+//        DrawDebugPoint(
+//            GetWorld(),
+//            Hit.ImpactPoint,
+//            10.0f,  // 점 크기
+//            FColor::Green,  // Hit 위치는 녹색으로 표시
+//            false,
+//            DrawDuration,
+//            0
+//        );
+//    }
+//#endif
 
     if (HitResults.Num() <= 0)
     {

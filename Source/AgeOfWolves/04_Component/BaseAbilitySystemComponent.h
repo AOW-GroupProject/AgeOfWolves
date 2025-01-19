@@ -169,5 +169,9 @@ public:
 
 public:
 	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM; }
+
+public:
+	FORCEINLINE bool IsChainWindowActive() const { return bChainWindowActive; }
+	FORCEINLINE bool CanChainAction() const { return bCanChainAction; }
 #pragma endregion
 };
