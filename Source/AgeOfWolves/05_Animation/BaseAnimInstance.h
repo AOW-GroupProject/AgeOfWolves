@@ -42,7 +42,11 @@ UENUM(BlueprintType)
 enum class EMovementDirection : uint8
 {
 	Fwd = 0		UMETA(DisplayName = "Fwd"),
+	FL			UMETA(DisplayNmae = "Forward Left"),
+	FR			UMETA(DisplayNmae = "Forward Right"),
 	Bwd			UMETA(DisplayName = "Bwd"),
+	BL			UMETA(DisplayNmae = "Forward Left"),
+	BR			UMETA(DisplayNmae = "Forward Right"),
 	Left		UMETA(DisplayName = "Left"),
 	Right		UMETA(DisplayName = "Right"),
 	MAX			UMETA(DisplayName = "MAX"),

@@ -495,36 +495,67 @@ void UBaseAbilitySystemComponent::EndChainWindow()
 	//@체인 액션 실행
 	if (bCanChainAction && ChainActionEventTag.IsValid())
 	{
-		if (!ChainActionActivated.IsBound())
+		//@Chain Action Mode : Immediate, 즉발
+		if (CurrentChainMode == EChainActionMode::ImmediateActivation)
 		{
-			UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 바인딩된 함수 없음");
+			//@원본 어빌리티 취소
+			if (OriginAbilityTag.IsValid())
+			{
+				TArray<FGameplayAbilitySpec> MatchingSpecs = GetActivatableAbilities();
+
+				for (const FGameplayAbilitySpec& Spec : MatchingSpecs)
+				{
+					if (Spec.Ability && Spec.IsActive() && Spec.Ability->AbilityTags.HasTag(OriginAbilityTag))
+					{
+						UE_LOGFMT(LogASC, Log, "원본 어빌리티 취소 - {0}", *Spec.Ability->GetName());
+						CancelAbility(Spec.Ability);
+						break;
+					}
+				}
+			}
+
+			UE_LOGFMT(LogASC, Log, "즉시 실행 모드 - GameplayEvent 직접 전송: {0}", *ChainActionEventTag.ToString());
+
+			//@이벤트 호출 -> 패시브 유형 체인 액션 어빌리티 호출
+			FGameplayEventData Payload;
+			HandleGameplayEvent(ChainActionEventTag, &Payload);
 		}
+		//@Chain Action Mode : Delayed, 지연
 		else
 		{
-			auto GA = Cast<UGameplayAbility>(ChainActionActivated.GetUObject());
-			if (!GA)
+			if (!ChainActionActivated.IsBound())
 			{
-				UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 유효하지 않은 GameplayAbility");
-			}
-			else if (!GA->IsActive())
-			{
-				UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 비활성화된 {0}", *GA->GetName());
-			}
-			else if (!GA->GetCurrentActorInfo())
-			{
-				UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 유효하지 않은 ActorInfo");
+				UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 바인딩된 함수 없음");
 			}
 			else
 			{
-				UE_LOGFMT(LogASC, Log, "체인 액션 실행 - 이벤트 태그: {0} | 체인 모드: {1}",
-					*ChainActionEventTag.ToString(),
-					TEXT("Delayed"));
+				auto GA = Cast<UGameplayAbility>(ChainActionActivated.GetUObject());
+				if (!GA)
+				{
+					UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 유효하지 않은 GameplayAbility");
+				}
+				else if (!GA->IsActive())
+				{
+					UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 비활성화된 {0}", *GA->GetName());
+				}
+				else if (!GA->GetCurrentActorInfo())
+				{
+					UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 유효하지 않은 ActorInfo");
+				}
+				else
+				{
+					UE_LOGFMT(LogASC, Log, "체인 액션 실행 - 이벤트 태그: {0} | 체인 모드: {1}",
+						*ChainActionEventTag.ToString(),
+						TEXT("Delayed"));
 
-				ChainActionActivated.ExecuteIfBound(ChainActionEventTag);
+					//@체인 액션 활성화 이벤트
+					ChainActionActivated.ExecuteIfBound(ChainActionEventTag);
+				}
 			}
 		}
 	}
 
+	//@초기화
 	ChainActionActivated.Clear();
 	bChainWindowActive = false;
 	bCanChainAction = false;
@@ -568,6 +599,7 @@ void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 
 void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 {
+
 	//@Ability
 	if (!Ability)
 	{

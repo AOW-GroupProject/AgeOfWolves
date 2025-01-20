@@ -367,6 +367,18 @@ void UBaseGameplayAbility::OnMontageCompleted_Implementation()
 void UBaseGameplayAbility::OnMontageBlendOut_Implementation()
 {
     UE_LOGFMT(LogGA, Log, "{0} Montage BlendOut", *GetName());
+
+    //@체인 액션에 의한 중단이면 플래그만 리셋하고 종료
+    if (bIsCanceledByChainAction)
+    {
+        UE_LOGFMT(LogGA, Log, "체인 액션으로 인한 중단 - 어빌리티 유지: {0}", *GetName());
+        bIsCanceledByChainAction = false;
+        return;
+    }
+
+    //@일반 중단인 경우 어빌리티 종료
+    UE_LOGFMT(LogGA, Log, "일반 중단으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
 }
 
 void UBaseGameplayAbility::OnMontageInterrupted_Implementation()
@@ -393,6 +405,18 @@ void UBaseGameplayAbility::OnMontageInterrupted_Implementation()
 void UBaseGameplayAbility::OnMontageCancelled_Implementation()
 {
     UE_LOGFMT(LogGA, Log, "{0} Montage Cancelled", *GetName());
+
+    //@체인 액션에 의한 중단이면 플래그만 리셋하고 종료
+    if (bIsCanceledByChainAction)
+    {
+        UE_LOGFMT(LogGA, Log, "체인 액션으로 인한 중단 - 어빌리티 유지: {0}", *GetName());
+        bIsCanceledByChainAction = false;
+        return;
+    }
+
+    //@일반 중단인 경우 어빌리티 종료
+    UE_LOGFMT(LogGA, Log, "일반 중단으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
 }
 #pragma endregion
 
