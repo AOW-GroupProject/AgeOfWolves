@@ -195,17 +195,6 @@ protected:
 	const float SprintingSpeed = 500.f;
 
 protected:
-	UPROPERTY()
-		bool bIsSprintingCooldown;
-	UPROPERTY()
-		float SprintingCooldownTime;
-
-	UPROPERTY(EditAnywhere, Category = "Movement|Sprint", meta = (AllowPrivateAccess = "true"))
-		float SprintingCooldownDuration;
-	// 현재 누적된 Cooldown 시간을 추적
-	float CurrentCooldownTime;
-
-protected:
 	UPROPERTY(Transient, BlueprintReadOnly)
 		bool bModifyBoneTransform;
 
@@ -292,9 +281,6 @@ public:
 		FORCEINLINE bool GetIsPlayingRootMotion() const { return bIsPlayingRootMotionMontage; }
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "Animation", meta = (BlueprintThreadSafe))
-		FORCEINLINE void SetIsSprintingCoolDown(bool InBool) { bIsSprintingCooldown = InBool; }
-
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 		FORCEINLINE void SetIsPlayingRootMotionMontage(bool InBool) { bIsPlayingRootMotionMontage = InBool; }
 #pragma endregion
