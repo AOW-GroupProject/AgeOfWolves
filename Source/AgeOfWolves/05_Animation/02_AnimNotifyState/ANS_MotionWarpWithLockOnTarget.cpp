@@ -17,6 +17,31 @@ DEFINE_LOG_CATEGORY(LogANS_MotionWarpWithLockOnTarget)
 void UANS_MotionWarpWithLockOnTarget::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration)
 {
     Super::NotifyBegin(MeshComp, Animation, TotalDuration);
+
+    if (!MeshComp)
+    {
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - MeshComp가 유효하지 않음");
+        return;
+    }
+
+    auto Character = Cast<APlayerCharacter>(MeshComp->GetOwner());
+    if (!Character)
+    {
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - Character 캐스팅 실패. Owner: {0}",
+            *GetNameSafe(MeshComp->GetOwner()));
+        return;
+    }
+
+    auto LockOnComp = Character->GetLockOnComponent();
+    if (!LockOnComp || !LockOnComp->GetbLockOn())
+    {
+        if (auto MotionWarpingComp = Character->GetMotionWarpingComponent())
+        {
+            MotionWarpingComp->RemoveWarpTarget(FName("LockOnTarget"));
+        }
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - LockOn 상태가 아님. WarpTarget 제거");
+        return;
+    }
 }
 
 void UANS_MotionWarpWithLockOnTarget::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime)
@@ -38,15 +63,13 @@ void UANS_MotionWarpWithLockOnTarget::NotifyTick(USkeletalMeshComponent* MeshCom
     }
 
     auto LockOnComp = Character->GetLockOnComponent();
-    if (!LockOnComp)
+    if (!LockOnComp || !LockOnComp->GetbLockOn())
     {
-        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - LockOnComponent가 없음");
-        return;
-    }
-
-    if (!LockOnComp->GetbLockOn())
-    {
-        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - LockOn 상태가 아님");
+        if (auto MotionWarpingComp = Character->GetMotionWarpingComponent())
+        {
+            MotionWarpingComp->RemoveWarpTarget(FName("LockOnTarget"));
+        }
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - LockOn 상태가 아님. WarpTarget 제거");
         return;
     }
 

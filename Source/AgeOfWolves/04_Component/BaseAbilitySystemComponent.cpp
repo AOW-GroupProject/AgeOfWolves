@@ -198,25 +198,30 @@ void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Inp
 
 		for (const auto& Mapping : AllowedChainMappings)
 		{
-			UE_LOGFMT(LogASC, Log, "체인 매핑 체크 중 - 허용된 다음 어빌리티: {0}",
-				*Mapping.AbilityTag.ToString());
-
 			if (!Mapping.Find(AbilityTag))
 			{
 				continue;
 			}
 
-			UE_LOGFMT(LogASC, Log, "체인 액션 매칭 성공 - 어빌리티: {0} | 이벤트 태그: {1}",
-				*AbilitySpec.Ability->GetName(),
-				*Mapping.EventTag.ToString());
+			// OriginAbilityTag에 해당하는 활성화된 어빌리티 찾기
+			for (const FGameplayAbilitySpec& OriginSpec : GetActivatableAbilities())
+			{
+				if (OriginSpec.Ability && OriginSpec.IsActive() &&
+					OriginSpec.Ability->AbilityTags.HasTag(OriginAbilityTag))
+				{
+					if (auto OriginInstance = OriginSpec.GetPrimaryInstance())
+					{
+						ChainActionActivated.BindUFunction(OriginInstance, "OnChainActionActivated");
+					}
+					break;
+				}
+			}
 
 			ChainActionEventTag = Mapping.EventTag;
 			bCanChainAction = true;
 
-			//@Immediate 모드일 때만 즉시 EndChainWindow 호출
 			if (CurrentChainMode == EChainActionMode::ImmediateActivation)
 			{
-				UE_LOGFMT(LogASC, Log, "즉시 실행 모드 - 체인 윈도우 종료");
 				EndChainWindow();
 			}
 			return;
@@ -391,167 +396,113 @@ bool UBaseAbilitySystemComponent::TriggerDamageEvent(const FGameplayTag& EventTa
 	return true;
 }
 
-void UBaseAbilitySystemComponent::StartChainWindow()
-{
-	StartChainWindowWithTag(FGameplayTag());
-}
-
-void UBaseAbilitySystemComponent::StartChainWindowWithTag(const FGameplayTag& InAbilityToBindTag)
+void UBaseAbilitySystemComponent::StartChainWindowWithTag(const FGameplayTag& InAbilityToBindTag, FGameplayTag InChainActionTag)
 {
 	UE_LOGFMT(LogASC, Log, "체인 윈도우 시작 시도");
 
-	if (InAbilityToBindTag.IsValid())
-	{
-		//@캐싱
-		OriginAbilityTag = InAbilityToBindTag;
-
-		const TArray<FGameplayAbilitySpec>& AbilitySpecs = GetActivatableAbilities();
-		const FGameplayAbilitySpec* TargetSpec = nullptr;
-
-		for (const FGameplayAbilitySpec& Spec : AbilitySpecs)
+	// 기존 어빌리티 찾기 로직은 유지
+	auto TargetSpec = [&]() -> const FGameplayAbilitySpec* {
+		for (const auto& Spec : GetActivatableAbilities())
 		{
-			if (!Spec.Ability || !Spec.Ability->AbilityTags.HasTag(InAbilityToBindTag))
+			if (Spec.Ability && Spec.Ability->AbilityTags.HasTag(InAbilityToBindTag))
 			{
-				continue;
+				return &Spec;
 			}
-
-			TargetSpec = &Spec;
-			break;
 		}
+		return nullptr;
+	}();
 
-		if (!TargetSpec || !TargetSpec->Ability)
-		{
-			UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 태그에 해당하는 어빌리티를 찾을 수 없음: {0}",
-				*InAbilityToBindTag.ToString());
-			EndChainWindow();
-			return;
-		}
-
-		auto BaseGA = Cast<UBaseGameplayAbility>(TargetSpec->Ability);
-		if (!BaseGA)
-		{
-			UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 찾은 어빌리티가 BaseGameplayAbility가 아님");
-			EndChainWindow();
-			return;
-		}
-
-		if (!BaseGA->bUseChainSystem)
-		{
-			UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 체인 시스템 미사용 어빌리티: {0}",
-				*BaseGA->GetName());
-			EndChainWindow();
-			return;
-		}
-
-		CurrentChainMode = BaseGA->GetChainActionMode();
-		ChainActionActivated.BindUFunction(BaseGA, "OnChainActionActivated");
-		bChainWindowActive = true;
-		AllowedChainMappings = BaseGA->GetChainActionMappings();
-		bCanChainAction = false;
-
-		UE_LOGFMT(LogASC, Log, "체인 윈도우 시작 성공 - 태그로 찾은 어빌리티: {0} | 체인 모드: {1}",
-			*BaseGA->GetName(),
-			CurrentChainMode == EChainActionMode::DelayedActivation ? TEXT("Delayed") : TEXT("Immediate"));
-		return;
-	}
-
-	auto BaseGA = Cast<UBaseGameplayAbility>(GetAnimatingAbility());
-	if (!BaseGA)
+	if (!TargetSpec || !TargetSpec->Ability)
 	{
-		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 현재 실행 중인 어빌리티가 없거나 BaseGameplayAbility가 아님");
+		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 태그에 해당하는 어빌리티를 찾을 수 없음: {0}",
+			*InAbilityToBindTag.ToString());
 		EndChainWindow();
 		return;
 	}
 
-	if (!BaseGA->bUseChainSystem)
+	auto BaseGA = Cast<UBaseGameplayAbility>(TargetSpec->Ability);
+	if (!BaseGA || !BaseGA->bUseChainSystem)
 	{
-		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 체인 시스템 미사용 어빌리티: {0}",
-			*BaseGA->GetName());
+		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패");
 		EndChainWindow();
 		return;
 	}
 
-	CurrentChainMode = BaseGA->GetChainActionMode();
-	ChainActionActivated.BindUFunction(BaseGA, "OnChainActionActivated");
+	// 체인 액션 매핑 정보 가져오기
+	auto ChainMapping = BaseGA->GetChainActionMapping(InChainActionTag);
+	if (!ChainMapping.AbilityTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "체인 윈도우 시작 실패 - 유효하지 않은 체인 액션 매핑");
+		EndChainWindow();
+		return;
+	}
+
+	//@체인 윈도우 설정
+	OriginAbilityTag = InAbilityToBindTag;
+	CurrentChainMode = ChainMapping.ChainActionMode;
+	ChainActionEventTag = ChainMapping.EventTag;
+	AllowedChainMappings = { ChainMapping };
+
 	bChainWindowActive = true;
-	AllowedChainMappings = BaseGA->GetChainActionMappings();
 	bCanChainAction = false;
 
-	UE_LOGFMT(LogASC, Log, "체인 윈도우 시작 성공 - 애니메이팅 어빌리티: {0} | 체인 모드: {1}",
+	UE_LOGFMT(LogASC, Log, "체인 윈도우 시작 성공 - 어빌리티: {0} | 체인 모드: {1}",
 		*BaseGA->GetName(),
 		CurrentChainMode == EChainActionMode::DelayedActivation ? TEXT("Delayed") : TEXT("Immediate"));
 }
 
 void UBaseAbilitySystemComponent::EndChainWindow()
 {
-	if (!bChainWindowActive)
+	if (!bChainWindowActive || !bCanChainAction || !ChainActionEventTag.IsValid())
 	{
-		UE_LOGFMT(LogASC, Log, "체인 윈도우가 활성화되지 않은 상태에서 종료 시도");
+		//@초기화
+		ChainActionActivated.Clear();
+		bChainWindowActive = false;
+		bCanChainAction = false;
+		AllowedChainMappings.Empty();
+		ChainActionEventTag = FGameplayTag();
+		CurrentChainMode = EChainActionMode::DelayedActivation;
+
+		UE_LOGFMT(LogASC, Log, "체인 윈도우 종료 - 조건 불충족");
 		return;
 	}
 
 	UE_LOGFMT(LogASC, Log, "체인 윈도우 종료 시작");
 
-	//@체인 액션 실행
-	if (bCanChainAction && ChainActionEventTag.IsValid())
+	// 원본 어빌리티 찾기
+	UGameplayAbility* OriginGA = nullptr;
+	if (OriginAbilityTag.IsValid())
 	{
-		//@Chain Action Mode : Immediate, 즉발
+		for (const FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+		{
+			if (Spec.Ability && Spec.IsActive() && Spec.Ability->AbilityTags.HasTag(OriginAbilityTag))
+			{
+				OriginGA = Spec.Ability;
+				break;
+			}
+		}
+	}
+
+	if (!OriginGA)
+	{
+		UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 원본 어빌리티를 찾을 수 없음");
+	}
+	else
+	{
 		if (CurrentChainMode == EChainActionMode::ImmediateActivation)
 		{
-			//@원본 어빌리티 취소
-			if (OriginAbilityTag.IsValid())
-			{
-				TArray<FGameplayAbilitySpec> MatchingSpecs = GetActivatableAbilities();
+			// 원본 어빌리티 취소
+			CancelAbility(OriginGA);
+			UE_LOGFMT(LogASC, Log, "즉시 실행 모드 - 원본 어빌리티 취소 및 이벤트 전송: {0}", *ChainActionEventTag.ToString());
 
-				for (const FGameplayAbilitySpec& Spec : MatchingSpecs)
-				{
-					if (Spec.Ability && Spec.IsActive() && Spec.Ability->AbilityTags.HasTag(OriginAbilityTag))
-					{
-						UE_LOGFMT(LogASC, Log, "원본 어빌리티 취소 - {0}", *Spec.Ability->GetName());
-						CancelAbility(Spec.Ability);
-						break;
-					}
-				}
-			}
-
-			UE_LOGFMT(LogASC, Log, "즉시 실행 모드 - GameplayEvent 직접 전송: {0}", *ChainActionEventTag.ToString());
-
-			//@이벤트 호출 -> 패시브 유형 체인 액션 어빌리티 호출
+			// 이벤트 호출
 			FGameplayEventData Payload;
 			HandleGameplayEvent(ChainActionEventTag, &Payload);
 		}
-		//@Chain Action Mode : Delayed, 지연
 		else
 		{
-			if (!ChainActionActivated.IsBound())
-			{
-				UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 바인딩된 함수 없음");
-			}
-			else
-			{
-				auto GA = Cast<UGameplayAbility>(ChainActionActivated.GetUObject());
-				if (!GA)
-				{
-					UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 유효하지 않은 GameplayAbility");
-				}
-				else if (!GA->IsActive())
-				{
-					UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 비활성화된 {0}", *GA->GetName());
-				}
-				else if (!GA->GetCurrentActorInfo())
-				{
-					UE_LOGFMT(LogASC, Warning, "체인 액션 실행 실패 - 유효하지 않은 ActorInfo");
-				}
-				else
-				{
-					UE_LOGFMT(LogASC, Log, "체인 액션 실행 - 이벤트 태그: {0} | 체인 모드: {1}",
-						*ChainActionEventTag.ToString(),
-						TEXT("Delayed"));
-
-					//@체인 액션 활성화 이벤트
-					ChainActionActivated.ExecuteIfBound(ChainActionEventTag);
-				}
-			}
+			UE_LOGFMT(LogASC, Log, "지연 실행 모드 - 체인 액션 이벤트 전달: {0}", *ChainActionEventTag.ToString());
+			ChainActionActivated.ExecuteIfBound(ChainActionEventTag);
 		}
 	}
 

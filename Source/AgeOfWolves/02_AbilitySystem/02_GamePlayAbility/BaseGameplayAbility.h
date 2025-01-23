@@ -71,6 +71,11 @@ enum class EChainActionMode : uint8
 
 //@구조체
 #pragma region Structs
+/*
+*	@FDamageInformation
+* 
+*	데미지 정보를 담은 구조체
+*/
 USTRUCT(BlueprintType)
 struct FDamageInformation : public FGameplayEventData
 {
@@ -96,9 +101,15 @@ struct FChainActionMapping
 	GENERATED_BODY()
 
 public:
+	//@체인 액션 실행 모드
+	UPROPERTY(EditDefaultsOnly)
+		EChainActionMode ChainActionMode;
+
+	//@체인 시스템 활성화 중 활성화 요건이 될 어빌리티 태그
 	UPROPERTY(EditDefaultsOnly)
 		FGameplayTag AbilityTag;
 
+	//@체인 액션 성공 시 호출할 이벤트 태그
 	UPROPERTY(EditDefaultsOnly)
 		FGameplayTag EventTag;
 
@@ -211,10 +222,6 @@ protected:
 	//@Chain Action 실행으로인한 취소 여부
 	bool bIsCanceledByChainAction;
 
-	//@체인 액션 실행 모드
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
-		EChainActionMode ChainActionMode;
-
 	//@체인 액션 가능한 어빌리티 태그와 이에 대응되는 이벤트 태그 목록
 	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
 		TArray<FChainActionMapping> ChainActionMappings;
@@ -298,10 +305,23 @@ public:
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
-		FORCEINLINE EChainActionMode GetChainActionMode() const { return ChainActionMode; }
+		EChainActionMode GetChainActionMode(const FGameplayTag& AbilityTag) const
+	{
+		for (const auto& Mapping : ChainActionMappings)
+		{
+			if (Mapping.AbilityTag == AbilityTag)
+			{
+				return Mapping.ChainActionMode;
+			}
+		}
+		return EChainActionMode::DelayedActivation;
+	}
 
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
 		TArray<FChainActionMapping> GetChainActionMappings() const;
+
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
+		FChainActionMapping GetChainActionMapping(const FGameplayTag& AbilityTag) const;
 #pragma endregion
 
 };

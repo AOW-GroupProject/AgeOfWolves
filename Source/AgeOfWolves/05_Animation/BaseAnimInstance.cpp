@@ -338,19 +338,9 @@ void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
 void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
 {
     const ECombatType OldCombatType = CombatType;
-
-    if (NewValue == 0.f)
-    {
-        CombatType = ECombatType::NonCombat;
-    }
-    else if (NewValue == 1.f)
-    {
-        CombatType = ECombatType::NormalCombat;
-    }
-    else if (NewValue == 2.f)
-    {
-        CombatType = ECombatType::BattoujutsuCombat;
-    }
+    // float 값을 ECombatType으로 안전하게 변환
+    CombatType = static_cast<ECombatType>(FMath::RoundToInt(FMath::Clamp(NewValue, 0.f,
+        static_cast<float>(ECombatType::MAX) - 1)));
 
     UE_LOGFMT(LogAnimInstance, Log, "전투 상태 변경: {0} -> {1} (값: {2})",
         static_cast<uint8>(OldCombatType),
@@ -367,36 +357,20 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
     if (!WeaponMesh || !ShealthMesh || !FullMesh) return;
 
     const float VisibilityDelay = 0.5f;
+    const bool bIsInCombat = NewValue > 0.f;
 
     FTimerHandle TimerHandle;
-    if (NewValue > 0.f)
-    {
-        GetWorld()->GetTimerManager().SetTimer(
-            TimerHandle,
-            [=]()
-            {
-                WeaponMesh->SetVisibility(true);
-                ShealthMesh->SetVisibility(true);
-                FullMesh->SetVisibility(false);
-            },
-            VisibilityDelay,
-                false
-                );
-    }
-    else
-    {
-        GetWorld()->GetTimerManager().SetTimer(
-            TimerHandle,
-            [=]()
-            {
-                WeaponMesh->SetVisibility(false);
-                ShealthMesh->SetVisibility(false);
-                FullMesh->SetVisibility(true);
-            },
-            VisibilityDelay + 1.f,
-                false
-                );
-    }
+    GetWorld()->GetTimerManager().SetTimer(
+        TimerHandle,
+        [=]()
+        {
+            WeaponMesh->SetVisibility(bIsInCombat);
+            ShealthMesh->SetVisibility(bIsInCombat);
+            FullMesh->SetVisibility(!bIsInCombat);
+        },
+        bIsInCombat ? VisibilityDelay : VisibilityDelay + 1.f,
+            false
+            );
 }
 #pragma endregion
 

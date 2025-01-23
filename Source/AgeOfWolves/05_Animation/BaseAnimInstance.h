@@ -77,7 +77,8 @@ enum class ECombatType : uint8
 	NonCombat = 0		UMETA(DisplayName = "NonCombat"),
 	NormalCombat		UMETA(DisplayName = "NormalCombat"),
 	BattoujutsuCombat	UMETA(DisplayName = "BattoujutsuCombat"),
-	MAX			UMETA(DisplayName = "MAX"),
+	GuardCombat			UMETA(DisplayName = "Guard Combat"),
+	MAX					UMETA(DisplayName = "MAX"),
 };
 #pragma endregion
 
@@ -254,6 +255,19 @@ protected:
 	//@Combat State 속성 수치 변화 이벤트 관찰자
 	UPROPERTY()
 		TObjectPtr<UAsyncTaskAttributeChanged> CombatStateAttributeListenerRef;
+
+protected:
+	float CombatTypeToFloat(ECombatType Type)
+	{
+		return static_cast<float>(Type);
+	}
+
+	ECombatType FloatToCombatType(float Value)
+	{
+		// 반올림하여 가장 가까운 정수값으로 변환
+		int32 IntValue = FMath::RoundToInt(Value);
+		return static_cast<ECombatType>(FMath::Clamp(IntValue, 0, static_cast<int32>(ECombatType::MAX) - 1));
+	}
 
 public:
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))

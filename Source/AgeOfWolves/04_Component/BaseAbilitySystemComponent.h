@@ -97,12 +97,9 @@ protected:
 	bool TriggerDamageEvent(const FGameplayTag& EventTag, const FGameplayEventData* Payload);
 
 protected:
-	//@Chain System 활성화
+	//@Chain System 시작
 	UFUNCTION(BlueprintCallable, Category = "Chain System")
-		void StartChainWindow();
-
-	UFUNCTION(BlueprintCallable, Category = "Chain System")
-		void StartChainWindowWithTag(const FGameplayTag& InAbilityToBindTag);
+		void StartChainWindowWithTag(const FGameplayTag& InAbilityToBindTag, FGameplayTag InChainActionTag);
 
 	//@Chain Sytsem 종료
 	UFUNCTION(BlueprintCallable, Category = "Chain System")

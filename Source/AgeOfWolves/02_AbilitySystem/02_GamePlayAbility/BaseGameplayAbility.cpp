@@ -29,9 +29,6 @@ UBaseGameplayAbility::UBaseGameplayAbility(const FObjectInitializer& ObjectIniti
     //@체인 시스템
     bUseChainSystem = false;
     bIsCanceledByChainAction = false;
-
-    //@Play Montage 캐싱
-    //CurrentMontageTaskRef = nullptr;
 }
 
 void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
@@ -378,6 +375,7 @@ void UBaseGameplayAbility::OnMontageBlendOut_Implementation()
 
     //@일반 중단인 경우 어빌리티 종료
     UE_LOGFMT(LogGA, Log, "일반 중단으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
 }
 
@@ -399,6 +397,7 @@ void UBaseGameplayAbility::OnMontageInterrupted_Implementation()
 
     //@일반 중단인 경우 어빌리티 종료
     UE_LOGFMT(LogGA, Log, "일반 중단으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
 }
 
@@ -416,6 +415,7 @@ void UBaseGameplayAbility::OnMontageCancelled_Implementation()
 
     //@일반 중단인 경우 어빌리티 종료
     UE_LOGFMT(LogGA, Log, "일반 중단으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
 }
 #pragma endregion
@@ -435,5 +435,17 @@ FGameplayTag UBaseGameplayAbility::GetAbilityTag() const
 TArray<FChainActionMapping> UBaseGameplayAbility::GetChainActionMappings() const
 {
     return ChainActionMappings;
+}
+
+FChainActionMapping UBaseGameplayAbility::GetChainActionMapping(const FGameplayTag& AbilityTag) const
+{
+    for (const auto& Mapping : ChainActionMappings)
+    {
+        if (Mapping.AbilityTag == AbilityTag)
+        {
+            return Mapping;
+        }
+    }
+    return FChainActionMapping();
 }
 #pragma endregion
