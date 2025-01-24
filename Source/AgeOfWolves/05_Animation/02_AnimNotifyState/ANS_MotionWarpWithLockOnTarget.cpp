@@ -10,10 +10,6 @@ DEFINE_LOG_CATEGORY(LogANS_MotionWarpWithLockOnTarget)
 
 //@Defualt Setting
 #pragma region Default Setting
-#pragma endregion
-
-//@Property/Info...etc
-#pragma region Property or Subwidgets or Infos...etc
 void UANS_MotionWarpWithLockOnTarget::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration)
 {
     Super::NotifyBegin(MeshComp, Animation, TotalDuration);
@@ -104,6 +100,11 @@ void UANS_MotionWarpWithLockOnTarget::NotifyEnd(USkeletalMeshComponent* MeshComp
 {
     Super::NotifyEnd(MeshComp, Animation);
 }
+#pragma endregion
+
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+
 #pragma endregion
 
 //@Callbacks

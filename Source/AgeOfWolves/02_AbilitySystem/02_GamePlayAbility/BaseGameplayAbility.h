@@ -66,7 +66,6 @@ enum class EChainActionMode : uint8
 	//@입력이 들어오면 즉시 체인 액션 실행
 	ImmediateActivation UMETA(DisplayName = "Immediate Activation")
 };
-
 #pragma endregion
 
 //@구조체
@@ -134,7 +133,7 @@ UCLASS()
 class AGEOFWOLVES_API UBaseGameplayAbility : public UGameplayAbility
 {
 
-	//@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 	friend class UBaseAbilitySystemComponent;
 	friend class UPlayerAbilitySystemComponent;
@@ -143,7 +142,7 @@ class AGEOFWOLVES_API UBaseGameplayAbility : public UGameplayAbility
 
 	GENERATED_BODY()
 
-		//@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UBaseGameplayAbility(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
@@ -200,9 +199,11 @@ protected:
 		EAbilityActivationPolicy ActivationPolicy;
 
 protected:
+	//@애님 몽타주 목록
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | 애니메이션")
 		TArray<UAnimMontage*> AnimMontages;
 
+	//@애님 몽타주 재생 속도
 	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | 애니메이션", meta = (EditCondition = "AnimMontages.Num() > 0"))
 		float MontagePlayRate;
 

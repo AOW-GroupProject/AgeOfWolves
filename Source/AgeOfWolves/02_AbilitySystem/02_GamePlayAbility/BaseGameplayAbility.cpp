@@ -356,16 +356,20 @@ void UBaseGameplayAbility::OnChainActionActivated_Implementation(FGameplayTag Ch
 
 void UBaseGameplayAbility::OnMontageCompleted_Implementation()
 {
-    UE_LOGFMT(LogGA, Log, "{0} Montage Completed", *GetName());
+    UE_LOGFMT(LogGA, Log, "{0} 몽타주 재생 완료", *GetName());
 
-    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+    if (ActivationPolicy != EAbilityActivationPolicy::WhileInputActive)
+    {
+        UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
+    }
 }
 
 void UBaseGameplayAbility::OnMontageBlendOut_Implementation()
 {
-    UE_LOGFMT(LogGA, Log, "{0} Montage BlendOut", *GetName());
+    UE_LOGFMT(LogGA, Log, "{0} 몽타주 블렌드 아웃", *GetName());
 
-    //@체인 액션에 의한 중단이면 플래그만 리셋하고 종료
+    //@체인 액션에 의한 중단 처리
     if (bIsCanceledByChainAction)
     {
         UE_LOGFMT(LogGA, Log, "체인 액션으로 인한 중단 - 어빌리티 유지: {0}", *GetName());
@@ -373,21 +377,25 @@ void UBaseGameplayAbility::OnMontageBlendOut_Implementation()
         return;
     }
 
-    //@일반 중단인 경우 어빌리티 종료
-    UE_LOGFMT(LogGA, Log, "일반 중단으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
-
-    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
+    // OnInputTriggered 정책인 경우에만 어빌리티 종료
+    // WhileInputActive 정책은 입력이 유지되는 동안 계속 실행되어야 함
+    if (ActivationPolicy != EAbilityActivationPolicy::WhileInputActive)
+    {
+        UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
+    }
 }
 
 void UBaseGameplayAbility::OnMontageInterrupted_Implementation()
 {
+    // 이미 종료된 어빌리티 체크
     if (!IsActive())
     {
         UE_LOGFMT(LogGA, Log, "이미 종료된 어빌리티 - 추가 EndAbility 호출 방지: {0}", *GetName());
         return;
     }
 
-    //@체인 액션에 의한 중단이면 플래그만 리셋하고 종료
+    // 체인 액션에 의한 중단 처리
     if (bIsCanceledByChainAction)
     {
         UE_LOGFMT(LogGA, Log, "체인 액션으로 인한 중단 - 어빌리티 유지: {0}", *GetName());
@@ -395,17 +403,20 @@ void UBaseGameplayAbility::OnMontageInterrupted_Implementation()
         return;
     }
 
-    //@일반 중단인 경우 어빌리티 종료
-    UE_LOGFMT(LogGA, Log, "일반 중단으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
-
-    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
+    // OnInputTriggered 정책인 경우에만 어빌리티 종료
+    // WhileInputActive 정책은 입력이 유지되는 동안 계속 실행되어야 함
+    if (ActivationPolicy != EAbilityActivationPolicy::WhileInputActive)
+    {
+        UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
+    }
 }
 
 void UBaseGameplayAbility::OnMontageCancelled_Implementation()
 {
-    UE_LOGFMT(LogGA, Log, "{0} Montage Cancelled", *GetName());
+    UE_LOGFMT(LogGA, Log, "{0} 몽타주 취소됨", *GetName());
 
-    //@체인 액션에 의한 중단이면 플래그만 리셋하고 종료
+    // 체인 액션에 의한 중단 처리
     if (bIsCanceledByChainAction)
     {
         UE_LOGFMT(LogGA, Log, "체인 액션으로 인한 중단 - 어빌리티 유지: {0}", *GetName());
@@ -413,10 +424,13 @@ void UBaseGameplayAbility::OnMontageCancelled_Implementation()
         return;
     }
 
-    //@일반 중단인 경우 어빌리티 종료
-    UE_LOGFMT(LogGA, Log, "일반 중단으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
-
-    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
+    // OnInputTriggered 정책인 경우에만 어빌리티 종료
+    // WhileInputActive 정책은 입력이 유지되는 동안 계속 실행되어야 함
+    if (ActivationPolicy != EAbilityActivationPolicy::WhileInputActive)
+    {
+        UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
+    }
 }
 #pragma endregion
 
