@@ -43,14 +43,18 @@ void UANS_AllowChainAction::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimS
 
     if (auto AbilityTag = AnimatingGA->GetAbilityTag(); AbilityTag.IsValid())
     {
-        if (!AbilityTagToChain.IsValid())
+        if (!TagToChain.IsValid())
         {
             UE_LOGFMT(LogANS_AllowChainAction, Warning, "체인 윈도우 시작 실패 - 체인 액션 태그가 설정되지 않음");
             return;
         }
 
         BaseASCRef = BaseASC;
-        BaseASCRef->StartChainWindowWithTag(AbilityTag, AbilityTagToChain);
+        BaseASCRef->StartChainWindowWithTag(AbilityTag, TagToChain);
+
+        UE_LOGFMT(LogANS_AllowChainAction, Log, "체인 윈도우 시작 성공 - 어빌리티: {0} | 체인 액션 태그: {1}",
+            *AnimatingGA->GetName(),
+            *TagToChain.ToString());
     }
     else
     {

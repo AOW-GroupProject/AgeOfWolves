@@ -28,6 +28,8 @@ class UANS_AllowChainAction;
 DECLARE_MULTICAST_DELEGATE_OneParam(FAbilitySpecGiven, FGameplayAbilitySpec)
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionActivated, FGameplayTag, ChainActionAbilityTag);
+
+DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionFinished, FGameplayTag, ChainActionAbilityTag);
 #pragma endregion
 
 /**	
@@ -99,7 +101,7 @@ protected:
 protected:
 	//@Chain System 시작
 	UFUNCTION(BlueprintCallable, Category = "Chain System")
-		void StartChainWindowWithTag(const FGameplayTag& InAbilityToBindTag, FGameplayTag InChainActionTag);
+		void StartChainWindowWithTag(const FGameplayTag& InAbilityToBindTag, FGameplayTag InTagToChain);
 
 	//@Chain Sytsem 종료
 	UFUNCTION(BlueprintCallable, Category = "Chain System")
@@ -129,6 +131,8 @@ protected:
 	EChainActionMode CurrentChainMode;
 	//@허용 받은 체인 액션들
 	TArray<FChainActionMapping> AllowedChainMappings;
+	//@허용 받은 체인 이벤트들
+	TArray<FChainEventMapping> AllowedChainEventMappings;
 	//@다음 실행할 체인 액션의 이벤트 태그
 	FGameplayTag ChainActionEventTag;
 #pragma endregion
@@ -142,6 +146,9 @@ public:
 public:
 	//@체인 액션 활성화 이벤트
 	FChainActionActivated ChainActionActivated;
+
+	//@체인 액션 종료 이벤트
+	FChainActionFinished ChainActionFinished;
 #pragma endregion
 
 //@Callbacks

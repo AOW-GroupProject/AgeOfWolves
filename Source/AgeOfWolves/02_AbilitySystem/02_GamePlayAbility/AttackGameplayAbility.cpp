@@ -311,6 +311,14 @@ void UAttackGameplayAbility::PerformLineTrace(const FVector& Start, const FVecto
 
 //@Callbacks
 #pragma region Callbacks
+void UAttackGameplayAbility::OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag)
+{
+    Super::OnChainActionActivated_Implementation(ChainActionEventTag);
+
+    UE_LOGFMT(LogAttackGA, Log, "AttackGA OnChainActionActivated Called - Ability: {0} | Event Tag: {1}",
+        *GetName(),
+        *ChainActionEventTag.ToString());
+}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

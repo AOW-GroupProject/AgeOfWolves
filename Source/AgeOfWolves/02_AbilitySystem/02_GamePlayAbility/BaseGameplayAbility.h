@@ -66,6 +66,19 @@ enum class EChainActionMode : uint8
 	//@입력이 들어오면 즉시 체인 액션 실행
 	ImmediateActivation UMETA(DisplayName = "Immediate Activation")
 };
+
+/*
+*	@EChainSystemType
+*
+*	체인 시스템의 유형을 정의합니다.
+*/
+UENUM(BlueprintType)
+enum class EChainSystemType : uint8
+{
+	Active      UMETA(DisplayName = "Active Chain"),    // 입력을 통한 능동적 체인
+	Passive     UMETA(DisplayName = "Passive Chain"),   // 특정 조건 만족 시 자동 체인
+	MAX         UMETA(DisplayName = "MAX")
+};
 #pragma endregion
 
 //@구조체
@@ -116,6 +129,36 @@ public:
 	bool Find (const FGameplayTag& Tag) const
 	{
 		return Tag.MatchesTagExact(AbilityTag);
+	}
+};
+
+/*
+*	@FChainEventMapping
+*
+*	Chain Event 활성화를 위한 Event Tag 정보
+*/
+USTRUCT(BlueprintType)
+struct FChainEventMapping
+{
+	GENERATED_BODY()
+
+public:
+	//@체인 액션 실행 모드
+	UPROPERTY(EditDefaultsOnly)
+		EChainActionMode ChainActionMode;
+
+	//@체인 시스템 활성화 중 활성화 요건이 될 이벤트 태그
+	UPROPERTY(EditDefaultsOnly)
+		FGameplayTag RequiredEventTag;
+
+	//@체인 시스템 조건 만족 시 호출할 이벤트 태그
+	UPROPERTY(EditDefaultsOnly)
+		FGameplayTag EventTagToSend;
+
+public:
+	bool Find(const FGameplayTag& Tag) const
+	{
+		return Tag.MatchesTagExact(RequiredEventTag);
 	}
 };
 #pragma endregion
@@ -220,12 +263,20 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템")
 		bool bUseChainSystem;
 	
-	//@Chain Action 실행으로인한 취소 여부
-	bool bIsCanceledByChainAction;
+	//@체인 시스템 타입
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
+		EChainSystemType ChainSystemType;
 
 	//@체인 액션 가능한 어빌리티 태그와 이에 대응되는 이벤트 태그 목록
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true && ChainSystemType == EChainSystemType::Active"))
 		TArray<FChainActionMapping> ChainActionMappings;
+
+	//@체인 이벤트 매핑 목록
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true && ChainSystemType == EChainSystemType::Passive"))
+		TArray<FChainEventMapping> ChainEventMappings;
+
+	//@Chain Action 실행으로인한 취소 여부
+	bool bIsCanceledByChainAction;
 #pragma endregion
 
 	//@Delegates
@@ -239,19 +290,27 @@ public:
 		void OnChainActionActivated(FGameplayTag ChainActionEventTag);
 	virtual void OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag);
 
+	UFUNCTION(BlueprintNativeEvent, category = "체인 시스템")
+		void OnChainActionFinished(FGameplayTag ChainActionEventTag);
+	virtual void OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag);
+
 protected:
+	//@몽타주 재생 완료
 	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
 		void OnMontageCompleted();
 	virtual void OnMontageCompleted_Implementation();
 
+	//@몽타주 블렌드 아웃 시작 시 호출
 	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
 		void OnMontageBlendOut();
 	virtual void OnMontageBlendOut_Implementation();
 
+	//@다른 몽타주 재생에 의해 종료 됨
 	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
 		void OnMontageInterrupted();
 	virtual void OnMontageInterrupted_Implementation();
 
+	//@외부 요인으로 몽타주 재생 취소 됨
 	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
 		void OnMontageCancelled();
 	virtual void OnMontageCancelled_Implementation();
@@ -306,6 +365,9 @@ public:
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
+	EChainSystemType GetChainSystemType() const { return ChainSystemType;}
+
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
 		EChainActionMode GetChainActionMode(const FGameplayTag& AbilityTag) const
 	{
 		for (const auto& Mapping : ChainActionMappings)
@@ -323,6 +385,22 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
 		FChainActionMapping GetChainActionMapping(const FGameplayTag& AbilityTag) const;
+
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
+		TArray<FChainEventMapping> GetChainEventMappings() const { return ChainEventMappings; }
+
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
+		FChainEventMapping GetChainEventMapping(const FGameplayTag& EventTag) const
+	{
+		for (const auto& Mapping : ChainEventMappings)
+		{
+			if (Mapping.RequiredEventTag == EventTag)
+			{
+				return Mapping;
+			}
+		}
+		return FChainEventMapping();
+	}
 #pragma endregion
 
 };

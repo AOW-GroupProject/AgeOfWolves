@@ -55,7 +55,7 @@ protected:
 protected:
     //@체인 시스템 활성화 도중에 입력 받을 어빌리티 태그
     UPROPERTY(EditAnywhere, Category = "Chain Action")
-        FGameplayTag AbilityTagToChain;
+        FGameplayTag TagToChain;
 #pragma endregion
 
 //@Delegates

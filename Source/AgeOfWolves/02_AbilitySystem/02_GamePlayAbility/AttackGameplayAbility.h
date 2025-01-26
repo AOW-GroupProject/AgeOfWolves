@@ -140,6 +140,9 @@ protected:
 
 //@Callbacks
 #pragma region Callbacks
+protected:
+	//@오버라이드
+	virtual void OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag) override;
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

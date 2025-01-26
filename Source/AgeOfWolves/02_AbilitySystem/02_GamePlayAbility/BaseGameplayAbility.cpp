@@ -28,6 +28,9 @@ UBaseGameplayAbility::UBaseGameplayAbility(const FObjectInitializer& ObjectIniti
 
     //@체인 시스템
     bUseChainSystem = false;
+
+    ChainSystemType = EChainSystemType::MAX;
+
     bIsCanceledByChainAction = false;
 }
 
@@ -180,7 +183,7 @@ bool UBaseGameplayAbility::DoesAbilitySatisfyTagRequirements(const UAbilitySyste
             if (!AbilitySystemComponentTags.HasAll(AllRequiredTags))
             {
                 bMissing = true;
-                UE_LOGFMT(LogGA, Error, "{0} Required Tag 때문에 활성화 불가", GetName());
+                //UE_LOGFMT(LogGA, Error, "{0} Required Tag 때문에 활성화 불가", GetName());
 
             }
         }
@@ -339,46 +342,61 @@ UAbilityTask_PlayMontageAndWait* UBaseGameplayAbility::PlayMontageWithCallback(
 #pragma region Callbacks
 void UBaseGameplayAbility::OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag)
 {
-    for (const auto& Mapping : ChainActionMappings)
+    //@Chain System Type: Active, Passive
+    switch (ChainSystemType)
     {
-        if (Mapping.EventTag == ChainActionEventTag)
+    //@Active 유형
+    case EChainSystemType::Active:
+        for (const auto& Mapping : ChainActionMappings)
         {
-            UE_LOGFMT(LogGA, Log, "체인 액션 매칭 성공 - 어빌리티: {0} | 매칭된 태그: {1}",
-                *GetName(),
-                *ChainActionEventTag.ToString());
+            if (Mapping.EventTag == ChainActionEventTag)
+            {
+                UE_LOGFMT(LogGA, Log, "Active 체인 액션 매칭 성공 - 어빌리티: {0} | 매칭된 태그: {1}",
+                    *GetName(),
+                    *ChainActionEventTag.ToString());
 
-            //@체인 액션으로 인한 중단임을 표시
-            bIsCanceledByChainAction = true;
-            break;
+                bIsCanceledByChainAction = true;
+                break;
+            }
         }
+        break;
+    //@Passive 유형
+    case EChainSystemType::Passive:
+        for (const auto& Mapping : ChainEventMappings)
+        {
+            if (Mapping.EventTagToSend == ChainActionEventTag)
+            {
+                UE_LOGFMT(LogGA, Log, "Passive 체인 이벤트 매칭 성공 - 어빌리티: {0} | 매칭된 태그: {1}",
+                    *GetName(),
+                    *ChainActionEventTag.ToString());
+
+                bIsCanceledByChainAction = true;
+                break;
+            }
+        }
+        break;
+
+    default:
+        UE_LOGFMT(LogGA, Warning, "알 수 없는 체인 시스템 타입 - 어빌리티: {0}", *GetName());
+        break;
     }
+}
+
+void UBaseGameplayAbility::OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag)
+{
+
 }
 
 void UBaseGameplayAbility::OnMontageCompleted_Implementation()
 {
     UE_LOGFMT(LogGA, Log, "{0} 몽타주 재생 완료", *GetName());
-
-    if (ActivationPolicy != EAbilityActivationPolicy::WhileInputActive)
-    {
-        UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
-    }
 }
 
 void UBaseGameplayAbility::OnMontageBlendOut_Implementation()
 {
     UE_LOGFMT(LogGA, Log, "{0} 몽타주 블렌드 아웃", *GetName());
 
-    //@체인 액션에 의한 중단 처리
-    if (bIsCanceledByChainAction)
-    {
-        UE_LOGFMT(LogGA, Log, "체인 액션으로 인한 중단 - 어빌리티 유지: {0}", *GetName());
-        bIsCanceledByChainAction = false;
-        return;
-    }
-
-    // OnInputTriggered 정책인 경우에만 어빌리티 종료
-    // WhileInputActive 정책은 입력이 유지되는 동안 계속 실행되어야 함
+    //@OnInputTriggered, MAX(Passive) 정책 경우에만 어빌리티 종료
     if (ActivationPolicy != EAbilityActivationPolicy::WhileInputActive)
     {
         UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
@@ -388,6 +406,8 @@ void UBaseGameplayAbility::OnMontageBlendOut_Implementation()
 
 void UBaseGameplayAbility::OnMontageInterrupted_Implementation()
 {
+    UE_LOGFMT(LogGA, Log, "{0} 몽타주 인터럽트 발생!", *GetName());
+
     // 이미 종료된 어빌리티 체크
     if (!IsActive())
     {
@@ -403,8 +423,7 @@ void UBaseGameplayAbility::OnMontageInterrupted_Implementation()
         return;
     }
 
-    // OnInputTriggered 정책인 경우에만 어빌리티 종료
-    // WhileInputActive 정책은 입력이 유지되는 동안 계속 실행되어야 함
+    //@OnInputTriggered, MAX(Passive) 정책 경우에만 어빌리티 종료
     if (ActivationPolicy != EAbilityActivationPolicy::WhileInputActive)
     {
         UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
@@ -416,21 +435,8 @@ void UBaseGameplayAbility::OnMontageCancelled_Implementation()
 {
     UE_LOGFMT(LogGA, Log, "{0} 몽타주 취소됨", *GetName());
 
-    // 체인 액션에 의한 중단 처리
-    if (bIsCanceledByChainAction)
-    {
-        UE_LOGFMT(LogGA, Log, "체인 액션으로 인한 중단 - 어빌리티 유지: {0}", *GetName());
-        bIsCanceledByChainAction = false;
-        return;
-    }
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
 
-    // OnInputTriggered 정책인 경우에만 어빌리티 종료
-    // WhileInputActive 정책은 입력이 유지되는 동안 계속 실행되어야 함
-    if (ActivationPolicy != EAbilityActivationPolicy::WhileInputActive)
-    {
-        UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
-    }
 }
 #pragma endregion
 
