@@ -535,6 +535,9 @@ void UBaseAbilitySystemComponent::EndChainWindow()
 	}
 	else
 	{
+		//@체인 액션 활성화 이벤트 호출
+		ChainActionActivated.ExecuteIfBound(ChainActionEventTag);
+
 		if (CurrentChainMode == EChainActionMode::ImmediateActivation)
 		{
 			UE_LOGFMT(LogASC, Log, "즉시 실행 모드 - 원본 이벤트 전송: {0}", *ChainActionEventTag.ToString());
@@ -543,9 +546,6 @@ void UBaseAbilitySystemComponent::EndChainWindow()
 			FGameplayEventData Payload;
 			HandleGameplayEvent(ChainActionEventTag, &Payload);
 		}
-
-		//@체인 액션 활성화 이벤트 호출
-		ChainActionActivated.ExecuteIfBound(ChainActionEventTag);
 	}
 
 	goto Cleanup;
