@@ -373,7 +373,7 @@ int32 UBaseAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, co
 
 					if (CurrentChainMode == EChainActionMode::ImmediateActivation)
 					{
-						EndChainWindow();
+						EndChainWindow(Payload);
 					}
 					return 0;
 				}
@@ -488,6 +488,11 @@ void UBaseAbilitySystemComponent::StartChainWindowWithTag(const FGameplayTag& In
 
 void UBaseAbilitySystemComponent::EndChainWindow()
 {
+	EndChainWindow(nullptr);
+}
+
+void UBaseAbilitySystemComponent::EndChainWindow(const FGameplayEventData* Payload)
+{
 	//@체인 윈도우 체크
 	if (!bChainWindowActive)
 	{
@@ -543,8 +548,7 @@ void UBaseAbilitySystemComponent::EndChainWindow()
 			UE_LOGFMT(LogASC, Log, "즉시 실행 모드 - 원본 이벤트 전송: {0}", *ChainActionEventTag.ToString());
 
 			//@이벤트 호출
-			FGameplayEventData Payload;
-			HandleGameplayEvent(ChainActionEventTag, &Payload);
+			HandleGameplayEvent(ChainActionEventTag, Payload);
 		}
 	}
 

@@ -107,6 +107,8 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "Chain System")
 		void EndChainWindow();
 
+	void EndChainWindow(const FGameplayEventData* Payload);
+
 protected:
 	UPROPERTY(EditAnywhere)
 		TObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;

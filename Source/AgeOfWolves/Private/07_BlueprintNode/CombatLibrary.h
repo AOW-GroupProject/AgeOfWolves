@@ -1,9 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
+#include "Engine/DataTable.h"
 
 #include "CombatLibrary.generated.h"
 
@@ -30,10 +29,79 @@ enum class EHitReactDirection : uint8
     Max     UMETA(DisplayName = "Max")
 };
 
+/*
+*   @EHitHeight
+* 
+*   공격 높이 결정
+*/
+UENUM(BlueprintType)
+enum class EHitHeight : uint8
+{
+    Upper    UMETA(DisplayName = "Upper"),
+    Middle   UMETA(DisplayName = "Middle"),
+    Lower    UMETA(DisplayName = "Lower"),
+    Max      UMETA(Hidden)
+};
+
+/*
+*   @EHitImpactLocation
+* 
+*   공격 받은 위치
+*/
+UENUM(BlueprintType)
+enum class EHitImpactLocation : uint8
+{
+    Center    UMETA(DisplayName = "Center"),
+    Front     UMETA(DisplayName = "Front"),
+    Back      UMETA(DisplayName = "Back"),
+    Left      UMETA(DisplayName = "Left"),
+    Right     UMETA(DisplayName = "Right"),
+    Max       UMETA(Hidden)
+};
 #pragma endregion
 
 //@구조체
 #pragma region Structs
+/*
+*   @FHitDirectionResult
+* 
+*   피격 방향 관련 정보를 담아놓은 구조체
+*/
+USTRUCT(BlueprintType)
+struct FHitDirectionResult
+{
+    GENERATED_BODY()
+
+        FHitDirectionResult()
+        : Direction(EHitReactDirection::Max)
+        , Height(EHitHeight::Max)
+        , ImpactLocation(EHitImpactLocation::Max)
+    {
+    }
+
+    UPROPERTY(BlueprintReadOnly, Category = "Hit Direction")
+        EHitReactDirection Direction;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Hit Direction")
+        EHitHeight Height;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Hit Direction")
+        EHitImpactLocation ImpactLocation;
+
+    // Getter 함수들
+    EHitReactDirection GetDirection() const { return Direction; }
+    EHitHeight GetHeight() const { return Height; }
+    EHitImpactLocation GetImpactLocation() const { return ImpactLocation; }
+
+    // 디버그 정보 출력을 위한 ToString 함수
+    FString ToString() const
+    {
+        return FString::Printf(TEXT("Direction: %d, Height: %d, ImpactLocation: %d"),
+            static_cast<uint8>(Direction),
+            static_cast<uint8>(Height),
+            static_cast<uint8>(ImpactLocation));
+    }
+};
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -61,6 +129,10 @@ public:
     //@피격 반응 방향을 계산합니다.
     UFUNCTION(BlueprintCallable, Category = "Combat | 피격 반응")
         static EHitReactDirection CalculateHitDirection(const FVector& ImpactLocation, const AActor* HitActor);
+
+    //@피격 반응 방향을 계산합니다.
+    UFUNCTION(BlueprintCallable, Category = "Combat | 피격 반응")
+        static FHitDirectionResult  CalculateHitDirectionWithHitResult(const AActor* Instigator, const FHitResult& HitResult);
 #pragma endregion
 
 //@Property/Info...etc
