@@ -341,6 +341,9 @@ public:
 
 public:
 	FORCEINLINE TSubclassOf<UGameplayEffect> GetApplyGameplayEffectClass() { return ApplyGameplayEffectClass; }
+	FORCEINLINE TSubclassOf<UGameplayEffect> GetApplySubGameplayEffectClass() { return ApplySubGameplayEffectClass; }
+
+public:
 	FORCEINLINE FGameplayTagContainer GetRequiredTags() const { return ActivationRequiredTags; }
 
 public:

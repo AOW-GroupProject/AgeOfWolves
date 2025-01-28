@@ -46,6 +46,7 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
     Payload.Instigator = SourceActor;
     Payload.Target = HitActor;
     Payload.OptionalObject = GetApplyGameplayEffectClass().GetDefaultObject();
+    Payload.OptionalObject2 = GetApplySubGameplayEffectClass().GetDefaultObject();
 
     //@Context Handle
     FGameplayEffectContextHandle EffectContext = SourceASC->MakeEffectContext();
