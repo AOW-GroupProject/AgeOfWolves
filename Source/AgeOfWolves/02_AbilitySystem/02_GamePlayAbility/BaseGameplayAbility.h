@@ -258,6 +258,13 @@ protected:
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | Gameplay Effect")
 		FActiveGameplayEffectHandle ActiveApplyGameplayEffectHandle;
 
+	//@해당 Gameplay Ability의 활성화 과정에서 Target(GA의 적용 대상)에게 전달하는 Sub Gameplay Effect입니다.
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | Gameplay Effect")
+		TSubclassOf<UGameplayEffect> ApplySubGameplayEffectClass;
+
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | Gameplay Effect")
+		FActiveGameplayEffectHandle ApplySubGameplayEffectHandle;
+
 protected:
 	//@체인 시스템 활용 여부
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템")
