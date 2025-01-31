@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "Kismet/BlueprintFunctionLibrary.h"
 #include "Engine/DataTable.h"
+#include "AbilitySystemComponent.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 #include "CombatLibrary.generated.h"
 
@@ -16,7 +18,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCombatLibrary, Log, All);
 #pragma region Enums
 /*
 *   @EHitReactDirection
-* 
+*
 *   피격 반응 방향
 */
 UENUM(BlueprintType)
@@ -31,7 +33,7 @@ enum class EHitReactDirection : uint8
 
 /*
 *   @EHitHeight
-* 
+*
 *   공격 높이 결정
 */
 UENUM(BlueprintType)
@@ -45,7 +47,7 @@ enum class EHitHeight : uint8
 
 /*
 *   @EHitImpactLocation
-* 
+*
 *   공격 받은 위치
 */
 UENUM(BlueprintType)
@@ -64,7 +66,7 @@ enum class EHitImpactLocation : uint8
 #pragma region Structs
 /*
 *   @FHitDirectionResult
-* 
+*
 *   피격 방향 관련 정보를 담아놓은 구조체
 */
 USTRUCT(BlueprintType)
@@ -110,20 +112,15 @@ struct FHitDirectionResult
 
 /**
  *	@UCombatLibrary
- * 
+ *
  *	전투 시스템에서 활용 가능한 블루프린트 노드를 정의합니다.
  */
 UCLASS()
 class UCombatLibrary : public UBlueprintFunctionLibrary
 {
+    GENERATED_BODY()
 
-//@친추 클래스
-#pragma region Friend Class
-#pragma endregion
-
-	GENERATED_BODY()
-
-//@Defualt Setting
+ //@Defualt Setting
 #pragma region Default Setting
 public:
     //@피격 반응 방향을 계산합니다.
@@ -132,10 +129,31 @@ public:
 
     //@피격 반응 방향을 계산합니다.
     UFUNCTION(BlueprintCallable, Category = "Combat | 피격 반응")
-        static FHitDirectionResult  CalculateHitDirectionWithHitResult(const AActor* Instigator, const FHitResult& HitResult);
+        static FHitDirectionResult CalculateHitDirectionWithHitResult(const AActor* Instigator, const FHitResult& HitResult);
+
+    /**
+     * 대상 액터에게 GameplayEvent를 전송합니다.
+     * @param EventTag - 전송할 이벤트의 태그
+     * @param TargetActor - 이벤트를 받을 대상 액터
+     * @param InstigatorActor - 이벤트를 발생시킨 액터
+     * @param HitResult - 히트 결과 (옵션)
+     * @param Magnitude - 이벤트의 크기값 (옵션)
+     * @param OptionalObject - 추가 전달할 오브젝트 (옵션)
+     * @param OptionalObject2 - 추가 전달할 오브젝트2 (옵션)
+     * @return bool - 이벤트 전송 성공 여부
+     */
+    UFUNCTION(BlueprintCallable, Category = "Combat | Gameplay Event", Meta = (GameplayTagFilter = "EventTag"))
+        static bool SendGameplayEventToTarget(
+            FGameplayTag EventTag,
+            AActor* TargetActor,
+            AActor* InstigatorActor,
+            const FHitResult& HitResult = FHitResult(),
+            float Magnitude = 0.0f,
+            UObject* OptionalObject = nullptr,
+            UObject* OptionalObject2 = nullptr);
 #pragma endregion
 
-//@Property/Info...etc
+    //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 #pragma endregion
 
@@ -150,5 +168,4 @@ public:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 #pragma endregion
-	
 };

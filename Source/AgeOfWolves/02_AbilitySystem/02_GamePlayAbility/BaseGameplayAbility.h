@@ -165,6 +165,7 @@ public:
 
 //@이벤트/델리게이트
 #pragma region Delegates
+DECLARE_DYNAMIC_MULTICAST_DELEGATE(FTimingNotifiedByAN);
 #pragma endregion
 
 /**
@@ -288,6 +289,8 @@ protected:
 
 	//@Delegates
 #pragma region Delegates
+public:
+	FTimingNotifiedByAN TimingNotifiedByAN;
 #pragma endregion
 
 //@Callbacks
@@ -321,6 +324,12 @@ protected:
 	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
 		void OnMontageCancelled();
 	virtual void OnMontageCancelled_Implementation();
+
+protected:
+	//@특정 타이밍 이벤트 호출을 구독하는 콜백
+	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
+		void OnTimingNotified();
+	virtual void OnTimingNotified_Implementation();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

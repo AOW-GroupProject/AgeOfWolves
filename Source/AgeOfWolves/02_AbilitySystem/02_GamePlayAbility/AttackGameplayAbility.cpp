@@ -7,6 +7,7 @@
 
 #include "Abilities/GameplayAbilityTypes.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "07_BlueprintNode/CombatLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogAttackGA)
 
@@ -31,41 +32,25 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
 
     //@Source Actor
     AActor* SourceActor = GetAvatarActorFromActorInfo();
-
-    //@Source ASC
-    UAbilitySystemComponent* SourceASC = GetAbilitySystemComponentFromActorInfo();
-    if (!SourceActor || !SourceASC)
+    if (!SourceActor)
     {
-        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEvent 실패 - 사유: Source Actor 또는 ASC가 유효하지 않음");
+        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEvent 실패 - 사유: Source Actor가 유효하지 않음");
         return;
     }
 
-    //@Event Data
-    FGameplayEventData Payload;
-    Payload.EventTag = FGameplayTag::RequestGameplayTag("EventTag.OnDamaged");
-    Payload.Instigator = SourceActor;
-    Payload.Target = HitActor;
-    Payload.OptionalObject = GetApplyGameplayEffectClass().GetDefaultObject();
-    Payload.OptionalObject2 = GetApplySubGameplayEffectClass().GetDefaultObject();
+    bool bSuccess = UCombatLibrary::SendGameplayEventToTarget(
+        FGameplayTag::RequestGameplayTag("EventTag.OnDamaged"),
+        HitActor,
+        SourceActor,
+        HitResult,
+        0.0f,
+        GetApplyGameplayEffectClass().GetDefaultObject(),
+        GetApplySubGameplayEffectClass().GetDefaultObject()
+    );
 
-    //@Context Handle
-    FGameplayEffectContextHandle EffectContext = SourceASC->MakeEffectContext();
-    EffectContext.AddHitResult(HitResult);
-    Payload.ContextHandle = EffectContext;
-
-    //@Target ASC
-    UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(HitActor);
-    if (!TargetASC)
+    if (!bSuccess)
     {
-        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEvent 실패 - Target: {0}, 사유: 타겟의 ASC가 유효하지 않음",
-            HitActor->GetName());
-        return;
-    }
-
-    //@Handle Gameplay Event
-    if (!TargetASC->HandleGameplayEvent(Payload.EventTag, &Payload))
-    {
-        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEvent 실패 - Target: {0}, 사유: HandleGameplayEvent 호출 실패",
+        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEvent 실패 - Target: {0}, 사유: 이벤트 전송 실패",
             HitActor->GetName());
         return;
     }

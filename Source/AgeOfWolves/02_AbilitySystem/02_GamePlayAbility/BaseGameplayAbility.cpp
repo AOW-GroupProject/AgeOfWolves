@@ -325,11 +325,14 @@ UAbilityTask_PlayMontageAndWait* UBaseGameplayAbility::PlayMontageWithCallback(
         return nullptr;
     }
 
-    // 콜백 바인딩
+    //@콜백 바인딩
     Task->OnCompleted.AddDynamic(this, &UBaseGameplayAbility::OnMontageCompleted);
     Task->OnBlendOut.AddDynamic(this, &UBaseGameplayAbility::OnMontageBlendOut);
     Task->OnInterrupted.AddDynamic(this, &UBaseGameplayAbility::OnMontageInterrupted);
     Task->OnCancelled.AddDynamic(this, &UBaseGameplayAbility::OnMontageCancelled);
+
+    //@타이밍 이벤트
+    TimingNotifiedByAN.AddDynamic(this, &UBaseGameplayAbility::OnTimingNotified);
 
     // 태스크 활성화
     Task->Activate();
@@ -437,6 +440,11 @@ void UBaseGameplayAbility::OnMontageCancelled_Implementation()
 
     EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
 
+}
+
+void UBaseGameplayAbility::OnTimingNotified_Implementation()
+{
+    UE_LOGFMT(LogGA, Log, "애님 노티파이 타이밍 감지 - 어빌리티: {0}", *GetName());
 }
 #pragma endregion
 

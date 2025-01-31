@@ -67,17 +67,24 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	{
 		SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
 		SpringArm->SetupAttachment(RootComponent);
-		SpringArm->TargetArmLength = 400.0f;
+
+		// 카메라 거리 조정 (세키로 스타일)
+		SpringArm->TargetArmLength = 350.0f;
 		SpringArm->bUsePawnControlRotation = true;
 
+		// 카메라 래그 설정
 		SpringArm->bEnableCameraLag = true;
 		SpringArm->bEnableCameraRotationLag = true;
-
 		SpringArm->CameraLagSpeed = 10.f;
 		SpringArm->CameraRotationLagSpeed = 8.f;
 		SpringArm->CameraLagMaxDistance = 100.f;
 
-		SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 10.f));
+		// 스프링암 위치와 회전 조정
+		SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 70.f));  // 높이 조정
+		SpringArm->SetRelativeRotation(FRotator(-15.f, 0.f, 0.f)); // 아래를 내려다보는 각도
+
+		// 소켓 오프셋 조정으로 카메라 위치 미세 조정
+		SpringArm->SocketOffset = FVector(0.f, 0.f, 0.f);
 
 		FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
 		FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);

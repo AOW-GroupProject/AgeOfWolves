@@ -1,6 +1,7 @@
 #pragma once
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
+
 #include "AN_ApplyGEDuringAnimPlaying.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogAN_ApplyGEDuringAnimPlaying, Log, All)

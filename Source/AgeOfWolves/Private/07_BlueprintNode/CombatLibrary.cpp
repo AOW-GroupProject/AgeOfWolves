@@ -209,3 +209,75 @@ FHitDirectionResult UCombatLibrary::CalculateHitDirectionWithHitResult(const AAc
 
     return Result;
 }
+
+bool UCombatLibrary::SendGameplayEventToTarget(
+    FGameplayTag EventTag, 
+    AActor* TargetActor,
+    AActor* InstigatorActor,
+    const FHitResult& HitResult,
+    float Magnitude,
+    UObject* OptionalObject,
+    UObject* OptionalObject2)
+{
+    //@Target
+    if (!IsValid(TargetActor))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "GameplayEvent 전송 실패 - 사유: TargetActor가 유효하지 않음");
+        return false;
+    }
+
+    //@Target ASC 가져오기
+    UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
+    if (!TargetASC)
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "GameplayEvent 전송 실패 - Target: {0}, 사유: 타겟의 ASC가 유효하지 않음",
+            *TargetActor->GetName());
+        return false;
+    }
+
+    //@Instigator ASC 가져오기 (Context 생성용)
+    UAbilitySystemComponent* InstigatorASC = nullptr;
+    if (IsValid(InstigatorActor))
+    {
+        InstigatorASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(InstigatorActor);
+    }
+
+    //@Context Handle 생성
+    FGameplayEffectContextHandle ContextHandle;
+    if (InstigatorASC)
+    {
+        ContextHandle = InstigatorASC->MakeEffectContext();
+    }
+    else
+    {
+        ContextHandle = TargetASC->MakeEffectContext();
+    }
+
+    //@HitResult 추가
+    ContextHandle.AddHitResult(HitResult);
+
+    //@Event Data 구성
+    FGameplayEventData Payload;
+    Payload.EventTag = EventTag;
+    Payload.Target = TargetActor;
+    Payload.Instigator = InstigatorActor;
+    Payload.OptionalObject = OptionalObject;
+    Payload.OptionalObject2 = OptionalObject2;
+    Payload.ContextHandle = ContextHandle;
+    Payload.EventMagnitude = Magnitude;
+
+    //@Event 전송
+    if (!TargetASC->HandleGameplayEvent(EventTag, &Payload))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "GameplayEvent 전송 실패 - Target: {0}, Event: {1}, 사유: HandleGameplayEvent 호출 실패",
+            *TargetActor->GetName(), *EventTag.ToString());
+        return false;
+    }
+
+    UE_LOGFMT(LogCombatLibrary, Log, "GameplayEvent 전송 완료 - Target: {0}, Event: {1}, Instigator: {2}",
+        *TargetActor->GetName(),
+        *EventTag.ToString(),
+        IsValid(InstigatorActor) ? *InstigatorActor->GetName() : TEXT("None"));
+
+    return true;
+}
