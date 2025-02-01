@@ -1,6 +1,4 @@
-﻿#pragma once
-
-#include "BaseAnimInstance.h"
+﻿#include "BaseAnimInstance.h"
 #include "Logging/StructuredLog.h"
 
 #include "01_Character/PlayerCharacter.h"
@@ -34,10 +32,6 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , bModifyBoneTransform(false)
     , BoneTransformLerpSpeed(10.0f)
     , CharacterMovementCompRef(nullptr)
-    , bIsSprintingCooldown(false)
-    , SprintingCooldownTime(0.0f)
-    , SprintingCooldownDuration(1.5f)
-    , CurrentCooldownTime(0.0f)
     , CombatType(ECombatType::NonCombat)
     , bIsPlayingRootMotionMontage(false)
     , bIsRootMotionCooldown(false)
@@ -91,7 +85,7 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
         return;
     }
 
-    // Root Motion Cooldown 처리
+    //@Root Motion Cooldown 처리
     if (bIsRootMotionCooldown)
     {
         CurrentRootMotionCooldownTime += DeltaSeconds;
@@ -101,22 +95,6 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
             LastMovementState = MovementState;
 
             UE_LOGFMT(LogAnimInstance, Log, "Root Motion Cooldown 종료 - LastState 업데이트: {0}",
-                *UEnum::GetValueAsString(LastMovementState));
-
-            UpdateMovementSettings();
-        }
-    }
-
-    //@Sprinting 쿨 다운 타이머
-    if (bIsSprintingCooldown)
-    {
-        CurrentCooldownTime += DeltaSeconds;
-        if (CurrentCooldownTime >= SprintingCooldownDuration)
-        {
-            bIsSprintingCooldown = false;
-            LastMovementState = MovementState;
-
-            UE_LOGFMT(LogAnimInstance, Log, "Sprint Stop 종료 - LastState 업데이트: {0}",
                 *UEnum::GetValueAsString(LastMovementState));
 
             UpdateMovementSettings();
@@ -185,7 +163,7 @@ void UBaseAnimInstance::FindMovementState()
 
 void UBaseAnimInstance::FindMovementDirectionAngle()
 {
-    if (!bEnableDirectionalMovement || MovementState == EMovementState::Sprinting || bIsSprintingCooldown)
+    if (!bEnableDirectionalMovement || MovementState == EMovementState::Sprinting)
     {
         DirectionAngle = 0.f;
         MovementDirection = EMovementDirection::Fwd;
@@ -236,14 +214,12 @@ void UBaseAnimInstance::UpdateMovementSettings()
         return;
     }
 
-    bool bShouldUseDirectionalMovement = bEnableDirectionalMovement 
-        && MovementState != EMovementState::Sprinting 
-        && !bIsSprintingCooldown;
+    bool bShouldUseDirectionalMovement = bEnableDirectionalMovement
+        && MovementState != EMovementState::Sprinting;
 
-    UE_LOGFMT(LogAnimInstance, Log, "이동 방향 설정 값: DirectionalMovement({0}), MovementState({1}), SprintingCooldown({2})",
+    UE_LOGFMT(LogAnimInstance, Log, "이동 방향 설정 값: DirectionalMovement({0}), MovementState({1}))",
         bEnableDirectionalMovement,
-        *UEnum::GetValueAsString(MovementState),
-        bIsSprintingCooldown);
+        *UEnum::GetValueAsString(MovementState));
 
     if (bShouldUseDirectionalMovement)
     {
@@ -268,15 +244,13 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
     //@Stop Motion Type 업데이트
     StopMotionType = Type;
 
-    //@Sprint Stop일 경우,
-    StopMotionType == EStopMotionType::SprintStop ? bIsSprintingCooldown = true : nullptr;
-
     UE_LOGFMT(LogAnimInstance, Log, "정지 모션 변경: {0}", *UEnum::GetValueAsString(StopMotionType));
 }
 
 void UBaseAnimInstance::HandleStartRootMotion()
 {
     bIsPlayingRootMotionMontage = true;
+    
     UE_LOGFMT(LogAnimInstance, Log, "Root Motion 시작");
 }
 
@@ -286,9 +260,7 @@ void UBaseAnimInstance::HandleEndRootMotion()
     bIsRootMotionCooldown = true;
     CurrentRootMotionCooldownTime = 0.0f;
 
-    UE_LOGFMT(LogAnimInstance, Log, "Root Motion 종료 - Cooldown 시작");
-
-    UpdateMovementSettings();
+    UE_LOGFMT(LogAnimInstance, Log, "Root Motion 종료");
 }
 
 void UBaseAnimInstance::ListenToCombatStateAttributeChange()
@@ -347,12 +319,17 @@ void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
 {
     if (!OwnerCharacterBaseRef.IsValid() || !CharacterMovementCompRef.IsValid())
     {
-        UE_LOGFMT(LogAnimInstance, Log, "Owner Character가 유효하지 않습니다.");
+        UE_LOGFMT(LogAnimInstance, Warning, "OnLockOnStateChanged 실패 - Owner Character 또는 Movement Component가 유효하지 않음");
         return;
     }
 
     //@Lock On 상태 저장
     bEnableDirectionalMovement = bIsLockOn;
+
+    UE_LOGFMT(LogAnimInstance, Log, "{0} - Lock On 상태 변경: {1} -> DirectionalMovement: {2}",
+        *OwnerCharacterBaseRef->GetName(),
+        bIsLockOn,
+        bEnableDirectionalMovement);
 
     //@이동 설정 업데이트
     UpdateMovementSettings();
@@ -361,19 +338,9 @@ void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
 void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
 {
     const ECombatType OldCombatType = CombatType;
-
-    if (NewValue == 0.f)
-    {
-        CombatType = ECombatType::NonCombat;
-    }
-    else if (NewValue == 1.f)
-    {
-        CombatType = ECombatType::NormalCombat;
-    }
-    else if (NewValue == 2.f)
-    {
-        CombatType = ECombatType::BattoujutsuCombat;
-    }
+    // float 값을 ECombatType으로 안전하게 변환
+    CombatType = static_cast<ECombatType>(FMath::RoundToInt(FMath::Clamp(NewValue, 0.f,
+        static_cast<float>(ECombatType::MAX) - 1)));
 
     UE_LOGFMT(LogAnimInstance, Log, "전투 상태 변경: {0} -> {1} (값: {2})",
         static_cast<uint8>(OldCombatType),
@@ -390,36 +357,20 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
     if (!WeaponMesh || !ShealthMesh || !FullMesh) return;
 
     const float VisibilityDelay = 0.5f;
+    const bool bIsInCombat = NewValue > 0.f;
 
     FTimerHandle TimerHandle;
-    if (NewValue > 0.f)
-    {
-        GetWorld()->GetTimerManager().SetTimer(
-            TimerHandle,
-            [=]()
-            {
-                WeaponMesh->SetVisibility(true);
-                ShealthMesh->SetVisibility(true);
-                FullMesh->SetVisibility(false);
-            },
-            VisibilityDelay,
-                false
-                );
-    }
-    else
-    {
-        GetWorld()->GetTimerManager().SetTimer(
-            TimerHandle,
-            [=]()
-            {
-                WeaponMesh->SetVisibility(false);
-                ShealthMesh->SetVisibility(false);
-                FullMesh->SetVisibility(true);
-            },
-            VisibilityDelay + 1.f,
-                false
-                );
-    }
+    GetWorld()->GetTimerManager().SetTimer(
+        TimerHandle,
+        [=]()
+        {
+            WeaponMesh->SetVisibility(bIsInCombat);
+            ShealthMesh->SetVisibility(bIsInCombat);
+            FullMesh->SetVisibility(!bIsInCombat);
+        },
+        bIsInCombat ? VisibilityDelay : VisibilityDelay + 1.f,
+            false
+            );
 }
 #pragma endregion
 

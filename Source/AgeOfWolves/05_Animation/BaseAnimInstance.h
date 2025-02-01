@@ -42,7 +42,11 @@ UENUM(BlueprintType)
 enum class EMovementDirection : uint8
 {
 	Fwd = 0		UMETA(DisplayName = "Fwd"),
+	FL			UMETA(DisplayNmae = "Forward Left"),
+	FR			UMETA(DisplayNmae = "Forward Right"),
 	Bwd			UMETA(DisplayName = "Bwd"),
+	BL			UMETA(DisplayNmae = "Forward Left"),
+	BR			UMETA(DisplayNmae = "Forward Right"),
 	Left		UMETA(DisplayName = "Left"),
 	Right		UMETA(DisplayName = "Right"),
 	MAX			UMETA(DisplayName = "MAX"),
@@ -73,7 +77,8 @@ enum class ECombatType : uint8
 	NonCombat = 0		UMETA(DisplayName = "NonCombat"),
 	NormalCombat		UMETA(DisplayName = "NormalCombat"),
 	BattoujutsuCombat	UMETA(DisplayName = "BattoujutsuCombat"),
-	MAX			UMETA(DisplayName = "MAX"),
+	GuardCombat			UMETA(DisplayName = "Guard Combat"),
+	MAX					UMETA(DisplayName = "MAX"),
 };
 #pragma endregion
 
@@ -191,17 +196,6 @@ protected:
 	const float SprintingSpeed = 500.f;
 
 protected:
-	UPROPERTY()
-		bool bIsSprintingCooldown;
-	UPROPERTY()
-		float SprintingCooldownTime;
-
-	UPROPERTY(EditAnywhere, Category = "Movement|Sprint", meta = (AllowPrivateAccess = "true"))
-		float SprintingCooldownDuration;
-	// 현재 누적된 Cooldown 시간을 추적
-	float CurrentCooldownTime;
-
-protected:
 	UPROPERTY(Transient, BlueprintReadOnly)
 		bool bModifyBoneTransform;
 
@@ -262,6 +256,19 @@ protected:
 	UPROPERTY()
 		TObjectPtr<UAsyncTaskAttributeChanged> CombatStateAttributeListenerRef;
 
+protected:
+	float CombatTypeToFloat(ECombatType Type)
+	{
+		return static_cast<float>(Type);
+	}
+
+	ECombatType FloatToCombatType(float Value)
+	{
+		// 반올림하여 가장 가까운 정수값으로 변환
+		int32 IntValue = FMath::RoundToInt(Value);
+		return static_cast<ECombatType>(FMath::Clamp(IntValue, 0, static_cast<int32>(ECombatType::MAX) - 1));
+	}
+
 public:
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE float GetSpeed() const { return Speed; }
@@ -288,9 +295,6 @@ public:
 		FORCEINLINE bool GetIsPlayingRootMotion() const { return bIsPlayingRootMotionMontage; }
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "Animation", meta = (BlueprintThreadSafe))
-		FORCEINLINE void SetIsSprintingCoolDown(bool InBool) { bIsSprintingCooldown = InBool; }
-
 	UFUNCTION(BlueprintCallable, Category = "Animation")
 		FORCEINLINE void SetIsPlayingRootMotionMontage(bool InBool) { bIsPlayingRootMotionMontage = InBool; }
 #pragma endregion

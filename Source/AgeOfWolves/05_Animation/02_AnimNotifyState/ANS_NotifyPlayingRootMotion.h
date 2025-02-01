@@ -4,6 +4,7 @@
 #include "Animation/AnimNotifies/AnimNotifyState.h"
 
 #include "ANS_NotifyPlayingRootMotion.generated.h"
+
 DECLARE_LOG_CATEGORY_EXTERN(LogANS_NotifyPlayingRootMotion, Log, All)
 
 //@전방 선언

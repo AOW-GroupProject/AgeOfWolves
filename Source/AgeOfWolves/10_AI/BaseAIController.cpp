@@ -386,7 +386,6 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
 void ABaseAIController::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
 {
 }
-
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -395,6 +394,7 @@ UAbilitySystemComponent* ABaseAIController::GetAbilitySystemComponent() const
 {
     return AbilitySystemComponent;
 }
+
 FGenericTeamId ABaseAIController::GetGenericTeamId() const
 {
     const IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>(GetPawn());
