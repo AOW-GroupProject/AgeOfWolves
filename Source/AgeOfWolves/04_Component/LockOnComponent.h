@@ -1,8 +1,5 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
-//@#include
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
 
@@ -94,7 +91,7 @@ protected:
         float MaxLockOnDistance = 2000.f;
 
     UPROPERTY(EditDefaultsOnly, Category = "Lock On")
-        float InterpolationSpeed = 50.f;
+        float InterpolationSpeed = 10.f;
 
 protected:
     bool bLockOn;

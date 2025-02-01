@@ -16,6 +16,18 @@ class UAnimMontage;
 
 //@열거형
 #pragma region Enums
+/*
+*	@무기 트레이스 유형
+* 
+*	무기의 충돌 유형을 정의합니다.
+*/
+UENUM(BlueprintType)
+enum class EWeaponTraceType : uint8
+{
+	Line    UMETA(DisplayName = "Line Trace"),
+	Sphere  UMETA(DisplayName = "Sphere Trace"),
+	Box     UMETA(DisplayName = "Box Trace")
+};
 #pragma endregion
 
 //@구조체
@@ -47,45 +59,79 @@ public:
 #pragma region Property or Subwidgets or Infos...etc
 protected:
 	//@BP 에서 Damage Info 멤버 설정 필수
-	UFUNCTION(BlueprintCallable, Category = "Ability | Damage")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 데미지")
 		void SendDamageEvent(const FHitResult& HitResult);
 
 protected:
-	//@Anim Montage
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (Category = "AttackAbilityInfo"))
-		TArray<UAnimMontage*> AttackMontages;
-
-	//@Anim Montage 재생 속도
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, meta = (Category = "AttackAbilityInfo"))
-		float MontagePlayRate = 1.0f;
-
-protected:
-	// 트레이스 이벤트 함수들
-	UFUNCTION(BlueprintCallable, Category = "Ability|Trace")
+	//@트레이스 시작
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌")
 		virtual void StartWeaponTrace();
 
-	UFUNCTION(BlueprintCallable, Category = "Ability|Trace")
+	//@트레이스 처리
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌")
 		virtual void ProcessWeaponTrace();
 
-	UFUNCTION(BlueprintCallable, Category = "Ability|Trace")
+	//@트레이스 종료
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌")
 		virtual void EndWeaponTrace();
 
+	//@Line Trace
+	void PerformLineTrace(const FVector& Start, const FVector& End,
+		FCollisionQueryParams& QueryParams, TArray<FHitResult>& OutHitResults);
+
+	//@통합된 Sweep 함수를 위한 템플릿 함수
+	template<typename TShape>
+	void PerformSweepTrace(const FVector& Start, const FVector& End,
+		const TShape& Shape, FCollisionQueryParams& QueryParams,
+		TArray<FHitResult>& OutHitResults)
+	{
+		{
+			GetWorld()->SweepMultiByChannel(
+				OutHitResults,
+				Start,
+				End,
+				FQuat::Identity,
+				ECC_Visibility,
+				Shape,
+				QueryParams
+			);
+		}
+	}
+
 protected:
-	// 트레이스에 사용될 소켓 이름들
-	UPROPERTY(EditDefaultsOnly, Category = "Ability|Trace")
-		FName WeaponTraceStartSocket;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Ability|Trace")
-		FName WeaponTraceEndSocket;
-
-	UPROPERTY(EditDefaultsOnly, Category = "Ability|Trace")
-		float TraceRadius = 20.0f;
-
-	// 트레이스 활성화 여부
+	//@트레이스 활성화 여부
 	bool bIsTracing = false;
 
+	//@무시 대상
 	UPROPERTY()
 		TArray<AActor*> ActorsToIgnore;
+
+	//@Trace 타입 설정
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌")
+		EWeaponTraceType TraceType = EWeaponTraceType::Line;
+
+protected:
+	//@트레이스에 사용될 소켓 이름들
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌")
+		FName WeaponTraceStartSocket;
+
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌")
+		FName WeaponSocket;
+
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌")
+		FName WeaponTraceEndSocket;
+
+protected:
+	//@Sphere Trace용 반경
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌",
+		meta = (EditCondition = "TraceType == EWeaponTraceType::Sphere"))
+		float SphereTraceRadius = 20.0f;
+
+protected:
+	//@Box Trace용 크기
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌",
+		meta = (EditCondition = "TraceType == EWeaponTraceType::Box"))
+		FVector BoxTraceHalfSize = FVector(20.0f, 20.0f, 20.0f);
 #pragma endregion
 
 //@Delegates
@@ -94,6 +140,9 @@ protected:
 
 //@Callbacks
 #pragma region Callbacks
+protected:
+	//@오버라이드
+	virtual void OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag) override;
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

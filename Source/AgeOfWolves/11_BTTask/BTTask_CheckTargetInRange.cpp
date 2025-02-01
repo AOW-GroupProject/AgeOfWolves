@@ -24,7 +24,7 @@ EBTNodeResult::Type UBTTask_CheckTargetInRange::ExecuteTask(UBehaviorTreeCompone
 
 	if (!EnemyAIController || !OwningPawn || !BBComponent || !TargetActor) return EBTNodeResult::Failed;
 
-	float Max_SkillRange = EnemyAIController->GetAttackRange().Get<1>();
+	float Max_SkillRange = EnemyAIController->GetMaxAttackRange();
 
 	float DistanceBetween = FMath::Abs(UKismetMathLibrary::Distance2D(FVector2D(TargetActor->GetActorLocation()), FVector2D(OwningPawn->GetActorLocation())));
 

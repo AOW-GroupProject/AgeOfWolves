@@ -13,46 +13,53 @@ UANS_AllowChainAction::UANS_AllowChainAction()
 
 void UANS_AllowChainAction::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration)
 {
-    //@Owner
-    AActor* Owner = MeshComp->GetOwner();
+    auto Owner = MeshComp->GetOwner();
     if (!Owner)
     {
         UE_LOGFMT(LogANS_AllowChainAction, Warning, "체인 윈도우 시작 실패 - 유효하지 않은 Owner");
         return;
     }
 
-    //@Character
-    ACharacterBase* Character = Cast<ACharacterBase>(Owner);
+    auto Character = Cast<ACharacterBase>(Owner);
     if (!Character)
     {
-        UE_LOGFMT(LogANS_AllowChainAction, Warning, "체인 윈도우 시작 실패 - 소유자: {0}가 CharacterBase가 아님",
-            *Owner->GetName());
+        UE_LOGFMT(LogANS_AllowChainAction, Warning, "체인 윈도우 시작 실패 - 소유자가 CharacterBase가 아님");
         return;
     }
 
-    //@ASC
-    UAbilitySystemComponent* ASC = Character->GetAbilitySystemComponent();
-    if (!ASC)
-    {
-        UE_LOGFMT(LogANS_AllowChainAction, Warning, "체인 윈도우 시작 실패 - 소유자: {0}에서 AbilitySystemComponent를 찾을 수 없음",
-            *Character->GetName());
-        return;
-    }
-
-    //@Base ASC
-    UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(ASC);
+    auto BaseASC = Cast<UBaseAbilitySystemComponent>(Character->GetAbilitySystemComponent());
     if (!BaseASC)
     {
-        UE_LOGFMT(LogANS_AllowChainAction, Warning, "체인 윈도우 시작 실패 - 소유자: {0}의 AbilitySystemComponent가 BaseAbilitySystemComponent가 아님",
-            *Character->GetName());
+        UE_LOGFMT(LogANS_AllowChainAction, Warning, "체인 윈도우 시작 실패 - BaseASC가 아님");
         return;
     }
 
-    //@캐싱
-    BaseASCRef = BaseASC;
+    auto AnimatingGA = Cast<UBaseGameplayAbility>(BaseASC->GetAnimatingAbility());
+    if (!AnimatingGA)
+    {
+        UE_LOGFMT(LogANS_AllowChainAction, Warning, "체인 윈도우 시작 실패 - 실행 중인 어빌리티가 없음");
+        return;
+    }
 
-    //@Chain Window 허용
-    BaseASCRef->StartChainWindow();
+    if (auto AbilityTag = AnimatingGA->GetAbilityTag(); AbilityTag.IsValid())
+    {
+        if (!TagToChain.IsValid())
+        {
+            UE_LOGFMT(LogANS_AllowChainAction, Warning, "체인 윈도우 시작 실패 - 체인 액션 태그가 설정되지 않음");
+            return;
+        }
+
+        BaseASCRef = BaseASC;
+        BaseASCRef->StartChainWindowWithTag(AbilityTag, TagToChain);
+
+        UE_LOGFMT(LogANS_AllowChainAction, Log, "체인 윈도우 시작 성공 - 어빌리티: {0} | 체인 액션 태그: {1}",
+            *AnimatingGA->GetName(),
+            *TagToChain.ToString());
+    }
+    else
+    {
+        UE_LOGFMT(LogANS_AllowChainAction, Warning, "체인 윈도우 시작 실패 - 유효하지 않은 어빌리티 태그");
+    }
 }
 
 void UANS_AllowChainAction::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)

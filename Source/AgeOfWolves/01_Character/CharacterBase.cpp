@@ -29,13 +29,14 @@ void ACharacterBase::BeginPlay()
 
 void ACharacterBase::PossessedBy(AController* NewController)
 {
-	if (!NewController)
-	{
-		UE_LOGFMT(LogCharacter, Error, "NewController°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.");
-		return;
-	}
 
 	Super::PossessedBy(NewController);
+
+	if (!NewController)
+	{
+		UE_LOGFMT(LogCharacter, Error, "NewControllerê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
+		return;
+	}
 
 	if (!AbilitySystemComponent.IsValid())
 	{
@@ -50,13 +51,14 @@ void ACharacterBase::PossessedBy(AController* NewController)
 		UAbilitySystemComponent* ASC = BaseAIC->GetAbilitySystemComponent();
 		if (!ASC)
 		{
-			UE_LOGFMT(LogCharacter, Error, "AbilitySystemComponent°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.");
+			UE_LOGFMT(LogCharacter, Error, "AbilitySystemComponentê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.");
 			return;
 		}
 
 		//@Set ASC
 		SetAbilitySystemComponent(ASC);
 	}
+
 }
 
 bool ACharacterBase::CanBeSeenFrom(const FVector& ObserverLocation, FVector& OutSeenLocation, int32& NumberOfLoSChecksPerformed, float& OutSightStrength, const AActor* IgnoreActor, const bool* bWasVisible, int32* UserData) const

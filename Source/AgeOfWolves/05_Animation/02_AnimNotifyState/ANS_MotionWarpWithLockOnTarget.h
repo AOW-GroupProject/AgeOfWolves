@@ -7,33 +7,33 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogANS_MotionWarpWithLockOnTarget, Log, All)
 
-//@ì „ë°© ì„ ì–¸
+//@Àü¹æ ¼±¾ğ
 #pragma region Forward Declaration
 #pragma endregion
 
-//@ì—´ê±°í˜•
+//@¿­°ÅÇü
 #pragma region Enums
 #pragma endregion
 
-//@êµ¬ì¡°ì²´
+//@±¸Á¶Ã¼
 #pragma region Structs
 #pragma endregion
 
-//@ì´ë²¤íŠ¸/ë¸ë¦¬ê²Œì´íŠ¸
+//@ÀÌº¥Æ®/µ¨¸®°ÔÀÌÆ®
 #pragma region Delegates
 #pragma endregion
 
 /**
  *	@UANS_MotionWarpWithLockOnTarget
- * 
- *	Lock On Targetì— Motion Warp í•˜ê¸° ìœ„í•´ í™œìš©ë˜ëŠ” ANSë¥¼ êµ¬í˜„í•©ë‹ˆë‹¤.
+ *
+ *	Lock On Target¿¡ Motion Warp ÇÏ±â À§ÇØ È°¿ëµÇ´Â ANS¸¦ ±¸ÇöÇÕ´Ï´Ù.
  */
-UCLASS()
-class AGEOFWOLVES_API UANS_MotionWarpWithLockOnTarget : public UAnimNotifyState_MotionWarping
+	UCLASS()
+	class AGEOFWOLVES_API UANS_MotionWarpWithLockOnTarget : public UAnimNotifyState_MotionWarping
 {
 	GENERATED_BODY()
 
-//@ì¹œì¶” í´ë˜ìŠ¤
+		//@Ä£Ãß Å¬·¡½º
 #pragma region Friend Class
 #pragma endregion
 
@@ -45,7 +45,7 @@ protected:
 	virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
 #pragma endregion
 
-//@Property/Info...etc
+	//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 #pragma endregion
 
@@ -61,5 +61,5 @@ protected:
 #pragma region Utility
 #pragma endregion
 
-	
+
 };
