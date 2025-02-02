@@ -335,6 +335,7 @@ int32 UBaseAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, co
 	if (EventTag.MatchesTag(FGameplayTag::RequestGameplayTag("EventTag.OnChainActionFinished")))
 	{
 		UE_LOGFMT(LogASC, Log, "체인 액션 종료 이벤트 처리");
+
 		ChainActionFinished.ExecuteIfBound(ChainActionEventTag);
 		return 0;
 	}
@@ -557,6 +558,7 @@ void UBaseAbilitySystemComponent::EndChainWindow(const FGameplayEventData* Paylo
 Cleanup:
 	//@초기화
 	ChainActionActivated.Clear();
+	ChainActionFinished.Clear();
 	bChainWindowActive = false;
 	bCanChainAction = false;
 	AllowedChainMappings.Empty();

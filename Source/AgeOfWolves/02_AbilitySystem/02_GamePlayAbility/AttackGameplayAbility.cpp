@@ -285,6 +285,7 @@ void UAttackGameplayAbility::EndWeaponTrace()
 void UAttackGameplayAbility::PerformLineTrace(const FVector& Start, const FVector& End,
     FCollisionQueryParams& QueryParams, TArray<FHitResult>& OutHitResults)
 {
+
     GetWorld()->LineTraceMultiByChannel(
         OutHitResults,
         Start,

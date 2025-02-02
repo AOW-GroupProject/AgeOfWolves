@@ -86,6 +86,7 @@ void UBaseGameplayAbility::PreActivate(const FGameplayAbilitySpecHandle Handle, 
 {
     Super::PreActivate(Handle, ActorInfo, ActivationInfo, OnGameplayAbilityEndedDelegate, TriggerEventData);
 
+    UE_LOGFMT(LogGA, Log, "{0}", GetName());
 }
 
 void UBaseGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
