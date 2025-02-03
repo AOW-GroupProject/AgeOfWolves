@@ -40,17 +40,30 @@ void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorI
 
     check(ActorInfo);
 
+    UE_LOGFMT(LogTemp, Log, "어빌리티 등록 시작 - Ability: {0}", *GetName());
 
     auto* ASC = ActorInfo->AbilitySystemComponent.Get();
-    if(!ASC)
+    if (!ASC)
     {
+        UE_LOGFMT(LogTemp, Warning, "어빌리티 등록 실패 - ASC가 유효하지 않음");
         return;
     }
 
     auto BaseASC = Cast<UBaseAbilitySystemComponent>(ASC);
     if (!BaseASC)
     {
+        UE_LOGFMT(LogTemp, Warning, "어빌리티 등록 실패 - BaseASC로 캐스팅 실패");
         return;
+    }
+
+    // Trigger 정보 로깅
+    for (const auto& TriggerData : AbilityTriggers)
+    {
+        if (TriggerData.TriggerTag.IsValid())
+        {
+            UE_LOGFMT(LogTemp, Log, "어빌리티 트리거 정보 - Ability: {0}, Trigger Tag: {1}",
+                *GetName(), *TriggerData.TriggerTag.ToString());
+        }
     }
 
     //@Activation Policy가 On Granted일 경우, 등록 직후 활성화 시도
@@ -60,11 +73,11 @@ void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorI
         {
             if (!Spec.IsActive() && IsValid(Spec.Ability))
             {
+                UE_LOGFMT(LogTemp, Log, "OnGranted 어빌리티 활성화 시도 - Ability: {0}", *GetName());
                 BaseASC->TryActivateAbility(Spec.Handle);
             }
         }
     }
-
 }
 
 void UBaseGameplayAbility::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
@@ -388,7 +401,20 @@ void UBaseGameplayAbility::OnChainActionActivated_Implementation(FGameplayTag Ch
 
 void UBaseGameplayAbility::OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag)
 {
+    UE_LOGFMT(LogGA, Log, "체인 액션 종료 - Ability: {0}, ChainEventTag: {1}",
+        *GetName(), *ChainActionEventTag.ToString());
 
+    if (!ChainActionEventTag.IsValid())
+    {
+        UE_LOGFMT(LogGA, Warning, "체인 액션 종료 - 유효하지 않은 이벤트 태그");
+        return;
+    }
+
+    if (!IsActive())
+    {
+        UE_LOGFMT(LogGA, Warning, "체인 액션 종료 - 어빌리티가 활성화되지 않은 상태");
+        return;
+    }
 }
 
 void UBaseGameplayAbility::OnMontageCompleted_Implementation()

@@ -302,7 +302,16 @@ void UAttackGameplayAbility::OnChainActionActivated_Implementation(FGameplayTag 
 {
     Super::OnChainActionActivated_Implementation(ChainActionEventTag);
 
-    UE_LOGFMT(LogAttackGA, Log, "AttackGA OnChainActionActivated Called - Ability: {0} | Event Tag: {1}",
+    UE_LOGFMT(LogAttackGA, Log, "체인 액션 활성화 이벤트 호출 - Ability: {0} | Event Tag: {1}",
+        *GetName(),
+        *ChainActionEventTag.ToString());
+}
+
+void UAttackGameplayAbility::OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag)
+{
+    Super::OnChainActionFinished_Implementation(ChainActionEventTag);
+
+    UE_LOGFMT(LogAttackGA, Log, "체인 액션 종료 이벤트 호출 - Ability: {0} | Event Tag: {1}",
         *GetName(),
         *ChainActionEventTag.ToString());
 }
