@@ -143,6 +143,8 @@ protected:
 protected:
 	//@오버라이드
 	virtual void OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag) override;
+	//@오버라이드
+	virtual void OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag) override;
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
