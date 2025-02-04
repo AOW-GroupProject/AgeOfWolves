@@ -17,6 +17,7 @@ class USpringArmComponent;
 class UCameraComponent;
 class UBaseInputComponent;
 struct FInputActionValue;
+class UBillboardComponent;
 #pragma endregion
 
 //@열거형
@@ -77,6 +78,9 @@ protected:
     void UpdateControllerRotation(float DeltaTime);
     void UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& TargetRotation);
 
+private:
+    void UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly = false);
+
 protected:
     UPROPERTY(BlueprintReadWrite, Category = "Lock On")
         FRotator FinalRotation;
@@ -105,6 +109,20 @@ protected:
     //@Target으로 설정한 적의 약한 참조
     UPROPERTY()
         TWeakObjectPtr<AActor> TargetEnemyRef;
+
+protected:
+    UPROPERTY()
+        UBillboardComponent* LockOnBillboardComponent;
+
+    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
+        TSoftObjectPtr<UTexture2D> LockOnTexture;
+
+    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
+        float BillboardForwardOffset = 100.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
+        float TextureScale = 0.08f;
+
 #pragma endregion
 
 //@Delegates

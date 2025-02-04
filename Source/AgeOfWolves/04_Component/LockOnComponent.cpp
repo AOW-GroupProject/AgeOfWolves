@@ -9,8 +9,11 @@
 
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "Kismet/GameplayStatics.h"
+
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "Components/BillboardComponent.h"
 
 DEFINE_LOG_CATEGORY(LogLockOn)
 
@@ -19,6 +22,8 @@ DEFINE_LOG_CATEGORY(LogLockOn)
 ULockOnComponent::ULockOnComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
+
+
 
     bLockOn = false;
 
@@ -103,9 +108,36 @@ void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
         return;
     }
 
+    //@컴포넌트 등록
+    if (!LockOnBillboardComponent)
+    {
+        LockOnBillboardComponent = NewObject<UBillboardComponent>(GetOwner());
+        if (!LockOnBillboardComponent)
+        {
+            UE_LOGFMT(LogLockOn, Warning, "빌보드 컴포넌트 생성 실패");
+            return;
+        }
+        LockOnBillboardComponent->RegisterComponent();
+    }
+
+
+    //@Billobard Component 초기화
+    if (!LockOnTexture.IsNull())
+    {
+        LockOnTexture.LoadSynchronous();
+        if (UTexture2D* LoadedTexture = LockOnTexture.Get())
+        {
+            LockOnBillboardComponent->SetSprite(LoadedTexture);
+            // 원래 크기의 0.1배로 설정
+            LockOnBillboardComponent->SetRelativeScale3D(FVector(0.1f));
+        }
+    }
+
+    LockOnBillboardComponent->SetVisibility(false);
+    LockOnBillboardComponent->bHiddenInGame = false;
+
     UE_LOGFMT(LogLockOn, Log, "락온 컴포넌트 초기화 완료");
 }
-
 #pragma endregion
 
 //@Property/Info...etc
@@ -126,6 +158,32 @@ void ULockOnComponent::StartLockOn()
         return;
     }
 
+    //@시각 효과
+    if (!LockOnBillboardComponent)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "락온 시작 실패: 빌보드 컴포넌트가 유효하지 않음");
+        return;
+    }
+
+    if (!TargetEnemyRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "락온 시작 실패: 타겟이 유효하지 않음");
+        return;
+    }
+
+    USceneComponent* TargetRoot = TargetEnemyRef->GetRootComponent();
+    if (!TargetRoot)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "락온 시작 실패: 타겟의 루트 컴포넌트가 유효하지 않음");
+        return;
+    }
+
+    //@Billboard Component 부착
+    if (LockOnBillboardComponent && PlayerCharacterRef.IsValid() && TargetEnemyRef.IsValid())
+    {
+        UpdateBillboardComponent(true);
+    }
+
     //@Spring Arm(Camera) 설정 업데이트
     UpdateSpringArmSettings(true);
 
@@ -134,6 +192,8 @@ void ULockOnComponent::StartLockOn()
 
     //@Lock On 상태 이벤트
     LockOnStateChanged.Broadcast(bLockOn);
+
+    UE_LOGFMT(LogLockOn, Log, "Lock On 시작: 타겟 = {0}", *TargetEnemyRef->GetName());
 }
 
 void ULockOnComponent::CancelLockOn()
@@ -144,6 +204,10 @@ void ULockOnComponent::CancelLockOn()
         UE_LOGFMT(LogLockOn, Warning, "락온 해제 실패: 플레이어 캐릭터가 유효하지 않음");
         return;
     }
+
+    //@Billboard
+    UpdateBillboardComponent(false);
+
     //@Spring Arm 설정 업데이트
     UpdateSpringArmSettings(false);
 
@@ -158,6 +222,7 @@ void ULockOnComponent::CancelLockOn()
     EnemyMap.Empty();
     TargetEnemyRef.Reset();
 }
+
 bool ULockOnComponent::FindTargetEnemy()
 {
     if (!PlayerCharacterRef.IsValid()) return false;
@@ -329,6 +394,12 @@ void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
 
     //@Update Spring Arm
     UpdateSpringArmTransform(DeltaTime, Target, FinalRotation);
+
+    //@시각 효과
+    if (LockOnBillboardComponent && TargetEnemyRef.IsValid())
+    {
+        UpdateBillboardComponent(true, true);
+    }
 }
 
 void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& TargetRotation)
@@ -342,22 +413,6 @@ void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& 
 
     //@Offset Coefficient
     float SocketOffsetCoefficient = (BaseAnimInstanceRef->GetMovementState() != EMovementState::Sprinting) ? 1.5f : 1.0f;
-
-    //@Input Vector
-    if (BaseInputComponentRef->GetInputVector().Y > 0)
-    {
-        if (SpringArmComponentRef->SocketOffset.Y > -50)
-        {
-            SpringArmComponentRef->SocketOffset.Y -= (SocketOffsetCoefficient * BaseInputComponentRef->GetInputVector().Y);
-        }
-    }
-    else if (BaseInputComponentRef->GetInputVector().Y < 0)
-    {
-        if (SpringArmComponentRef->SocketOffset.Y < 50)
-        {
-            SpringArmComponentRef->SocketOffset.Y -= (SocketOffsetCoefficient * BaseInputComponentRef->GetInputVector().Y);
-        }
-    }
 
     //@Distance to Rotation
     float DistanceFromTargetEnemy = (PlayerCharacterRef->GetActorLocation() - Target).Length();
@@ -374,31 +429,75 @@ void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& 
     SpringArmComponentRef->SocketOffset.X = FMath::Lerp(0, -200, DistanceFromTargetEnemy / 70);
     SpringArmComponentRef->SetWorldRotation(CameraFinalRotation);
 }
+
+void ULockOnComponent::UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly)
+{
+    if (!LockOnBillboardComponent || !TargetEnemyRef.IsValid() || !PlayerCharacterRef.IsValid() || !FollowCameraComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "빌보드 업데이트 실패: 필요한 컴포넌트가 유효하지 않음");
+        return;
+    }
+
+    if (!bVisible)
+    {
+        LockOnBillboardComponent->SetVisibility(false);
+        return;
+    }
+
+    // Scale
+    LockOnBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
+
+    // 타겟의 월드 위치를 뷰포트 좌표로 변환
+    APlayerController* PlayerController = PlayerCharacterRef->GetController<APlayerController>();
+    if (!PlayerController) return;
+
+    FVector2D ScreenPosition;
+    FVector TargetLocation = TargetEnemyRef->GetActorLocation();
+
+    if (PlayerController->ProjectWorldLocationToScreen(TargetLocation, ScreenPosition))
+    {
+        // 카메라에서 타겟 방향으로의 벡터 계산
+        FVector CameraLocation = FollowCameraComponentRef->GetComponentLocation();
+        FVector DirectionToTarget = (TargetLocation - CameraLocation).GetSafeNormal();
+
+        // 타겟 위치에서 카메라 방향의 반대로 약간 앞으로 이동
+        FVector AdjustedLocation = TargetLocation - DirectionToTarget * BillboardForwardOffset;
+
+        LockOnBillboardComponent->SetWorldLocation(AdjustedLocation);
+        LockOnBillboardComponent->SetWorldRotation(FollowCameraComponentRef->GetComponentRotation());
+    }
+
+    if (!bChangeTransformOnly)
+    {
+        LockOnBillboardComponent->SetVisibility(true);
+    }
+}
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
 void ULockOnComponent::OnLockOnTargetChanged(const FGameplayTag& InputTag, const float Value)
 {
-    // ChangeLockOnTarget 태그인지 확인
+    //@태그 체크
     if (InputTag != FGameplayTag::RequestGameplayTag(FName("Input.Native.ChangeLockOnTarget")))
     {
         return;
     }
 
-    // Lock On 상태가 아니면 리턴
+    //@Lock On 상태 체크
     if (!bLockOn)
     {
         return;
     }
 
-    // 현재 타겟이 없으면 리턴
+    //@타겟 체크
     if (!TargetEnemyRef.IsValid())
     {
+        UE_LOGFMT(LogLockOn, Warning, "타겟 변경 실패: 현재 타겟이 유효하지 않음");
         return;
     }
 
-    // 주변 적이 없으면 리턴
+    //@주변 적 체크
     if (NearByEnemies.Num() <= 1)
     {
         return;
@@ -408,27 +507,47 @@ void ULockOnComponent::OnLockOnTargetChanged(const FGameplayTag& InputTag, const
     const int32 CurrentIndex = NearByEnemies.Find(TargetEnemyRef.Get());
     if (CurrentIndex == INDEX_NONE)
     {
+        UE_LOGFMT(LogLockOn, Warning, "타겟 변경 실패: 현재 타겟의 인덱스를 찾을 수 없음");
         return;
     }
 
+    //@새 인덱스 계산
     int32 NewIndex;
-    //@휠 다운(음수) -> 오른쪽으로 이동
-    if (Value < 0.0f)
+    if (Value < 0.0f)  //@휠 다운(음수) -> 오른쪽으로 이동
     {
         NewIndex = (CurrentIndex + 1) % NearByEnemies.Num();
     }
-    //@휠 업(양수) -> 왼쪽으로 이동
-    else
+    else  //@휠 업(양수) -> 왼쪽으로 이동
     {
         NewIndex = (CurrentIndex - 1 + NearByEnemies.Num()) % NearByEnemies.Num();
     }
 
     //@새로운 타겟 설정
-    if (AActor* NewTarget = NearByEnemies[NewIndex])
+    AActor* NewTarget = NearByEnemies[NewIndex];
+    if (!NewTarget)
     {
-        TargetEnemyRef = NewTarget;
-        UE_LOGFMT(LogLockOn, Log, "Lock On 타겟이 변경되었습니다: {0}", NewTarget->GetName());
+        UE_LOGFMT(LogLockOn, Warning, "타겟 변경 실패: 새로운 타겟이 유효하지 않음");
+        return;
     }
+
+    //@Billboard Component 업데이트
+    if (!LockOnBillboardComponent)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "타겟 변경 실패: 빌보드 컴포넌트가 유효하지 않음");
+        return;
+    }
+
+    USceneComponent* NewTargetRoot = NewTarget->GetRootComponent();
+    if (!NewTargetRoot)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "타겟 변경 실패: 새 타겟의 루트 컴포넌트가 유효하지 않음");
+        return;
+    }
+
+    UpdateBillboardComponent(true, true);
+
+    TargetEnemyRef = NewTarget;
+    UE_LOGFMT(LogLockOn, Log, "Lock On 타겟이 변경되었습니다: {0}", *NewTarget->GetName());
 }
 #pragma endregion
 
