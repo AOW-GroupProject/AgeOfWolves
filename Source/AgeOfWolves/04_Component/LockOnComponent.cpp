@@ -110,46 +110,8 @@ void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-void ULockOnComponent::Input_LockOn()
-{
-    if (!PlayerCharacterRef.IsValid()) return;
-
-    if (bLockOn)
-    {
-        CancelLockOn();
-        UE_LOGFMT(LogLockOn, Log, "Lock On Canceled");
-        return;
-    }
-
-    StartLockOn();
-    UE_LOGFMT(LogLockOn, Log, "Lock On Started");
-}
-
-void ULockOnComponent::Input_ChangeLockOnTarget(const FInputActionValue& Value)
-{
-    if (NearByEnemies.Num() == 0) return;
-
-    int32 TargetIndex = NearByEnemies.IndexOfByKey(TargetEnemyRef);
-    FVector2D ValueVector = Value.Get<FVector2D>();
-
-    if (ValueVector.X > 0)
-    {
-        TargetIndex = FMath::Clamp(TargetIndex + 1, 0, NearByEnemies.Num() - 1);
-        TargetEnemyRef = NearByEnemies[TargetIndex];
-        UE_LOGFMT(LogLockOn, Log, "Changed Target to next: {0}", *TargetEnemyRef->GetName());
-    }
-    else
-    {
-        TargetIndex = FMath::Clamp(TargetIndex - 1, 0, NearByEnemies.Num() - 1);
-        TargetEnemyRef = NearByEnemies[TargetIndex];
-        UE_LOGFMT(LogLockOn, Log, "Changed Target to previous: {0}", *TargetEnemyRef->GetName());
-    }
-
-}
-
 void ULockOnComponent::StartLockOn()
 {
-
     //@Ref 
     if (!PlayerCharacterRef.IsValid() || !BaseAnimInstanceRef.IsValid())
     {
@@ -196,7 +158,6 @@ void ULockOnComponent::CancelLockOn()
     EnemyMap.Empty();
     TargetEnemyRef.Reset();
 }
-
 bool ULockOnComponent::FindTargetEnemy()
 {
     if (!PlayerCharacterRef.IsValid()) return false;
@@ -208,6 +169,7 @@ bool ULockOnComponent::FindTargetEnemy()
     TArray<AActor*> IgnoreActors;
     IgnoreActors.Add(PlayerCharacterRef.Get());
 
+    // 첫 번째: 구체 트레이스로 범위 내 모든 액터 찾기
     TArray<FHitResult> HitResults;
     bool SphereTraceHitResult = UKismetSystemLibrary::SphereTraceMultiForObjects(
         GetWorld(),
@@ -230,14 +192,25 @@ bool ULockOnComponent::FindTargetEnemy()
 
     NearByEnemies.Empty();
     EnemyMap.Empty();
-    float Min = MAX_FLT;
+    float CenterDot = MAX_FLT;
 
+    const FVector CameraLocation = FollowCameraComponentRef->GetComponentTransform().GetTranslation();
+    const FVector CameraForward = FollowCameraComponentRef->GetForwardVector();
+    const FVector CameraRight = FollowCameraComponentRef->GetRightVector();
+    const FVector CameraUp = FollowCameraComponentRef->GetUpVector();
+    const float HalfFOV = FMath::Cos(FMath::DegreesToRadians(FollowCameraComponentRef->FieldOfView * 0.5f));
+
+    // FOV 내에 있는 타겟이 하나라도 있는지 체크하기 위한 플래그
+    bool bHasTargetInFOV = false;
+
+    // 두 번째: 각 액터에 대해 FOV와 가시성 체크
     for (const auto& Hit : HitResults)
     {
+        // 시야 체크를 위한 Line Trace
         FHitResult LineHitResults;
         bool LineTraceHitResult = UKismetSystemLibrary::LineTraceSingleForObjects(
             GetWorld(),
-            PlayerCharacterRef->GetActorLocation(),
+            CameraLocation,  // 카메라 위치에서 시작
             Hit.GetActor()->GetActorLocation(),
             NearByActors,
             false,
@@ -247,50 +220,58 @@ bool ULockOnComponent::FindTargetEnemy()
             true
         );
 
+        // Line Trace로 장애물 체크
         if (Hit.GetActor() == LineHitResults.GetActor())
         {
-            NearByEnemies.AddUnique(Hit.GetActor());
+            // 카메라에서 적까지의 방향 벡터
+            FVector DirectionToEnemy = (Hit.GetActor()->GetActorLocation() - CameraLocation).GetSafeNormal();
 
-            FVector PlayerCameraLocation = FollowCameraComponentRef->GetComponentTransform().GetTranslation();
-            FVector CameraToPlayer = FollowCameraComponentRef->GetForwardVector();
-            FVector CameraToEnemy = Hit.GetActor()->GetActorLocation() - PlayerCameraLocation;
+            // 화면 중앙으로부터의 각도 계산 (내적)
+            float ForwardDot = FVector::DotProduct(CameraForward, DirectionToEnemy);
 
-            FVector CrossProduct = FVector::CrossProduct(CameraToPlayer, CameraToEnemy);
-            float UpDotProduct = FVector::DotProduct(CameraToPlayer, CrossProduct);
-            float TempDotProductResult = FVector::DotProduct(CameraToPlayer, CameraToEnemy);
-
-            float Cos = TempDotProductResult / (CameraToPlayer.Length() * CameraToEnemy.Length());
-            float HalfFOV = FMath::Cos(FMath::DegreesToRadians(FollowCameraComponentRef->FieldOfView / 1.5));
-
-            if (Cos > HalfFOV)
+            // FOV 체크 - 더 엄격한 체크를 위해 HalfFOV 사용
+            if (ForwardDot > HalfFOV)
             {
-                EnemyMap.Add(UpDotProduct, Hit.GetActor());
-                if (FMath::Abs(Min) > FMath::Abs(UpDotProduct))
+                bHasTargetInFOV = true;
+
+                // 좌우 위치 판단을 위한 외적과 내적
+                FVector Cross = FVector::CrossProduct(CameraForward, DirectionToEnemy);
+                float RightDot = FVector::DotProduct(Cross, CameraUp);
+
+                NearByEnemies.AddUnique(Hit.GetActor());
+                EnemyMap.Add(RightDot, Hit.GetActor());
+
+                // 화면 중앙에 가장 가까운 적 찾기
+                if (FMath::Abs(RightDot) < FMath::Abs(CenterDot))
                 {
-                    Min = UpDotProduct;
+                    CenterDot = RightDot;
                 }
             }
         }
     }
 
-    if (EnemyMap.IsEmpty())
+    // FOV 내에 타겟이 없으면 Lock On 실패
+    if (!bHasTargetInFOV || EnemyMap.IsEmpty())
     {
-        UE_LOGFMT(LogLockOn, Log, "No valid targets in FOV");
+        UE_LOGFMT(LogLockOn, Log, "No valid targets in camera FOV");
         return false;
     }
 
+    // 좌우 위치에 따라 정렬
     TArray<float> DotProducts;
     EnemyMap.GenerateKeyArray(DotProducts);
     DotProducts.Sort();
-    NearByEnemies.Empty();
 
+    // 정렬된 순서대로 NearByEnemies 재구성
+    NearByEnemies.Empty();
     for (float DotProduct : DotProducts)
     {
         NearByEnemies.Add(*EnemyMap.Find(DotProduct));
     }
 
-    TargetEnemyRef = *EnemyMap.Find(Min);
-    UE_LOGFMT(LogLockOn, Log, "Found target: {0}", *TargetEnemyRef->GetName());
+    // 화면 중앙에 가장 가까운 적을 첫 타겟으로 설정
+    TargetEnemyRef = *EnemyMap.Find(CenterDot);
+    UE_LOGFMT(LogLockOn, Log, "Found target in FOV: {0}", *TargetEnemyRef->GetName());
 
     return IsValid(TargetEnemyRef.Get());
 }
@@ -397,6 +378,58 @@ void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& 
 
 //@Callbacks
 #pragma region Callbacks
+void ULockOnComponent::OnLockOnTargetChanged(const FGameplayTag& InputTag, const float Value)
+{
+    // ChangeLockOnTarget 태그인지 확인
+    if (InputTag != FGameplayTag::RequestGameplayTag(FName("Input.Native.ChangeLockOnTarget")))
+    {
+        return;
+    }
+
+    // Lock On 상태가 아니면 리턴
+    if (!bLockOn)
+    {
+        return;
+    }
+
+    // 현재 타겟이 없으면 리턴
+    if (!TargetEnemyRef.IsValid())
+    {
+        return;
+    }
+
+    // 주변 적이 없으면 리턴
+    if (NearByEnemies.Num() <= 1)
+    {
+        return;
+    }
+
+    //@현재 타겟의 인덱스 찾기
+    const int32 CurrentIndex = NearByEnemies.Find(TargetEnemyRef.Get());
+    if (CurrentIndex == INDEX_NONE)
+    {
+        return;
+    }
+
+    int32 NewIndex;
+    //@휠 다운(음수) -> 오른쪽으로 이동
+    if (Value < 0.0f)
+    {
+        NewIndex = (CurrentIndex + 1) % NearByEnemies.Num();
+    }
+    //@휠 업(양수) -> 왼쪽으로 이동
+    else
+    {
+        NewIndex = (CurrentIndex - 1 + NearByEnemies.Num()) % NearByEnemies.Num();
+    }
+
+    //@새로운 타겟 설정
+    if (AActor* NewTarget = NearByEnemies[NewIndex])
+    {
+        TargetEnemyRef = NewTarget;
+        UE_LOGFMT(LogLockOn, Log, "Lock On 타겟이 변경되었습니다: {0}", NewTarget->GetName());
+    }
+}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

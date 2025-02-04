@@ -10,6 +10,7 @@
 #include "Camera/CameraComponent.h"
 
 #include "03_Player/BasePlayerController.h"
+#include "04_Component/BaseInputComponent.h"
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "05_Animation/BaseAnimInstance.h"
@@ -167,12 +168,30 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 		return;
 	}
 
-	LockOnComponent->LockOnStateChanged.AddUFunction(BaseAnimInstance, "OnLockOnStateChanged");
 	AnimInstanceRef = BaseAnimInstance;
+	LockOnComponent->LockOnStateChanged.AddUFunction(BaseAnimInstance, "OnLockOnStateChanged");
 
+	//@LockOn Component <-> Input Component
+	ABasePlayerController* PC = Cast<ABasePlayerController>(NewController);
+	if (!PC)
+	{
+		UE_LOGFMT(LogPlayer, Warning, "BasePlayerController가 유효하지 않습니다.");
+		return;
+	}
+
+	UBaseInputComponent* BaseInputComp = PC->GetBaseInputComponent();
+	if (!BaseInputComp)
+	{
+		UE_LOGFMT(LogPlayer, Warning, "BaseInputComponent가 유효하지 않습니다.");
+		return;
+	}
+
+	// Input Component의 NativeInputTagTriggeredWithValue 이벤트에 LockOn Component의 OnLockOnTargetChanged 바인딩
+	BaseInputComp->NativeInputTagTriggeredWithValue.AddUObject(LockOnComponent, &ULockOnComponent::OnLockOnTargetChanged);
+
+	//@ASC
 	if (!AbilitySystemComponent.IsValid())
 	{
-		//@ASC
 		APlayerStateBase* PS = Cast<APlayerStateBase>(GetPlayerState());
 		if (!PS)
 		{

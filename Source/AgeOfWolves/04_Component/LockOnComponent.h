@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameplayTagContainer.h"
 
 #include "LockOnComponent.generated.h"
 
@@ -62,10 +63,6 @@ protected:
 
     //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-public:
-    void Input_LockOn();
-    void Input_ChangeLockOnTarget(const FInputActionValue& Value);
-
 protected:
     void StartLockOn();
     void CancelLockOn();
@@ -119,6 +116,10 @@ public:
 
 //@Callbacks
 #pragma region Callbacks
+public:
+    UFUNCTION()
+        void OnLockOnTargetChanged(const FGameplayTag& InputTag, const float Value);
+
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
