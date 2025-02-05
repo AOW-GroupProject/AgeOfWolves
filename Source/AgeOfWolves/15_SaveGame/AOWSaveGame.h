@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -9,6 +7,78 @@
 #include "AOWSaveGame.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogSaveGame, Log, All)
+
+//@전방 선언
+#pragma region Forward Declaration
+class UBaseAttributeSet;
+class APlayerStateBase;
+class ABaseAIController;
+#pragma endregion
+
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+/*
+*	@FCharacterInformation
+*
+*	캐릭터 주요 정보를 담은 구조체
+*/
+USTRUCT(BlueprintType)
+struct FCharacterInformation : public FTableRowBase
+{
+	GENERATED_BODY()
+
+public:
+	FCharacterInformation()
+		: Actor(nullptr)
+		, Location(FVector::ZeroVector)
+		, AttributeSet(nullptr)
+		, GameplayTimeOnEvent(0.0f)
+	{}
+
+	// Custom constructor to initialize more fields
+	FCharacterInformation(
+		const FGameplayTag& InStateTag,
+		AActor* InActor = nullptr,
+		const FVector& InLocation = FVector::ZeroVector,
+		UBaseAttributeSet* InAttributeSet = nullptr,
+		float InGameplayTimeOnEvent = 0.0f,
+		const FString& InDescription = FString())
+		: StateTag(InStateTag)
+		, Actor(InActor)
+		, Location(InLocation)
+		, AttributeSet(InAttributeSet)
+		, GameplayTimeOnEvent(InGameplayTimeOnEvent)
+		, Description(InDescription)
+	{}
+
+	// Equality operator overload
+	bool operator==(const FCharacterInformation& Other) const
+	{
+		return StateTag == Other.StateTag;
+	}
+
+	UPROPERTY()
+		FGameplayTag StateTag;
+
+	UPROPERTY()
+		AActor* Actor;
+
+	UPROPERTY()
+		FVector Location;
+
+	UPROPERTY()
+		UBaseAttributeSet* AttributeSet;
+
+	UPROPERTY()
+		float GameplayTimeOnEvent;
+
+	UPROPERTY()
+		FString Description;
+};
 
 USTRUCT(BlueprintType)
 struct FInventoryItemSaveInfo
@@ -44,23 +114,67 @@ public:
 		int32 EnhancementCount = -1;
 
 };
+#pragma endregion
 
+//@이벤트/델리게이트
+#pragma region Delegates
+DECLARE_MULTICAST_DELEGATE_OneParam(FCharacterStateEventToCache, FCharacterInformation)
+#pragma endregion
 
 /**
+ *	@UAOWSaveGame
  * 
+ *	AOW의 Save Game
  */
 UCLASS()
 class AGEOFWOLVES_API UAOWSaveGame : public USaveGame
 {
+
+//@친추 클래스
+#pragma region Friend Class
+	friend class APlayerStateBase;
+	friend class ABaseAIController;
+#pragma endregion
+
+
 	GENERATED_BODY()
-	
+
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UAOWSaveGame();
 #pragma endregion
 
-#pragma region Inventory
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+protected:
+	void AddCharacterStateToHistory(
+		const FGameplayTag& CharacterStateTag,
+		AActor* Actor,
+		UBaseAttributeSet* AttributeSet);
+
+protected:
+	//@캐싱해 둘 최대 캐릭터의 게임 플레이 이벤트 정보
+	const int32 MaxStateHistorySize = 10;
+
+	//@캐릭터 상태 변화 이벤트를 모아둔 큐
+	TArray<FCharacterInformation> CharacterStateHistory;
+
 public:
 	TArray<FInventoryItemSaveInfo> InventoryItemSaveInfos;
+#pragma endregion
+
+//@Delegates
+#pragma region Delegates
+public:
+	FCharacterStateEventToCache CharacterStateEventToCache;
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion
 };

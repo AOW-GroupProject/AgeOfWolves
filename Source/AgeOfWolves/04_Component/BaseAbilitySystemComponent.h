@@ -12,6 +12,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 //@전방 선언
 #pragma region Forward Declaration
 class UANS_AllowChainAction;
+class UBaseAttributeSet;
+struct FDeathInformation;
 #pragma endregion
 
 //@열거형
@@ -20,6 +22,7 @@ class UANS_AllowChainAction;
 
 //@구조체
 #pragma region Structs
+
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -30,6 +33,8 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FAbilitySpecGiven, FGameplayAbilitySpec)
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionActivated, FGameplayTag, ChainActionAbilityTag);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionFinished, FGameplayTag, ChainActionAbilityTag);
+
+DECLARE_MULTICAST_DELEGATE_OneParam(FCharacterStateEventOnGameplay, const FGameplayTag&)
 #pragma endregion
 
 /**	
@@ -95,8 +100,14 @@ public:
 protected:
 	//@Gameplay Event에 의한 GA 활성화 작업 처리
 	virtual int32 HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload) override;
+
+protected:
 	//@Damage Event 발생 시 Armor 어빌리티 활성화
 	bool TriggerDamageEvent(const FGameplayTag& EventTag, const FGameplayEventData* Payload);
+
+protected:
+	//@Death Event 발생 처리
+	void HandleCharacterDead();
 
 protected:
 	//@Chain System 시작
@@ -151,6 +162,10 @@ public:
 
 	//@체인 액션 종료 이벤트
 	FChainActionFinished ChainActionFinished;
+
+public:
+	//@캐릭터의 게임 플레이 과정에서 발생하는 주요 이벤트
+	FCharacterStateEventOnGameplay CharacterStateEventOnGameplay;
 #pragma endregion
 
 //@Callbacks
@@ -160,6 +175,12 @@ protected:
 	void OnAbilityActivated(UGameplayAbility* Ability);
 	//@GA 종료 이벤트 구독
 	virtual void OnAbilityEnded(UGameplayAbility* Ability);
+
+protected:
+	void OnGameplayEffectApplied(
+		UAbilitySystemComponent* Source,
+		const FGameplayEffectSpec& SpecApplied,
+		FActiveGameplayEffectHandle ActiveHandle);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

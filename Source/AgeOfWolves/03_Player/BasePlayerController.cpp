@@ -153,6 +153,11 @@ void ABasePlayerController::SetupViewportClientOnBeginPlay()
 }
 #pragma endregion
 
+#pragma region Callbacks
+
+#pragma endregion
+
+
 #pragma region Utility
 UUIComponent* ABasePlayerController::GetUIComponent() const
 {

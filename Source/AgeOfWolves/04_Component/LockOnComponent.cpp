@@ -23,8 +23,6 @@ ULockOnComponent::ULockOnComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
 
-
-
     bLockOn = false;
 
     NearByEnemies.Reset();
@@ -48,6 +46,10 @@ void ULockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
+    //@Target, NearbyEnemies 체크
+
+
+    //@회전 업데이트
     UpdateControllerRotation(DeltaTime);
 }
 
