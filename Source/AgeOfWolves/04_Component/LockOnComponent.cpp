@@ -6,6 +6,7 @@
 #include "05_Animation/BaseAnimInstance.h"
 #include "03_Player/BasePlayerController.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
+#include "04_Component/BaseAbilitySystemComponent.h"
 
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -45,9 +46,6 @@ void ULockOnComponent::BeginPlay()
 void ULockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-    //@Target, NearbyEnemies 체크
-
 
     //@회전 업데이트
     UpdateControllerRotation(DeltaTime);
@@ -160,6 +158,9 @@ void ULockOnComponent::StartLockOn()
         return;
     }
 
+    //@현재 타겟의 상태 변화 이벤트에 바인딩 수행
+    BindCurrentTargetStateEvents();
+
     //@시각 효과
     if (!LockOnBillboardComponent)
     {
@@ -206,6 +207,9 @@ void ULockOnComponent::CancelLockOn()
         UE_LOGFMT(LogLockOn, Warning, "락온 해제 실패: 플레이어 캐릭터가 유효하지 않음");
         return;
     }
+
+    //@타겟의 상태 변화 이벤트 언바인딩
+    UnbindCurrentTargetStateEvents();
 
     //@Billboard
     UpdateBillboardComponent(false);
@@ -343,6 +347,39 @@ bool ULockOnComponent::FindTargetEnemy()
     return IsValid(TargetEnemyRef.Get());
 }
 
+void ULockOnComponent::BindCurrentTargetStateEvents()
+{
+    //@Target Enemy
+    if (!TargetEnemyRef.IsValid()) return;
+
+    //@CharacterBase로 캐스팅
+    ACharacterBase* Character = Cast<ACharacterBase>(TargetEnemyRef.Get());
+    if (!Character) return;
+
+    //@ASC
+    if (UBaseAbilitySystemComponent* TargetASC = Cast<UBaseAbilitySystemComponent>(Character->GetAbilitySystemComponent()))
+    {
+        //@상태 변화 이벤트 바인딩
+        TargetASC->CharacterStateEventOnGameplay.AddUObject(this, &ULockOnComponent::OnTargetStateChanged);
+
+        UE_LOGFMT(LogLockOn, Log, "타겟 {0}에 대한 상태 이벤트 바인딩 완료", *TargetEnemyRef->GetName());
+    }
+}
+
+void ULockOnComponent::UnbindCurrentTargetStateEvents()
+{
+    if (!TargetEnemyRef.IsValid()) return;
+
+    ACharacterBase* Character = Cast<ACharacterBase>(TargetEnemyRef.Get());
+    if (!Character) return;
+
+    if (UBaseAbilitySystemComponent* TargetASC = Cast<UBaseAbilitySystemComponent>(Character->GetAbilitySystemComponent()))
+    {
+        TargetASC->CharacterStateEventOnGameplay.RemoveAll(this);
+        UE_LOGFMT(LogLockOn, Log, "타겟 {0}에 대한 상태 이벤트 바인딩 해제", *TargetEnemyRef->GetName());
+    }
+}
+
 void ULockOnComponent::UpdateSpringArmSettings(bool bIsLockingOn)
 {
     if (!SpringArmComponentRef.IsValid())
@@ -351,7 +388,8 @@ void ULockOnComponent::UpdateSpringArmSettings(bool bIsLockingOn)
         return;
     }
 
-    SpringArmComponentRef->bUsePawnControlRotation = !bIsLockingOn;
+    SpringArmComponentRef->bUsePawnControlRotation = true;
+
     SpringArmComponentRef->CameraLagSpeed = bIsLockingOn ? 5.0f : 10.0f;
     SpringArmComponentRef->CameraRotationLagSpeed = bIsLockingOn ? 17.5f : 30.0f;
 }
@@ -395,7 +433,7 @@ void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
     PlayerCharacterRef->GetController()->SetControlRotation(FRotator(0.f, FinalRotation.Yaw, 0.f));
 
     //@Update Spring Arm
-    UpdateSpringArmTransform(DeltaTime, Target, FinalRotation);
+    //UpdateSpringArmTransform(DeltaTime, Target, FinalRotation);
 
     //@시각 효과
     if (LockOnBillboardComponent && TargetEnemyRef.IsValid())
@@ -513,6 +551,9 @@ void ULockOnComponent::OnLockOnTargetChanged(const FGameplayTag& InputTag, const
         return;
     }
 
+    // 이전 타겟의 이벤트 바인딩 해제
+    UnbindCurrentTargetStateEvents();
+
     //@새 인덱스 계산
     int32 NewIndex;
     if (Value < 0.0f)  //@휠 다운(음수) -> 오른쪽으로 이동
@@ -549,7 +590,21 @@ void ULockOnComponent::OnLockOnTargetChanged(const FGameplayTag& InputTag, const
     UpdateBillboardComponent(true, true);
 
     TargetEnemyRef = NewTarget;
+
+    // 새로운 타겟에 대한 이벤트 바인딩
+    BindCurrentTargetStateEvents();
+
     UE_LOGFMT(LogLockOn, Log, "Lock On 타겟이 변경되었습니다: {0}", *NewTarget->GetName());
+}
+
+void ULockOnComponent::OnTargetStateChanged(const FGameplayTag& StateTag)
+{
+    // 죽음 상태 태그 체크
+    if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+    {
+        UE_LOGFMT(LogLockOn, Log, "타겟 {0}이(가) 사망하여 Lock On을 취소합니다.", *TargetEnemyRef->GetName());
+        CancelLockOn();
+    }
 }
 #pragma endregion
 

@@ -70,7 +70,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		SpringArm->SetupAttachment(RootComponent);
 
 		// 카메라 거리 조정 (세키로 스타일)
-		SpringArm->TargetArmLength = 350.0f;
+		SpringArm->TargetArmLength = 350.f;
 		SpringArm->bUsePawnControlRotation = true;
 
 		// 카메라 래그 설정
@@ -81,7 +81,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		SpringArm->CameraLagMaxDistance = 100.f;
 
 		// 스프링암 위치와 회전 조정
-		SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 70.f));  // 높이 조정
+		SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 250.f));  // 높이 조정
 		SpringArm->SetRelativeRotation(FRotator(-15.f, 0.f, 0.f)); // 아래를 내려다보는 각도
 
 		// 소켓 오프셋 조정으로 카메라 위치 미세 조정
@@ -102,16 +102,16 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	//@TODO: 추후에 삭제 예정
 	//@임시 무기
 	{
-		WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
-		WeaponMesh->SetupAttachment(GetMesh(), "TempKatana");
-		WeaponMesh->SetVisibility(false);
+		//WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+		//WeaponMesh->SetupAttachment(GetMesh(), "TempKatana");
+		//WeaponMesh->SetVisibility(false);
 
-		ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
-		ShealthedWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
-		ShealthedWeaponMesh->SetVisibility(false);
+		//ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
+		//ShealthedWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
+		//ShealthedWeaponMesh->SetVisibility(false);
 
-		FullWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));
-		FullWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
+		//FullWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));
+		//FullWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
 	}
 
 	//@Team ID

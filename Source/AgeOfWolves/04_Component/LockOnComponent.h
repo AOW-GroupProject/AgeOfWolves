@@ -71,6 +71,11 @@ protected:
 protected:
     bool FindTargetEnemy();
 
+protected:
+    // 현재 타겟의 상태 변화 이벤트 바인딩/언바인딩
+    void BindCurrentTargetStateEvents();
+    void UnbindCurrentTargetStateEvents();
+
 private:
     void UpdateSpringArmSettings(bool bIsLockingOn);
 
@@ -122,7 +127,6 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
         float TextureScale = 0.08f;
-
 #pragma endregion
 
 //@Delegates
@@ -138,6 +142,10 @@ public:
     UFUNCTION()
         void OnLockOnTargetChanged(const FGameplayTag& InputTag, const float Value);
 
+protected:
+    //@주변 적들 목록에 추가된 적들의 상태 변화 이벤트를 구독하는 콜백
+    UFUNCTION()
+        void OnTargetStateChanged(const FGameplayTag& StateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

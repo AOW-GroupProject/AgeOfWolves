@@ -22,7 +22,6 @@ struct FDeathInformation;
 
 //@구조체
 #pragma region Structs
-
 #pragma endregion
 
 //@이벤트/델리게이트

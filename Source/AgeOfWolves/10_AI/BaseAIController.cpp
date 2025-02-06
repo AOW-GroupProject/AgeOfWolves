@@ -362,17 +362,11 @@ void ABaseAIController::ChangeAgentAIState(EAIState InStateType)
 
 void ABaseAIController::HandleCharacterStateEvent(const FGameplayTag& CharacterStateTag)
 {
-    //@World
-    UWorld* World = GetWorld();
-    if (!World)
-    {
-        UE_LOGFMT(LogBaseAIC, Warning, "캐릭터 상태 이벤트 처리 실패: 월드가 유효하지 않음");
-        return;
-    }
-
     if (CharacterStateTag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
     {
         UE_LOGFMT(LogBaseAIC, Log, "캐릭터 사망 상태 감지. 사망 처리를 시작합니다.");
+
+        //@캐릭터 죽음 처리
         ProcessCharacterDeathEvent();
     }
 }

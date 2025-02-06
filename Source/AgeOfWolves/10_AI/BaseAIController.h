@@ -36,12 +36,10 @@ class UAbilityManagerSubsystem;
 UENUM(BlueprintType)
 enum class EAIState : uint8
 {
-
 	Idle = 0			UMETA(DisplayName = "Idle"),
 	Investigate 		UMETA(DisplayName = "Investigate"),
 	CoverFire			UMETA(DisplayName = "ComverFire"),
-	Attack	 		UMETA(DisplayName = "Attack"),
-
+	Attack	 			UMETA(DisplayName = "Attack"),
 };
 
 /*
@@ -213,6 +211,7 @@ protected:
 	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);
 
 protected:
+	//@캐릭터 상태 관련 이벤트 발생 시 호출되는 콜백
 	UFUNCTION()
 		void OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag);
 #pragma endregion
