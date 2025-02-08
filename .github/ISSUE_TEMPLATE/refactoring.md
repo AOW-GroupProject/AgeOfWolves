@@ -1,7 +1,7 @@
 ---
-name: "♻️Refactoring"
+name: Refactoring
 about: 코드 리팩토링 관련 이슈 작성 시 해당 템플릿을 사용하세요.
-title: "♻️Refactoring : "
+title: 'Refactoring : '
 labels: enhancement, wontfix
 assignees: Yongsullee
 

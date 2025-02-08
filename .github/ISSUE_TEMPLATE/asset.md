@@ -1,7 +1,7 @@
 ---
-name: "\U0001F36EAsset"
+name: Asset
 about: 비 기획자 전용 Asset 추가 관련 이슈 작성 시 해당 템플릿을 사용하세요
-title: "\U0001F36EAsset: "
+title: 'Asset: '
 labels: documentation
 assignees: ''
 
