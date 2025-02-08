@@ -23,6 +23,7 @@ UENUM(BlueprintType)
 enum class EAIType : uint8
 {
 	Wolf = 0		UMETA(DisplayName = "Wolf"),
+	KuroOni			UMETA(DisplayName = "Kuro Oni"),
 	MAX,
 };
 #pragma endregion

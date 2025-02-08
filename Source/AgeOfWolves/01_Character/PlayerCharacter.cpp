@@ -102,16 +102,16 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	//@TODO: 추후에 삭제 예정
 	//@임시 무기
 	{
-		//WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
-		//WeaponMesh->SetupAttachment(GetMesh(), "TempKatana");
-		//WeaponMesh->SetVisibility(false);
+		WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+		WeaponMesh->SetupAttachment(GetMesh(), "TempKatana");
+		WeaponMesh->SetVisibility(false);
 
-		//ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
-		//ShealthedWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
-		//ShealthedWeaponMesh->SetVisibility(false);
+		ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
+		ShealthedWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
+		ShealthedWeaponMesh->SetVisibility(true);
 
-		//FullWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));
-		//FullWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
+		FullWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));
+		FullWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
 	}
 
 	//@Team ID
