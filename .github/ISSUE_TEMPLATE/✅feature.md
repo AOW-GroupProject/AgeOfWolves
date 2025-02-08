@@ -3,7 +3,7 @@ name: "✅Feature"
 about: 새로운 기능 구현에 대한 이슈 작성 시 해당 템플릿을 사용하세요
 title: "✅Feature: "
 labels: enhancement
-assignees: ''
+assignees: Yongsullee
 
 ---
 
