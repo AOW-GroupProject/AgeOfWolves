@@ -73,12 +73,12 @@ void UAOWSaveGame::AddCharacterStateToHistory(
         return;
     }
 
-    CharacterStateHistory.Push(StateInfo);
-
-    while (CharacterStateHistory.Num() > MaxStateHistorySize)
+    if(CharacterStateHistory.Num() >= MaxStateHistorySize)
     {
         CharacterStateHistory.RemoveAt(0);
     }
+
+    CharacterStateHistory.AddUnique(StateInfo);
 
     CharacterStateEventToCache.Broadcast(StateInfo);
 }

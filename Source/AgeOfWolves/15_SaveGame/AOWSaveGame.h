@@ -55,7 +55,6 @@ public:
 		, Description(InDescription)
 	{}
 
-	// Equality operator overload
 	bool operator==(const FCharacterInformation& Other) const
 	{
 		return StateTag == Other.StateTag;
