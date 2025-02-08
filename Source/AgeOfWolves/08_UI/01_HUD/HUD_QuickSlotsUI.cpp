@@ -140,6 +140,8 @@ void UHUD_QuickSlotsUI::ExternalBindToInputComp()
     }
 
     //@외부 바인딩
+    BaseInputComp->UIInputTagTriggered.AddUFunction(this, "OnChangeJujutsuToPrev");
+    BaseInputComp->UIInputTagTriggered.AddUFunction(this, "OnChangeJujutsuToNext");
     BaseInputComp->UIInputTagTriggeredWithValue.AddUFunction(this, "OnUIInputTriggeredWithValue");
 
 }
@@ -439,7 +441,7 @@ void UHUD_QuickSlotsUI::OnAbilitySpecGiven(FGameplayAbilitySpec AbilitySpec)
         FString TagString = AbilityTag.ToString();
 
         //@Battoujutsu Ability
-        if (TagString.StartsWith("Ability.Active.Battoujutsu"))
+        if (TagString.StartsWith("Ability.Passive.Battoujutsu"))
         {
             if (BattoujutsuAbilitySlotRef && !BattoujutsuAbilitySlotRef->GetIsFilled())
             {
@@ -465,12 +467,12 @@ void UHUD_QuickSlotsUI::OnAbilitySpecGiven(FGameplayAbilitySpec AbilitySpec)
                 return;
             }
 
-            // 정보 저장
+            //@정보 저장
             FJujutsuAbilitySlotInfo& SlotInfo = JujutsuSlots.AbilityInfos[EmptySlotIndex];
             SlotInfo.AbilityTag = AbilityTag;
             SlotInfo.bIsFilled = true;
 
-            // UI 업데이트
+            //@UI 업데이트
             if (EmptySlotIndex == JujutsuSlots.CurrentMainIndex)
             {
                 if (JujutsuSlots.MainSlot)
@@ -493,6 +495,114 @@ void UHUD_QuickSlotsUI::OnAbilitySpecGiven(FGameplayAbilitySpec AbilitySpec)
             return;
         }
     }
+}
+
+void UHUD_QuickSlotsUI::OnChangeJujutsuToPrev(const FGameplayTag& InputTag)
+{
+    //@Tag 유효성 검사
+    if (!InputTag.IsValid() || !InputTag.ToString().StartsWith("Input.UI.QuickSlots.MoveJujutsuSlotToPrev"))
+    {
+        return;
+    }
+
+    //@슬롯 유효성 검사
+    if (JujutsuSlots.AbilityInfos.Num() < 3 || !JujutsuSlots.MainSlot || JujutsuSlots.ExtraSlots.Num() < 2)
+    {
+        UE_LOGFMT(LogQuickSlotsUI, Warning, "주술 슬롯 순환에 필요한 슬롯이 부족합니다.");
+        return;
+    }
+
+    //@반시계 방향 회전 (마우스 휠 위로 올리는 것과 동일)
+    JujutsuSlots.CurrentMainIndex = (JujutsuSlots.CurrentMainIndex + 2) % 3;  // -1 + 3
+
+    //@메인 주술 어빌리티 슬롯
+    if (JujutsuSlots.AbilityInfos[JujutsuSlots.CurrentMainIndex].bIsFilled)
+    {
+        JujutsuSlots.MainSlot->AssignNewAbility(JujutsuSlots.AbilityInfos[JujutsuSlots.CurrentMainIndex].AbilityTag);
+    }
+    else
+    {
+        JujutsuSlots.MainSlot->ClearAssignedAbility();
+    }
+
+    //@대기 주술 어빌리티 슬롯
+    int32 firstExtraIndex = (JujutsuSlots.CurrentMainIndex + 1) % 3;
+    int32 secondExtraIndex = (JujutsuSlots.CurrentMainIndex + 2) % 3;
+
+    if (JujutsuSlots.AbilityInfos[firstExtraIndex].bIsFilled)
+    {
+        JujutsuSlots.ExtraSlots[0]->AssignNewAbility(JujutsuSlots.AbilityInfos[firstExtraIndex].AbilityTag);
+    }
+    else
+    {
+        JujutsuSlots.ExtraSlots[0]->ClearAssignedAbility();
+    }
+
+    if (JujutsuSlots.AbilityInfos[secondExtraIndex].bIsFilled)
+    {
+        JujutsuSlots.ExtraSlots[1]->AssignNewAbility(JujutsuSlots.AbilityInfos[secondExtraIndex].AbilityTag);
+    }
+    else
+    {
+        JujutsuSlots.ExtraSlots[1]->ClearAssignedAbility();
+    }
+
+    UE_LOGFMT(LogQuickSlotsUI, Log, "주술 슬롯 반시계 방향 순환 완료 - Main Index: {0}, Extra Indices: {1}, {2}",
+        JujutsuSlots.CurrentMainIndex, firstExtraIndex, secondExtraIndex);
+}
+
+void UHUD_QuickSlotsUI::OnChangeJujutsuToNext(const FGameplayTag& InputTag)
+{
+    //@Tag 유효성 검사
+    if (!InputTag.IsValid() || !InputTag.ToString().StartsWith("Input.UI.QuickSlots.MoveJujutsuSlotToNext"))
+    {
+        return;
+    }
+
+    //@슬롯 유효성 검사
+    if (JujutsuSlots.AbilityInfos.Num() < 3 || !JujutsuSlots.MainSlot || JujutsuSlots.ExtraSlots.Num() < 2)
+    {
+        UE_LOGFMT(LogQuickSlotsUI, Warning, "주술 슬롯 순환에 필요한 슬롯이 부족합니다.");
+        return;
+    }
+
+    //@시계 방향 회전 (마우스 휠 아래로 내리는 것과 동일)
+    JujutsuSlots.CurrentMainIndex = (JujutsuSlots.CurrentMainIndex + 1) % 3;
+
+    //@메인 주술 어빌리티 슬롯
+    if (JujutsuSlots.AbilityInfos[JujutsuSlots.CurrentMainIndex].bIsFilled)
+    {
+        JujutsuSlots.MainSlot->AssignNewAbility(JujutsuSlots.AbilityInfos[JujutsuSlots.CurrentMainIndex].AbilityTag);
+    }
+    else
+    {
+        JujutsuSlots.MainSlot->ClearAssignedAbility();
+    }
+
+    //@대기 주술 어빌리티 슬롯
+    int32 firstExtraIndex = (JujutsuSlots.CurrentMainIndex + 1) % 3;
+    int32 secondExtraIndex = (JujutsuSlots.CurrentMainIndex + 2) % 3;
+
+    if (JujutsuSlots.AbilityInfos[firstExtraIndex].bIsFilled)
+    {
+        JujutsuSlots.ExtraSlots[0]->AssignNewAbility(JujutsuSlots.AbilityInfos[firstExtraIndex].AbilityTag);
+    }
+    else
+    {
+        JujutsuSlots.ExtraSlots[0]->ClearAssignedAbility();
+    }
+
+    if (JujutsuSlots.AbilityInfos[secondExtraIndex].bIsFilled)
+    {
+        JujutsuSlots.ExtraSlots[1]->AssignNewAbility(JujutsuSlots.AbilityInfos[secondExtraIndex].AbilityTag);
+    }
+    else
+    {
+        JujutsuSlots.ExtraSlots[1]->ClearAssignedAbility();
+    }
+
+    UE_LOGFMT(LogQuickSlotsUI, Log, "주술 슬롯 시계 방향 순환 완료 - Main Index: {0}, Extra Indices: {1}, {2}",
+        JujutsuSlots.CurrentMainIndex, firstExtraIndex, secondExtraIndex);
 }
 
 void UHUD_QuickSlotsUI::OnUIInputTriggeredWithValue(const FGameplayTag& InputTag, const float AxisValue)

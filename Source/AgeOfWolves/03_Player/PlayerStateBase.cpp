@@ -9,8 +9,9 @@
 #include "04_Component/BaseCharacterMovementComponent.h"
 
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
-#include "04_Component/BaseAbilitySystemComponent.h"
 #include "14_Subsystem/AbilityManagerSubsystem.h"
+
+#include "15_SaveGame/AOWSaveGame.h"
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 
@@ -37,6 +38,9 @@ void APlayerStateBase::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
 
+    //@내부 바인딩
+    InternalBindingToASC();
+
     //@Ability Manager Subsystem
     const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
     if (!GameInstance)
@@ -59,6 +63,20 @@ void APlayerStateBase::BeginPlay()
 {
     Super::BeginPlay();
 
+}
+
+void APlayerStateBase::InternalBindingToASC()
+{
+    if (!AbilitySystemComponent)
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "InternalBindingToASC: ASC가 유효하지 않습니다");
+        return;
+    }
+
+    //@내부 바인딩
+    AbilitySystemComponent->CharacterStateEventOnGameplay.AddUObject(this, &APlayerStateBase::OnCharacterStateEventOnGameplay);
+
+    UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 상태 관련 이벤트 콜백이 성공적으로 바인딩되었습니다");
 }
 
 void APlayerStateBase::InitializePlayerState()
@@ -194,6 +212,57 @@ void APlayerStateBase::LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame)
 void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
 {
     OnAnyAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);
+}
+
+void APlayerStateBase::OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag)
+{
+    // "State." 태그가 아니면 즉시 반환
+    if (!CharacterStateTag.GetTagName().ToString().StartsWith("State."))
+        return;
+
+    // World 확인
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "월드를 찾을 수 없습니다.");
+        return;
+    }
+
+    // GameInstance 확인
+    UAOWGameInstance* GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(World));
+    if (!GameInstance)
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "GameInstance를 가져올 수 없습니다.");
+        return;
+    }
+
+    // 세이브 게임 인스턴스 확인
+    UAOWSaveGame* SaveGame = Cast<UAOWSaveGame>(GameInstance->GetSaveGameInstance());
+    if (!SaveGame)
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "세이브 게임 인스턴스를 찾을 수 없습니다.");
+        return;
+    }
+
+    // 현재 플레이어 폰 가져오기
+    APawn* ControlledPawn = GetPawn();
+    if (!ControlledPawn)
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "폰이 유효하지 않습니다.");
+        return;
+    }
+
+    //@상태 이력 추가
+    SaveGame->AddCharacterStateToHistory(
+        CharacterStateTag,
+        ControlledPawn,
+        AttributeSet.IsValid() ? AttributeSet.Get() : nullptr
+    );
+
+    // 상태 이벤트 처리 로그
+    UE_LOGFMT(LogPlayerStateBase, Log,
+        "캐릭터 상태 이벤트 처리 | 태그: {0}",
+        CharacterStateTag.GetTagName().ToString());
 }
 #pragma endregion
 

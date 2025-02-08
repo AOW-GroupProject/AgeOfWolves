@@ -149,9 +149,32 @@ void UBaseInputComponent::InternalBindToInputActions(const APlayerController* PC
 void UBaseInputComponent::BindNativeInputActions(const UInputConfig* InputConfig)
 {
 	UE_LOGFMT(LogInputComponent, Log, "기본 입력 액션을 바인딩합니다.");
-	BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Move")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Move);
-	BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_Look);
-	BindNativeInputAction(InputConfig, FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")), ETriggerEvent::Triggered, this, &UBaseInputComponent::Input_LockOn);
+
+	//@이동 
+	BindNativeInputAction(InputConfig,
+		FGameplayTag::RequestGameplayTag(FName("Input.Native.Move")),
+		ETriggerEvent::Triggered,
+		this,
+		&UBaseInputComponent::Input_Move);
+
+	//@회전
+	BindNativeInputAction(InputConfig,
+		FGameplayTag::RequestGameplayTag(FName("Input.Native.Looking")),
+		ETriggerEvent::Triggered,
+		this,
+		&UBaseInputComponent::Input_Look);
+
+	//@락온
+	BindNativeInputAction(InputConfig,
+		FGameplayTag::RequestGameplayTag(FName("Input.Native.LockOn")),
+		ETriggerEvent::Triggered,
+		this,
+		&UBaseInputComponent::Input_LockOn);
+
+	//@락온 타겟 변경 - Axis1D
+	BindAxis1DNativeInputAction(InputConfig,
+		FGameplayTag::RequestGameplayTag(FName("Input.Native.ChangeLockOnTarget")),
+		ETriggerEvent::Triggered);
 }
 
 void UBaseInputComponent::BindAbilityInputActions(const UInputConfig* InputConfig)
@@ -415,10 +438,21 @@ void UBaseInputComponent::OnUIInputTagReleased(FGameplayTag InputTag)
 
 }
 
+void UBaseInputComponent::OnNativeInputTagValueTriggered(const FInputActionValue& Value, FGameplayTag InputTag)
+{
+	const float AxisValue = Value.Get<float>();
+	UE_LOGFMT(LogInputComponent, Log, "Native Input Value Triggered - Tag: {0}, Value: {1}",
+		InputTag.ToString(), AxisValue);
+
+	NativeInputTagTriggeredWithValue.Broadcast(InputTag, AxisValue);
+}
+
+
 void UBaseInputComponent::OnUIInputTagValueTriggered(const FInputActionValue& Value, FGameplayTag InputTag)
 {
 	const float AxisValue = Value.Get<float>();
 	UE_LOGFMT(LogInputComponent, Log, "UI Input Value Triggered - Tag: {0}, Value: {1}", InputTag.ToString(), AxisValue);
+
 	UIInputTagTriggeredWithValue.Broadcast(InputTag, AxisValue);
 }
 #pragma endregion

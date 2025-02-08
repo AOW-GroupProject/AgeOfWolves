@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "GameplayTagContainer.h"
 
 #include "LockOnComponent.generated.h"
 
@@ -16,6 +17,7 @@ class USpringArmComponent;
 class UCameraComponent;
 class UBaseInputComponent;
 struct FInputActionValue;
+class UBillboardComponent;
 #pragma endregion
 
 //@열거형
@@ -62,10 +64,6 @@ protected:
 
     //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-public:
-    void Input_LockOn();
-    void Input_ChangeLockOnTarget(const FInputActionValue& Value);
-
 protected:
     void StartLockOn();
     void CancelLockOn();
@@ -73,12 +71,20 @@ protected:
 protected:
     bool FindTargetEnemy();
 
+protected:
+    // 현재 타겟의 상태 변화 이벤트 바인딩/언바인딩
+    void BindCurrentTargetStateEvents();
+    void UnbindCurrentTargetStateEvents();
+
 private:
     void UpdateSpringArmSettings(bool bIsLockingOn);
 
 protected:
     void UpdateControllerRotation(float DeltaTime);
     void UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& TargetRotation);
+
+private:
+    void UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly = false);
 
 protected:
     UPROPERTY(BlueprintReadWrite, Category = "Lock On")
@@ -108,6 +114,19 @@ protected:
     //@Target으로 설정한 적의 약한 참조
     UPROPERTY()
         TWeakObjectPtr<AActor> TargetEnemyRef;
+
+protected:
+    UPROPERTY()
+        UBillboardComponent* LockOnBillboardComponent;
+
+    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
+        TSoftObjectPtr<UTexture2D> LockOnTexture;
+
+    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
+        float BillboardForwardOffset = 100.0f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
+        float TextureScale = 0.08f;
 #pragma endregion
 
 //@Delegates
@@ -119,6 +138,14 @@ public:
 
 //@Callbacks
 #pragma region Callbacks
+public:
+    UFUNCTION()
+        void OnLockOnTargetChanged(const FGameplayTag& InputTag, const float Value);
+
+protected:
+    //@주변 적들 목록에 추가된 적들의 상태 변화 이벤트를 구독하는 콜백
+    UFUNCTION()
+        void OnTargetStateChanged(const FGameplayTag& StateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

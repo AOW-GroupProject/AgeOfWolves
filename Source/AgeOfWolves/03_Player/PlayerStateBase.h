@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -8,16 +6,15 @@
 
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "02_AbilitySystem/BaseAbilitySet.h"
+#include "04_Component/BaseAbilitySystemComponent.h"
 
 #include "PlayerStateBase.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogPlayerStateBase, Log, All)
 
-
 //@전방 선언
 #pragma region Forward Declaration
 class ABasePlayerController;
-class UBaseAbilitySystemComponent;
 class UUserWidget;
 class UAOWSaveGame;
 class UAbilityManagerSubsystem;
@@ -34,7 +31,10 @@ class UAbilityManagerSubsystem;
 //@이벤트/델리게이트
 #pragma region Delegates
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAttributeSetInitialized);
+
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGameplayAttribute, Attribute, float, OldValue, float, NewValue);
+
+
 #pragma endregion
 
 
@@ -68,6 +68,7 @@ protected:
 
 protected:
 	//@외부 바인딩
+	void InternalBindingToASC();
 
 public:
 	UFUNCTION()
@@ -98,6 +99,7 @@ protected:
 	//@캐릭터 태그
 	FGameplayTag CharacterTag;
 
+
 #pragma endregion
 
 //@Delegates
@@ -112,6 +114,10 @@ public:
 #pragma region Callbacks
 protected:
 	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);
+
+protected:
+	UFUNCTION()
+		void OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

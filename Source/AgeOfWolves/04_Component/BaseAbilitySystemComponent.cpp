@@ -1,7 +1,10 @@
 #include "BaseAbilitySystemComponent.h"
 #include "Logging/StructuredLog.h"
 
+#include "03_Player/PlayerStateBase.h"
+
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
+#include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 
 DEFINE_LOG_CATEGORY(LogASC)
 // UE_LOGFMT(LogASC, Warning, "");
@@ -25,8 +28,15 @@ void UBaseAbilitySystemComponent::InitializeComponent()
 
 	// @Ability 생명 주기 이벤트에 커스텀 콜백 함수 등록
 	{
+		//@어빌리티 활성화 이벤트
 		AbilityActivatedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityActivated);
+		//@어빌리티 활성화 종료 이베느
 		AbilityEndedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityEnded);
+		//@GameplayEffect 적용 이벤트
+		OnActiveGameplayEffectAddedDelegateToSelf.AddUObject(
+			this,
+			&UBaseAbilitySystemComponent::OnGameplayEffectApplied
+		);
 	}
 }
 #pragma endregion
@@ -708,6 +718,24 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 
 	// @TODO: Ability 활성화 종료 시점에 ASC에서 할 일들...
 
+}
+
+void UBaseAbilitySystemComponent::OnGameplayEffectApplied(UAbilitySystemComponent* Source,
+	const FGameplayEffectSpec& SpecApplied,
+	FActiveGameplayEffectHandle ActiveHandle)
+{
+	const FGameplayTagContainer& AssetTags = SpecApplied.Def->InheritableGameplayEffectTags.Added;
+
+	// State 태그 확인 및 이벤트 발생
+	for (const FGameplayTag& StateTag : AssetTags)
+	{
+		if (StateTag.ToString().StartsWith("State"))
+		{
+			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *StateTag.ToString());
+
+			CharacterStateEventOnGameplay.Broadcast(StateTag);
+		}
+	}
 }
 #pragma endregion
 

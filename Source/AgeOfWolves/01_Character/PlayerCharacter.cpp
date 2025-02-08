@@ -10,6 +10,7 @@
 #include "Camera/CameraComponent.h"
 
 #include "03_Player/BasePlayerController.h"
+#include "04_Component/BaseInputComponent.h"
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "05_Animation/BaseAnimInstance.h"
@@ -69,7 +70,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		SpringArm->SetupAttachment(RootComponent);
 
 		// 카메라 거리 조정 (세키로 스타일)
-		SpringArm->TargetArmLength = 350.0f;
+		SpringArm->TargetArmLength = 350.f;
 		SpringArm->bUsePawnControlRotation = true;
 
 		// 카메라 래그 설정
@@ -80,7 +81,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		SpringArm->CameraLagMaxDistance = 100.f;
 
 		// 스프링암 위치와 회전 조정
-		SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 70.f));  // 높이 조정
+		SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 250.f));  // 높이 조정
 		SpringArm->SetRelativeRotation(FRotator(-15.f, 0.f, 0.f)); // 아래를 내려다보는 각도
 
 		// 소켓 오프셋 조정으로 카메라 위치 미세 조정
@@ -107,7 +108,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 
 		ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
 		ShealthedWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
-		ShealthedWeaponMesh->SetVisibility(false);
+		ShealthedWeaponMesh->SetVisibility(true);
 
 		FullWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));
 		FullWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
@@ -167,12 +168,30 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 		return;
 	}
 
-	LockOnComponent->LockOnStateChanged.AddUFunction(BaseAnimInstance, "OnLockOnStateChanged");
 	AnimInstanceRef = BaseAnimInstance;
+	LockOnComponent->LockOnStateChanged.AddUFunction(BaseAnimInstance, "OnLockOnStateChanged");
 
+	//@LockOn Component <-> Input Component
+	ABasePlayerController* PC = Cast<ABasePlayerController>(NewController);
+	if (!PC)
+	{
+		UE_LOGFMT(LogPlayer, Warning, "BasePlayerController가 유효하지 않습니다.");
+		return;
+	}
+
+	UBaseInputComponent* BaseInputComp = PC->GetBaseInputComponent();
+	if (!BaseInputComp)
+	{
+		UE_LOGFMT(LogPlayer, Warning, "BaseInputComponent가 유효하지 않습니다.");
+		return;
+	}
+
+	// Input Component의 NativeInputTagTriggeredWithValue 이벤트에 LockOn Component의 OnLockOnTargetChanged 바인딩
+	BaseInputComp->NativeInputTagTriggeredWithValue.AddUObject(LockOnComponent, &ULockOnComponent::OnLockOnTargetChanged);
+
+	//@ASC
 	if (!AbilitySystemComponent.IsValid())
 	{
-		//@ASC
 		APlayerStateBase* PS = Cast<APlayerStateBase>(GetPlayerState());
 		if (!PS)
 		{

@@ -33,6 +33,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FNotifyInputComponentInitFinished);
 DECLARE_MULTICAST_DELEGATE_OneParam(FUIInputTagTriggered, const FGameplayTag&);
 DECLARE_MULTICAST_DELEGATE_OneParam(FUIInputTagReleased, const FGameplayTag&);
 
+DECLARE_MULTICAST_DELEGATE_TwoParams(FNativeInputTagTriggeredWithValue, const FGameplayTag&, const float);
+
 DECLARE_MULTICAST_DELEGATE_TwoParams(FUIInputTagTriggeredWithValue, const FGameplayTag&, const float);
 #pragma endregion
 
@@ -117,15 +119,29 @@ protected:
 		}
 	}
 
-	//@Bind Native IA Template
+	//@Bind Native IA Template 
 	template<typename UserClass, typename FuncType>
-	void BindNativeInputAction(const UInputConfig* InputConfig, const FGameplayTag& InputTag, ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func)
+	void BindNativeInputAction(const UInputConfig* InputConfig, const FGameplayTag& InputTag,
+		ETriggerEvent TriggerEvent, UserClass* Object, FuncType Func)
 	{
 		check(InputConfig);
 
 		if (const auto& InputAction = InputConfig->FindNativeInputActionForTag(InputTag))
 		{
 			BindAction(InputAction, TriggerEvent, Object, Func);
+		}
+	}
+
+
+	void BindAxis1DNativeInputAction(const UInputConfig* InputConfig, const FGameplayTag& InputTag,
+		ETriggerEvent TriggerEvent)
+	{
+		check(InputConfig);
+
+		if (const auto& InputAction = InputConfig->FindNativeInputActionForTag(InputTag))
+		{
+			BindAction(InputAction, TriggerEvent,
+				this, &UBaseInputComponent::OnNativeInputTagValueTriggered, InputTag);
 		}
 	}
 
@@ -164,6 +180,9 @@ public:
 	//@UI Input Tag의 해제 이벤트
 	FUIInputTagReleased UIInputTagReleased;
 
+	//@Native Input Action의 Axis1D 값 처리 이벤트
+	FNativeInputTagTriggeredWithValue NativeInputTagTriggeredWithValue;
+
 	//@UI Input Tag의 활성화 및 수치값 발생 IA 이벤트
 	FUIInputTagTriggeredWithValue UIInputTagTriggeredWithValue;
 #pragma endregion
@@ -190,7 +209,12 @@ protected:
 	//@UI Input Tag Released 이벤트를 구독하는 콜백
 	void OnUIInputTagReleased(FGameplayTag InputTag);
 
-	// Axis 입력 처리를 위한 새로운 콜백
+protected:
+	//@Native IA 중 Axis1D 처리 이벤틀르 구독
+	void OnNativeInputTagValueTriggered(const FInputActionValue& Value, FGameplayTag InputTag);
+
+protected:
+	//@UI IA 중 Axis1D 처리 이벤트를 구독
 	void OnUIInputTagValueTriggered(const FInputActionValue& Value, FGameplayTag InputTag);
 #pragma endregion
 
