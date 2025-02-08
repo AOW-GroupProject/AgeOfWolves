@@ -36,12 +36,10 @@ class UAbilityManagerSubsystem;
 UENUM(BlueprintType)
 enum class EAIState : uint8
 {
-
 	Idle = 0			UMETA(DisplayName = "Idle"),
 	Investigate 		UMETA(DisplayName = "Investigate"),
 	CoverFire			UMETA(DisplayName = "ComverFire"),
-	Attack	 		UMETA(DisplayName = "Attack"),
-
+	Attack	 			UMETA(DisplayName = "Attack"),
 };
 
 /*
@@ -106,6 +104,7 @@ protected:
 
 protected:
 	//@외부 바인딩
+	void InternalBindingToASC();
 
 public:
 	//@초기화
@@ -133,6 +132,14 @@ protected:
 protected:
 	//@AI State의 변경
 	virtual void ChangeAgentAIState(EAIState InStateType);
+
+protected:
+	//@AIC에서 수행할 Character의 상태 이벤트 처리
+	void HandleCharacterStateEvent(const FGameplayTag& CharacterStateTag);
+
+protected:
+	//@캐릭터 죽음 상태 처리
+	void ProcessCharacterDeathEvent();
 
 protected:
 	//@BT
@@ -202,6 +209,11 @@ protected:
 protected:
 	//@AI Attribute Set의 속성 수치 값 변화 이벤트를 구독하는 콜백
 	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);
+
+protected:
+	//@캐릭터 상태 관련 이벤트 발생 시 호출되는 콜백
+	UFUNCTION()
+		void OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

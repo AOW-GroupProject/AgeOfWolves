@@ -1,66 +1,92 @@
-## GitHub 정책, [24-04-06, Updated by YongSeol]
-
-관련 링크 : https://webddevys.tistory.com/440
-
-### 브랜치 정책
-
-1. main 
-
-	- 개념 : 배포 용 최종 코드가 관리되는 브랜치, 절대 건드리지 않는다.
-	- 보호 정책 : main은 Lock, 절대 최종 코드가 아닌 이상 push하지 않는다.
-
-2. develop 
-
-	- 개념 : 실질적으로 개발이 현재 진행되는 브랜치, 거의 완성된 코드만 올라간다.
-	- 보호 정책 : develp도 Lock, PR 필수, 코드 리뷰 받기, Approval 모두 받기 그 다음에 Merge
-
-3. feature
-
-	- 개념 : 이슈로부터 생성되어, develop 브랜치를 Base로 두는 각 개발자의 Local에서 작업을 수행하는 Branch입니다. 코드 리뷰 후 develop 브랜치로의 PR이 승인되면, 성공적으로 develop에 merge되어 즉시 관련 이슈와 함께 제거됩니다.
-	- 이름 형식 : <이슈종류>-<마일스톤><이슈번호> 형식, 예제) feature-CharacterLocomotion#5, fix-CharacterLocomotion#5
-	- base 브랜치/상위 브랜치 : develop 브랜치
-	- 보호 정책 : 각 개발자가 소유하는 Local 브랜치 개념으로, 서로의 브랜치는 최대한 침범하지 않는다. 
-	- 매커니즘
-		
-  		1. Issue 발행 // Owner가 발행, 회의를 통해 결정, 신경 안써도됨
-		2. GitHub Project에서 해당 이슈를 On-Progress 칼럼으로 옮긴다.
-		3. Assignee 설정 - 작업하는 본인으로 변경
-		3. Create Branch 
-		4. Base 브랜치를 Develop으로 설정 
-		5. Local에서 작업
-		6. 작업 완료 후 Commit 작성 및 Push (원격 저장소의 동일 네임의 feature 브랜치로 push)
-		7. develop < - feature PR 작성 후, 리뷰 받기
-		8. 모든 리뷰어로부터 Approval 받으면, Owner가 Merge 진행
-
-************************************************************************************************************************************************************************
-
-2. Commit Convention
-
-	1. Commit 제목
-		
-		a) Feat : 기능 추가, 구현
-		b) Fix : 버그 수정 
-		c) Test : 테스트 코드
-		d) Asset : 애셋 추가/수정/변경 (비 개발자 전용)
-		e) Sync : Conflict 발생 시 브랜치 간 동기화 작업 (Owner 전용)
-
-	2. Commit 본문 : 이전 Commit 참조
-
-************************************************************************************************************************************************************************
-
-3. PR 작성
-
-	1. 제목 작성 유형
-
-		- [Commit 제목], 관련 이슈: <이슈번호>
-
-		예제) Feat : Character Locomotion 구현, 관련 이슈:#5
-
-	2. 본문
-
-		- PR 템플릿 활용
-
-************************************************************************************************************************************************************************
+# Blood Pack
 
 
 
+## Getting started
+
+To make it easy for you to get started with GitLab, here's a list of recommended next steps.
+
+Already a pro? Just edit this README.md and make it your own. Want to make it easy? [Use the template at the bottom](#editing-this-readme)!
+
+## Add your files
+
+- [ ] [Create](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#create-a-file) or [upload](https://docs.gitlab.com/ee/user/project/repository/web_editor.html#upload-a-file) files
+- [ ] [Add files using the command line](https://docs.gitlab.com/ee/gitlab-basics/add-file.html#add-a-file-using-the-command-line) or push an existing Git repository with the following command:
+
+```
+cd existing_repo
+git remote add origin https://gitlab.com/daryll2/blood-pack.git
+git branch -M main
+git push -uf origin main
+```
+
+## Integrate with your tools
+
+- [ ] [Set up project integrations](https://gitlab.com/daryll2/blood-pack/-/settings/integrations)
+
+## Collaborate with your team
+
+- [ ] [Invite team members and collaborators](https://docs.gitlab.com/ee/user/project/members/)
+- [ ] [Create a new merge request](https://docs.gitlab.com/ee/user/project/merge_requests/creating_merge_requests.html)
+- [ ] [Automatically close issues from merge requests](https://docs.gitlab.com/ee/user/project/issues/managing_issues.html#closing-issues-automatically)
+- [ ] [Enable merge request approvals](https://docs.gitlab.com/ee/user/project/merge_requests/approvals/)
+- [ ] [Automatically merge when pipeline succeeds](https://docs.gitlab.com/ee/user/project/merge_requests/merge_when_pipeline_succeeds.html)
+
+## Test and Deploy
+
+Use the built-in continuous integration in GitLab.
+
+- [ ] [Get started with GitLab CI/CD](https://docs.gitlab.com/ee/ci/quick_start/index.html)
+- [ ] [Analyze your code for known vulnerabilities with Static Application Security Testing(SAST)](https://docs.gitlab.com/ee/user/application_security/sast/)
+- [ ] [Deploy to Kubernetes, Amazon EC2, or Amazon ECS using Auto Deploy](https://docs.gitlab.com/ee/topics/autodevops/requirements.html)
+- [ ] [Use pull-based deployments for improved Kubernetes management](https://docs.gitlab.com/ee/user/clusters/agent/)
+- [ ] [Set up protected environments](https://docs.gitlab.com/ee/ci/environments/protected_environments.html)
+
+***
+
+# Editing this README
+
+When you're ready to make this README your own, just edit this file and use the handy template below (or feel free to structure it however you want - this is just a starting point!). Thank you to [makeareadme.com](https://www.makeareadme.com/) for this template.
+
+## Suggestions for a good README
+Every project is different, so consider which of these sections apply to yours. The sections used in the template are suggestions for most open source projects. Also keep in mind that while a README can be too long and detailed, too long is better than too short. If you think your README is too long, consider utilizing another form of documentation rather than cutting out information.
+
+## Name
+Choose a self-explaining name for your project.
+
+## Description
+Let people know what your project can do specifically. Provide context and add a link to any reference visitors might be unfamiliar with. A list of Features or a Background subsection can also be added here. If there are alternatives to your project, this is a good place to list differentiating factors.
+
+## Badges
+On some READMEs, you may see small images that convey metadata, such as whether or not all the tests are passing for the project. You can use Shields to add some to your README. Many services also have instructions for adding a badge.
+
+## Visuals
+Depending on what you are making, it can be a good idea to include screenshots or even a video (you'll frequently see GIFs rather than actual videos). Tools like ttygif can help, but check out Asciinema for a more sophisticated method.
+
+## Installation
+Within a particular ecosystem, there may be a common way of installing things, such as using Yarn, NuGet, or Homebrew. However, consider the possibility that whoever is reading your README is a novice and would like more guidance. Listing specific steps helps remove ambiguity and gets people to using your project as quickly as possible. If it only runs in a specific context like a particular programming language version or operating system or has dependencies that have to be installed manually, also add a Requirements subsection.
+
+## Usage
+Use examples liberally, and show the expected output if you can. It's helpful to have inline the smallest example of usage that you can demonstrate, while providing links to more sophisticated examples if they are too long to reasonably include in the README.
+
+## Support
+Tell people where they can go to for help. It can be any combination of an issue tracker, a chat room, an email address, etc.
+
+## Roadmap
+If you have ideas for releases in the future, it is a good idea to list them in the README.
+
+## Contributing
+State if you are open to contributions and what your requirements are for accepting them.
+
+For people who want to make changes to your project, it's helpful to have some documentation on how to get started. Perhaps there is a script that they should run or some environment variables that they need to set. Make these steps explicit. These instructions could also be useful to your future self.
+
+You can also document commands to lint the code or run tests. These steps help to ensure high code quality and reduce the likelihood that the changes inadvertently break something. Having instructions for running tests is especially helpful if it requires external setup, such as starting a Selenium server for testing in a browser.
+
+## Authors and acknowledgment
+Show your appreciation to those who have contributed to the project.
+
+## License
+For open source projects, say how it is licensed.
+
+## Project status
+If you have run out of energy or time for your project, put a note at the top of the README saying that development has slowed down or stopped completely. Someone may choose to fork your project or volunteer to step in as a maintainer or owner, allowing your project to keep going. You can also make an explicit request for maintainers.

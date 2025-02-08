@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -183,16 +181,13 @@ protected:
 	//@외부 바인딩
 	void ExternalBindToASC();
 	void ExternalBindToInputComp();
+	void ExternalBindToInventoryComp();
 
 protected:
 	//@내부 바인딩
 	void InternalBindToToolItemSlots(UItemSlot* ItemSlot, bool bLast = false);
 	void InternalBindToBattoujutsuAbilitySlot(UHUD_QuickSlotsUI_AbilitySlot* AbilitySlot);
 	void InternalBindToJujutsuAbilitySlots(UAbilitySlot* AbilitySlot);
-
-protected:
-	//@외부 바인딩
-	void ExternalBindToInventoryComp();
 
 public:
 	//@초기화
@@ -297,6 +292,12 @@ protected:
 		void OnAbilitySpecGiven(FGameplayAbilitySpec AbilitySpec);
 
 protected:
+	UFUNCTION()
+		void OnChangeJujutsuToPrev(const FGameplayTag& InputTag);
+
+	UFUNCTION()
+		void OnChangeJujutsuToNext(const FGameplayTag& InputTag);
+
 	UFUNCTION()
 		void OnUIInputTriggeredWithValue(const FGameplayTag& InputTag, const float AxisValue);
 

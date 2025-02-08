@@ -12,11 +12,13 @@
 #include "Kismet/KismetMathLibrary.h"
 
 #include "01_Character/CharacterBase.h"
+#include "03_Player/PlayerStateBase.h"
 
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "14_Subsystem/AbilityManagerSubsystem.h"
 
+#include "15_SaveGame/AOWSaveGame.h"
 #include "00_GameInstance/AOWGameInstance.h"
 #include "Kismet/GameplayStatics.h"
 
@@ -81,7 +83,8 @@ void ABaseAIController::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
 
-    //@TODO: 컴포넌트 간 바인딩
+    //@내부 바인딩
+    InternalBindingToASC();
 
     //@Ability Manager Subsystem
     const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
@@ -155,6 +158,20 @@ void ABaseAIController::InternalBindToPerceptionComp()
 
     //@내부 바인딩
     AIPerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &ABaseAIController::OnPerception);
+}
+
+void ABaseAIController::InternalBindingToASC()
+{
+    if (!AbilitySystemComponent)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "InternalBindingToASC: ASC가 유효하지 않습니다");
+        return;
+    }
+
+    //@내부 바인딩
+    AbilitySystemComponent->CharacterStateEventOnGameplay.AddUObject(this, &ABaseAIController::OnCharacterStateEventOnGameplay);
+
+    UE_LOGFMT(LogBaseAIC, Log, "캐릭터 상태 이벤트 콜백이 성공적으로 바인딩되었습니다");
 }
 
 void ABaseAIController::InitializeAIController(APawn* InPawn)
@@ -342,6 +359,77 @@ void ABaseAIController::LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame)
 void ABaseAIController::ChangeAgentAIState(EAIState InStateType)
 {
 }
+
+void ABaseAIController::HandleCharacterStateEvent(const FGameplayTag& CharacterStateTag)
+{
+    if (CharacterStateTag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
+    {
+        UE_LOGFMT(LogBaseAIC, Log, "캐릭터 사망 상태 감지. 사망 처리를 시작합니다.");
+
+        //@캐릭터 죽음 처리
+        ProcessCharacterDeathEvent();
+    }
+}
+
+void ABaseAIController::ProcessCharacterDeathEvent()
+{
+    //@BT 중지
+    if (AIBehaviorTree)
+    {
+        AIBehaviorTree->StopTree();
+        UE_LOGFMT(LogBaseAIC, Log, "비헤이비어 트리 실행을 중지했습니다.");
+    }
+
+    //@AI 퍼셉션 비활성화 
+    if (AIPerceptionComponent)
+    {
+        AIPerceptionComponent->Deactivate();
+        UE_LOGFMT(LogBaseAIC, Log, "AI 퍼셉션 컴포넌트를 비활성화했습니다.");
+    }
+
+    //@BB 초기화
+    if (BBComponent)
+    {
+        BBComponent->ClearValue("Contact");
+        BBComponent->ClearValue("TargetActor");
+        BBComponent->ClearValue("MoveToLocation");
+        UE_LOGFMT(LogBaseAIC, Log, "블랙보드 값들을 초기화했습니다.");
+    }
+
+    //@현재 폰 확인
+    APawn* CurrentPawn = GetPawn();
+    if (!CurrentPawn)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "사망 처리 실패: 현재 폰이 유효하지 않음");
+        return;
+    }
+
+    //@World 확인
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "사망 처리 실패: 월드가 유효하지 않음");
+        return;
+    }
+
+    //@일정 시간 후 Unpossess
+    FTimerHandle UnpossessTimerHandle;
+    World->GetTimerManager().SetTimer(
+        UnpossessTimerHandle,
+        [this]()
+        {
+            if (APawn* PawnToUnpossess = GetPawn())
+            {
+                UnPossess();
+                UE_LOGFMT(LogBaseAIC, Log, "AI 컨트롤러가 폰과의 연결을 해제했습니다.");
+            }
+        },
+        5.0f,
+            false
+            );
+
+    UE_LOGFMT(LogBaseAIC, Log, "5초 후 폰 연결 해제를 예약했습니다.");
+}
 #pragma endregion
 
 //@Callbacks
@@ -385,6 +473,60 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
 
 void ABaseAIController::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
 {
+}
+
+void ABaseAIController::OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag)
+{
+    //@"State." 태그가 아니면 즉시 반환
+    if (!CharacterStateTag.GetTagName().ToString().StartsWith("State."))
+        return;
+
+    //@World
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "월드를 찾을 수 없습니다.");
+        return;
+    }
+
+    //@GameInstance
+    UAOWGameInstance* GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(World));
+    if (!GameInstance)
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "GameInstance를 가져올 수 없습니다.");
+        return;
+    }
+
+    //@Save Game
+    UAOWSaveGame* SaveGame = GameInstance->GetSaveGameInstance();
+    if (!SaveGame)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "세이브 게임 인스턴스를 찾을 수 없습니다.");
+        return;
+    }
+
+    //@현재 AI 폰 가져오기
+    APawn* ControlledPawn = GetPawn();
+    if (!ControlledPawn)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "폰 에이전트가 유효하지 않습니다.");
+        return;
+    }
+
+    //@상태 이벤트 처리
+    HandleCharacterStateEvent(CharacterStateTag);
+
+    //@상태 이력 추가
+    SaveGame->AddCharacterStateToHistory(
+        CharacterStateTag,
+        ControlledPawn,
+        AttributeSet.IsValid() ? AttributeSet.Get() : nullptr
+    );
+
+    //@상태 이벤트 처리 로그
+    UE_LOGFMT(LogBaseAIC, Log,
+        "AI 캐릭터 상태 이벤트 처리 | 태그: {0}",
+        CharacterStateTag.GetTagName().ToString());
 }
 #pragma endregion
 

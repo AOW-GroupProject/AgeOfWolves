@@ -1,4 +1,3 @@
-// AbilityManagerSubsystem.cpp
 #include "AbilityManagerSubsystem.h"
 #include "Logging/StructuredLog.h"
 
