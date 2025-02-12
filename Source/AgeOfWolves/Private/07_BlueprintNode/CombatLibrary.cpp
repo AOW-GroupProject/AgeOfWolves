@@ -130,39 +130,54 @@ FHitDirectionResult UCombatLibrary::CalculateHitDirectionWithHitResult(const AAc
     // 2. Impact Point 기반 타격 위치 계산
     {
         FVector HitLocation = HitResult.ImpactPoint;
+
+        //@Debug Sphere 그리기
+#if ENABLE_DRAW_DEBUG
+        DrawDebugSphere(
+            Character->GetWorld(),
+            HitLocation,
+            10.0f,
+            12,
+            FColor::Red,
+            false,
+            3.0f,
+            0,
+            2.0f
+        );
+#endif
+
         FVector ToCenterHit = (HitLocation - ActorLocation);
         ToCenterHit.Z = 0;
         ToCenterHit = ToCenterHit.GetSafeNormal();
 
+        //@(타격 - 중심)벡터와 Forward 벡터의 내적
         float ForwardDot = FVector::DotProduct(ForwardVector, ToCenterHit);
+        //@(타격 - 중심)벡터와 Right 벡터의 내적
         float RightDot = FVector::DotProduct(RightVector, ToCenterHit);
-        float DistanceFromCenter = (HitLocation - ActorLocation).Size2D();
-        const float CenterThreshold = 50.0f;
 
-        UE_LOGFMT(LogCombatLibrary, Log, "Impact Location 계산 - Forward Dot: {0}, Right Dot: {1}, Distance: {2}",
-            ForwardDot, RightDot, DistanceFromCenter);
+        //@전방/후방은 더 엄격하게 (30도), 좌우는 기존대로 (45도)
+        const float ForwardThreshold = FMath::Cos(FMath::DegreesToRadians(30.f));  // 약 0.866 (엄격)
+        const float SideThreshold = FMath::Cos(FMath::DegreesToRadians(45.f));     // 약 0.707 (기존)
 
-        if (DistanceFromCenter <= CenterThreshold)
-        {
-            Result.ImpactLocation = EHitImpactLocation::Center;
-            UE_LOGFMT(LogCombatLibrary, Log, "타격 위치: 중심");
-        }
-        else if (ForwardDot >= Threshold)
+        UE_LOGFMT(LogCombatLibrary, Log, "Impact Location 계산 - Forward Dot: {0}, Right Dot: {1}",
+            ForwardDot, RightDot);
+
+        if (ForwardDot >= ForwardThreshold)
         {
             Result.ImpactLocation = EHitImpactLocation::Front;
             UE_LOGFMT(LogCombatLibrary, Log, "타격 위치: 전방");
         }
-        else if (-ForwardDot > Threshold)
+        else if (-ForwardDot > ForwardThreshold)
         {
             Result.ImpactLocation = EHitImpactLocation::Back;
             UE_LOGFMT(LogCombatLibrary, Log, "타격 위치: 후방");
         }
-        else if (RightDot >= Threshold)
+        else if (RightDot >= SideThreshold)
         {
             Result.ImpactLocation = EHitImpactLocation::Right;
             UE_LOGFMT(LogCombatLibrary, Log, "타격 위치: 우측");
         }
-        else if (-RightDot > Threshold)
+        else if (-RightDot > SideThreshold)
         {
             Result.ImpactLocation = EHitImpactLocation::Left;
             UE_LOGFMT(LogCombatLibrary, Log, "타격 위치: 좌측");

@@ -78,6 +78,7 @@ enum class ECombatType : uint8
 	NormalCombat		UMETA(DisplayName = "NormalCombat"),
 	BattoujutsuCombat	UMETA(DisplayName = "BattoujutsuCombat"),
 	GuardCombat			UMETA(DisplayName = "Guard Combat"),
+	ReverseGuardCombat	UMETA(DisplayName = "Reverse Guard Combat"),
 	MAX					UMETA(DisplayName = "MAX"),
 };
 #pragma endregion
