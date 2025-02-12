@@ -103,6 +103,7 @@ class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 #pragma region Friend Class
 	friend class UAN_UpdateStopMotionType;
 	friend class UANS_NotifyPlayingRootMotion;
+	friend class ABaseAIController;
 #pragma endregion
 
 	GENERATED_BODY()

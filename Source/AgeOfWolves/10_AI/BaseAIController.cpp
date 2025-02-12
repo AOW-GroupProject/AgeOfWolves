@@ -13,10 +13,11 @@
 
 #include "01_Character/CharacterBase.h"
 #include "03_Player/PlayerStateBase.h"
-
+#include "05_Animation/BaseAnimInstance.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "14_Subsystem/AbilityManagerSubsystem.h"
+#include "Components/SkeletalMeshComponent.h"
 
 #include "15_SaveGame/AOWSaveGame.h"
 #include "00_GameInstance/AOWGameInstance.h"
@@ -128,23 +129,85 @@ void ABaseAIController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn)
     Super::UpdateControlRotation(DeltaTime, false);
 
     APawn* const AgentPawn = GetPawn();
+    if (!AgentPawn) return;
 
-    //@Pawn
-    if (!AgentPawn)
+    //@BB의 타겟 액터 확인
+    AActor* TargetActor = nullptr;
+    if (BBComponent)
     {
-        UE_LOGFMT(LogBaseAIC, Warning, "AI 폰을 찾을 수 없습니다. AI 회전 업데이트가 실패했습니다.");
+        TargetActor = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+    }
+
+    //@타겟이 없으면 회전 업데이트 하지 않음
+    if (!TargetActor) return;
+
+    //@현재 위치와 회전
+    FVector Start = AgentPawn->GetActorLocation();
+    FRotator CurrentRotation = GetControlRotation();
+
+    //@타겟을 향한 회전 계산 (GetFocalPoint 대신 직접 타겟 위치 사용)
+    TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, TargetActor->GetActorLocation());
+
+    //@Yaw만 사용
+    TargetRotation.Pitch = 0.0f;
+    TargetRotation.Roll = 0.0f;
+
+    //@보간된 최종 회전 계산
+    FRotator FinalRotation = UKismetMathLibrary::RInterpTo(
+        CurrentRotation,
+        TargetRotation,
+        DeltaTime,
+        SmootRotationSpeed
+    );
+
+    //@컨트롤러 회전 설정
+    SetControlRotation(FinalRotation);
+}
+void ABaseAIController::ExternalBindToAnimInstance(APawn* InPawn)
+{
+    //@폰 유효성 체크
+    if (!InPawn)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "바인딩 실패: 폰이 유효하지 않음");
         return;
     }
 
-    //@현재 회전
-    const FRotator CurrentPawnRotation = AgentPawn->GetActorRotation();
-
-    //@타겟 회전으로 선형 보간
-    FRotator Rotation = UKismetMathLibrary::RInterpTo_Constant(AgentPawn->GetActorRotation(), ControlRotation, DeltaTime, SmootRotationSpeed);
-    if (CurrentPawnRotation.Equals(Rotation, 1e-3f) == false)
+    //@Character로 캐스팅
+    ACharacter* AgentCharacter = Cast<ACharacter>(InPawn);
+    if (!AgentCharacter)
     {
-        AgentPawn->FaceRotation(Rotation, DeltaTime);
+        UE_LOGFMT(LogBaseAIC, Warning, "바인딩 실패: Character로 캐스팅 실패");
+        return;
     }
+
+    //@Skeletal Mesh 컴포넌트 가져오기
+    USkeletalMeshComponent* SkeletalMesh = AgentCharacter->GetMesh();
+    if (!SkeletalMesh)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "바인딩 실패: 스켈레탈 메시 컴포넌트가 유효하지 않음");
+        return;
+    }
+
+    //@Anim Instance 가져오기
+    UAnimInstance* AnimInstance = SkeletalMesh->GetAnimInstance();
+    if (!AnimInstance)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "바인딩 실패: 애님 인스턴스가 유효하지 않음");
+        return;
+    }
+
+    //@BaseAnimInstance로 캐스팅
+    UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(AnimInstance);
+    if (!BaseAnimInstance)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "바인딩 실패: BaseAnimInstance로 캐스팅 실패");
+        return;
+    }
+
+    //@Lock On 상태 변경 이벤트 바인딩
+    AILockOnStateChanged.AddUObject(BaseAnimInstance, &UBaseAnimInstance::OnLockOnStateChanged);
+
+    UE_LOGFMT(LogBaseAIC, Log, "AI {0}의 Lock On 상태 변경 이벤트 바인딩 완료", *InPawn->GetName());
 }
 
 void ABaseAIController::InternalBindToPerceptionComp()
@@ -158,6 +221,7 @@ void ABaseAIController::InternalBindToPerceptionComp()
 
     //@내부 바인딩
     AIPerceptionComponent->OnTargetPerceptionUpdated.AddDynamic(this, &ABaseAIController::OnPerception);
+    AIPerceptionComponent->OnTargetPerceptionForgotten.AddDynamic(this, &ABaseAIController::OnTargetPerceptionLost);
 }
 
 void ABaseAIController::InternalBindingToASC()
@@ -176,6 +240,9 @@ void ABaseAIController::InternalBindingToASC()
 
 void ABaseAIController::InitializeAIController(APawn* InPawn)
 {
+    //@외부 바인딩
+    ExternalBindToAnimInstance(InPawn);
+
     //@AI System
     InitializeAISystem(InPawn);
 
@@ -468,7 +535,26 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
         BBComponent->SetValueAsBool("Contact", Stimulus.WasSuccessfullySensed());
         BBComponent->SetValueAsObject("TargetActor", Actor);
         BBComponent->SetValueAsVector("MoveToLocation", Stimulus.StimulusLocation);
+
+        //@Lock On 이벤트 호출
+        AILockOnStateChanged.Broadcast(true);
     }
+
+}
+
+void ABaseAIController::OnTargetPerceptionLost(AActor* Actor)
+{
+    if (!Actor) return;
+
+    UE_LOGFMT(LogBaseAIC, Log, "타겟 {0}에 대한 인지가 소실되었습니다.", *Actor->GetName());
+
+    // [기존의 타겟 소실 처리 코드...]
+
+    //@Lock On 상태 변경 이벤트 호출
+    AILockOnStateChanged.Broadcast(false);
+    UE_LOGFMT(LogBaseAIC, Log, "AI가 {0}을(를) 놓쳐 Lock On 상태 해제", *Actor->GetName());
+
+    // [기존의 상태 변경 코드...]
 }
 
 void ABaseAIController::OnAttributeValueChanged(const FOnAttributeChangeData& Data)

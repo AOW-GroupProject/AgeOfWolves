@@ -67,6 +67,9 @@ enum class EAICombatPhase : uint8
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByAI)
 //@AI의 Attribute Set 초기화 완료 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAIAttributeSetInitialized);
+
+//@타겟 발견
+DECLARE_MULTICAST_DELEGATE_OneParam(FAILockOnStateChanged, bool)
 #pragma endregion
 
 /**
@@ -99,11 +102,12 @@ protected:
 	//~End Of AAIController Interface
 
 protected:
-	//@내부 바인딩
-	void InternalBindToPerceptionComp();
+	//@외부 바인딩
+	void ExternalBindToAnimInstance(APawn* InPawn);
 
 protected:
-	//@외부 바인딩
+	//@내부 바인딩
+	void InternalBindToPerceptionComp();
 	void InternalBindingToASC();
 
 public:
@@ -197,6 +201,10 @@ public:
 public:
 	//@AI의 Attribute Set 초기화 완료 이벤트
 	FAIAttributeSetInitialized AIAttributeSetInitialized;
+
+public:
+	//@AI의 Lock On 상태 변화 이벤트
+	FAILockOnStateChanged AILockOnStateChanged;
 #pragma endregion
 
 //@Callbacks
@@ -206,6 +214,9 @@ protected:
 	UFUNCTION()
 		virtual void OnPerception(AActor* Actor, FAIStimulus Stimulus);
 
+	//@Target에 대한 인지 소실 이벤트를 구독하는 콜백
+	UFUNCTION()
+		void OnTargetPerceptionLost(AActor* Actor);
 protected:
 	//@AI Attribute Set의 속성 수치 값 변화 이벤트를 구독하는 콜백
 	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);

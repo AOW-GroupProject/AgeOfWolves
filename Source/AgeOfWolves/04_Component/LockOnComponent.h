@@ -146,6 +146,8 @@ protected:
     //@주변 적들 목록에 추가된 적들의 상태 변화 이벤트를 구독하는 콜백
     UFUNCTION()
         void OnTargetStateChanged(const FGameplayTag& StateTag);
+
+
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
