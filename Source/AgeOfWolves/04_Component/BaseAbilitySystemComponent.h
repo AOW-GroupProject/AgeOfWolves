@@ -29,6 +29,13 @@ struct FDeathInformation;
 //@어빌리티 스펙 등록 완료 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FAbilitySpecGiven, FGameplayAbilitySpec)
 
+//@어빌리티 활성화/종료 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FAbilityActivated, UGameplayAbility*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FAbilityEnded, UGameplayAbility*);
+
+//@어빌리티 취소 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FAbilityCancelled, UGameplayAbility*);
+
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionActivated, FGameplayTag, ChainActionAbilityTag);
 
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionFinished, FGameplayTag, ChainActionAbilityTag);
@@ -156,9 +163,16 @@ public:
 	FAbilitySpecGiven AbilitySpecGiven;
 
 public:
+	//@어빌리티 활성화 이벤트
+	FAbilityActivated AbilityActivated;
+	//@어빌리티 종료 이벤트
+	FAbilityEnded AbilityEnded;
+	//@어빌리티 취소 이벤트
+	FAbilityCancelled AbilityCancelled;
+
+public:
 	//@체인 액션 활성화 이벤트
 	FChainActionActivated ChainActionActivated;
-
 	//@체인 액션 종료 이벤트
 	FChainActionFinished ChainActionFinished;
 
@@ -180,6 +194,11 @@ protected:
 		UAbilitySystemComponent* Source,
 		const FGameplayEffectSpec& SpecApplied,
 		FActiveGameplayEffectHandle ActiveHandle);
+
+protected:
+	//@태그 기반 어빌리티 활성화 요청
+	UFUNCTION()
+		bool OnRequestActivateAbilityBlockUnitByAI(const FGameplayTag& AbilityTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

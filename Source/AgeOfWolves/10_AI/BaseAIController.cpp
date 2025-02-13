@@ -18,6 +18,7 @@
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "14_Subsystem/AbilityManagerSubsystem.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "04_Component/AIAbilitySequencerComponent.h"
 
 #include "15_SaveGame/AOWSaveGame.h"
 #include "00_GameInstance/AOWGameInstance.h"
@@ -38,6 +39,11 @@ ABaseAIController::ABaseAIController(const FObjectInitializer& ObjectInitializer
     BBComponent = CreateDefaultSubobject<UBlackboardComponent>(TEXT("Blackboard"));
     //@AI Perception
     AIPerceptionComponent = CreateDefaultSubobject<UAIPerceptionComponent>(TEXT("AI Perception"));
+    //@ASC
+    AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
+    //@AI Combat Component
+    AIAbilitySequencerComponent = CreateDefaultSubobject<UAIAbilitySequencerComponent>(TEXT("AI Combat Pattern Component"));
+
     //@AI Sense Config - Sight
     Sight = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("AI Sight Config"));
     //@AI Sense Config - Hearing
@@ -46,8 +52,6 @@ ABaseAIController::ABaseAIController(const FObjectInitializer& ObjectInitializer
     AIManagerRef.Reset();
     //@Ability Manger Subsystem
     AbilityManagerRef.Reset();
-    //@ASC
-    AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
 
     Sight->SightRadius = 2000.f;
     Sight->LoseSightRadius = Sight->SightRadius + 500.f;
@@ -84,7 +88,18 @@ void ABaseAIController::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
 
-    //@내부 바인딩
+    //@AI Combat Pattern Component
+    if (!AIAbilitySequencerComponent)
+    {
+        UE_LOGFMT(LogBaseAIC, Error, "Combat Pattern Component가 유효하지 않습니다.");
+        return;
+    }
+
+    //@비동기 초기화
+    RequestStartInitByAI.AddUFunction(AIAbilitySequencerComponent, "InitializeCombatPatternComponent");
+    RequestStartCombatPattern.BindUFunction(AIAbilitySequencerComponent, "OnRequestActivateAICombatLoop");
+
+    //@내부 바인딩...
     InternalBindingToASC();
 
     //@Ability Manager Subsystem
@@ -163,6 +178,7 @@ void ABaseAIController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn)
     //@컨트롤러 회전 설정
     SetControlRotation(FinalRotation);
 }
+
 void ABaseAIController::ExternalBindToAnimInstance(APawn* InPawn)
 {
     //@폰 유효성 체크
@@ -240,13 +256,11 @@ void ABaseAIController::InternalBindingToASC()
 
 void ABaseAIController::InitializeAIController(APawn* InPawn)
 {
-    //@외부 바인딩
+    //@외부 바인딩...
     ExternalBindToAnimInstance(InPawn);
 
-    //@AI System
+    //@내부 바인딩...
     InitializeAISystem(InPawn);
-
-    //@ASC
     InitializeAbilitySystem(InPawn);
 }
 #pragma endregion
@@ -360,6 +374,16 @@ void ABaseAIController::InitializeAbilitySystem(APawn* InPawn)
     AbilitySystemComponent->SetAbilityTagRelationshipMapping(ATMR);
 
     UE_LOGFMT(LogBaseAIC, Log, "태그 관계 매핑 완료");
+
+    //@AI Combat Pattern과 바인딩
+    if (!AIAbilitySequencerComponent)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "AI Combat Pattern 컴포넌트가 유효하지 않습니다.");
+        return;
+    }
+
+    //@바인딩
+    AIAbilitySequencerComponent->RequestActivateAbilityBlockUnit.BindUFunction(AbilitySystemComponent, "OnRequestActivateAbilityBlockUnitByAI");
 
     //@TODO: 임시 바인딩
     RequestStartInitByAI.AddUFunction(this, "LoadGameAbilitySystem");

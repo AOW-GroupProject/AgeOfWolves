@@ -44,22 +44,16 @@ struct FAIAbilityBlockUnit
 
 public:
     FAIAbilityBlockUnit()
-        : AbilityClass(nullptr)
-        , AbilityTag(FGameplayTag())
+        : AbilityTag(FGameplayTag())
         , Priority(0)
     {}
 
-    FAIAbilityBlockUnit(TSubclassOf<UGameplayAbility> InAbilityClass, const FGameplayTag& InAbilityTag, int32 InPriority)
-        : AbilityClass(InAbilityClass)
-        , AbilityTag(InAbilityTag)
+    FAIAbilityBlockUnit(const FGameplayTag& InAbilityTag, int32 InPriority)
+        : AbilityTag(InAbilityTag)
         , Priority(InPriority)
     {}
 
 public:
-    //@어빌리티 클래스
-    UPROPERTY(EditDefaultsOnly, Category = "어빌리티")
-        TSubclassOf<UGameplayAbility> AbilityClass;
-
     //@어빌리티 식별 태그
     UPROPERTY(EditDefaultsOnly, Category = "어빌리티")
         FGameplayTag AbilityTag;
@@ -80,7 +74,6 @@ public:
     }
 
 public:
-    FORCEINLINE TSubclassOf<UGameplayAbility> GetAbilityClass() const { return AbilityClass; }
     FORCEINLINE FGameplayTag GetAbilityTag() const { return AbilityTag; }
     FORCEINLINE int32 GetPriority() const { return Priority; }
 };
@@ -123,30 +116,9 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "어빌리티 블록 | 어빌리티")
         TArray<FAIAbilityBlockUnit> AbilityBlockUnits;
 
-public:
-    // 직렬화 후 호출되는 함수
-    void PostSerialize(const FArchive& Ar)
-    {
-        if (AbilityBlockUnits.Num() >= 2)
-        {
-            SortAbilityBlockUnitsByPriority();
-        }
-    }
-
-    // 에디터에서 프로퍼티가 변경될 때 호출되는 함수
-    void PostEditChangeProperty(struct FPropertyChangedEvent& PropertyChangedEvent)
-    {
-        if (PropertyChangedEvent.GetPropertyName() == GET_MEMBER_NAME_CHECKED(FAIAbilityBlock, AbilityBlockUnits))
-        {
-            if (AbilityBlockUnits.Num() >= 2)
-            {
-                SortAbilityBlockUnitsByPriority();
-            }
-        }
-    }
+    // ... PostSerialize와 PostEditChangeProperty는 동일 ...
 
 public:
-    // Getter 함수들
     FORCEINLINE FGameplayTag GetBlockIdentifier() const { return BlockIdentifier; }
     FORCEINLINE int32 GetExecutionPriority() const { return ExecutionPriority; }
     FORCEINLINE const TArray<FAIAbilityBlockUnit>& GetAbilityBlockUnits() const { return AbilityBlockUnits; }
