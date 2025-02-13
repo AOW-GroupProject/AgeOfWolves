@@ -18,6 +18,7 @@ EBTNodeResult::Type UBTTask_TryChangeAIState::ExecuteTask(UBehaviorTreeComponent
 {
 	ABaseAIController* Controller = Cast<ABaseAIController>(OwnerComp.GetAIOwner());
 	UBlackboardComponent* BBComponent = Controller->GetBlackboardComponent();
+	
 	if (Controller == nullptr || BBComponent == nullptr) return EBTNodeResult::Failed;
 
 	// #0 Target Actor + Target Location 
