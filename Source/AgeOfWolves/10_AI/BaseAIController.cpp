@@ -328,7 +328,10 @@ void ABaseAIController::InitializeAISystem(APawn* InPawn)
 
 void ABaseAIController::InitializeAbilitySystem(APawn* InPawn)
 {
-    // AbilityManagerSubsystem으로부터 AbilitySet 가져오기
+    //@외부 바인딩...
+    AbilitySystemComponent->ExternalBindToAIAbilitySequencer(this);
+
+    //@Handle
     UBaseAbilitySet* SetToGrant = AbilityManagerRef->GetAbilitySet(CharacterTag);
     if (!IsValid(SetToGrant))
     {
@@ -374,16 +377,6 @@ void ABaseAIController::InitializeAbilitySystem(APawn* InPawn)
     AbilitySystemComponent->SetAbilityTagRelationshipMapping(ATMR);
 
     UE_LOGFMT(LogBaseAIC, Log, "태그 관계 매핑 완료");
-
-    //@AI Combat Pattern과 바인딩
-    if (!AIAbilitySequencerComponent)
-    {
-        UE_LOGFMT(LogBaseAIC, Warning, "AI Combat Pattern 컴포넌트가 유효하지 않습니다.");
-        return;
-    }
-
-    //@바인딩
-    AIAbilitySequencerComponent->RequestActivateAbilityBlockUnit.BindUFunction(AbilitySystemComponent, "OnRequestActivateAbilityBlockUnitByAI");
 
     //@TODO: 임시 바인딩
     RequestStartInitByAI.AddUFunction(this, "LoadGameAbilitySystem");

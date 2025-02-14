@@ -71,6 +71,19 @@ void UAIAbilitySequencerComponent::ExternalBindToASC(UBaseAbilitySystemComponent
 
 }
 
+void UAIAbilitySequencerComponent::ExternalBindToAIController()
+{
+    //@소유 컨트롤러 캐싱
+    ABaseAIController* OwnerController = Cast<ABaseAIController>(GetOwner());
+    if (!OwnerController)
+    {
+        UE_LOGFMT(LogAICombatPattern, Warning, "초기화 실패: 소유 컨트롤러가 BaseAIController가 아님");
+        return;
+    }
+
+    OwnerController->RequestEndCombatPattern.BindUFunction(this, "OnRequestEndCombatPattern");
+}
+
 void UAIAbilitySequencerComponent::InitializeCombatPatternComponent()
 {
     //@소유 컨트롤러 캐싱
@@ -89,7 +102,8 @@ void UAIAbilitySequencerComponent::InitializeCombatPatternComponent()
         return;
     }
 
-    //@외부 바인딩
+    //@외부 바인딩...
+    ExternalBindToAIController();
     ExternalBindToASC(ASC);
 
     //@Game Instance
@@ -117,8 +131,18 @@ void UAIAbilitySequencerComponent::InitializeCombatPatternComponent()
         return;
     }
 
-    //@어빌리티 블록 캐싱
-    InitializeAbilityBlocks(AIDataSet.AbilityBlocks);
+    //@전투 시퀀스 캐싱
+    CachedCombatSequence = AIDataSet.CombatSequence;
+
+    //@초기화 작업
+    bIsFirstRun = true;
+    CurrentBlockIndex = -1;
+    CurrentUnitIndex = 0;
+    bCombatReady = true;
+
+    UE_LOGFMT(LogAICombatPattern, Log, "전투 시퀀스 초기화 완료");
+    UE_LOGFMT(LogAICombatPattern, Log, "시작 블록 Identifier: {0}",
+        *CachedCombatSequence.GetStartBlock().GetBlockIdentifier().ToString());
 
     UE_LOGFMT(LogAICombatPattern, Log, "전투 패턴 컴포넌트 초기화 완료");
 }
@@ -126,68 +150,97 @@ void UAIAbilitySequencerComponent::InitializeCombatPatternComponent()
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-void UAIAbilitySequencerComponent::InitializeAbilityBlocks(const TArray<FAIAbilityBlock>& InBlocks)
-{
-    CachedAbilityBlocks = InBlocks;
-    CurrentBlockIndex = 0;
-    CurrentUnitIndex = 0;
-    bCombatReady = true;
-
-    UE_LOGFMT(LogAICombatPattern, Log, "어빌리티 블록 초기화 완료 - 블록 수: {0}", CachedAbilityBlocks.Num());
-}
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
 bool UAIAbilitySequencerComponent::OnRequestActivateAICombatLoop()
 {
-    if (CachedAbilityBlocks.Num() == 0)
+    //@전투 준비 상태 체크
+    if (!bCombatReady)
     {
-        UE_LOGFMT(LogAICombatPattern, Warning, "어빌리티 블록이 없습니다");
+        UE_LOGFMT(LogAICombatPattern, Warning, "전투 준비가 되지 않은 상태");
         return false;
     }
 
-    if (!CachedAbilityBlocks.IsValidIndex(CurrentBlockIndex))
+    //@현재 블록의 유닛 정보 가져오기
+    const FAIAbilityBlockUnit* CurrentUnit = nullptr;
+    FString BlockType;
+
+    if (IsExecutingStartBlock())
     {
-        UE_LOGFMT(LogAICombatPattern, Warning, "유효하지 않은 블록 인덱스: {0}", CurrentBlockIndex);
-        return false;
+        const auto& StartBlock = CachedCombatSequence.GetStartBlock();
+        if (CurrentUnitIndex < StartBlock.GetAbilityBlockUnits().Num())
+        {
+            CurrentUnit = &StartBlock.GetAbilityBlockUnits()[CurrentUnitIndex];
+            BlockType = TEXT("StartBlock");
+        }
+    }
+    else if (IsExecutingAbilityBlocks())
+    {
+        const auto& AbilityBlocks = CachedCombatSequence.GetAbilityBlocks();
+        if (CurrentBlockIndex < AbilityBlocks.Num() &&
+            CurrentUnitIndex < AbilityBlocks[CurrentBlockIndex].GetAbilityBlockUnits().Num())
+        {
+            CurrentUnit = &AbilityBlocks[CurrentBlockIndex].GetAbilityBlockUnits()[CurrentUnitIndex];
+            BlockType = FString::Printf(TEXT("AbilityBlock[%d]"), CurrentBlockIndex);
+        }
+    }
+    else if (IsExecutingExitBlock())
+    {
+        const auto& ExitBlock = CachedCombatSequence.GetExitBlock();
+        if (CurrentUnitIndex < ExitBlock.GetAbilityBlockUnits().Num())
+        {
+            CurrentUnit = &ExitBlock.GetAbilityBlockUnits()[CurrentUnitIndex];
+            BlockType = TEXT("ExitBlock");
+        }
     }
 
-    const auto& CurrentBlock = CachedAbilityBlocks[CurrentBlockIndex];
-    const auto& Units = CurrentBlock.GetAbilityBlockUnits();
-
-    if (!Units.IsValidIndex(CurrentUnitIndex))
+    //@유닛 유효성 검사
+    if (!CurrentUnit)
     {
-        UE_LOGFMT(LogAICombatPattern, Warning, "유효하지 않은 유닛 인덱스: {0}", CurrentUnitIndex);
+        UE_LOGFMT(LogAICombatPattern, Warning, "유효하지 않은 유닛");
         return false;
     }
-
-    const auto& CurrentUnit = Units[CurrentUnitIndex];
 
     //@어빌리티 태그 유효성 검사
-    if (!CurrentUnit.GetAbilityTag().IsValid())
+    if (!CurrentUnit->GetAbilityTag().IsValid())
     {
         UE_LOGFMT(LogAICombatPattern, Warning, "유효하지 않은 어빌리티 태그");
         return false;
     }
 
+    SetCombatReady(false);
+
     //@어빌리티 활성화 요청
-    if (!RequestActivateAbilityBlockUnit.Execute(CurrentUnit.GetAbilityTag()))
+    if (!RequestActivateAbilityBlockUnit.Execute(CurrentUnit->GetAbilityTag()))
     {
-        UE_LOGFMT(LogAICombatPattern, Warning, "어빌리티 활성화 요청 실패: Block[{0}] Unit[{1}] Tag[{2}]",
-            CurrentBlockIndex, CurrentUnitIndex, *CurrentUnit.GetAbilityTag().ToString());
+        UE_LOGFMT(LogAICombatPattern, Warning, "어빌리티 활성화 요청 실패: {0} Unit[{1}] Tag[{2}]",
+            *BlockType, CurrentUnitIndex, *CurrentUnit->GetAbilityTag().ToString());
+
+        SetCombatReady(true);
+
         return false;
     }
 
-    SetCombatReady(false);
-
-    UE_LOGFMT(LogAICombatPattern, Log, "어빌리티 유닛 활성화 요청 성공: Block[{0}] Unit[{1}] Tag[{2}]",
-        CurrentBlockIndex, CurrentUnitIndex, *CurrentUnit.GetAbilityTag().ToString());
+    UE_LOGFMT(LogAICombatPattern, Log, "어빌리티 유닛 활성화 요청 성공: {0} Unit[{1}] Tag[{2}]",
+        *BlockType, CurrentUnitIndex, *CurrentUnit->GetAbilityTag().ToString());
 
     return true;
-
 }
 
+void UAIAbilitySequencerComponent::OnRequestEndCombatPattern()
+{
+    //@초기화 작업
+    bIsFirstRun = true;
+
+    CurrentBlockIndex = -1;
+    CurrentUnitIndex = 0;
+
+    bCombatReady = true;
+
+    UE_LOGFMT(LogAICombatPattern, Log, "전투 패턴 초기화 완료. 시작 블록 준비");
+}
 void UAIAbilitySequencerComponent::OnAbilityActivated(UGameplayAbility* Ability)
 {
     if (!Ability)
@@ -197,6 +250,10 @@ void UAIAbilitySequencerComponent::OnAbilityActivated(UGameplayAbility* Ability)
     }
 
     UE_LOGFMT(LogAICombatPattern, Log, "어빌리티 활성화: {0}", *Ability->GetName());
+
+    //@전투 준비 상태 해제 및 다음 인덱스로 진행
+    AdvanceToNextUnit();
+
 }
 
 void UAIAbilitySequencerComponent::OnAbilityEnded(UGameplayAbility* Ability)
@@ -236,21 +293,89 @@ void UAIAbilitySequencerComponent::AdvanceToNextUnit()
 {
     CurrentUnitIndex++;
 
-    const auto& CurrentBlock = CachedAbilityBlocks[CurrentBlockIndex];
-    if (CurrentUnitIndex >= CurrentBlock.GetAbilityBlockUnits().Num())
+    //@현재 블록의 유닛 정보 가져오기
+    const TArray<FAIAbilityBlockUnit>* CurrentUnits = nullptr;
+    if (IsExecutingStartBlock())
     {
+        CurrentUnits = &CachedCombatSequence.GetStartBlock().GetAbilityBlockUnits();
+    }
+    else if (IsExecutingAbilityBlocks())
+    {
+        CurrentUnits = &CachedCombatSequence.GetAbilityBlocks()[CurrentBlockIndex].GetAbilityBlockUnits();
+    }
+    else if (IsExecutingExitBlock())
+    {
+        CurrentUnits = &CachedCombatSequence.GetExitBlock().GetAbilityBlockUnits();
+    }
+
+    //@현재 블록의 모든 유닛을 실행했는지 체크
+    if (CurrentUnits && CurrentUnitIndex >= CurrentUnits->Num())
+    {
+        UE_LOGFMT(LogAICombatPattern, Log, "현재 블록의 모든 유닛 실행 완료");
         AdvanceToNextBlock();
     }
 }
-
 void UAIAbilitySequencerComponent::AdvanceToNextBlock()
 {
-    CurrentBlockIndex++;
     CurrentUnitIndex = 0;
 
-    if (CurrentBlockIndex >= CachedAbilityBlocks.Num())
+    //@최초 실행 시
+    if (bIsFirstRun)
     {
-        CurrentBlockIndex = 0;
+        //@Start Block 실행 중이었다면 AbilityBlocks로
+        if (IsExecutingStartBlock())
+        {
+            bIsFirstRun = false;
+            CurrentBlockIndex = 0;  // AbilityBlocks의 첫 번째로
+            UE_LOGFMT(LogAICombatPattern, Log, "Start Block 완료, AbilityBlocks 시작");
+            return;
+        }
+        //@AbilityBlocks 실행 중이었다면 Exit Block으로
+        else if (IsExecutingAbilityBlocks())
+        {
+            if (CurrentBlockIndex >= CachedCombatSequence.GetAbilityBlocks().Num() - 1)
+            {
+                SetExecutingExitBlock();
+                UE_LOGFMT(LogAICombatPattern, Log, "AbilityBlocks 완료, Exit Block 시작");
+                return;
+            }
+            else
+            {
+                CurrentBlockIndex++;
+            }
+        }
     }
+    //@최초 실행이 아닐 경우
+    else
+    {
+        //@AbilityBlocks 실행 중이었다면
+        if (IsExecutingAbilityBlocks())
+        {
+            //@마지막 블록이었다면 Exit Block으로
+            if (CurrentBlockIndex >= CachedCombatSequence.GetAbilityBlocks().Num() - 1)
+            {
+                SetExecutingExitBlock();
+                UE_LOGFMT(LogAICombatPattern, Log, "AbilityBlocks 완료, Exit Block 시작");
+                return;
+            }
+            //@다음 블록으로
+            else
+            {
+                CurrentBlockIndex++;
+            }
+        }
+        //@Exit Block 실행 중이었다면 다시 AbilityBlocks의 처음으로
+        else if (IsExecutingExitBlock())
+        {
+            CurrentBlockIndex = 0;  // AbilityBlocks의 첫 번째로
+            UE_LOGFMT(LogAICombatPattern, Log, "Exit Block 완료, AbilityBlocks 재시작");
+            return;
+        }
+    }
+
+    UE_LOGFMT(LogAICombatPattern, Log, "다음 블록으로 이동 - Block[{0}]",
+        IsExecutingStartBlock() ? TEXT("StartBlock") :
+        IsExecutingExitBlock() ? TEXT("ExitBlock") :
+        *FString::Printf(TEXT("AbilityBlock[%d]"), CurrentBlockIndex));
 }
 #pragma endregion

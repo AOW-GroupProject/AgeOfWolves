@@ -72,10 +72,10 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAIAttributeSetInitialized);
 //@타겟 발견
 DECLARE_MULTICAST_DELEGATE_OneParam(FAILockOnStateChanged, bool)
 
-
 //@전투 패턴 활성화 요청
 DECLARE_DELEGATE_RetVal(bool, FRequestStartCombatPattern)
 
+DECLARE_DELEGATE(FRequestEndCombatPattern)
 #pragma endregion
 
 /**
@@ -223,6 +223,8 @@ public:
 public:
 	//@전투 패턴 활성화 요청 이벤트
 	FRequestStartCombatPattern RequestStartCombatPattern;
+	//@전투 패턴 활성화 종료 요청 이벤트
+	FRequestEndCombatPattern RequestEndCombatPattern;
 #pragma endregion
 
 //@Callbacks

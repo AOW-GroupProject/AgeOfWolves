@@ -14,6 +14,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 class UANS_AllowChainAction;
 class UBaseAttributeSet;
 struct FDeathInformation;
+class ABaseAIController;
 #pragma endregion
 
 //@열거형
@@ -56,6 +57,7 @@ class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemCompone
 #pragma region Friend Class
 	friend class UBaseGameplayAbility;
 	friend class UANS_AllowChainAction;
+	friend class ABaseAIController;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -70,6 +72,7 @@ protected:
 
 protected:
 	//@외부 바인딩
+	void ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC);
 
 protected:
 	//@초기화

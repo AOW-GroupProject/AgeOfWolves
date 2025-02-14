@@ -12,6 +12,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAICombatPattern, Log, All);
 #pragma region Forward Declaration
 class UBaseAbilitySystemComponent;
 class UGameplayAbility;
+struct FAIDataSet;
+struct FAICombatSequence;
 #pragma endregion
 
 //@열거형
@@ -60,6 +62,7 @@ protected:
 private:
     //@외부 바인딩
     void ExternalBindToASC(UBaseAbilitySystemComponent* ASC);
+    void ExternalBindToAIController();
 
 public:
     //@초기화
@@ -69,16 +72,10 @@ public:
 
     //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-public:
-    //@블록 초기화
-    void InitializeAbilityBlocks(const TArray<FAIAbilityBlock>& InBlocks);
-
-
-
 protected:
-    //@캐싱된 어빌리티 블록들
+    //@캐싱된 전투 시퀀스
     UPROPERTY()
-        TArray<FAIAbilityBlock> CachedAbilityBlocks;
+        FAICombatSequence CachedCombatSequence;
 
     //@현재 실행 중인 블록/유닛 인덱스
     UPROPERTY()
@@ -90,6 +87,10 @@ protected:
     //@전투 준비 상태
     UPROPERTY()
         bool bCombatReady;
+
+    //@최초 실행 여부
+    UPROPERTY()
+        bool bIsFirstRun;
 #pragma endregion
 
 //@Delegates
@@ -106,6 +107,10 @@ protected:
     UFUNCTION()
         bool OnRequestActivateAICombatLoop();
 
+    //@전투 패턴 활성화 종료 이벤트 구독
+    UFUNCTION()
+        void OnRequestEndCombatPattern();
+
 protected:
     //@ASC 이벤트 콜백
     void OnAbilityActivated(UGameplayAbility* Ability);
@@ -120,6 +125,31 @@ protected:
     void AdvanceToNextUnit();
     void AdvanceToNextBlock();
 
+private:
+    //@Start Block 실행 중인지 확인
+    FORCEINLINE bool IsExecutingStartBlock() const
+    {
+        return bIsFirstRun && CurrentBlockIndex == -1;
+    }
+
+    //@AbilityBlocks 실행 중인지 확인
+    FORCEINLINE bool IsExecutingAbilityBlocks() const
+    {
+        return CurrentBlockIndex >= 0;
+    }
+
+    //@Exit Block 실행 중인지 확인
+    FORCEINLINE bool IsExecutingExitBlock() const
+    {
+        return CurrentBlockIndex == -2;
+    }
+
+    //@Exit Block 실행 상태로 설정
+    FORCEINLINE void SetExecutingExitBlock()
+    {
+        CurrentBlockIndex = -2;
+    }
+
 public:
     //@상태 조회/설정
     FORCEINLINE bool IsCombatReady() const { return bCombatReady; }
@@ -130,6 +160,6 @@ public:
     FORCEINLINE int32 GetCurrentUnitIndex() const { return CurrentUnitIndex; }
 
     //@블록 정보 getter
-    FORCEINLINE const TArray<FAIAbilityBlock>& GetCachedAbilityBlocks() const { return CachedAbilityBlocks; }
+    FORCEINLINE const FAICombatSequence& GetCachedCachedCombatSequence() const { return CachedCombatSequence; }
 #pragma endregion
 };

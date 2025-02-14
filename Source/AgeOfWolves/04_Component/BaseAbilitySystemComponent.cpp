@@ -1,7 +1,9 @@
 #include "BaseAbilitySystemComponent.h"
 #include "Logging/StructuredLog.h"
 
+#include "10_AI/BaseAIController.h"
 #include "03_Player/PlayerStateBase.h"
+#include "04_Component/AIAbilitySequencerComponent.h"
 
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
@@ -20,6 +22,27 @@ UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitialize
 
 	bChainWindowActive = false;
 	AllowedChainMappings.Empty();
+}
+
+void UBaseAbilitySystemComponent::ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC)
+{
+	if (!BaseAIC)
+	{
+		UE_LOGFMT(LogASC, Warning, "바인딩 실패: AI 컨트롤러가 유효하지 않음");
+		return;
+	}
+
+	auto AISequencer = BaseAIC->FindComponentByClass<UAIAbilitySequencerComponent>();
+	if (!AISequencer)
+	{
+		UE_LOGFMT(LogASC, Warning, "바인딩 실패: AI Ability Sequencer 컴포넌트를 찾을 수 없음");
+		return;
+	}
+
+	//@어빌리티 활성화 요청 이벤트 바인딩
+	AISequencer->RequestActivateAbilityBlockUnit.BindUFunction(this, "OnRequestActivateAbilityBlockUnitByAI");
+
+	UE_LOGFMT(LogASC, Log, "AI Ability Sequencer 컴포넌트와 바인딩 완료");
 }
 
 void UBaseAbilitySystemComponent::InitializeComponent()

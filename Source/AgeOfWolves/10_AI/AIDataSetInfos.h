@@ -148,10 +148,50 @@ public:
 };
 
 /**
- * @FAIDataSet
- *
- * AI의 기본 정보와 행동 패턴을 정의합니다.
- */
+* @FAICombatSequence
+*
+* AI의 전투 시퀀스를 정의합니다.
+*/
+USTRUCT(BlueprintType)
+struct FAICombatSequence
+{
+    GENERATED_BODY()
+
+public:
+    FAICombatSequence()
+        : StartBlock()
+        , AbilityBlocks()
+        , ExitBlock()
+    {}
+
+    //@전투 시작 블록
+    UPROPERTY(EditDefaultsOnly, Category = "전투 시퀀스")
+        FAIAbilityBlock StartBlock;
+
+    //@주요 전투 패턴 블록 목록
+    UPROPERTY(EditDefaultsOnly, Category = "전투 시퀀스")
+        TArray<FAIAbilityBlock> AbilityBlocks;
+
+    //@전투 종료 블록
+    UPROPERTY(EditDefaultsOnly, Category = "전투 시퀀스")
+        FAIAbilityBlock ExitBlock;
+
+public:
+    //@시작 블록 반환
+    FORCEINLINE const FAIAbilityBlock& GetStartBlock() const { return StartBlock; }
+
+    //@전투 패턴 블록 목록 반환
+    FORCEINLINE const TArray<FAIAbilityBlock>& GetAbilityBlocks() const { return AbilityBlocks; }
+
+    //@종료 블록 반환
+    FORCEINLINE const FAIAbilityBlock& GetExitBlock() const { return ExitBlock; }
+};
+
+/**
+* @FAIDataSet
+*
+* AI의 기본 정보와 행동 패턴을 정의합니다.
+*/
 USTRUCT(BlueprintType)
 struct FAIDataSet
 {
@@ -166,13 +206,9 @@ public:
     UPROPERTY(EditDefaultsOnly, Category = "AI 정보 | Behavior Tree")
         TObjectPtr<UBehaviorTree> BehaviorTree;
 
-    //@AI의 전투 행동을 구성하는 어빌리티 블록들
+    //@전투 시퀀스
     UPROPERTY(EditDefaultsOnly, Category = "AI 정보 | 전투 패턴")
-        TArray<FAIAbilityBlock> AbilityBlocks;
-
-    //@가드/일반 전투 상태 전환을 위한 종료 블록
-    UPROPERTY(EditDefaultsOnly, Category = "AI 정보 | 전투 패턴")
-        FAIAbilityBlock ExitBlock;
+        FAICombatSequence CombatSequence;
 };
 #pragma endregion
 
