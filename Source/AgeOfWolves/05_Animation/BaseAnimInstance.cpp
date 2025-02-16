@@ -347,12 +347,15 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
         static_cast<uint8>(CombatType),
         NewValue);
 
-    auto OwnerPlayer = Cast<APlayerCharacter>(OwnerCharacterBaseRef.Get());
-    if (!OwnerPlayer) return;
+    if (!OwnerCharacterBaseRef.IsValid())
+    {
+        UE_LOGFMT(LogAnimInstance, Log, "캐릭터가 유효하지 않습니다.");
+        return;
+    }
 
-    UStaticMeshComponent* WeaponMesh = OwnerPlayer->GetWeaponMesh();
-    UStaticMeshComponent* ShealthMesh = OwnerPlayer->GetShealthMesh();
-    UStaticMeshComponent* FullMesh = OwnerPlayer->GetFullWeaponMesh();
+    UStaticMeshComponent* WeaponMesh = OwnerCharacterBaseRef->GetWeaponMesh();
+    UStaticMeshComponent* ShealthMesh = OwnerCharacterBaseRef->GetShealthMesh();
+    UStaticMeshComponent* FullMesh = OwnerCharacterBaseRef->GetFullWeaponMesh();
 
     if (!WeaponMesh || !ShealthMesh || !FullMesh) return;
 

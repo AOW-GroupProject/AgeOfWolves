@@ -74,8 +74,10 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FAILockOnStateChanged, bool)
 
 //@전투 패턴 활성화 요청
 DECLARE_DELEGATE_RetVal(bool, FRequestStartCombatPattern)
-
-DECLARE_DELEGATE(FRequestEndCombatPattern)
+//@전투 패턴 종료 요청
+DECLARE_DELEGATE_RetVal(bool, FRequestEndCombatPattern)
+//@전투 패턴 Exit Block 완료 통지
+DECLARE_DELEGATE_RetVal(bool, FNotifyCombatPatternExitComplete)
 #pragma endregion
 
 /**
@@ -115,6 +117,7 @@ protected:
 	//@내부 바인딩
 	void InternalBindToPerceptionComp();
 	void InternalBindingToASC();
+	void InternalBindingToAISequencerComp();
 
 public:
 	//@초기화
@@ -225,6 +228,8 @@ public:
 	FRequestStartCombatPattern RequestStartCombatPattern;
 	//@전투 패턴 활성화 종료 요청 이벤트
 	FRequestEndCombatPattern RequestEndCombatPattern;
+	//@전투 패턴 활성화 종료 완료 이벤트
+	FNotifyCombatPatternExitComplete NotifyCombatPatternExitComplete;
 #pragma endregion
 
 //@Callbacks
@@ -246,6 +251,12 @@ protected:
 	//@캐릭터 상태 관련 이벤트 발생 시 호출되는 콜백
 	UFUNCTION()
 		void OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag);
+
+protected:
+	//@전투 패턴 Exit Block 완료 콜백
+	UFUNCTION()
+		bool OnCombatPatternExitComplete();
+
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

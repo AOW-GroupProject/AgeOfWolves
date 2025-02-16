@@ -28,6 +28,9 @@ struct FAICombatSequence;
 #pragma region Delegates
 //@어빌리티 활성화 요청 이벤트
 DECLARE_DELEGATE_RetVal_OneParam(bool, FRequestActivateAbilityBlockUnit, const FGameplayTag&);
+
+//@전투 패턴 Exit Block 완료 통지
+DECLARE_DELEGATE_RetVal(bool, FNotifyCombatPatternExitComplete);
 #pragma endregion
 
 /**
@@ -73,11 +76,21 @@ public:
     //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
+    //@Exit Block 유닛들 순차 실행
+    UFUNCTION()
+        void ExecuteExitBlockUnits();
+
+protected:
     //@캐싱된 전투 시퀀스
     UPROPERTY()
         FAICombatSequence CachedCombatSequence;
 
+    //@현재 활성화 된 블록 유닛의 어빌리티 태그
+    UPROPERTY()
+        FGameplayTag CurrentActivatingUnitTag;
+
     //@현재 실행 중인 블록/유닛 인덱스
+    //@brief -1은 Start Block, 0~N 은 Ability Blocks 내부의 블록 인덱스 의미
     UPROPERTY()
         int32 CurrentBlockIndex;
 
@@ -98,6 +111,10 @@ protected:
 public:
     //@어빌리티 활성화 요청 이벤트
     FRequestActivateAbilityBlockUnit RequestActivateAbilityBlockUnit;
+
+public:
+    //@전투 패턴 Exit Block 완료 통지 이벤트
+    FNotifyCombatPatternExitComplete NotifyCombatPatternExitComplete;
 #pragma endregion
 
 //@Callbacks
@@ -109,7 +126,7 @@ protected:
 
     //@전투 패턴 활성화 종료 이벤트 구독
     UFUNCTION()
-        void OnRequestEndCombatPattern();
+        bool OnRequestEndCombatPattern();
 
 protected:
     //@ASC 이벤트 콜백
@@ -118,7 +135,7 @@ protected:
     void OnAbilityCancelled(UGameplayAbility* Ability);
 #pragma endregion
 
-    //@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
     //@인덱스 관리
@@ -149,6 +166,10 @@ private:
     {
         CurrentBlockIndex = -2;
     }
+
+private:
+    //@AI Combat Pattern에서 관리하는 블록 유닛의 어빌리티 태그인지 체크
+    bool ValidateAbilityTag(const UGameplayAbility* Ability) const;
 
 public:
     //@상태 조회/설정

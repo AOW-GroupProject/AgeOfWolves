@@ -100,7 +100,9 @@ void ABaseAIController::PostInitializeComponents()
     RequestStartCombatPattern.BindUFunction(AIAbilitySequencerComponent, "OnRequestActivateAICombatLoop");
 
     //@내부 바인딩...
+    InternalBindToPerceptionComp();
     InternalBindingToASC();
+    InternalBindingToAISequencerComp();
 
     //@Ability Manager Subsystem
     const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
@@ -254,6 +256,24 @@ void ABaseAIController::InternalBindingToASC()
     UE_LOGFMT(LogBaseAIC, Log, "캐릭터 상태 이벤트 콜백이 성공적으로 바인딩되었습니다");
 }
 
+void ABaseAIController::InternalBindingToAISequencerComp()
+{
+    //@AIAbilitySequencer 유효성 체크
+    if (!AIAbilitySequencerComponent)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "InternalBindingToAISequencerComp: AIAbilitySequencerComponent가 유효하지 않습니다");
+        return;
+    }
+
+    //@전투 패턴 종료 요청
+    RequestEndCombatPattern.BindUFunction(AIAbilitySequencerComponent, "OnRequestEndCombatPattern");
+
+    //@Exit Block 완료 통지 바인딩
+    AIAbilitySequencerComponent->NotifyCombatPatternExitComplete.BindUFunction(this, "OnCombatPatternExitComplete");
+
+    UE_LOGFMT(LogBaseAIC, Log, "AI Sequencer Component 이벤트 바인딩 완료");
+}
+
 void ABaseAIController::InitializeAIController(APawn* InPawn)
 {
     //@외부 바인딩...
@@ -320,10 +340,6 @@ void ABaseAIController::InitializeAISystem(APawn* InPawn)
     //@BB 초기화 및 BT 시작
     BBComponent->InitializeBlackboard(*AIDataSet.BehaviorTree->BlackboardAsset);
     AIBehaviorTree->StartTree(*AIDataSet.BehaviorTree);
-
-    //@내부 바인딩
-    InternalBindToPerceptionComp();
-
 }
 
 void ABaseAIController::InitializeAbilitySystem(APawn* InPawn)
@@ -631,6 +647,20 @@ void ABaseAIController::OnCharacterStateEventOnGameplay(const FGameplayTag& Char
         "AI 캐릭터 상태 이벤트 처리 | 태그: {0}",
         CharacterStateTag.GetTagName().ToString());
 }
+
+bool ABaseAIController::OnCombatPatternExitComplete()
+{
+    //@완료 통지가 바인딩되어 있지 않으면 종료
+    if (!NotifyCombatPatternExitComplete.IsBound())
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "Exit Block 완료 통지 실패: 델리게이트가 바인딩되지 않음");
+        return false;
+    }
+
+    //@Task에 완료 통지
+    UE_LOGFMT(LogBaseAIC, Log, "전투 패턴 Exit Block 완료. Task에 통지");
+    return NotifyCombatPatternExitComplete.Execute();
+}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -667,3 +697,4 @@ ETeamAttitude::Type ABaseAIController::GetTeamAttitudeTowards(const AActor& Othe
         : ETeamAttitude::Hostile;
 }
 #pragma endregion
+

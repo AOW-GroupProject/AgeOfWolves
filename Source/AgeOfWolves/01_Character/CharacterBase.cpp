@@ -20,6 +20,18 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
 
 	MotionWarpComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("Motion Warp Component"));
 
+	//@임시 무기 장착 코드
+	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
+	WeaponMesh->SetupAttachment(GetMesh(), "TempKatana");
+	WeaponMesh->SetVisibility(false);
+
+	ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
+	ShealthedWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
+	ShealthedWeaponMesh->SetVisibility(true);
+
+	FullWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));
+	FullWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
+	FullWeaponMesh->SetVisibility(true);
 }
 
 void ACharacterBase::BeginPlay()

@@ -16,9 +16,11 @@ DEFINE_LOG_CATEGORY(LogAICombatPattern);
 #pragma region Default Setting
 UAIAbilitySequencerComponent::UAIAbilitySequencerComponent(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
-    , CurrentBlockIndex(0)
+    , CurrentActivatingUnitTag(FGameplayTag())
+    , CurrentBlockIndex(-1)
     , CurrentUnitIndex(0)
     , bCombatReady(true)
+    , bIsFirstRun(true) 
 {
     PrimaryComponentTick.bCanEverTick = false;
 }
@@ -150,6 +152,79 @@ void UAIAbilitySequencerComponent::InitializeCombatPatternComponent()
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+void UAIAbilitySequencerComponent::ExecuteExitBlockUnits()
+{
+    //@현재 Exit Block 유닛 가져오기
+    const auto& ExitBlock = CachedCombatSequence.GetExitBlock();
+    const auto& ExitBlockUnits = ExitBlock.GetAbilityBlockUnits();
+
+    //@현재 유닛이 유효한지 확인
+    if (CurrentUnitIndex >= ExitBlockUnits.Num())
+    {
+        //@모든 Exit Block 유닛 실행 완료, 완전 종료
+        UE_LOGFMT(LogAICombatPattern, Log, "Exit Block의 모든 유닛 실행 완료, 전투 패턴 종료");
+
+        //@컴포넌트 상태 초기화
+        bIsFirstRun = true;
+        CurrentBlockIndex = -1;
+        CurrentUnitIndex = 0;
+        bCombatReady = true;
+        CurrentActivatingUnitTag = FGameplayTag();
+
+        //@AI Controller에 완료 통지가 바인딩되지 않은 경우
+        if (!NotifyCombatPatternExitComplete.IsBound())
+        {
+            UE_LOGFMT(LogAICombatPattern, Warning, "Exit Block 완료 통지 델리게이트가 바인딩되지 않음");
+            return;
+        }
+
+        //@완료 통지 실행
+        const bool bNotifySuccess = NotifyCombatPatternExitComplete.Execute();
+        if (bNotifySuccess)
+        {
+            UE_LOGFMT(LogAICombatPattern, Log, "AI Controller에 Exit Block 완료 통지 성공");
+        }
+        else
+        {
+            UE_LOGFMT(LogAICombatPattern, Warning, "AI Controller에 Exit Block 완료 통지 실패");
+        }
+        return;
+    }
+
+    //@현재 유닛 가져오기
+    const auto& CurrentUnit = ExitBlockUnits[CurrentUnitIndex];
+
+    //@어빌리티 태그 유효성 검사
+    if (!CurrentUnit.GetAbilityTag().IsValid())
+    {
+        UE_LOGFMT(LogAICombatPattern, Warning, "Exit Block 유닛의 어빌리티 태그가 유효하지 않음");
+        //@다음 유닛
+        CurrentUnitIndex++;
+        //@Exit Block 수행
+        ExecuteExitBlockUnits();
+        return;
+    }
+
+    //@현재 실행할 어빌리티 태그 저장
+    CurrentActivatingUnitTag = CurrentUnit.GetAbilityTag();
+
+    //@어빌리티 활성화 요청 실패 시
+    if (!RequestActivateAbilityBlockUnit.Execute(CurrentActivatingUnitTag))
+    {
+        UE_LOGFMT(LogAICombatPattern, Warning, "Exit Block 어빌리티 활성화 요청 실패: Unit[{0}] Tag[{1}]",
+            CurrentUnitIndex, *CurrentActivatingUnitTag.ToString());
+
+        //@실패 시 다음 유닛으로
+        CurrentActivatingUnitTag = FGameplayTag();
+        CurrentUnitIndex++;
+        ExecuteExitBlockUnits();
+        return;
+    }
+
+    //@요청 성공
+    UE_LOGFMT(LogAICombatPattern, Log, "Exit Block 어빌리티 유닛 활성화 요청 성공: Unit[{0}] Tag[{1}]",
+        CurrentUnitIndex, *CurrentActivatingUnitTag.ToString());
+}
 #pragma endregion
 
 //@Callbacks
@@ -212,35 +287,48 @@ bool UAIAbilitySequencerComponent::OnRequestActivateAICombatLoop()
 
     SetCombatReady(false);
 
+    //@현재 실행할 어빌리티 태그 저장
+    CurrentActivatingUnitTag = CurrentUnit->GetAbilityTag();
+
     //@어빌리티 활성화 요청
-    if (!RequestActivateAbilityBlockUnit.Execute(CurrentUnit->GetAbilityTag()))
+    if (!RequestActivateAbilityBlockUnit.Execute(CurrentActivatingUnitTag))
     {
         UE_LOGFMT(LogAICombatPattern, Warning, "어빌리티 활성화 요청 실패: {0} Unit[{1}] Tag[{2}]",
-            *BlockType, CurrentUnitIndex, *CurrentUnit->GetAbilityTag().ToString());
+            *BlockType, CurrentUnitIndex, *CurrentActivatingUnitTag.ToString());
 
+        //@실패 시 태그 초기화
+        CurrentActivatingUnitTag = FGameplayTag();
         SetCombatReady(true);
 
         return false;
     }
 
     UE_LOGFMT(LogAICombatPattern, Log, "어빌리티 유닛 활성화 요청 성공: {0} Unit[{1}] Tag[{2}]",
-        *BlockType, CurrentUnitIndex, *CurrentUnit->GetAbilityTag().ToString());
+        *BlockType, CurrentUnitIndex, *CurrentActivatingUnitTag.ToString());
 
     return true;
 }
 
-void UAIAbilitySequencerComponent::OnRequestEndCombatPattern()
+bool UAIAbilitySequencerComponent::OnRequestEndCombatPattern()
 {
-    //@초기화 작업
-    bIsFirstRun = true;
+    //@현재 진행 중인 Exit Block이 있는지 체크
+    if (IsExecutingExitBlock())
+    {
+        UE_LOGFMT(LogAICombatPattern, Warning, "이미 Exit Block을 실행 중입니다");
+        return false;
+    }
 
-    CurrentBlockIndex = -1;
+    //@Exit Block 설정
+    SetExecutingExitBlock();
     CurrentUnitIndex = 0;
 
-    bCombatReady = true;
+    //@Exit Block의 유닛들 순차 실행
+    ExecuteExitBlockUnits();
 
-    UE_LOGFMT(LogAICombatPattern, Log, "전투 패턴 초기화 완료. 시작 블록 준비");
+    //@Exit Block 대기가 필요함을 알림
+    return true;
 }
+
 void UAIAbilitySequencerComponent::OnAbilityActivated(UGameplayAbility* Ability)
 {
     if (!Ability)
@@ -249,11 +337,13 @@ void UAIAbilitySequencerComponent::OnAbilityActivated(UGameplayAbility* Ability)
         return;
     }
 
-    UE_LOGFMT(LogAICombatPattern, Log, "어빌리티 활성화: {0}", *Ability->GetName());
+    //@현재 실행 중인 어빌리티가 아니면 무시
+    if (!ValidateAbilityTag(Ability))
+    {
+        return;
+    }
 
-    //@전투 준비 상태 해제 및 다음 인덱스로 진행
-    AdvanceToNextUnit();
-
+    UE_LOGFMT(LogAICombatPattern, Log, "시퀀서 어빌리티 활성화: {0}", *Ability->GetName());
 }
 
 void UAIAbilitySequencerComponent::OnAbilityEnded(UGameplayAbility* Ability)
@@ -264,11 +354,29 @@ void UAIAbilitySequencerComponent::OnAbilityEnded(UGameplayAbility* Ability)
         return;
     }
 
-    UE_LOGFMT(LogAICombatPattern, Log, "어빌리티 종료: {0}", *Ability->GetName());
+    //@현재 실행 중인 어빌리티가 아니면 무시
+    if (!ValidateAbilityTag(Ability))
+    {
+        return;
+    }
 
-    AdvanceToNextUnit();
+    UE_LOGFMT(LogAICombatPattern, Log, "시퀀서 어빌리티 종료: {0}", *Ability->GetName());
 
-    SetCombatReady(true);
+    //@태그 초기화
+    CurrentActivatingUnitTag = FGameplayTag();
+
+    //@Exit Block 실행 중이면 다음 Exit 유닛 실행
+    if (IsExecutingExitBlock())
+    {
+        CurrentUnitIndex++;
+        ExecuteExitBlockUnits();
+    }
+    //@일반 실행 중이면 다음 유닛으로
+    else
+    {
+        AdvanceToNextUnit();
+        SetCombatReady(true);
+    }
 }
 
 void UAIAbilitySequencerComponent::OnAbilityCancelled(UGameplayAbility* Ability)
@@ -279,11 +387,29 @@ void UAIAbilitySequencerComponent::OnAbilityCancelled(UGameplayAbility* Ability)
         return;
     }
 
-    UE_LOGFMT(LogAICombatPattern, Log, "어빌리티 취소: {0}", *Ability->GetName());
+    //@현재 실행 중인 어빌리티가 아니면 무시
+    if (!ValidateAbilityTag(Ability))
+    {
+        return;
+    }
 
-    AdvanceToNextUnit();
+    UE_LOGFMT(LogAICombatPattern, Log, "시퀀서 어빌리티 취소: {0}", *Ability->GetName());
 
-    SetCombatReady(true);
+    //@태그 초기화
+    CurrentActivatingUnitTag = FGameplayTag();
+
+    //@Exit Block 실행 중이면 다음 Exit 유닛 실행
+    if (IsExecutingExitBlock())
+    {
+        CurrentUnitIndex++;
+        ExecuteExitBlockUnits();
+    }
+    //@일반 실행 중이면 다음 유닛으로
+    else
+    {
+        AdvanceToNextUnit();
+        SetCombatReady(true);
+    }
 }
 #pragma endregion
 
@@ -315,6 +441,7 @@ void UAIAbilitySequencerComponent::AdvanceToNextUnit()
         AdvanceToNextBlock();
     }
 }
+
 void UAIAbilitySequencerComponent::AdvanceToNextBlock()
 {
     CurrentUnitIndex = 0;
@@ -330,52 +457,51 @@ void UAIAbilitySequencerComponent::AdvanceToNextBlock()
             UE_LOGFMT(LogAICombatPattern, Log, "Start Block 완료, AbilityBlocks 시작");
             return;
         }
-        //@AbilityBlocks 실행 중이었다면 Exit Block으로
-        else if (IsExecutingAbilityBlocks())
-        {
-            if (CurrentBlockIndex >= CachedCombatSequence.GetAbilityBlocks().Num() - 1)
-            {
-                SetExecutingExitBlock();
-                UE_LOGFMT(LogAICombatPattern, Log, "AbilityBlocks 완료, Exit Block 시작");
-                return;
-            }
-            else
-            {
-                CurrentBlockIndex++;
-            }
-        }
     }
-    //@최초 실행이 아닐 경우
-    else
+
+    //@AbilityBlocks 실행 중이었다면
+    if (IsExecutingAbilityBlocks())
     {
-        //@AbilityBlocks 실행 중이었다면
-        if (IsExecutingAbilityBlocks())
+        //@마지막 블록이었다면 처음으로 돌아감
+        if (CurrentBlockIndex >= CachedCombatSequence.GetAbilityBlocks().Num() - 1)
         {
-            //@마지막 블록이었다면 Exit Block으로
-            if (CurrentBlockIndex >= CachedCombatSequence.GetAbilityBlocks().Num() - 1)
-            {
-                SetExecutingExitBlock();
-                UE_LOGFMT(LogAICombatPattern, Log, "AbilityBlocks 완료, Exit Block 시작");
-                return;
-            }
-            //@다음 블록으로
-            else
-            {
-                CurrentBlockIndex++;
-            }
+            CurrentBlockIndex = 0;
+            UE_LOGFMT(LogAICombatPattern, Log, "AbilityBlocks 순환, 처음으로 돌아감");
+            return;
         }
-        //@Exit Block 실행 중이었다면 다시 AbilityBlocks의 처음으로
-        else if (IsExecutingExitBlock())
+        //@다음 블록으로
+        else
         {
-            CurrentBlockIndex = 0;  // AbilityBlocks의 첫 번째로
-            UE_LOGFMT(LogAICombatPattern, Log, "Exit Block 완료, AbilityBlocks 재시작");
+            CurrentBlockIndex++;
+            UE_LOGFMT(LogAICombatPattern, Log, "다음 Ability Block으로 이동 - Block[{0}]", CurrentBlockIndex);
             return;
         }
     }
+    //@Exit Block 실행 중이었다면 완전히 종료
+    else if (IsExecutingExitBlock())
+    {
+        //@전투 패턴 종료 처리
+        bIsFirstRun = true;
+        CurrentBlockIndex = -1;
+        CurrentUnitIndex = 0;
+        bCombatReady = true;
+        CurrentActivatingUnitTag = FGameplayTag();
 
-    UE_LOGFMT(LogAICombatPattern, Log, "다음 블록으로 이동 - Block[{0}]",
-        IsExecutingStartBlock() ? TEXT("StartBlock") :
-        IsExecutingExitBlock() ? TEXT("ExitBlock") :
-        *FString::Printf(TEXT("AbilityBlock[%d]"), CurrentBlockIndex));
+        UE_LOGFMT(LogAICombatPattern, Log, "Exit Block 완료, 전투 패턴 완전 종료");
+        return;
+    }
+}
+
+bool UAIAbilitySequencerComponent::ValidateAbilityTag(const UGameplayAbility* Ability) const
+{
+    //@어빌리티나 태그가 유효하지 않으면 실패
+    if (!Ability || !CurrentActivatingUnitTag.IsValid())
+    {
+        return false;
+    }
+
+    //@어빌리티가 가진 태그들 중에 현재 활성화된 태그가 있는지 확인
+    const FGameplayTagContainer& AbilityTags = Ability->AbilityTags;
+    return AbilityTags.HasTag(CurrentActivatingUnitTag);
 }
 #pragma endregion
