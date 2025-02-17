@@ -755,20 +755,15 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 		{
 			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *StateTag.ToString());
 
+			CharacterStateEventOnGameplay.Broadcast(StateTag);
+
 			// 죽음 상태일 경우 이벤트 발생 전에 모든 구독 해제
 			if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
 			{
-				CancelAbilities();
-
-				// 이벤트 발생 전 마지막 정리 작업
-				CharacterStateEventOnGameplay.Broadcast(StateTag);
-
 				// 이벤트 구독 해제
 				CharacterStateEventOnGameplay.Clear();
 				return;
 			}
-
-			CharacterStateEventOnGameplay.Broadcast(StateTag);
 		}
 	}
 }

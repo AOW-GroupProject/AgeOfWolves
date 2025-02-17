@@ -38,14 +38,37 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
         return;
     }
 
+    //@MainEffect 유효성 검사
+    auto MainEffectClass = GetApplyGameplayEffectClass();
+    if (!MainEffectClass)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEvent 실패 - 메인 GameplayEffect 클래스가 유효하지 않음");
+        return;
+    }
+
+    auto MainEffectCDO = MainEffectClass.GetDefaultObject();
+    if (!MainEffectCDO)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEvent 실패 - 메인 GameplayEffect CDO가 유효하지 않음");
+        return;
+    }
+
+    //@SubEffect는 선택적으로 처리
+    UGameplayEffect* SubEffectCDO = nullptr;
+    auto SubEffectClass = GetApplySubGameplayEffectClass();
+    if (SubEffectClass)
+    {
+        SubEffectCDO = SubEffectClass.GetDefaultObject();
+    }
+
     bool bSuccess = UCombatLibrary::SendGameplayEventToTarget(
         FGameplayTag::RequestGameplayTag("EventTag.OnDamaged"),
         HitActor,
         SourceActor,
         HitResult,
         0.0f,
-        GetApplyGameplayEffectClass().GetDefaultObject(),
-        GetApplySubGameplayEffectClass().GetDefaultObject()
+        MainEffectCDO,
+        SubEffectCDO  // nullptr이어도 무방
     );
 
     if (!bSuccess)
@@ -61,9 +84,16 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
 
 void UAttackGameplayAbility::StartWeaponTrace()
 {
-    bIsTracing = true;
+    // SCOPE_LOCK은 범위를 벗어날 때 자동으로 잠금 해제
+    FScopeLock ScopeLock(&TraceStateLock);
 
-    //@ActorsToIgnore 초기화
+    if (bIsTracing)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "트레이스 시작 실패 - 사유: 이미 트레이스가 진행 중");
+        return;
+    }
+
+    bIsTracing = true;
     ActorsToIgnore.Empty();
 
     UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 시작 - 소켓 정보 [시작: {0}, 끝: {1}]",
@@ -72,12 +102,16 @@ void UAttackGameplayAbility::StartWeaponTrace()
 
 void UAttackGameplayAbility::ProcessWeaponTrace()
 {
+    FScopeLock ScopeLock(&TraceStateLock);
+
+    // 1. 트레이스 상태 확인
     if (!bIsTracing)
     {
         UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 처리 중단 - 사유: 트레이스가 활성화되지 않음");
         return;
     }
 
+    // 2. 캐릭터 및 메시 유효성 검사
     ACharacterBase* Character = GetCharacterFromActorInfo();
     if (!Character || !Character->GetMesh())
     {
@@ -85,56 +119,102 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
         return;
     }
 
-    //@자기 자신을 무시 목록에 추가
-    ActorsToIgnore.AddUnique(Character);
+    USkeletalMeshComponent* Mesh = Character->GetMesh();
 
-    //@Socket Location
-    FVector StartLocation = Character->GetMesh()->GetSocketLocation(WeaponTraceStartSocket);
-    FVector EndLocation = Character->GetMesh()->GetSocketLocation(WeaponTraceEndSocket);
-
-    UE_LOGFMT(LogAttackGA, Log, "트레이스 위치 정보 - 시작: {0}, 끝: {1}",
-        StartLocation.ToString(), EndLocation.ToString());
-
-    //@Collision Query Params
-    FCollisionQueryParams QueryParams;
-    for (AActor* ActorToIgnore : ActorsToIgnore)
+    // 3. 소켓 유효성 검사
+    if (!Mesh->DoesSocketExist(WeaponTraceStartSocket) || !Mesh->DoesSocketExist(WeaponTraceEndSocket))
     {
-        if (!IsValid(ActorToIgnore)) continue;
-        QueryParams.AddIgnoredActor(ActorToIgnore);
+        UE_LOGFMT(LogAttackGA, Warning, "무기 트레이스 실패 - 사유: 소켓이 존재하지 않음 [시작: {0}, 끝: {1}]",
+            *WeaponTraceStartSocket.ToString(), *WeaponTraceEndSocket.ToString());
+        return;
     }
 
-    //@트레이스 수행
+    // 4. 트레이스 위치 설정
+    FVector StartLocation = Mesh->GetSocketLocation(WeaponTraceStartSocket);
+    FVector EndLocation = Mesh->GetSocketLocation(WeaponTraceEndSocket);
+
+    if (StartLocation.Equals(EndLocation, 1.0f))
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "무기 트레이스 실패 - 사유: 시작점과 끝점이 같음");
+        return;
+    }
+
+    UE_LOGFMT(LogAttackGA, Log, "트레이스 위치 정보 - 시작: {0}, 끝: {1}",
+        *StartLocation.ToString(), *EndLocation.ToString());
+
+    // 5. 자기 자신을 무시 목록에 추가
+    ActorsToIgnore.AddUnique(TWeakObjectPtr<AActor>(Character));
+
+    // 6. 쿼리 파라미터 설정
+    FCollisionQueryParams QueryParams;
+    QueryParams.bTraceComplex = true;
+    QueryParams.bReturnPhysicalMaterial = true;
+
+    for (const TWeakObjectPtr<AActor>& ActorToIgnore : ActorsToIgnore)
+    {
+        if (ActorToIgnore.IsValid())
+        {
+            QueryParams.AddIgnoredActor(ActorToIgnore.Get());
+        }
+    }
+
+    // 7. 트레이스 수행
     TArray<FHitResult> HitResults;
+    bool bTraceSuccess = false;
+
     switch (TraceType)
     {
     case EWeaponTraceType::Line:
     {
-        PerformLineTrace(StartLocation, EndLocation, QueryParams, HitResults);
+        bTraceSuccess = GetWorld()->LineTraceMultiByChannel(
+            HitResults,
+            StartLocation,
+            EndLocation,
+            ECC_Visibility,
+            QueryParams
+        );
         break;
     }
     case EWeaponTraceType::Sphere:
     {
         FCollisionShape SphereShape = FCollisionShape::MakeSphere(SphereTraceRadius);
-        PerformSweepTrace(StartLocation, EndLocation, SphereShape, QueryParams, HitResults);
+        bTraceSuccess = GetWorld()->SweepMultiByChannel(
+            HitResults,
+            StartLocation,
+            EndLocation,
+            FQuat::Identity,
+            ECC_Visibility,
+            SphereShape,
+            QueryParams
+        );
         break;
     }
     case EWeaponTraceType::Box:
     {
         FCollisionShape BoxShape = FCollisionShape::MakeBox(BoxTraceHalfSize);
-        PerformSweepTrace(StartLocation, EndLocation, BoxShape, QueryParams, HitResults);
+        bTraceSuccess = GetWorld()->SweepMultiByChannel(
+            HitResults,
+            StartLocation,
+            EndLocation,
+            FQuat::Identity,
+            ECC_Visibility,
+            BoxShape,
+            QueryParams
+        );
         break;
     }
     }
 
+    // 8. 디버그 드로잉
 #if ENABLE_DRAW_DEBUG
-    const float DrawDuration = 2.0f;  // 디버그 라인이 표시될 시간
-    const FColor TraceColor = FColor::Red;  // 트레이스 색상
+    const float DrawDuration = 2.0f;
+    const FColor TraceColor = FColor::Red;
+    const FColor HitColor = FColor::Green;
 
     switch (TraceType)
     {
     case EWeaponTraceType::Line:
     {
-        // 라인 트레이스의 경우 시작점과 끝점을 잇는 선만 그립니다
         DrawDebugLine(
             GetWorld(),
             StartLocation,
@@ -149,85 +229,29 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
     }
     case EWeaponTraceType::Sphere:
     {
-        // 구체 트레이스의 경우 시작점과 끝점에 구체를, 그 사이를 잇는 선을 그립니다
-        DrawDebugSphere(
-            GetWorld(),
-            StartLocation,
-            SphereTraceRadius,
-            12,  // 구체의 세그먼트 수
-            TraceColor,
-            false,
-            DrawDuration
-        );
-        DrawDebugSphere(
-            GetWorld(),
-            EndLocation,
-            SphereTraceRadius,
-            12,
-            TraceColor,
-            false,
-            DrawDuration
-        );
-        DrawDebugLine(
-            GetWorld(),
-            StartLocation,
-            EndLocation,
-            TraceColor,
-            false,
-            DrawDuration,
-            0,
-            2.0f
-        );
+        DrawDebugSphere(GetWorld(), StartLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
+        DrawDebugSphere(GetWorld(), EndLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
+        DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
         break;
     }
     case EWeaponTraceType::Box:
     {
-        // 박스 트레이스의 경우 시작점과 끝점에 박스를, 그 사이를 잇는 선을 그립니다
         FQuat Rotation = FRotationMatrix::MakeFromZ(EndLocation - StartLocation).ToQuat();
-        DrawDebugBox(
-            GetWorld(),
-            StartLocation,
-            BoxTraceHalfSize,
-            Rotation,
-            TraceColor,
-            false,
-            DrawDuration,
-            0,
-            2.0f
-        );
-        DrawDebugBox(
-            GetWorld(),
-            EndLocation,
-            BoxTraceHalfSize,
-            Rotation,
-            TraceColor,
-            false,
-            DrawDuration,
-            0,
-            2.0f
-        );
-        DrawDebugLine(
-            GetWorld(),
-            StartLocation,
-            EndLocation,
-            TraceColor,
-            false,
-            DrawDuration,
-            0,
-            2.0f
-        );
+        DrawDebugBox(GetWorld(), StartLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
+        DrawDebugBox(GetWorld(), EndLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
+        DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
         break;
     }
     }
 
-    // Hit 발생 시 Hit 위치에 점 표시
+    // Hit 지점 표시
     for (const FHitResult& Hit : HitResults)
     {
         DrawDebugPoint(
             GetWorld(),
             Hit.ImpactPoint,
-            10.0f,  // 점 크기
-            FColor::Green,  // Hit 위치는 녹색으로 표시
+            10.0f,
+            HitColor,
             false,
             DrawDuration,
             0
@@ -235,6 +259,7 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
     }
 #endif
 
+    // 9. 트레이스 결과 처리
     if (HitResults.Num() <= 0)
     {
         UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 실행 완료 - 히트 없음");
@@ -243,45 +268,61 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
 
     UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 히트 발생 - 총 {0}개의 대상 감지", HitResults.Num());
 
-    //@각 히트 결과에 대해 데미지 이벤트 전송
+    // 10. 각 히트 결과에 대한 데미지 처리
     for (const FHitResult& HitResult : HitResults)
     {
         AActor* HitActor = HitResult.GetActor();
-        if (!HitActor) continue;
+        if (!HitActor)
+        {
+            continue;
+        }
 
-        //@이미 무시 목록에 있는 액터는 스킵
-        if (ActorsToIgnore.Contains(HitActor))
+        // 이미 무시 목록에 있는지 확인
+        bool bAlreadyHit = false;
+        for (const TWeakObjectPtr<AActor>& IgnoredActor : ActorsToIgnore)
+        {
+            if (IgnoredActor.IsValid() && IgnoredActor.Get() == HitActor)
+            {
+                bAlreadyHit = true;
+                break;
+            }
+        }
+
+        if (bAlreadyHit)
         {
             UE_LOGFMT(LogAttackGA, Log, "트레이스 히트 무시 - 대상: {0}, 사유: 이미 데미지가 적용된 대상",
-                HitActor->GetName());
+                *HitActor->GetName());
             continue;
         }
 
         UE_LOGFMT(LogAttackGA, Log, "트레이스 히트 상세 정보 - 대상: {0}, 충돌 지점: {1}, 충돌 본: {2}",
-            HitActor->GetName(), HitResult.ImpactPoint.ToString(), HitResult.BoneName.ToString());
+            *HitActor->GetName(), *HitResult.ImpactPoint.ToString(), *HitResult.BoneName.ToString());
 
-        //@무시 대상 추가
-        ActorsToIgnore.AddUnique(HitActor);
+        // 무시 목록에 추가
+        ActorsToIgnore.Add(TWeakObjectPtr<AActor>(HitActor));
 
-        //@Damage Event 전달
+        // 데미지 이벤트 전송
         SendDamageEvent(HitResult);
     }
 }
 
 void UAttackGameplayAbility::EndWeaponTrace()
 {
-    bIsTracing = false;
+    FScopeLock ScopeLock(&TraceStateLock);
 
-    // ActorsToIgnore 배열 비우기
-    if (ActorsToIgnore.Num() > 0)
+    if (!bIsTracing)
     {
-        UE_LOGFMT(LogAttackGA, Log, "트레이스 무시 목록 초기화 - 제거된 액터 수: {0}", ActorsToIgnore.Num());
-        ActorsToIgnore.Empty();
+        UE_LOGFMT(LogAttackGA, Log, "트레이스 종료 실패 - 사유: 이미 종료된 상태");
+        return;
     }
 
-    UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 종료");
-}
+    bIsTracing = false;
 
+    int32 ClearedCount = ActorsToIgnore.Num();
+    ActorsToIgnore.Empty();
+
+    UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 종료 - 제거된 무시 대상 수: {0}", ClearedCount);
+}
 void UAttackGameplayAbility::PerformLineTrace(const FVector& Start, const FVector& End,
     FCollisionQueryParams& QueryParams, TArray<FHitResult>& OutHitResults)
 {

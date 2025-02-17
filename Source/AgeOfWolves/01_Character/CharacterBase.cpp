@@ -26,7 +26,7 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
 	WeaponMesh->SetVisibility(false);
 
 	ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
-	ShealthedWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
+	ShealthedWeaponMesh->SetupAttachment(GetMesh(), "WeaponSaya");
 	ShealthedWeaponMesh->SetVisibility(true);
 
 	FullWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));

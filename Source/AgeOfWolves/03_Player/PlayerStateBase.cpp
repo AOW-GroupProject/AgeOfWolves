@@ -258,6 +258,13 @@ void APlayerStateBase::OnCharacterStateEventOnGameplay(const FGameplayTag& Chara
         UE_LOGFMT(LogPlayerStateBase, Warning, "GameInstance를 가져올 수 없습니다.");
         return;
     }
+    
+    // SaveGame 인스턴스 존재 여부 먼저 확인
+    if (!GameInstance->DoesSaveGameExist())
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "SaveGame이 존재하지 않습니다.");
+        return;
+    }
 
     // 세이브 게임 인스턴스 확인
     UAOWSaveGame* SaveGame = Cast<UAOWSaveGame>(GameInstance->GetSaveGameInstance());
