@@ -741,18 +741,32 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 	AbilityEnded.Broadcast(Ability);
 }
 
-void UBaseAbilitySystemComponent::OnGameplayEffectApplied(UAbilitySystemComponent* Source,
+void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
+	UAbilitySystemComponent* Source,
 	const FGameplayEffectSpec& SpecApplied,
 	FActiveGameplayEffectHandle ActiveHandle)
 {
 	const FGameplayTagContainer& AssetTags = SpecApplied.Def->InheritableGameplayEffectTags.Added;
 
-	// State 태그 확인 및 이벤트 발생
+	//@State 태그 확인 및 이벤트 발생
 	for (const FGameplayTag& StateTag : AssetTags)
 	{
 		if (StateTag.ToString().StartsWith("State"))
 		{
 			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *StateTag.ToString());
+
+			// 죽음 상태일 경우 이벤트 발생 전에 모든 구독 해제
+			if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+			{
+				CancelAbilities();
+
+				// 이벤트 발생 전 마지막 정리 작업
+				CharacterStateEventOnGameplay.Broadcast(StateTag);
+
+				// 이벤트 구독 해제
+				CharacterStateEventOnGameplay.Clear();
+				return;
+			}
 
 			CharacterStateEventOnGameplay.Broadcast(StateTag);
 		}

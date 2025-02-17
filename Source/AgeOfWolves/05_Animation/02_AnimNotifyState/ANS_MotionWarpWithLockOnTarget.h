@@ -33,7 +33,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogANS_MotionWarpWithLockOnTarget, Log, All)
 {
 	GENERATED_BODY()
 
-		//@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 #pragma endregion
 

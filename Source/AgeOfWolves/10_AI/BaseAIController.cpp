@@ -530,6 +530,44 @@ void ABaseAIController::ProcessCharacterDeathEvent()
 
     UE_LOGFMT(LogBaseAIC, Log, "5초 후 폰 연결 해제를 예약했습니다.");
 }
+
+void ABaseAIController::BindTargetActorStateEvents(AActor* NewTarget)
+{
+    if (!NewTarget) return;
+
+    // CharacterBase로 캐스팅
+    ACharacterBase* TargetCharacter = Cast<ACharacterBase>(NewTarget);
+    if (!TargetCharacter) return;
+
+    // ASC 가져오기
+    if (UBaseAbilitySystemComponent* TargetASC =
+        Cast<UBaseAbilitySystemComponent>(TargetCharacter->GetAbilitySystemComponent()))
+    {
+        // 상태 변화 이벤트 바인딩
+        TargetASC->CharacterStateEventOnGameplay.AddUObject(
+            this, &ABaseAIController::OnTargetActorStateChanged);
+
+        UE_LOGFMT(LogBaseAIC, Log, "타겟 {0}에 대한 상태 이벤트 바인딩 완료",
+            *NewTarget->GetName());
+    }
+}
+
+void ABaseAIController::UnbindTargetActorStateEvents(AActor* OldTarget)
+{
+    if (!OldTarget) return;
+
+    ACharacterBase* TargetCharacter = Cast<ACharacterBase>(OldTarget);
+    if (!TargetCharacter) return;
+
+    if (UBaseAbilitySystemComponent* TargetASC =
+        Cast<UBaseAbilitySystemComponent>(TargetCharacter->GetAbilitySystemComponent()))
+    {
+        TargetASC->CharacterStateEventOnGameplay.RemoveAll(this);
+        UE_LOGFMT(LogBaseAIC, Log, "타겟 {0}에 대한 상태 이벤트 바인딩 해제",
+            *OldTarget->GetName());
+    }
+}
+
 #pragma endregion
 
 //@Callbacks
@@ -568,6 +606,9 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
         BBComponent->SetValueAsBool("Contact", Stimulus.WasSuccessfullySensed());
         BBComponent->SetValueAsObject("TargetActor", Actor);
         BBComponent->SetValueAsVector("MoveToLocation", Stimulus.StimulusLocation);
+
+        //@Target Actor의 상태 변화 이벤트에 바인딩 수행
+        BindTargetActorStateEvents(Actor);
 
         //@Lock On 이벤트 호출
         AILockOnStateChanged.Broadcast(true);
@@ -660,6 +701,28 @@ bool ABaseAIController::OnCombatPatternExitComplete()
     //@Task에 완료 통지
     UE_LOGFMT(LogBaseAIC, Log, "전투 패턴 Exit Block 완료. Task에 통지");
     return NotifyCombatPatternExitComplete.Execute();
+}
+
+void ABaseAIController::OnTargetActorStateChanged(const FGameplayTag& StateTag)
+{
+    // 죽음 상태 태그 체크
+    if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+    {
+        UE_LOGFMT(LogBaseAIC, Log, "타겟 액터 사망 감지");
+
+        // BB 값 초기화
+        if (BBComponent)
+        {
+            BBComponent->SetValueAsBool("Contact", false);
+            BBComponent->SetValueAsObject("TargetActor", nullptr);
+            BBComponent->ClearValue("MoveToLocation");
+        }
+
+        // Lock On 상태 해제
+        AILockOnStateChanged.Broadcast(false);
+
+        UE_LOGFMT(LogBaseAIC, Log, "타겟 사망으로 인한 상태 초기화 완료");
+    }
 }
 #pragma endregion
 

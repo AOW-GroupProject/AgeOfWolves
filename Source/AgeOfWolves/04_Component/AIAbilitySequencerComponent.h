@@ -76,6 +76,8 @@ public:
     //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
+    //@Exit Block 실행 시작
+    bool StartExitBlock();
     //@Exit Block 유닛들 순차 실행
     UFUNCTION()
         void ExecuteExitBlockUnits();
@@ -104,6 +106,10 @@ protected:
     //@최초 실행 여부
     UPROPERTY()
         bool bIsFirstRun;
+
+    //@현재 유닛 완료 후 Exit Block 시작 대기 상태
+    UPROPERTY()
+        bool bWaitingForExitBlock;
 #pragma endregion
 
 //@Delegates

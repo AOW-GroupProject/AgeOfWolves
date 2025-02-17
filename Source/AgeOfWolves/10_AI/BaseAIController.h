@@ -155,6 +155,11 @@ protected:
 	void ProcessCharacterDeathEvent();
 
 protected:
+	//@Target Actor의 상태 변화 이벤트 바인딩/언바인딩
+	void BindTargetActorStateEvents(AActor* NewTarget);
+	void UnbindTargetActorStateEvents(AActor* OldTarget);
+
+protected:
 	//@AI Perception
 	UPROPERTY(VisibleAnywhere)
 		UAIPerceptionComponent* AIPerceptionComponent;
@@ -257,6 +262,10 @@ protected:
 	UFUNCTION()
 		bool OnCombatPatternExitComplete();
 
+protected:
+	// Target Actor 상태 변화 콜백
+	UFUNCTION()
+		void OnTargetActorStateChanged(const FGameplayTag& StateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

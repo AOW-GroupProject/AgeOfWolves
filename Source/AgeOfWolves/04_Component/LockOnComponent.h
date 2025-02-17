@@ -18,6 +18,7 @@ class UCameraComponent;
 class UBaseInputComponent;
 struct FInputActionValue;
 class UBillboardComponent;
+class AController;
 #pragma endregion
 
 //@열거형
@@ -39,6 +40,7 @@ class AGEOFWOLVES_API ULockOnComponent : public UActorComponent
  //@친추 클래스
 #pragma region Friend Class
     friend class UBaseInputComponent;
+    friend class APlayerCharacter;
 #pragma endregion
 
     GENERATED_BODY()
@@ -55,6 +57,8 @@ protected:
 
 protected:
     //@외부 바인딩
+    void ExternalBindToInputComp(const AController* Controller);
+    void ExternalBindToASCComp();
 
 protected:
     //@초기화
@@ -72,7 +76,7 @@ protected:
     bool FindTargetEnemy();
 
 protected:
-    // 현재 타겟의 상태 변화 이벤트 바인딩/언바인딩
+    //@현재 타겟의 상태 변화 이벤트 바인딩/언바인딩
     void BindCurrentTargetStateEvents();
     void UnbindCurrentTargetStateEvents();
 
@@ -143,11 +147,14 @@ public:
         void OnLockOnTargetChanged(const FGameplayTag& InputTag, const float Value);
 
 protected:
+    //@Owner 캐릭터의 상태 변화 콜백
+    UFUNCTION()
+        void OnOwnerStateChanged(const FGameplayTag& StateTag);
+
+protected:
     //@주변 적들 목록에 추가된 적들의 상태 변화 이벤트를 구독하는 콜백
     UFUNCTION()
         void OnTargetStateChanged(const FGameplayTag& StateTag);
-
-
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

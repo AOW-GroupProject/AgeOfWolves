@@ -20,7 +20,8 @@ UAIAbilitySequencerComponent::UAIAbilitySequencerComponent(const FObjectInitiali
     , CurrentBlockIndex(-1)
     , CurrentUnitIndex(0)
     , bCombatReady(true)
-    , bIsFirstRun(true) 
+    , bIsFirstRun(true)
+    , bWaitingForExitBlock(false)
 {
     PrimaryComponentTick.bCanEverTick = false;
 }
@@ -152,6 +153,18 @@ void UAIAbilitySequencerComponent::InitializeCombatPatternComponent()
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+bool UAIAbilitySequencerComponent::StartExitBlock()
+{
+    //@Exit Block 설정
+    SetExecutingExitBlock();
+    CurrentUnitIndex = 0;
+
+    //@Exit Block의 유닛들 순차 실행
+    ExecuteExitBlockUnits();
+
+    return true;
+}
+
 void UAIAbilitySequencerComponent::ExecuteExitBlockUnits()
 {
     //@현재 Exit Block 유닛 가져오기
@@ -318,15 +331,21 @@ bool UAIAbilitySequencerComponent::OnRequestEndCombatPattern()
         return false;
     }
 
-    //@Exit Block 설정
-    SetExecutingExitBlock();
-    CurrentUnitIndex = 0;
+    //@현재 진행 중인 유닛이 있는 경우
+    if (CurrentActivatingUnitTag.IsValid())
+    {
+        UE_LOGFMT(LogAICombatPattern, Log, "현재 실행 중인 블록 유닛 완료 후 Exit Block 시작 대기: {0}",
+            *CurrentActivatingUnitTag.ToString());
 
-    //@Exit Block의 유닛들 순차 실행
-    ExecuteExitBlockUnits();
+        //@Exit Block 대기 상태로 전환
+        bWaitingForExitBlock = true;
 
-    //@Exit Block 대기가 필요함을 알림
-    return true;
+        //@완료될 때까지 대기가 필요함을 알림
+        return true;
+    }
+
+    //@실행 중인 유닛이 없으면 바로 Exit Block 시작
+    return StartExitBlock();
 }
 
 void UAIAbilitySequencerComponent::OnAbilityActivated(UGameplayAbility* Ability)
@@ -371,6 +390,13 @@ void UAIAbilitySequencerComponent::OnAbilityEnded(UGameplayAbility* Ability)
         CurrentUnitIndex++;
         ExecuteExitBlockUnits();
     }
+    //@Exit Block 대기 중이었다면 시작
+    else if (bWaitingForExitBlock)
+    {
+        UE_LOGFMT(LogAICombatPattern, Log, "대기 중이던 Exit Block 시작");
+        bWaitingForExitBlock = false;
+        StartExitBlock();
+    }
     //@일반 실행 중이면 다음 유닛으로
     else
     {
@@ -381,35 +407,8 @@ void UAIAbilitySequencerComponent::OnAbilityEnded(UGameplayAbility* Ability)
 
 void UAIAbilitySequencerComponent::OnAbilityCancelled(UGameplayAbility* Ability)
 {
-    if (!Ability)
-    {
-        UE_LOGFMT(LogAICombatPattern, Warning, "OnAbilityCancelled: 유효하지 않은 어빌리티");
-        return;
-    }
-
-    //@현재 실행 중인 어빌리티가 아니면 무시
-    if (!ValidateAbilityTag(Ability))
-    {
-        return;
-    }
-
-    UE_LOGFMT(LogAICombatPattern, Log, "시퀀서 어빌리티 취소: {0}", *Ability->GetName());
-
-    //@태그 초기화
-    CurrentActivatingUnitTag = FGameplayTag();
-
-    //@Exit Block 실행 중이면 다음 Exit 유닛 실행
-    if (IsExecutingExitBlock())
-    {
-        CurrentUnitIndex++;
-        ExecuteExitBlockUnits();
-    }
-    //@일반 실행 중이면 다음 유닛으로
-    else
-    {
-        AdvanceToNextUnit();
-        SetCombatReady(true);
-    }
+    //@OnAbilityEnded와 동일한 처리
+    OnAbilityEnded(Ability);
 }
 #pragma endregion
 
