@@ -51,13 +51,93 @@ void ULockOnComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActo
     UpdateControllerRotation(DeltaTime);
 }
 
+void ULockOnComponent::ExternalBindToInputComp(const AController* Controller)
+{
+    //@LockOn Component <-> Input Component 바인딩 설정
+    auto PC = Cast<ABasePlayerController>(Controller);
+    if (!PC)
+    {
+        UE_LOGFMT(LogPlayer, Warning, "입력 컴포넌트 바인딩 실패: BasePlayerController가 유효하지 않음");
+        return;
+    }
+
+    UBaseInputComponent* BaseInputComp = PC->GetBaseInputComponent();
+    if (!BaseInputComp)
+    {
+        UE_LOGFMT(LogPlayer, Warning, "입력 컴포넌트 바인딩 실패: BaseInputComponent가 유효하지 않음");
+        return;
+    }
+
+    //@타겟 변경 입력에 대한 이벤트 바인딩
+    BaseInputComp->NativeInputTagTriggeredWithValue.AddUObject(this, &ULockOnComponent::OnLockOnTargetChanged);
+
+    UE_LOGFMT(LogLockOn, Log, "입력 컴포넌트 바인딩 완료");
+}
+
+void ULockOnComponent::ExternalBindToASCComp()
+{
+    //@Owner 캐릭터의 ASC 가져오기
+    auto OwnerCharacter = Cast<ACharacterBase>(GetOwner());
+    if (!OwnerCharacter)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ASC 바인딩 실패: Owner 캐릭터가 유효하지 않음");
+        return;
+    }
+
+    //@ASC 컴포넌트 가져오기
+    auto BaseASC = Cast<UBaseAbilitySystemComponent>(OwnerCharacter->GetAbilitySystemComponent());
+    if (!BaseASC)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "ASC 바인딩 실패: BaseAbilitySystemComponent가 유효하지 않음");
+        return;
+    }
+
+    //@상태 변화 이벤트 구독
+    BaseASC->CharacterStateEventOnGameplay.AddUObject(this, &ULockOnComponent::OnOwnerStateChanged);
+
+    UE_LOGFMT(LogLockOn, Log, "어빌리티 시스템 컴포넌트 바인딩 완료");
+}
+
 void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
 {
+    //@외부 바인딩...
+    ExternalBindToInputComp(Controller);
+    ExternalBindToASCComp();
+
+    //@컴포넌트 등록
+    if (!LockOnBillboardComponent)
+    {
+        LockOnBillboardComponent = NewObject<UBillboardComponent>(GetOwner());
+        if (!LockOnBillboardComponent)
+        {
+            UE_LOGFMT(LogLockOn, Warning, "빌보드 컴포넌트 생성 실패");
+            return;
+        }
+        LockOnBillboardComponent->RegisterComponent();
+    }
+
+
+    //@Billobard Component 초기화
+    if (!LockOnTexture.IsNull())
+    {
+        LockOnTexture.LoadSynchronous();
+        if (UTexture2D* LoadedTexture = LockOnTexture.Get())
+        {
+            LockOnBillboardComponent->SetSprite(LoadedTexture);
+            // 원래 크기의 0.1배로 설정
+            LockOnBillboardComponent->SetRelativeScale3D(FVector(0.1f));
+        }
+    }
+
+    LockOnBillboardComponent->SetVisibility(false);
+    LockOnBillboardComponent->bHiddenInGame = false;
+
     if (!Controller)
     {
         UE_LOGFMT(LogLockOn, Warning, "컴포넌트 초기화 실패: 컨트롤러가 유효하지 않음");
         return;
     }
+
 
     const auto Owner = GetOwner();
     if (!Owner)
@@ -108,33 +188,7 @@ void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
         return;
     }
 
-    //@컴포넌트 등록
-    if (!LockOnBillboardComponent)
-    {
-        LockOnBillboardComponent = NewObject<UBillboardComponent>(GetOwner());
-        if (!LockOnBillboardComponent)
-        {
-            UE_LOGFMT(LogLockOn, Warning, "빌보드 컴포넌트 생성 실패");
-            return;
-        }
-        LockOnBillboardComponent->RegisterComponent();
-    }
 
-
-    //@Billobard Component 초기화
-    if (!LockOnTexture.IsNull())
-    {
-        LockOnTexture.LoadSynchronous();
-        if (UTexture2D* LoadedTexture = LockOnTexture.Get())
-        {
-            LockOnBillboardComponent->SetSprite(LoadedTexture);
-            // 원래 크기의 0.1배로 설정
-            LockOnBillboardComponent->SetRelativeScale3D(FVector(0.1f));
-        }
-    }
-
-    LockOnBillboardComponent->SetVisibility(false);
-    LockOnBillboardComponent->bHiddenInGame = false;
 
     UE_LOGFMT(LogLockOn, Log, "락온 컴포넌트 초기화 완료");
 }
@@ -271,18 +325,27 @@ bool ULockOnComponent::FindTargetEnemy()
     const FVector CameraUp = FollowCameraComponentRef->GetUpVector();
     const float HalfFOV = FMath::Cos(FMath::DegreesToRadians(FollowCameraComponentRef->FieldOfView * 0.5f));
 
-    // FOV 내에 있는 타겟이 하나라도 있는지 체크하기 위한 플래그
     bool bHasTargetInFOV = false;
 
-    // 두 번째: 각 액터에 대해 FOV와 가시성 체크
+    // 두 번째: 각 액터에 대해 FOV와 가시성, 콜리전 체크
     for (const auto& Hit : HitResults)
     {
+        AActor* HitActor = Hit.GetActor();
+
+        //@TODO: 임시적으로, Target의 생사여부를 충돌 활성화 여부로 체크
+        if (!IsValid(HitActor) || !HitActor->GetActorEnableCollision())
+        {
+            UE_LOGFMT(LogLockOn, Verbose, "Skipping actor {0} - collision disabled",
+                IsValid(HitActor) ? *HitActor->GetName() : TEXT("Invalid"));
+            continue;
+        }
+
         // 시야 체크를 위한 Line Trace
         FHitResult LineHitResults;
         bool LineTraceHitResult = UKismetSystemLibrary::LineTraceSingleForObjects(
             GetWorld(),
-            CameraLocation,  // 카메라 위치에서 시작
-            Hit.GetActor()->GetActorLocation(),
+            CameraLocation,
+            HitActor->GetActorLocation(),
             NearByActors,
             false,
             IgnoreActors,
@@ -292,15 +355,15 @@ bool ULockOnComponent::FindTargetEnemy()
         );
 
         // Line Trace로 장애물 체크
-        if (Hit.GetActor() == LineHitResults.GetActor())
+        if (HitActor == LineHitResults.GetActor())
         {
             // 카메라에서 적까지의 방향 벡터
-            FVector DirectionToEnemy = (Hit.GetActor()->GetActorLocation() - CameraLocation).GetSafeNormal();
+            FVector DirectionToEnemy = (HitActor->GetActorLocation() - CameraLocation).GetSafeNormal();
 
             // 화면 중앙으로부터의 각도 계산 (내적)
             float ForwardDot = FVector::DotProduct(CameraForward, DirectionToEnemy);
 
-            // FOV 체크 - 더 엄격한 체크를 위해 HalfFOV 사용
+            // FOV 체크
             if (ForwardDot > HalfFOV)
             {
                 bHasTargetInFOV = true;
@@ -309,8 +372,8 @@ bool ULockOnComponent::FindTargetEnemy()
                 FVector Cross = FVector::CrossProduct(CameraForward, DirectionToEnemy);
                 float RightDot = FVector::DotProduct(Cross, CameraUp);
 
-                NearByEnemies.AddUnique(Hit.GetActor());
-                EnemyMap.Add(RightDot, Hit.GetActor());
+                NearByEnemies.AddUnique(HitActor);
+                EnemyMap.Add(RightDot, HitActor);
 
                 // 화면 중앙에 가장 가까운 적 찾기
                 if (FMath::Abs(RightDot) < FMath::Abs(CenterDot))
@@ -595,6 +658,42 @@ void ULockOnComponent::OnLockOnTargetChanged(const FGameplayTag& InputTag, const
     BindCurrentTargetStateEvents();
 
     UE_LOGFMT(LogLockOn, Log, "Lock On 타겟이 변경되었습니다: {0}", *NewTarget->GetName());
+}
+
+void ULockOnComponent::OnOwnerStateChanged(const FGameplayTag& StateTag)
+{
+    //@죽음 상태 태그 체크
+    if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+    {
+        UE_LOGFMT(LogLockOn, Log, "오너 캐릭터 사망 감지");
+
+        //@Lock On 상태가 아니면 처리하지 않음
+        if (!bLockOn)
+        {
+            UE_LOGFMT(LogLockOn, Log, "Lock On 상태가 아니므로 처리를 종료합니다.");
+            return;
+        }
+
+        if (!PlayerCharacterRef.IsValid())
+        {
+            return;
+        }
+
+        ACharacterBase* Character = Cast<ACharacterBase>(PlayerCharacterRef.Get());
+        if (!Character)
+        {
+            return;
+        }
+
+        if (UBaseAbilitySystemComponent* OwnerASC = Cast<UBaseAbilitySystemComponent>(Character->GetAbilitySystemComponent()))
+        {
+            OwnerASC->CharacterStateEventOnGameplay.RemoveAll(this);
+            UE_LOGFMT(LogLockOn, Log, "오너 캐릭터에 대한 상태 이벤트 바인딩 해제");
+        }
+
+        UE_LOGFMT(LogLockOn, Log, "Lock On 상태이므로 Lock On을 취소합니다.");
+        CancelLockOn();
+    }
 }
 
 void ULockOnComponent::OnTargetStateChanged(const FGameplayTag& StateTag)

@@ -1,7 +1,9 @@
 #include "BaseAbilitySystemComponent.h"
 #include "Logging/StructuredLog.h"
 
+#include "10_AI/BaseAIController.h"
 #include "03_Player/PlayerStateBase.h"
+#include "04_Component/AIAbilitySequencerComponent.h"
 
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
@@ -22,22 +24,41 @@ UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitialize
 	AllowedChainMappings.Empty();
 }
 
+void UBaseAbilitySystemComponent::ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC)
+{
+	if (!BaseAIC)
+	{
+		UE_LOGFMT(LogASC, Warning, "바인딩 실패: AI 컨트롤러가 유효하지 않음");
+		return;
+	}
+
+	auto AISequencer = BaseAIC->FindComponentByClass<UAIAbilitySequencerComponent>();
+	if (!AISequencer)
+	{
+		UE_LOGFMT(LogASC, Warning, "바인딩 실패: AI Ability Sequencer 컴포넌트를 찾을 수 없음");
+		return;
+	}
+
+	//@어빌리티 활성화 요청 이벤트 바인딩
+	AISequencer->RequestActivateAbilityBlockUnit.BindUFunction(this, "OnRequestActivateAbilityBlockUnitByAI");
+
+	UE_LOGFMT(LogASC, Log, "AI Ability Sequencer 컴포넌트와 바인딩 완료");
+}
+
 void UBaseAbilitySystemComponent::InitializeComponent()
 {
 	Super::InitializeComponent();
 
 	// @Ability 생명 주기 이벤트에 커스텀 콜백 함수 등록
-	{
-		//@어빌리티 활성화 이벤트
-		AbilityActivatedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityActivated);
-		//@어빌리티 활성화 종료 이베느
-		AbilityEndedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityEnded);
-		//@GameplayEffect 적용 이벤트
-		OnActiveGameplayEffectAddedDelegateToSelf.AddUObject(
-			this,
-			&UBaseAbilitySystemComponent::OnGameplayEffectApplied
-		);
-	}
+	//@어빌리티 활성화 이벤트
+	AbilityActivatedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityActivated);
+	//@어빌리티 활성화 종료 이베느
+	AbilityEndedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityEnded);
+	//@GameplayEffect 적용 이벤트
+	OnActiveGameplayEffectAddedDelegateToSelf.AddUObject(
+		this,
+		&UBaseAbilitySystemComponent::OnGameplayEffectApplied
+	);
 }
 #pragma endregion
 
@@ -302,7 +323,6 @@ void UBaseAbilitySystemComponent::AbilitySpecInputReleased(FGameplayAbilitySpec&
 
 void UBaseAbilitySystemComponent::CancelAbilitySpec(FGameplayAbilitySpec& Spec, UGameplayAbility* Ignore)
 {
-
 	UGameplayAbility* GA = Spec.Ability;
 	if (!GA)
 	{
@@ -315,6 +335,9 @@ void UBaseAbilitySystemComponent::CancelAbilitySpec(FGameplayAbilitySpec& Spec, 
 		{
 			ActivatingAbilityTags.RemoveTags(GA->AbilityTags);
 			UE_LOGFMT(LogASC, Warning, "{0}이 취소되었습니다.", GA->GetName());
+
+			//@취소 이벤트 발생
+			AbilityCancelled.Broadcast(GA);
 		}
 	}
 
@@ -641,7 +664,6 @@ Cleanup:
 #pragma region Callbacks
 void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 {
-
 	// @Ability
 	if (!Ability)
 	{
@@ -664,12 +686,11 @@ void UBaseAbilitySystemComponent::OnAbilityActivated(UGameplayAbility* Ability)
 	UE_LOGFMT(LogASC, Warning, "{0}가 활성화 되었습니다.", Ability->GetName());
 
 	// @TODO: Ability 활성화 시점에 ASC에서 할 일들...
-
+	AbilityActivated.Broadcast(Ability);
 }
 
 void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 {
-
 	//@Ability
 	if (!Ability)
 	{
@@ -717,16 +738,17 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 	UE_LOGFMT(LogASC, Warning, "{0}가 종료되었습니다.", Ability->GetName());
 
 	// @TODO: Ability 활성화 종료 시점에 ASC에서 할 일들...
-
+	AbilityEnded.Broadcast(Ability);
 }
 
-void UBaseAbilitySystemComponent::OnGameplayEffectApplied(UAbilitySystemComponent* Source,
+void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
+	UAbilitySystemComponent* Source,
 	const FGameplayEffectSpec& SpecApplied,
 	FActiveGameplayEffectHandle ActiveHandle)
 {
 	const FGameplayTagContainer& AssetTags = SpecApplied.Def->InheritableGameplayEffectTags.Added;
 
-	// State 태그 확인 및 이벤트 발생
+	//@State 태그 확인 및 이벤트 발생
 	for (const FGameplayTag& StateTag : AssetTags)
 	{
 		if (StateTag.ToString().StartsWith("State"))
@@ -734,8 +756,53 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(UAbilitySystemComponen
 			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *StateTag.ToString());
 
 			CharacterStateEventOnGameplay.Broadcast(StateTag);
+
+			// 죽음 상태일 경우 이벤트 발생 전에 모든 구독 해제
+			if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+			{
+				// 이벤트 구독 해제
+				CharacterStateEventOnGameplay.Clear();
+				return;
+			}
 		}
 	}
+}
+
+bool UBaseAbilitySystemComponent::OnRequestActivateAbilityBlockUnitByAI(const FGameplayTag& AbilityTag)
+{
+	if (!AbilityTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "어빌리티 활성화 요청 실패: 유효하지 않은 태그");
+		return false;
+	}
+
+	//@어빌리티 스펙 찾기
+	FGameplayAbilitySpecHandle SpecHandle;
+	for (const FGameplayAbilitySpec& Spec : GetActivatableAbilities())
+	{
+		if (Spec.Ability && Spec.Ability->AbilityTags.HasTag(AbilityTag))
+		{
+			SpecHandle = Spec.Handle;
+			break;
+		}
+	}
+
+	if (!SpecHandle.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "어빌리티 활성화 요청 실패: 태그({0})에 해당하는 어빌리티를 찾을 수 없음",
+			*AbilityTag.ToString());
+		return false;
+	}
+
+	//@어빌리티 활성화 시도
+	if (!TryActivateAbility(SpecHandle))
+	{
+		UE_LOGFMT(LogASC, Warning, "어빌리티 활성화 실패 - Tag: {0}", *AbilityTag.ToString());
+		return false;
+	}
+
+	UE_LOGFMT(LogASC, Log, "어빌리티 활성화 성공 - Tag: {0}", *AbilityTag.ToString());
+	return true;
 }
 #pragma endregion
 

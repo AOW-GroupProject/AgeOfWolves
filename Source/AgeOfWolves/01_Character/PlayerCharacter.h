@@ -87,17 +87,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		ULockOnComponent* LockOnComponent;
-
-	//@TODO: 지울 예정
-protected:
-	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		UStaticMeshComponent* WeaponMesh;
-
-	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		UStaticMeshComponent* ShealthedWeaponMesh;
-
-	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		UStaticMeshComponent* FullWeaponMesh;
 #pragma endregion
 
 //@Delegates
@@ -121,10 +110,7 @@ public:
 		FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockOnComponent; }
 
 //@TODO: 지울 예정
-public:
-	FORCEINLINE UStaticMeshComponent* GetWeaponMesh() { return WeaponMesh; }
-	FORCEINLINE UStaticMeshComponent* GetShealthMesh() { return ShealthedWeaponMesh; }
-	FORCEINLINE UStaticMeshComponent* GetFullWeaponMesh() { return FullWeaponMesh; }
+
 #pragma endregion
 
 };

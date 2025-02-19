@@ -80,5 +80,6 @@ void UAN_ApplyGEDuringAnimPlaying::Notify(USkeletalMeshComponent* MeshComp, UAni
 
     //@Apply GE
     ASC->ApplyGameplayEffectSpecToSelf(*EffectSpec.Data.Get());
+
     UE_LOGFMT(LogAN_ApplyGEDuringAnimPlaying, Log, "GE({0})가 적용되었습니다.", *GEClass->GetName());
 }

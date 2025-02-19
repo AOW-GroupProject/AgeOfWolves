@@ -65,6 +65,17 @@ void APlayerStateBase::BeginPlay()
 
 }
 
+void APlayerStateBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    Super::EndPlay(EndPlayReason);
+
+    //// ASC 찾아서 이벤트 구독 해제
+    //if (auto ASC = Cast<UBaseAbilitySystemComponent>(GetAbilitySystemComponent()))
+    //{
+    //    ASC->CharacterStateEventOnGameplay.RemoveAll(this);
+    //}
+}
+
 void APlayerStateBase::InternalBindingToASC()
 {
     if (!AbilitySystemComponent)
@@ -216,6 +227,18 @@ void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Dat
 
 void APlayerStateBase::OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag)
 {
+    // 이미 파괴 중이거나 종료 중인 상태라면 무시
+    if (!IsValid(this) || IsUnreachable())
+    {
+        return;
+    }
+
+    // 필요한 참조들이 모두 유효한지 확인
+    if (!GetOwner() || !GetWorld())
+    {
+        return;
+    }
+
     // "State." 태그가 아니면 즉시 반환
     if (!CharacterStateTag.GetTagName().ToString().StartsWith("State."))
         return;
@@ -233,6 +256,13 @@ void APlayerStateBase::OnCharacterStateEventOnGameplay(const FGameplayTag& Chara
     if (!GameInstance)
     {
         UE_LOGFMT(LogPlayerStateBase, Warning, "GameInstance를 가져올 수 없습니다.");
+        return;
+    }
+    
+    // SaveGame 인스턴스 존재 여부 먼저 확인
+    if (!GameInstance->DoesSaveGameExist())
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "SaveGame이 존재하지 않습니다.");
         return;
     }
 

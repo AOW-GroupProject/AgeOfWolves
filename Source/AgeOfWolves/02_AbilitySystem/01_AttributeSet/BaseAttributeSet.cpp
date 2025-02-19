@@ -79,11 +79,13 @@ void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 	// @CombatState - 0(비전투), 1(전투), 2(발도 준비) 상태만 가질 수 있도록 클램핑
 	else if (Attribute == GetCombatStateAttribute())
 	{
-		NewValue = FMath::Clamp<float>(FMath::RoundToFloat(NewValue), 0.f, 3.f);
+		NewValue = FMath::Clamp<float>(FMath::RoundToFloat(NewValue), 0.f, 4.f);
 		UE_LOGFMT(LogAttributeSet, Log, "전투 상태 변경: {0}",
 			NewValue == 0.f ? TEXT("비전투") :
 			NewValue == 1.f ? TEXT("전투") :
-			NewValue == 2.f ? TEXT("전투-발도") : TEXT("전투-가드"));
+			NewValue == 2.f ? TEXT("전투-발도") :
+			NewValue == 3.f ? TEXT("전투-가드") :
+			TEXT("전투-반대 가드"));
 	}
 }
 

@@ -78,6 +78,7 @@ enum class ECombatType : uint8
 	NormalCombat		UMETA(DisplayName = "NormalCombat"),
 	BattoujutsuCombat	UMETA(DisplayName = "BattoujutsuCombat"),
 	GuardCombat			UMETA(DisplayName = "Guard Combat"),
+	ReverseGuardCombat	UMETA(DisplayName = "Reverse Guard Combat"),
 	MAX					UMETA(DisplayName = "MAX"),
 };
 #pragma endregion
@@ -102,6 +103,7 @@ class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 #pragma region Friend Class
 	friend class UAN_UpdateStopMotionType;
 	friend class UANS_NotifyPlayingRootMotion;
+	friend class ABaseAIController;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -222,6 +224,12 @@ protected:
 		float RootMotionCooldownDuration;
 
 	float CurrentRootMotionCooldownTime;
+
+//@TODO: 임시
+protected:
+	UPROPERTY()
+		UStaticMesh* OriginalFullWeaponMesh;
+
 #pragma endregion
 
 	//@Delegates

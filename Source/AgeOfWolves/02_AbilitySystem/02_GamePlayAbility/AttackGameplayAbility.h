@@ -98,13 +98,18 @@ protected:
 		}
 	}
 
-protected:
-	//@트레이스 활성화 여부
-	bool bIsTracing = false;
+private:
+	// 트레이스 상태 관리를 위한 동기화 객체
+	FCriticalSection TraceStateLock;
 
-	//@무시 대상
-	UPROPERTY()
-		TArray<AActor*> ActorsToIgnore;
+protected:
+	// 트레이스 관련 상태 변수들
+	UPROPERTY(Transient)
+		uint8 bIsTracing : 1;
+
+	// 약참조로 변경하여 메모리 안전성 향상
+	UPROPERTY(Transient)
+		TArray<TWeakObjectPtr<AActor>> ActorsToIgnore;
 
 	//@Trace 타입 설정
 	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌")

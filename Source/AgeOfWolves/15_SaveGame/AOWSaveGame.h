@@ -55,7 +55,6 @@ public:
 		, Description(InDescription)
 	{}
 
-	// Equality operator overload
 	bool operator==(const FCharacterInformation& Other) const
 	{
 		return StateTag == Other.StateTag;
@@ -135,7 +134,6 @@ class AGEOFWOLVES_API UAOWSaveGame : public USaveGame
 	friend class APlayerStateBase;
 	friend class ABaseAIController;
 #pragma endregion
-
 
 	GENERATED_BODY()
 

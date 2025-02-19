@@ -24,6 +24,7 @@ class UAOWSaveGame;
 struct FBaseAbilitySet_GrantedHandles;
 class UBaseAbilitySystemComponent;
 class UAbilityManagerSubsystem;
+class UAIAbilitySequencerComponent;
 #pragma endregion
 
 //@열거형
@@ -67,6 +68,16 @@ enum class EAICombatPhase : uint8
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByAI)
 //@AI의 Attribute Set 초기화 완료 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAIAttributeSetInitialized);
+
+//@타겟 발견
+DECLARE_MULTICAST_DELEGATE_OneParam(FAILockOnStateChanged, bool)
+
+//@전투 패턴 활성화 요청
+DECLARE_DELEGATE_RetVal(bool, FRequestStartCombatPattern)
+//@전투 패턴 종료 요청
+DECLARE_DELEGATE_RetVal(bool, FRequestEndCombatPattern)
+//@전투 패턴 Exit Block 완료 통지
+DECLARE_DELEGATE_RetVal(bool, FNotifyCombatPatternExitComplete)
 #pragma endregion
 
 /**
@@ -99,12 +110,14 @@ protected:
 	//~End Of AAIController Interface
 
 protected:
-	//@내부 바인딩
-	void InternalBindToPerceptionComp();
+	//@외부 바인딩
+	void ExternalBindToAnimInstance(APawn* InPawn);
 
 protected:
-	//@외부 바인딩
+	//@내부 바인딩
+	void InternalBindToPerceptionComp();
 	void InternalBindingToASC();
+	void InternalBindingToAISequencerComp();
 
 public:
 	//@초기화
@@ -142,12 +155,11 @@ protected:
 	void ProcessCharacterDeathEvent();
 
 protected:
-	//@BT
-	UPROPERTY(Transient)
-		UBehaviorTreeComponent* AIBehaviorTree;
-	//@BB
-	UPROPERTY(Transient)
-		UBlackboardComponent* BBComponent;
+	//@Target Actor의 상태 변화 이벤트 바인딩/언바인딩
+	void BindTargetActorStateEvents(AActor* NewTarget);
+	void UnbindTargetActorStateEvents(AActor* OldTarget);
+
+protected:
 	//@AI Perception
 	UPROPERTY(VisibleAnywhere)
 		UAIPerceptionComponent* AIPerceptionComponent;
@@ -157,6 +169,20 @@ protected:
 	//@Attribute Set
 	UPROPERTY()
 		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
+
+protected:
+	//@BT
+	UPROPERTY(Transient)
+		UBehaviorTreeComponent* AIBehaviorTree;
+	//@BB
+	UPROPERTY(Transient)
+		UBlackboardComponent* BBComponent;
+
+protected:
+	//@AI Combat Pattern 컴포넌트
+	UPROPERTY(Transient)
+		UAIAbilitySequencerComponent* AIAbilitySequencerComponent;
+
 
 protected:
 	//@Character Tag
@@ -197,6 +223,18 @@ public:
 public:
 	//@AI의 Attribute Set 초기화 완료 이벤트
 	FAIAttributeSetInitialized AIAttributeSetInitialized;
+
+public:
+	//@AI의 Lock On 상태 변화 이벤트
+	FAILockOnStateChanged AILockOnStateChanged;
+
+public:
+	//@전투 패턴 활성화 요청 이벤트
+	FRequestStartCombatPattern RequestStartCombatPattern;
+	//@전투 패턴 활성화 종료 요청 이벤트
+	FRequestEndCombatPattern RequestEndCombatPattern;
+	//@전투 패턴 활성화 종료 완료 이벤트
+	FNotifyCombatPatternExitComplete NotifyCombatPatternExitComplete;
 #pragma endregion
 
 //@Callbacks
@@ -206,6 +244,10 @@ protected:
 	UFUNCTION()
 		virtual void OnPerception(AActor* Actor, FAIStimulus Stimulus);
 
+	//@Target에 대한 인지 소실 이벤트를 구독하는 콜백
+	UFUNCTION()
+		void OnTargetPerceptionLost(AActor* Actor);
+
 protected:
 	//@AI Attribute Set의 속성 수치 값 변화 이벤트를 구독하는 콜백
 	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);
@@ -214,6 +256,16 @@ protected:
 	//@캐릭터 상태 관련 이벤트 발생 시 호출되는 콜백
 	UFUNCTION()
 		void OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag);
+
+protected:
+	//@전투 패턴 Exit Block 완료 콜백
+	UFUNCTION()
+		bool OnCombatPatternExitComplete();
+
+protected:
+	// Target Actor 상태 변화 콜백
+	UFUNCTION()
+		void OnTargetActorStateChanged(const FGameplayTag& StateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -232,6 +284,9 @@ public:
 	//~IAbilitySystemInterface Interface
 	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	//~End Of IAbilitySystemInterface Interface
+
+public:
+	FORCEINLINE EAIType GetAIType() const { return AIType; }
 
 public:
 	FORCEINLINE float GetMinAttackRange() { return MinAttackRange; }
