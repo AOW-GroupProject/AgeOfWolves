@@ -132,19 +132,19 @@ FHitDirectionResult UCombatLibrary::CalculateHitDirectionWithHitResult(const AAc
         FVector HitLocation = HitResult.ImpactPoint;
 
         //@Debug Sphere 그리기
-#if ENABLE_DRAW_DEBUG
-        DrawDebugSphere(
-            Character->GetWorld(),
-            HitLocation,
-            10.0f,
-            12,
-            FColor::Red,
-            false,
-            3.0f,
-            0,
-            2.0f
-        );
-#endif
+//#if ENABLE_DRAW_DEBUG
+//        DrawDebugSphere(
+//            Character->GetWorld(),
+//            HitLocation,
+//            10.0f,
+//            12,
+//            FColor::Red,
+//            false,
+//            3.0f,
+//            0,
+//            2.0f
+//        );
+//#endif
 
         FVector ToCenterHit = (HitLocation - ActorLocation);
         ToCenterHit.Z = 0;
