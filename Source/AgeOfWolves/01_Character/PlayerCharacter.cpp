@@ -99,20 +99,6 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 
 		//AnimInstanceRef = nullptr;
 	}
-	//@TODO: 추후에 삭제 예정
-	//@임시 무기
-	{
-		WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
-		WeaponMesh->SetupAttachment(GetMesh(), "TempKatana");
-		WeaponMesh->SetVisibility(false);
-
-		ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
-		ShealthedWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
-		ShealthedWeaponMesh->SetVisibility(true);
-
-		FullWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));
-		FullWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
-	}
 
 	//@Team ID
 	{
@@ -170,24 +156,6 @@ void APlayerCharacter::PossessedBy(AController* NewController)
 
 	AnimInstanceRef = BaseAnimInstance;
 	LockOnComponent->LockOnStateChanged.AddUFunction(BaseAnimInstance, "OnLockOnStateChanged");
-
-	//@LockOn Component <-> Input Component
-	ABasePlayerController* PC = Cast<ABasePlayerController>(NewController);
-	if (!PC)
-	{
-		UE_LOGFMT(LogPlayer, Warning, "BasePlayerController가 유효하지 않습니다.");
-		return;
-	}
-
-	UBaseInputComponent* BaseInputComp = PC->GetBaseInputComponent();
-	if (!BaseInputComp)
-	{
-		UE_LOGFMT(LogPlayer, Warning, "BaseInputComponent가 유효하지 않습니다.");
-		return;
-	}
-
-	// Input Component의 NativeInputTagTriggeredWithValue 이벤트에 LockOn Component의 OnLockOnTargetChanged 바인딩
-	BaseInputComp->NativeInputTagTriggeredWithValue.AddUObject(LockOnComponent, &ULockOnComponent::OnLockOnTargetChanged);
 
 	//@ASC
 	if (!AbilitySystemComponent.IsValid())

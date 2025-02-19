@@ -59,6 +59,15 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "Component | Motion Warp")
 		UMotionWarpingComponent* MotionWarpComponent;
 
+	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		UStaticMeshComponent* WeaponMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		UStaticMeshComponent* ShealthedWeaponMesh;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		UStaticMeshComponent* FullWeaponMesh;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "팀 설정")
 		FGenericTeamId TeamId;
@@ -100,6 +109,11 @@ public:
 	{
 		TeamId = NewTeamId;
 	}
+
+public:
+	FORCEINLINE UStaticMeshComponent* GetWeaponMesh() { return WeaponMesh; }
+	FORCEINLINE UStaticMeshComponent* GetShealthMesh() { return ShealthedWeaponMesh; }
+	FORCEINLINE UStaticMeshComponent* GetFullWeaponMesh() { return FullWeaponMesh; }
 #pragma endregion
 };
 

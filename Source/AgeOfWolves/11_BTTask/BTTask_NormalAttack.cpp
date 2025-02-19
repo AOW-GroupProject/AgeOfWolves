@@ -1,6 +1,6 @@
-// BTTask_NormalAttack.cpp
 #include "BTTask_NormalAttack.h"
 #include "Logging/StructuredLog.h"
+
 #include "10_AI/BaseAIController.h"
 #include "AbilitySystemComponent.h"
 #include "04_Component/BaseAbilitySystemComponent.h"

@@ -21,7 +21,7 @@ bool UAR_CheckIsGuardCombat::CanApplyGameplayEffect_Implementation(const UGamepl
     }
 
     const float CombatState = AttributeSet->GetCombatState();
-    const bool bResult = (CombatState == 3.0f);
+    const bool bResult = (CombatState >= 3.0f);
 
     UE_LOGFMT(LogCheckIsGuardCombat, Log, "현재 CombatState: {0}, 체크 결과: {1}", CombatState, bResult);
     return bResult;

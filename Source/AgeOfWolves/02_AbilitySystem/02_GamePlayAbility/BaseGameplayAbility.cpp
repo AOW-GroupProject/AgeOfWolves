@@ -45,14 +45,14 @@ void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorI
     auto* ASC = ActorInfo->AbilitySystemComponent.Get();
     if (!ASC)
     {
-        UE_LOGFMT(LogTemp, Warning, "어빌리티 등록 실패 - ASC가 유효하지 않음");
+        UE_LOGFMT(LogGA, Warning, "어빌리티 등록 실패 - ASC가 유효하지 않음");
         return;
     }
 
     auto BaseASC = Cast<UBaseAbilitySystemComponent>(ASC);
     if (!BaseASC)
     {
-        UE_LOGFMT(LogTemp, Warning, "어빌리티 등록 실패 - BaseASC로 캐스팅 실패");
+        UE_LOGFMT(LogGA, Warning, "어빌리티 등록 실패 - BaseASC로 캐스팅 실패");
         return;
     }
 
@@ -61,7 +61,7 @@ void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorI
     {
         if (TriggerData.TriggerTag.IsValid())
         {
-            UE_LOGFMT(LogTemp, Log, "어빌리티 트리거 정보 - Ability: {0}, Trigger Tag: {1}",
+            UE_LOGFMT(LogGA, Log, "어빌리티 트리거 정보 - Ability: {0}, Trigger Tag: {1}",
                 *GetName(), *TriggerData.TriggerTag.ToString());
         }
     }
@@ -73,7 +73,7 @@ void UBaseGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorI
         {
             if (!Spec.IsActive() && IsValid(Spec.Ability))
             {
-                UE_LOGFMT(LogTemp, Log, "OnGranted 어빌리티 활성화 시도 - Ability: {0}", *GetName());
+                UE_LOGFMT(LogGA, Log, "OnGranted 어빌리티 활성화 시도 - Ability: {0}", *GetName());
                 BaseASC->TryActivateAbility(Spec.Handle);
             }
         }

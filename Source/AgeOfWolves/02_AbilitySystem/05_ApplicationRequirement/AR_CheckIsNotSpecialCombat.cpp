@@ -22,7 +22,7 @@ bool UAR_CheckIsNotSpecialCombat::CanApplyGameplayEffect_Implementation(const UG
     }
 
     const float CombatState = AttributeSet->GetCombatState();
-    const bool bResult = (CombatState < 2.0f);
+    const bool bResult = (CombatState != 2.0f);
 
     UE_LOGFMT(LogCheckIsNotSpecialCombat, Log, "현재 CombatState: {0}, 체크 결과: {1}", CombatState, bResult);
     return bResult;

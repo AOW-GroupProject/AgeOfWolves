@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "GameplayTagContainer.h"
 
 #include "AIDataSetInfos.generated.h"
 
@@ -10,6 +11,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAIDataSetInfos, Log, All)
 //@전방 선언
 #pragma region Forward Declaration
 class UBehaviorTree;
+class UGameplayAbility;
 #pragma endregion
 
 //@열거형
@@ -31,22 +33,182 @@ enum class EAIType : uint8
 //@구조체
 #pragma region Structs
 /**
- *	@FAbilitySet_GameplayAbility
+ * @FAIAbilityBlockUnit
  *
- *	Gameplay Ability 와 함께 관리할 정보들을 정의한 구조체
+ * 블록 내의 각 어빌리티 유닛에 대한 정보를 정의합니다.
  */
+USTRUCT(BlueprintType)
+struct FAIAbilityBlockUnit
+{
+    GENERATED_BODY()
+
+public:
+    FAIAbilityBlockUnit()
+        : AbilityTag(FGameplayTag())
+        , Priority(0)
+    {}
+
+    FAIAbilityBlockUnit(const FGameplayTag& InAbilityTag, int32 InPriority)
+        : AbilityTag(InAbilityTag)
+        , Priority(InPriority)
+    {}
+
+public:
+    //@어빌리티 식별 태그
+    UPROPERTY(EditDefaultsOnly, Category = "어빌리티")
+        FGameplayTag AbilityTag;
+
+    //@어빌리티 실행 우선순위 (낮을수록 높은 우선순위)
+    UPROPERTY(EditDefaultsOnly, Category = "어빌리티")
+        int32 Priority;
+
+public:
+    /**
+     * 태그 일치 여부를 확인하는 연산자 오버로딩
+     * @param InTag - 비교할 GameplayTag
+     * @return 태그가 정확히 일치하면 true, 그렇지 않으면 false
+     */
+    bool operator==(const FGameplayTag& InTag) const
+    {
+        return AbilityTag.MatchesTagExact(InTag);
+    }
+
+public:
+    FORCEINLINE FGameplayTag GetAbilityTag() const { return AbilityTag; }
+    FORCEINLINE int32 GetPriority() const { return Priority; }
+};
+
+/**
+ * @FAIAbilityBlock
+ *
+ * AI가 수행할 하나의 동작을 구성하는 어빌리티들의 집합을 정의합니다.
+ */
+USTRUCT(BlueprintType)
+struct FAIAbilityBlock
+{
+    GENERATED_BODY()
+
+public:
+    FAIAbilityBlock()
+        : BlockIdentifier(FGameplayTag())
+        , ExecutionPriority(0)
+        , AbilityBlockUnits()
+    {
+    }
+
+    FAIAbilityBlock(const FGameplayTag& InBlockIdentifier, int32 InExecutionPriority)
+        : BlockIdentifier(InBlockIdentifier)
+        , ExecutionPriority(InExecutionPriority)
+        , AbilityBlockUnits()
+    {
+    }
+
+public:
+    //@어빌리티 블록의 고유 식별자
+    UPROPERTY(EditDefaultsOnly, Category = "어빌리티 블록 | 기본")
+        FGameplayTag BlockIdentifier;
+
+    //@어빌리티 블록의 실행 우선순위 (낮을수록 높은 우선순위)
+    UPROPERTY(EditDefaultsOnly, Category = "어빌리티 블록 | 기본")
+        int32 ExecutionPriority;
+
+    //@블록 내 어빌리티들의 정보
+    UPROPERTY(EditDefaultsOnly, Category = "어빌리티 블록 | 어빌리티")
+        TArray<FAIAbilityBlockUnit> AbilityBlockUnits;
+
+    // ... PostSerialize와 PostEditChangeProperty는 동일 ...
+
+public:
+    FORCEINLINE FGameplayTag GetBlockIdentifier() const { return BlockIdentifier; }
+    FORCEINLINE int32 GetExecutionPriority() const { return ExecutionPriority; }
+    FORCEINLINE const TArray<FAIAbilityBlockUnit>& GetAbilityBlockUnits() const { return AbilityBlockUnits; }
+
+    /**
+     * 지정된 태그와 일치하는 어빌리티 유닛을 찾습니다.
+     * @param InTag - 찾고자 하는 어빌리티의 태그
+     * @return 찾은 어빌리티 유닛에 대한 포인터, 없으면 nullptr
+     */
+    const FAIAbilityBlockUnit* FindAbilityBlockUnitByTag(const FGameplayTag& InTag) const
+    {
+        const FAIAbilityBlockUnit* FoundUnit = AbilityBlockUnits.FindByPredicate([InTag](const FAIAbilityBlockUnit& Unit)
+            {
+                return Unit == InTag;
+            });
+        return FoundUnit;
+    }
+
+    //@어빌리티 유닛의 정렬 작업
+    void SortAbilityBlockUnitsByPriority()
+    {
+        AbilityBlockUnits.Sort([](const FAIAbilityBlockUnit& A, const FAIAbilityBlockUnit& B)
+            {
+                return A.GetPriority() < B.GetPriority();
+            });
+    }
+};
+
+/**
+* @FAICombatSequence
+*
+* AI의 전투 시퀀스를 정의합니다.
+*/
+USTRUCT(BlueprintType)
+struct FAICombatSequence
+{
+    GENERATED_BODY()
+
+public:
+    FAICombatSequence()
+        : StartBlock()
+        , AbilityBlocks()
+        , ExitBlock()
+    {}
+
+    //@전투 시작 블록
+    UPROPERTY(EditDefaultsOnly, Category = "전투 시퀀스")
+        FAIAbilityBlock StartBlock;
+
+    //@주요 전투 패턴 블록 목록
+    UPROPERTY(EditDefaultsOnly, Category = "전투 시퀀스")
+        TArray<FAIAbilityBlock> AbilityBlocks;
+
+    //@전투 종료 블록
+    UPROPERTY(EditDefaultsOnly, Category = "전투 시퀀스")
+        FAIAbilityBlock ExitBlock;
+
+public:
+    //@시작 블록 반환
+    FORCEINLINE const FAIAbilityBlock& GetStartBlock() const { return StartBlock; }
+
+    //@전투 패턴 블록 목록 반환
+    FORCEINLINE const TArray<FAIAbilityBlock>& GetAbilityBlocks() const { return AbilityBlocks; }
+
+    //@종료 블록 반환
+    FORCEINLINE const FAIAbilityBlock& GetExitBlock() const { return ExitBlock; }
+};
+
+/**
+* @FAIDataSet
+*
+* AI의 기본 정보와 행동 패턴을 정의합니다.
+*/
 USTRUCT(BlueprintType)
 struct FAIDataSet
 {
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 public:
-	UPROPERTY(EditDefaultsOnly, category = "AI 정보 | AI 유형")
-		EAIType AIType;
+    //@AI 유형
+    UPROPERTY(EditDefaultsOnly, Category = "AI 정보 | AI 유형")
+        EAIType AIType;
 
-	UPROPERTY(EditDefaultsOnly, category = "AI 정보 | Behavior Tree")
-		TObjectPtr<UBehaviorTree> BehaviorTree;
+    //@비헤이비어 트리
+    UPROPERTY(EditDefaultsOnly, Category = "AI 정보 | Behavior Tree")
+        TObjectPtr<UBehaviorTree> BehaviorTree;
 
+    //@전투 시퀀스
+    UPROPERTY(EditDefaultsOnly, Category = "AI 정보 | 전투 패턴")
+        FAICombatSequence CombatSequence;
 };
 #pragma endregion
 
