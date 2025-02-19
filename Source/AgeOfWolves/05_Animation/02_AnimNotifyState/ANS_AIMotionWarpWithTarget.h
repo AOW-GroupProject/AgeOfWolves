@@ -30,5 +30,8 @@ protected:
     //@Warp Target의 이름
     UPROPERTY(EditAnywhere, Category = "AI | Motion Warp")
         FName WarpTargetName = FName("AITarget");
+
+    UPROPERTY(EditAnywhere, Category = "AI | Motion Warp")
+        float OffsetDistance = 100.0f;
 #pragma endregion
 };

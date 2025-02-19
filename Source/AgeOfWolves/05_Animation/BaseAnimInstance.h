@@ -224,6 +224,12 @@ protected:
 		float RootMotionCooldownDuration;
 
 	float CurrentRootMotionCooldownTime;
+
+//@TODO: 임시
+protected:
+	UPROPERTY()
+		UStaticMesh* OriginalFullWeaponMesh;
+
 #pragma endregion
 
 	//@Delegates

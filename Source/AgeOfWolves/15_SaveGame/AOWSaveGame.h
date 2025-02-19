@@ -135,7 +135,6 @@ class AGEOFWOLVES_API UAOWSaveGame : public USaveGame
 	friend class ABaseAIController;
 #pragma endregion
 
-
 	GENERATED_BODY()
 
 //@Defualt Setting

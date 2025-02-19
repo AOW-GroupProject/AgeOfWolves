@@ -93,6 +93,7 @@ void UANS_AIMotionWarpWithTarget::NotifyTick(USkeletalMeshComponent* MeshComp, U
     //@Warp Target 설정
     FMotionWarpingTarget WarpTarget;
     WarpTarget.Name = WarpTargetName;
+
     WarpTarget.Location = TargetActor->GetActorLocation();
     WarpTarget.Rotation = AIController->GetControlRotation();
 

@@ -567,7 +567,6 @@ void ABaseAIController::UnbindTargetActorStateEvents(AActor* OldTarget)
             *OldTarget->GetName());
     }
 }
-
 #pragma endregion
 
 //@Callbacks
@@ -760,4 +759,3 @@ ETeamAttitude::Type ABaseAIController::GetTeamAttitudeTowards(const AActor& Othe
         : ETeamAttitude::Hostile;
 }
 #pragma endregion
-

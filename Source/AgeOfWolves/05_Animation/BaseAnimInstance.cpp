@@ -65,6 +65,13 @@ void UBaseAnimInstance::NativeInitializeAnimation()
     }
     OwnerCharacterBaseRef = CharacterBase;
 
+    // 원본 FullWeapon Mesh 저장
+    if (UStaticMeshComponent* FullMesh = CharacterBase->GetFullWeaponMesh())
+    {
+        OriginalFullWeaponMesh = FullMesh->GetStaticMesh();
+        UE_LOGFMT(LogAnimInstance, Log, "원본 FullWeapon Mesh 저장 완료");
+    }
+
     //@Character Movement Component
     UCharacterMovementComponent* CharacterMovementComp = OwnerCharacterBaseRef->GetCharacterMovement();
     if (!CharacterMovementComp)
@@ -72,7 +79,6 @@ void UBaseAnimInstance::NativeInitializeAnimation()
         return;
     }
     CharacterMovementCompRef = CharacterMovementComp;
-
 }
 
 void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -338,7 +344,6 @@ void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
 void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
 {
     const ECombatType OldCombatType = CombatType;
-    // float 값을 ECombatType으로 안전하게 변환
     CombatType = static_cast<ECombatType>(FMath::RoundToInt(FMath::Clamp(NewValue, 0.f,
         static_cast<float>(ECombatType::MAX) - 1)));
 
@@ -362,18 +367,54 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
     const float VisibilityDelay = 0.5f;
     const bool bIsInCombat = NewValue > 0.f;
 
-    FTimerHandle TimerHandle;
-    GetWorld()->GetTimerManager().SetTimer(
-        TimerHandle,
-        [=]()
-        {
-            WeaponMesh->SetVisibility(bIsInCombat);
-            ShealthMesh->SetVisibility(bIsInCombat);
-            FullMesh->SetVisibility(!bIsInCombat);
-        },
-        bIsInCombat ? VisibilityDelay : VisibilityDelay + 1.f,
-            false
-            );
+    if (bIsInCombat)
+    {
+        // 전투 상태로 전환 (값이 1 이상)
+        FTimerHandle CombatTimerHandle;
+        GetWorld()->GetTimerManager().SetTimer(
+            CombatTimerHandle,
+            [=]()
+            {
+                // FullWeapon의 Static Mesh를 ShealthMesh의 것으로 변경
+                if (UStaticMesh* ShealthStaticMesh = ShealthMesh->GetStaticMesh())
+                {
+                    FullMesh->SetStaticMesh(ShealthStaticMesh);
+                    UE_LOGFMT(LogAnimInstance, Log, "FullWeapon Mesh가 Shealth Mesh로 변경됨");
+                }
+
+                // 가시성 설정
+                WeaponMesh->SetVisibility(true);
+                FullMesh->SetVisibility(true);
+                ShealthMesh->SetVisibility(false);
+            },
+            VisibilityDelay,
+                false
+                );
+    }
+    else
+    {
+        // 비전투 상태로 전환 (값이 0)
+        FTimerHandle NonCombatTimerHandle;
+        GetWorld()->GetTimerManager().SetTimer(
+            NonCombatTimerHandle,
+            [=]()
+            {
+                // FullWeapon 가시성 비활성화
+                FullMesh->SetVisibility(false);
+                WeaponMesh->SetVisibility(false);
+                ShealthMesh->SetVisibility(true);
+
+                // FullWeapon의 Static Mesh를 원래대로 복원
+                if (OriginalFullWeaponMesh)
+                {
+                    FullMesh->SetStaticMesh(OriginalFullWeaponMesh);
+                    UE_LOGFMT(LogAnimInstance, Log, "FullWeapon Mesh가 원본으로 복원됨");
+                }
+            },
+            VisibilityDelay + 1.f,
+                false
+                );
+    }
 }
 #pragma endregion
 

@@ -325,18 +325,27 @@ bool ULockOnComponent::FindTargetEnemy()
     const FVector CameraUp = FollowCameraComponentRef->GetUpVector();
     const float HalfFOV = FMath::Cos(FMath::DegreesToRadians(FollowCameraComponentRef->FieldOfView * 0.5f));
 
-    // FOV 내에 있는 타겟이 하나라도 있는지 체크하기 위한 플래그
     bool bHasTargetInFOV = false;
 
-    // 두 번째: 각 액터에 대해 FOV와 가시성 체크
+    // 두 번째: 각 액터에 대해 FOV와 가시성, 콜리전 체크
     for (const auto& Hit : HitResults)
     {
+        AActor* HitActor = Hit.GetActor();
+
+        //@TODO: 임시적으로, Target의 생사여부를 충돌 활성화 여부로 체크
+        if (!IsValid(HitActor) || !HitActor->GetActorEnableCollision())
+        {
+            UE_LOGFMT(LogLockOn, Verbose, "Skipping actor {0} - collision disabled",
+                IsValid(HitActor) ? *HitActor->GetName() : TEXT("Invalid"));
+            continue;
+        }
+
         // 시야 체크를 위한 Line Trace
         FHitResult LineHitResults;
         bool LineTraceHitResult = UKismetSystemLibrary::LineTraceSingleForObjects(
             GetWorld(),
-            CameraLocation,  // 카메라 위치에서 시작
-            Hit.GetActor()->GetActorLocation(),
+            CameraLocation,
+            HitActor->GetActorLocation(),
             NearByActors,
             false,
             IgnoreActors,
@@ -346,15 +355,15 @@ bool ULockOnComponent::FindTargetEnemy()
         );
 
         // Line Trace로 장애물 체크
-        if (Hit.GetActor() == LineHitResults.GetActor())
+        if (HitActor == LineHitResults.GetActor())
         {
             // 카메라에서 적까지의 방향 벡터
-            FVector DirectionToEnemy = (Hit.GetActor()->GetActorLocation() - CameraLocation).GetSafeNormal();
+            FVector DirectionToEnemy = (HitActor->GetActorLocation() - CameraLocation).GetSafeNormal();
 
             // 화면 중앙으로부터의 각도 계산 (내적)
             float ForwardDot = FVector::DotProduct(CameraForward, DirectionToEnemy);
 
-            // FOV 체크 - 더 엄격한 체크를 위해 HalfFOV 사용
+            // FOV 체크
             if (ForwardDot > HalfFOV)
             {
                 bHasTargetInFOV = true;
@@ -363,8 +372,8 @@ bool ULockOnComponent::FindTargetEnemy()
                 FVector Cross = FVector::CrossProduct(CameraForward, DirectionToEnemy);
                 float RightDot = FVector::DotProduct(Cross, CameraUp);
 
-                NearByEnemies.AddUnique(Hit.GetActor());
-                EnemyMap.Add(RightDot, Hit.GetActor());
+                NearByEnemies.AddUnique(HitActor);
+                EnemyMap.Add(RightDot, HitActor);
 
                 // 화면 중앙에 가장 가까운 적 찾기
                 if (FMath::Abs(RightDot) < FMath::Abs(CenterDot))
