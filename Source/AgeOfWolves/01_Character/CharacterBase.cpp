@@ -5,6 +5,7 @@
 
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "MotionWarpingComponent.h"
+#include "NiagaraComponent.h"
 
 #include "10_AI/BaseAIController.h"
 
@@ -18,7 +19,13 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
 {
 	PrimaryActorTick.bCanEverTick = true;
 
+	//@Motion Warp Component
 	MotionWarpComponent = CreateDefaultSubobject<UMotionWarpingComponent>(TEXT("Motion Warp Component"));
+
+	//@Skeletal FX Component
+	SkeletalFXComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Skeletal FX Component"));
+	SkeletalFXComponent->SetupAttachment(GetMesh());
+	SkeletalFXComponent->SetAutoActivate(false);
 
 	//@임시 무기 장착 코드
 	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
