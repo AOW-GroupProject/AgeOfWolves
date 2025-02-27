@@ -344,46 +344,46 @@ FSlashGameplayCueParams UCombatLibrary::PrepareSlashGameplayCueParameters(AActor
     FRotator SlashRotation = SurfaceNormal.Rotation();
 
     // 디버깅을 위한 시각화
-#if ENABLE_DRAW_DEBUG
-    // ClosestPoint 표시 (녹색)
-    DrawDebugSphere(
-        Character->GetWorld(),
-        ClosestPoint,
-        5.0f,
-        12,
-        FColor::Green,
-        false,
-        3.0f,
-        0,
-        1.0f
-    );
-
-    // 원래 ImpactPoint 표시 (빨간색)
-    DrawDebugSphere(
-        Character->GetWorld(),
-        ImpactPoint,
-        5.0f,
-        12,
-        FColor::Red,
-        false,
-        3.0f,
-        0,
-        1.0f
-    );
-
-    // ClosestPointResult의 Normal 방향 표시 (파란색)
-    DrawDebugDirectionalArrow(
-        Character->GetWorld(),
-        ClosestPoint,
-        ClosestPoint + SurfaceNormal * 30.0f,
-        10.0f,
-        FColor::Blue,
-        false,
-        3.0f,
-        0,
-        1.0f
-    );
-#endif
+//#if ENABLE_DRAW_DEBUG
+//    // ClosestPoint 표시 (녹색)
+//    DrawDebugSphere(
+//        Character->GetWorld(),
+//        ClosestPoint,
+//        5.0f,
+//        12,
+//        FColor::Green,
+//        false,
+//        3.0f,
+//        0,
+//        1.0f
+//    );
+//
+//    // 원래 ImpactPoint 표시 (빨간색)
+//    DrawDebugSphere(
+//        Character->GetWorld(),
+//        ImpactPoint,
+//        5.0f,
+//        12,
+//        FColor::Red,
+//        false,
+//        3.0f,
+//        0,
+//        1.0f
+//    );
+//
+//    // ClosestPointResult의 Normal 방향 표시 (파란색)
+//    DrawDebugDirectionalArrow(
+//        Character->GetWorld(),
+//        ClosestPoint,
+//        ClosestPoint + SurfaceNormal * 30.0f,
+//        10.0f,
+//        FColor::Blue,
+//        false,
+//        3.0f,
+//        0,
+//        1.0f
+//    );
+//#endif
 
     // 결과값 설정
     Params.SlashRotation = SlashRotation;
