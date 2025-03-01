@@ -12,6 +12,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCombatLibrary, Log, All);
 
 //@전방 선언
 #pragma region Forward Declaration
+class AActor;
+struct FHitResult;
 #pragma endregion
 
 //@열거형
@@ -104,6 +106,26 @@ struct FHitDirectionResult
             static_cast<uint8>(ImpactLocation));
     }
 };
+
+/*
+*   @FSlashGameplayCueParams
+* 
+*   Slash 이팩트를 다루는 Gameplay Cue의 Execute 를 위해 필요한 정보를 담은 구조체
+*/
+USTRUCT(BlueprintType)
+struct FSlashGameplayCueParams
+{
+    GENERATED_BODY()
+
+        UPROPERTY(BlueprintReadOnly)
+        FRotator SlashRotation;
+
+    UPROPERTY(BlueprintReadOnly)
+        FVector SpawnLocation;
+
+    UPROPERTY(BlueprintReadOnly)
+        FVector ImpactNormal;
+};
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -131,6 +153,7 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Combat | 피격 반응")
         static FHitDirectionResult CalculateHitDirectionWithHitResult(const AActor* Instigator, const FHitResult& HitResult);
 
+public:
     /**
      * 대상 액터에게 GameplayEvent를 전송합니다.
      * @param EventTag - 전송할 이벤트의 태그
@@ -151,6 +174,16 @@ public:
             float Magnitude = 0.0f,
             UObject* OptionalObject = nullptr,
             UObject* OptionalObject2 = nullptr);
+
+public:
+    /**
+     * @brief 슬래시 GameplayCue 실행에 필요한 파라미터들을 준비합니다.
+     * @param InActor - 이펙트를 실행할 액터
+     * @param HitResult - 공격 히트 결과
+     * @return 계산된 GameplayCue 파라미터들
+     */
+    UFUNCTION(BlueprintCallable, Category = "Combat | GameplayCue")
+        static FSlashGameplayCueParams PrepareSlashGameplayCueParameters(AActor* InActor, const FHitResult& HitResult);
 #pragma endregion
 
     //@Property/Info...etc

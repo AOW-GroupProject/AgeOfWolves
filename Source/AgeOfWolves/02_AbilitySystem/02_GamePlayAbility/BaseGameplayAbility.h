@@ -287,7 +287,7 @@ protected:
 	bool bIsCanceledByChainAction;
 #pragma endregion
 
-	//@Delegates
+//@Delegates
 #pragma region Delegates
 public:
 	FTimingNotifiedByAN TimingNotifiedByAN;

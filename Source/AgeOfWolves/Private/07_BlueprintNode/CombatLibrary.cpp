@@ -3,6 +3,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
+#include "Components/SkeletalMeshComponent.h"
 
 DEFINE_LOG_CATEGORY(LogCombatLibrary)
 
@@ -295,4 +296,106 @@ bool UCombatLibrary::SendGameplayEventToTarget(
         IsValid(InstigatorActor) ? *InstigatorActor->GetName() : TEXT("None"));
 
     return true;
+}
+
+FSlashGameplayCueParams UCombatLibrary::PrepareSlashGameplayCueParameters(AActor* InActor, const FHitResult& HitResult)
+{
+    FSlashGameplayCueParams Params;
+
+    // 유효성 검사
+    if (!InActor)
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "PrepareSlashGameplayCueParameters 실패 - 사유: Actor가 유효하지 않음");
+        return Params;
+    }
+
+    // 캐릭터 캐스팅
+    ACharacter* Character = Cast<ACharacter>(InActor);
+    if (!Character)
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "PrepareSlashGameplayCueParameters 실패 - 사유: Character 캐스팅 실패");
+        return Params;
+    }
+
+    // 스켈레탈 메시 컴포넌트 가져오기
+    USkeletalMeshComponent* SkeletalMesh = Character->GetMesh();
+    if (!SkeletalMesh)
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "PrepareSlashGameplayCueParameters 실패 - 사유: SkeletalMesh가 유효하지 않음");
+        return Params;
+    }
+
+    // 충돌 지점 정보 추출
+    const FVector ImpactPoint = HitResult.ImpactPoint;
+
+    // 스켈레탈 메시 표면의 가장 가까운 지점 찾기
+    FClosestPointOnPhysicsAsset ClosestPointResult;
+    SkeletalMesh->GetClosestPointOnPhysicsAsset(
+        ImpactPoint,
+        ClosestPointResult,
+        false
+    );
+
+    // ClosestPoint와 Normal 정보 추출
+    const FVector ClosestPoint = ClosestPointResult.ClosestWorldPosition;
+    const FVector SurfaceNormal = ClosestPointResult.Normal;
+
+    // 회전 계산
+    FRotator SlashRotation = SurfaceNormal.Rotation();
+
+    // 디버깅을 위한 시각화
+//#if ENABLE_DRAW_DEBUG
+//    // ClosestPoint 표시 (녹색)
+//    DrawDebugSphere(
+//        Character->GetWorld(),
+//        ClosestPoint,
+//        5.0f,
+//        12,
+//        FColor::Green,
+//        false,
+//        3.0f,
+//        0,
+//        1.0f
+//    );
+//
+//    // 원래 ImpactPoint 표시 (빨간색)
+//    DrawDebugSphere(
+//        Character->GetWorld(),
+//        ImpactPoint,
+//        5.0f,
+//        12,
+//        FColor::Red,
+//        false,
+//        3.0f,
+//        0,
+//        1.0f
+//    );
+//
+//    // ClosestPointResult의 Normal 방향 표시 (파란색)
+//    DrawDebugDirectionalArrow(
+//        Character->GetWorld(),
+//        ClosestPoint,
+//        ClosestPoint + SurfaceNormal * 30.0f,
+//        10.0f,
+//        FColor::Blue,
+//        false,
+//        3.0f,
+//        0,
+//        1.0f
+//    );
+//#endif
+
+    // 결과값 설정
+    Params.SlashRotation = SlashRotation;
+    Params.SpawnLocation = ClosestPoint;
+    Params.ImpactNormal = SurfaceNormal;
+
+    UE_LOGFMT(LogCombatLibrary, Log, "슬래시 GameplayCue 파라미터 준비 완료 - Target: {0}, Location: {1}, Rotation: {2}, Normal: {3}",
+        *InActor->GetName(),
+        *ClosestPoint.ToString(),
+        *SlashRotation.ToString(),
+        *SurfaceNormal.ToString()
+    );
+
+    return Params;
 }
