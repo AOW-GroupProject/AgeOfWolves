@@ -26,11 +26,13 @@ struct FHitResult;
 UENUM(BlueprintType)
 enum class EHitReactDirection : uint8
 {
-    Left    UMETA(DisplayName = "Left"),
-    Right   UMETA(DisplayName = "Right"),
-    Forward UMETA(DisplayName = "Forward"),
+    Left     UMETA(DisplayName = "Left"),
+    Right    UMETA(DisplayName = "Right"),
+    Forward  UMETA(DisplayName = "Forward"),
     Backward UMETA(DisplayName = "Backward"),
-    Max     UMETA(DisplayName = "Max")
+    FL       UMETA(DisplayName = "Forward Left"), 
+    FR       UMETA(DisplayName = "Forward Right"),
+    Max      UMETA(DisplayName = "Max")
 };
 
 /*

@@ -25,31 +25,53 @@ EHitReactDirection UCombatLibrary::CalculateHitDirection(const FVector& ImpactLo
 
     float ForwardDot = FVector::DotProduct(ForwardVector, ToHit);
     float RightDot = FVector::DotProduct(RightVector, ToHit);
-    const float Threshold = FMath::Cos(FMath::DegreesToRadians(45.f));
+
+    // 방향 판정을 위한 임계값 설정
+    const float ForwardThreshold = FMath::Cos(FMath::DegreesToRadians(30.f));  // 약 0.866 (더 엄격함)
+    const float DiagonalThreshold = FMath::Cos(FMath::DegreesToRadians(60.f)); // 약 0.5 (대각선 판정용)
+    const float BackwardThreshold = FMath::Cos(FMath::DegreesToRadians(45.f)); // Backward는 기존과 동일하게 유지
+    const float SideThreshold = FMath::Cos(FMath::DegreesToRadians(45.f));     // 약 0.707 (좌/우 판정)
 
     UE_LOGFMT(LogCombatLibrary, Log, "히트 방향 계산 시작 - Target: {0}", *HitActor->GetName());
     UE_LOGFMT(LogCombatLibrary, Log, "벡터 정보 - Impact: {0}, Actor: {1}, ToHit: {2}",
         *ImpactLocation.ToString(), *ActorLocation.ToString(), *ToHit.ToString());
-    UE_LOGFMT(LogCombatLibrary, Log, "내적 결과 - Forward: {0}, Right: {1}, Threshold: {2}",
-        ForwardDot, RightDot, Threshold);
+    UE_LOGFMT(LogCombatLibrary, Log, "내적 결과 - Forward: {0}, Right: {1}, ForwardThreshold: {2}, BackwardThreshold: {3}",
+        ForwardDot, RightDot, ForwardThreshold, BackwardThreshold);
 
     EHitReactDirection HitDirection;
-    if (ForwardDot >= Threshold && FMath::Abs(RightDot) < Threshold)
+
+    // 전방 (순수 전방 - 더 엄격한 각도)
+    if (ForwardDot >= ForwardThreshold && FMath::Abs(RightDot) < DiagonalThreshold)
     {
         HitDirection = EHitReactDirection::Forward;
         UE_LOGFMT(LogCombatLibrary, Log, "히트 방향 결정: 전방");
     }
-    else if (-ForwardDot > Threshold && FMath::Abs(RightDot) < Threshold)
+    // 전방 우측 (대각선 판정)
+    else if (ForwardDot >= DiagonalThreshold && RightDot >= DiagonalThreshold)
+    {
+        HitDirection = EHitReactDirection::FR;
+        UE_LOGFMT(LogCombatLibrary, Log, "히트 방향 결정: 전방 우측");
+    }
+    // 전방 좌측 (대각선 판정)
+    else if (ForwardDot >= DiagonalThreshold && RightDot <= -DiagonalThreshold)
+    {
+        HitDirection = EHitReactDirection::FL;
+        UE_LOGFMT(LogCombatLibrary, Log, "히트 방향 결정: 전방 좌측");
+    }
+    // 후방 (기존 임계값 유지)
+    else if (-ForwardDot > BackwardThreshold && FMath::Abs(RightDot) < BackwardThreshold)
     {
         HitDirection = EHitReactDirection::Backward;
         UE_LOGFMT(LogCombatLibrary, Log, "히트 방향 결정: 후방");
     }
-    else if (RightDot >= Threshold && FMath::Abs(ForwardDot) < Threshold)
+    // 우측
+    else if (RightDot >= SideThreshold && FMath::Abs(ForwardDot) < DiagonalThreshold)
     {
         HitDirection = EHitReactDirection::Right;
         UE_LOGFMT(LogCombatLibrary, Log, "히트 방향 결정: 우측");
     }
-    else if (-RightDot > Threshold && FMath::Abs(ForwardDot) < Threshold)
+    // 좌측
+    else if (RightDot <= -SideThreshold && FMath::Abs(ForwardDot) < DiagonalThreshold)
     {
         HitDirection = EHitReactDirection::Left;
         UE_LOGFMT(LogCombatLibrary, Log, "히트 방향 결정: 좌측");
@@ -85,67 +107,15 @@ FHitDirectionResult UCombatLibrary::CalculateHitDirectionWithHitResult(const AAc
         return Result;
     }
 
-    // 공통으로 사용할 변수들
-    FVector ActorLocation = Character->GetActorLocation();
-    FVector ForwardVector = Character->GetActorForwardVector();
-    FVector RightVector = Character->GetActorRightVector();
-    const float Threshold = FMath::Cos(FMath::DegreesToRadians(45.f));
-
-    // 1. 공격자 위치 기반 Direction 계산
-    {
-        FVector InstigatorLocation = Instigator->GetActorLocation();
-        FVector ToInstigator = (InstigatorLocation - ActorLocation);
-        ToInstigator.Z = 0;
-        ToInstigator = ToInstigator.GetSafeNormal();
-
-        float ForwardDot = FVector::DotProduct(ForwardVector, ToInstigator);
-        float RightDot = FVector::DotProduct(RightVector, ToInstigator);
-
-        UE_LOGFMT(LogCombatLibrary, Log, "공격자 방향 계산 - Target: {0}, Instigator: {1}",
-            *Character->GetName(), *Instigator->GetName());
-        UE_LOGFMT(LogCombatLibrary, Log, "공격자 방향 내적 - Forward: {0}, Right: {1}, Threshold: {2}",
-            ForwardDot, RightDot, Threshold);
-
-        if (ForwardDot >= Threshold && FMath::Abs(RightDot) < Threshold)
-        {
-            Result.Direction = EHitReactDirection::Forward;
-            UE_LOGFMT(LogCombatLibrary, Log, "공격자 위치: 전방");
-        }
-        else if (-ForwardDot > Threshold && FMath::Abs(RightDot) < Threshold)
-        {
-            Result.Direction = EHitReactDirection::Backward;
-            UE_LOGFMT(LogCombatLibrary, Log, "공격자 위치: 후방");
-        }
-        else if (RightDot >= Threshold && FMath::Abs(ForwardDot) < Threshold)
-        {
-            Result.Direction = EHitReactDirection::Right;
-            UE_LOGFMT(LogCombatLibrary, Log, "공격자 위치: 우측");
-        }
-        else if (-RightDot > Threshold && FMath::Abs(ForwardDot) < Threshold)
-        {
-            Result.Direction = EHitReactDirection::Left;
-            UE_LOGFMT(LogCombatLibrary, Log, "공격자 위치: 좌측");
-        }
-    }
+    // 1. 공격자 위치 기반 Direction 계산 - CalculateHitDirection 함수 재사용
+    Result.Direction = CalculateHitDirection(Instigator->GetActorLocation(), Character);
 
     // 2. Impact Point 기반 타격 위치 계산
     {
         FVector HitLocation = HitResult.ImpactPoint;
-
-        //@Debug Sphere 그리기
-//#if ENABLE_DRAW_DEBUG
-//        DrawDebugSphere(
-//            Character->GetWorld(),
-//            HitLocation,
-//            10.0f,
-//            12,
-//            FColor::Red,
-//            false,
-//            3.0f,
-//            0,
-//            2.0f
-//        );
-//#endif
+        FVector ActorLocation = Character->GetActorLocation();
+        FVector ForwardVector = Character->GetActorForwardVector();
+        FVector RightVector = Character->GetActorRightVector();
 
         FVector ToCenterHit = (HitLocation - ActorLocation);
         ToCenterHit.Z = 0;
@@ -168,7 +138,7 @@ FHitDirectionResult UCombatLibrary::CalculateHitDirectionWithHitResult(const AAc
             Result.ImpactLocation = EHitImpactLocation::Front;
             UE_LOGFMT(LogCombatLibrary, Log, "타격 위치: 전방");
         }
-        else if (-ForwardDot > ForwardThreshold)
+        else if (-ForwardDot > SideThreshold)
         {
             Result.ImpactLocation = EHitImpactLocation::Back;
             UE_LOGFMT(LogCombatLibrary, Log, "타격 위치: 후방");
@@ -183,6 +153,11 @@ FHitDirectionResult UCombatLibrary::CalculateHitDirectionWithHitResult(const AAc
             Result.ImpactLocation = EHitImpactLocation::Left;
             UE_LOGFMT(LogCombatLibrary, Log, "타격 위치: 좌측");
         }
+        else
+        {
+            Result.ImpactLocation = EHitImpactLocation::Center;
+            UE_LOGFMT(LogCombatLibrary, Log, "타격 위치: 중앙");
+        }
     }
 
     // 3. 수직 높이 계산
@@ -192,7 +167,7 @@ FHitDirectionResult UCombatLibrary::CalculateHitDirectionWithHitResult(const AAc
         {
             float CharacterHeight = Capsule->GetScaledCapsuleHalfHeight() * 2.0f;
             // 캐릭터의 중심점(ActorLocation)을 기준으로 상대 높이 계산
-            float CharacterCenterZ = ActorLocation.Z;
+            float CharacterCenterZ = Character->GetActorLocation().Z;
             float RelativeZ = HitResult.ImpactPoint.Z - CharacterCenterZ;
 
             // -1.0 ~ 1.0 범위로 정규화 (-1이 발밑, 0이 중심, 1이 머리)
