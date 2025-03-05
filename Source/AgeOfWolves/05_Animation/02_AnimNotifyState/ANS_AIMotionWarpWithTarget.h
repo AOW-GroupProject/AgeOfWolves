@@ -33,5 +33,9 @@ protected:
 
     UPROPERTY(EditAnywhere, Category = "AI | Motion Warp")
         float OffsetDistance = 100.0f;
+
+    //@Z축 높이 보존 여부
+    UPROPERTY(EditAnywhere, Category = "AI | Motion Warp")
+        bool bPreserveZHeight = true;
 #pragma endregion
 };

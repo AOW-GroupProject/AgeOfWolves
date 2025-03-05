@@ -89,6 +89,8 @@ protected:
 
 private:
     void UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly = false);
+    void AttachBillboardToSpineSocket(bool bVisible);
+
 
 protected:
     UPROPERTY(BlueprintReadWrite, Category = "Lock On")
@@ -99,6 +101,9 @@ protected:
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Lock On")
         float MaxLockOnDistance = 2000.f;
+
+    UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Lock On")
+        float HeightThreshold = 20.f;
 
     UPROPERTY(EditDefaultsOnly, Category = "Lock On")
         float InterpolationSpeed = 10.f;
@@ -130,7 +135,10 @@ protected:
         float BillboardForwardOffset = 100.0f;
 
     UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
-        float TextureScale = 0.08f;
+        float TextureScale = 0.05f;
+
+    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
+        float BillboardInterpolationSpeed = 30.0f;
 #pragma endregion
 
 //@Delegates

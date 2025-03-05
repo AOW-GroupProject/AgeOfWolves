@@ -255,6 +255,7 @@ bool UAIAbilitySequencerComponent::OnRequestActivateAICombatLoop()
     const FAIAbilityBlockUnit* CurrentUnit = nullptr;
     FString BlockType;
 
+    //@Start Block
     if (IsExecutingStartBlock())
     {
         const auto& StartBlock = CachedCombatSequence.GetStartBlock();
@@ -264,6 +265,7 @@ bool UAIAbilitySequencerComponent::OnRequestActivateAICombatLoop()
             BlockType = TEXT("StartBlock");
         }
     }
+    //@Ability Blocks
     else if (IsExecutingAbilityBlocks())
     {
         const auto& AbilityBlocks = CachedCombatSequence.GetAbilityBlocks();
@@ -274,6 +276,7 @@ bool UAIAbilitySequencerComponent::OnRequestActivateAICombatLoop()
             BlockType = FString::Printf(TEXT("AbilityBlock[%d]"), CurrentBlockIndex);
         }
     }
+    //@Exit Block
     else if (IsExecutingExitBlock())
     {
         const auto& ExitBlock = CachedCombatSequence.GetExitBlock();
