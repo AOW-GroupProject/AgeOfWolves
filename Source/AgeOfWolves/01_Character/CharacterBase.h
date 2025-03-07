@@ -16,6 +16,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogCharacter, Log, All)
 class UBaseAttributeSet;
 class UBaseAbilitySystemComponent;
 class UMotionWarpingComponent;
+class UNiagaraComponent;
 class UBaseAnimInstance;
 #pragma endregion
 
@@ -56,6 +57,9 @@ protected:
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
+	UPROPERTY(EditDefaultsOnly, Category = "Component | Skeletal FX")
+		UNiagaraComponent* SkeletalFXComponent;
+
 	UPROPERTY(EditDefaultsOnly, Category = "Component | Motion Warp")
 		UMotionWarpingComponent* MotionWarpComponent;
 
@@ -114,6 +118,7 @@ public:
 	FORCEINLINE UStaticMeshComponent* GetWeaponMesh() { return WeaponMesh; }
 	FORCEINLINE UStaticMeshComponent* GetShealthMesh() { return ShealthedWeaponMesh; }
 	FORCEINLINE UStaticMeshComponent* GetFullWeaponMesh() { return FullWeaponMesh; }
+	FORCEINLINE UNiagaraComponent* GetSkeletalFXComponent() { return SkeletalFXComponent; }
 #pragma endregion
 };
 

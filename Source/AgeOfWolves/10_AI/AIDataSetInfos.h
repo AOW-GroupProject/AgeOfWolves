@@ -188,6 +188,66 @@ public:
 };
 
 /**
+ *  @FAIPersonalityTraits
+ * 
+ *  AI의 성향 정보를 담고 있는 구조체
+ */
+USTRUCT(BlueprintType)
+struct FAIPersonalityTraits
+{
+    GENERATED_BODY()
+
+public:
+    //@공격성: 공격 유닛의 연속 사용 횟수와 공격적인 행동에 영향 + 높을수록 더 많은 공격 유닛 사용 및 더 공격적인 행동
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI | Personality", meta = (ClampMin = "0", ClampMax = "100", UIMin = "0", UIMax = "100"))
+        float Aggressiveness = 50.0f;
+
+    //@기민함: 회피 및 기동성에 영향 + 높을수록 더 자주 회피하고 적극적으로 움직임
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI | Personality", meta = (ClampMin = "0", ClampMax = "100", UIMin = "0", UIMax = "100"))
+        float Agility = 50.0f;
+
+    //@적극성: 선제적인 방어 및 준비 행동에 영향 + 높을수록 가드 장착 등의 준비 행동을 생략함
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI | Personality", meta = (ClampMin = "0", ClampMax = "100", UIMin = "0", UIMax = "100"))
+        float Proactiveness = 50.0f;
+
+    //@계획성: 상황에 따른 전략 변경에 영향 + 높을수록 피격 시 전략 변경 가능성 증가
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "AI | Personality", meta = (ClampMin = "0", ClampMax = "100", UIMin = "0", UIMax = "100"))
+        float Methodicalness = 50.0f;
+
+    //@성향에 따른 공격 유닛 사용 개수 계산 - 공격성 수치 영향
+    int32 CalculateAttackUnitsCount(int32 BaseCount) const
+    {
+        // 공격성이 0일 때는 기본값, 100일 때는 기본값의 2배까지 증가
+        float Multiplier = 1.0f + (Aggressiveness / 100.0f);
+        return FMath::Max(1, FMath::RoundToInt(BaseCount * Multiplier));
+    }
+
+    //@성향에 따른 회피 확률 계산 - 기민함 수치 영항
+    float CalculateDodgeProbability() const
+    {
+        // 기민함이 0일 때는 10%, 100일 때는 80%
+        return 0.1f + (Agility / 100.0f * 0.7f);
+    }
+
+    //@성향에 따른 선제적 가드 장착 여부 결정 - 적극성 수치 영향
+    bool ShouldUseProactiveGuard() const
+    {
+        // 적극성 수치에 따른 가드 장착 확률
+        float GuardProbability = Proactiveness / 100.0f;
+        return FMath::FRand() < GuardProbability;
+    }
+
+    //@성향에 따른 전략 변경 여부 결정 - 계획성 수치 영향
+    bool ShouldChangeStrategyOnCancel() const
+    {
+        // 계획성이 높을수록 전략 변경 확률 증가
+        float ChangeStrategyProbability = Methodicalness / 100.0f;
+        return FMath::FRand() < ChangeStrategyProbability;
+    }
+};
+
+
+/**
 * @FAIDataSet
 *
 * AI의 기본 정보와 행동 패턴을 정의합니다.
