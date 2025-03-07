@@ -477,26 +477,41 @@ void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
     if (!BaseAnimInstanceRef.IsValid() || !BaseInputComponentRef.IsValid())
     {
         UE_LOGFMT(LogLockOn, Warning, "카메라 변환 실패: 애님 인스턴스 또는 입력 컴포넌트 유효하지 않음");
-
         return;
     }
 
     //@Location
     FVector Start = PlayerCharacterRef->GetActorLocation();
     FVector Target = TargetEnemyRef->GetActorLocation();
-    
+
+    //@Height Difference Check
+    float HeightDifference = Target.Z - Start.Z;
+    bool bApplyPitch = FMath::Abs(HeightDifference) > HeightThreshold;
+
     //@Rotation
     FRotator StartRotation = PlayerCharacterRef->GetControlRotation();
     FRotator TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, Target);
-    
+
     //@Final Rotation
     FinalRotation = UKismetMathLibrary::RInterpTo(StartRotation, TargetRotation, DeltaTime, InterpolationSpeed);
 
-    //@RInterpTo
-    PlayerCharacterRef->GetController()->SetControlRotation(FRotator(0.f, FinalRotation.Yaw, 0.f));
+    //@Set Controller Rotation
+    if (bApplyPitch)
+    {
+        // 높이 차이가 있을 때 Yaw와 Pitch 모두 적용
+        PlayerCharacterRef->GetController()->SetControlRotation(
+            FRotator(FinalRotation.Pitch, FinalRotation.Yaw, 0.f));
 
-    //@Update Spring Arm
-    //UpdateSpringArmTransform(DeltaTime, Target, FinalRotation);
+        UE_LOGFMT(LogLockOn, Verbose, "높이 차이: {0}, Pitch 적용: {1}", HeightDifference, FinalRotation.Pitch);
+    }
+    else
+    {
+        // 높이 차이가 없을 때 Yaw만 적용 (기존 방식)
+        PlayerCharacterRef->GetController()->SetControlRotation(
+            FRotator(0.f, FinalRotation.Yaw, 0.f));
+
+        UE_LOGFMT(LogLockOn, Verbose, "높이 차이: {0}, 임계값({1}) 미만, Pitch 적용 안함", HeightDifference, HeightThreshold);
+    }
 
     //@시각 효과
     if (LockOnBillboardComponent && TargetEnemyRef.IsValid())
@@ -547,28 +562,63 @@ void ULockOnComponent::UpdateBillboardComponent(bool bVisible, bool bChangeTrans
         return;
     }
 
-    // Scale
-    LockOnBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
+    // 타겟의 스켈레탈 메시 컴포넌트 가져오기
+    USkeletalMeshComponent* TargetMesh = Cast<USkeletalMeshComponent>(
+        TargetEnemyRef->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
 
-    // 타겟의 월드 위치를 뷰포트 좌표로 변환
-    APlayerController* PlayerController = PlayerCharacterRef->GetController<APlayerController>();
-    if (!PlayerController) return;
-
-    FVector2D ScreenPosition;
-    FVector TargetLocation = TargetEnemyRef->GetActorLocation();
-
-    if (PlayerController->ProjectWorldLocationToScreen(TargetLocation, ScreenPosition))
+    if (!TargetMesh)
     {
-        // 카메라에서 타겟 방향으로의 벡터 계산
-        FVector CameraLocation = FollowCameraComponentRef->GetComponentLocation();
-        FVector DirectionToTarget = (TargetLocation - CameraLocation).GetSafeNormal();
-
-        // 타겟 위치에서 카메라 방향의 반대로 약간 앞으로 이동
-        FVector AdjustedLocation = TargetLocation - DirectionToTarget * BillboardForwardOffset;
-
-        LockOnBillboardComponent->SetWorldLocation(AdjustedLocation);
-        LockOnBillboardComponent->SetWorldRotation(FollowCameraComponentRef->GetComponentRotation());
+        UE_LOGFMT(LogLockOn, Warning, "빌보드 업데이트 실패: 타겟의 스켈레탈 메시를 찾을 수 없음");
+        return;
     }
+
+    FName SpineSocketName = FName("spine_03");
+
+    // 소켓 존재 여부 확인
+    if (!TargetMesh->DoesSocketExist(SpineSocketName))
+    {
+        UE_LOGFMT(LogLockOn, Warning, "빌보드 업데이트 실패: spine_03 소켓이 존재하지 않음");
+        return;
+    }
+
+    // 타겟의 소켓 위치 가져오기
+    FVector SocketLocation = TargetMesh->GetSocketLocation(SpineSocketName);
+
+    // 카메라 위치 가져오기
+    FVector CameraLocation = FollowCameraComponentRef->GetComponentLocation();
+
+    // 카메라에서 소켓으로의 방향 계산
+    FVector DirectionToSocket = (SocketLocation - CameraLocation).GetSafeNormal();
+
+    // 소켓 위치에서 카메라 방향의 반대로 약간 앞으로 이동 + 높이 오프셋 적용
+    FVector UpVector = FVector(0.0f, 0.0f, 1.0f);
+    FVector TargetBillboardLocation = SocketLocation - DirectionToSocket * BillboardForwardOffset + UpVector;
+
+    // 현재 빌보드 위치에서 목표 위치로 부드럽게 보간
+    FVector CurrentLocation = LockOnBillboardComponent->GetComponentLocation();
+    FVector InterpolatedLocation = UKismetMathLibrary::VInterpTo(
+        CurrentLocation,
+        TargetBillboardLocation,
+        GetWorld()->GetDeltaSeconds(),
+        BillboardInterpolationSpeed
+    );
+
+    // 빌보드가 항상 카메라를 향하도록 회전 설정
+    FRotator TargetRotation = (CameraLocation - SocketLocation).Rotation();
+    FRotator CurrentRotation = LockOnBillboardComponent->GetComponentRotation();
+    FRotator InterpolatedRotation = UKismetMathLibrary::RInterpTo(
+        CurrentRotation,
+        TargetRotation,
+        GetWorld()->GetDeltaSeconds(),
+        BillboardInterpolationSpeed
+    );
+
+    // 빌보드 위치 및 회전 설정
+    LockOnBillboardComponent->SetWorldLocation(InterpolatedLocation);
+    LockOnBillboardComponent->SetWorldRotation(InterpolatedRotation);
+
+    // 크기 설정
+    LockOnBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
 
     if (!bChangeTransformOnly)
     {
