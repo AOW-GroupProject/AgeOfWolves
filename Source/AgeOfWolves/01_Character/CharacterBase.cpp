@@ -28,17 +28,17 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
 	SkeletalFXComponent->SetAutoActivate(false);
 
 	//@임시 무기 장착 코드
-	WeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("WeaponMesh"));
-	WeaponMesh->SetupAttachment(GetMesh(), "TempKatana");
-	WeaponMesh->SetVisibility(false);
+	KatanaMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Katana"));
+	KatanaMesh->SetupAttachment(GetMesh(), TEXT("Katana"));
+	KatanaMesh->SetVisibility(false);
 
-	ShealthedWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("ShealthedWeaponMesh"));
-	ShealthedWeaponMesh->SetupAttachment(GetMesh(), "WeaponSaya");
-	ShealthedWeaponMesh->SetVisibility(false);
+	SayaMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Saya"));
+	SayaMesh->SetupAttachment(GetMesh(), TEXT("Saya"));
+	SayaMesh->SetVisibility(false);
 
-	FullWeaponMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));
-	FullWeaponMesh->SetupAttachment(GetMesh(), "TempShealth");
-	FullWeaponMesh->SetVisibility(true);
+	FullMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));
+	FullMesh->SetupAttachment(GetMesh(), TEXT("FullWeapon"));
+	FullMesh->SetVisibility(true);
 }
 
 void ACharacterBase::BeginPlay()

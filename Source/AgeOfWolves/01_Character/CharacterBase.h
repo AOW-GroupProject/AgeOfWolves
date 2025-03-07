@@ -18,6 +18,7 @@ class UBaseAbilitySystemComponent;
 class UMotionWarpingComponent;
 class UNiagaraComponent;
 class UBaseAnimInstance;
+class UStaticMeshComponent;
 #pragma endregion
 
 //@열거형
@@ -64,13 +65,13 @@ protected:
 		UMotionWarpingComponent* MotionWarpComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		UStaticMeshComponent* WeaponMesh;
+		UStaticMeshComponent* KatanaMesh;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		UStaticMeshComponent* ShealthedWeaponMesh;
+		UStaticMeshComponent* SayaMesh;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		UStaticMeshComponent* FullWeaponMesh;
+		UStaticMeshComponent* FullMesh;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "팀 설정")
@@ -115,9 +116,9 @@ public:
 	}
 
 public:
-	FORCEINLINE UStaticMeshComponent* GetWeaponMesh() { return WeaponMesh; }
-	FORCEINLINE UStaticMeshComponent* GetShealthMesh() { return ShealthedWeaponMesh; }
-	FORCEINLINE UStaticMeshComponent* GetFullWeaponMesh() { return FullWeaponMesh; }
+	FORCEINLINE UStaticMeshComponent* GetWeaponMesh() { return KatanaMesh; }
+	FORCEINLINE UStaticMeshComponent* GetSayaMesh() { return SayaMesh; }
+	FORCEINLINE UStaticMeshComponent* GetFullWeaponMesh() { return FullMesh; }
 	FORCEINLINE UNiagaraComponent* GetSkeletalFXComponent() { return SkeletalFXComponent; }
 #pragma endregion
 };

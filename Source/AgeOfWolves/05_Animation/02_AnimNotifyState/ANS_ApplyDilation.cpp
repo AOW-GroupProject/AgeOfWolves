@@ -44,6 +44,14 @@ void UANS_ApplyDilation::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequ
         return;
     }
 
+    // 애니메이션 인스턴스 가져오기
+    UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+    if (AnimInstance)
+    {
+        // 몽타주 블렌딩 아웃 델리게이트에 바인딩
+        AnimInstance->OnMontageBlendingOut.AddDynamic(this, &UANS_ApplyDilation::OnMontageBlendingOut);
+    }
+
     //@목표 타임 딜레이션 값 계산
     float TargetValue = CalculateTimeDilationValue();
 
@@ -65,6 +73,13 @@ void UANS_ApplyDilation::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequen
     {
         UE_LOGFMT(LogANS_TimeDilation, Warning, "NotifyEnd 실패 - 사유: 소유 액터가 유효하지 않음");
         return;
+    }
+
+    UAnimInstance* AnimInstance = MeshComp->GetAnimInstance();
+    if (AnimInstance)
+    {
+        // 델리게이트 언바인딩 (정상 종료 시에도 안전하게 처리)
+        AnimInstance->OnMontageBlendingOut.RemoveAll(this);
     }
 
     //@타임 딜레이션 복원
@@ -349,6 +364,27 @@ void UANS_ApplyDilation::OnTransitionTick(USkeletalMeshComponent* MeshComp, floa
         World->GetDeltaSeconds(),
             false
             );
+}
+
+void UANS_ApplyDilation::OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted)
+{
+    // 애니메이션 인스턴스 가져오기
+    UAnimInstance* AnimInstance = Cast<UAnimInstance>(Montage->GetOuter());
+    if (AnimInstance)
+    {
+        USkeletalMeshComponent* MeshComp = AnimInstance->GetSkelMeshComponent();
+        if (MeshComp)
+        {
+            UE_LOGFMT(LogANS_TimeDilation, Log,
+                "몽타주 블렌딩 아웃 감지 - 중단 여부: {0}", bInterrupted ? TEXT("예") : TEXT("아니오"));
+
+            //@타임 딜레이션 복원
+            RestoreTimeDilation(MeshComp);
+
+            //@델리게이트 언바인딩
+            AnimInstance->OnMontageBlendingOut.RemoveAll(this);
+        }
+    }
 }
 #pragma endregion
 

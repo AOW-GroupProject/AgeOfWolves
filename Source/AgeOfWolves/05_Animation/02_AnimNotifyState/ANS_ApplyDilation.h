@@ -143,6 +143,10 @@ private:
 private:
     //@타이머 콜백: 전환 진행
     void OnTransitionTick(USkeletalMeshComponent* MeshComp, float StartValue, float EndValue, float Duration);
+
+private:
+    UFUNCTION()
+        void OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
