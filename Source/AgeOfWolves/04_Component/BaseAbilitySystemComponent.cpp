@@ -381,14 +381,14 @@ int32 UBaseAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, co
 {
 	UE_LOGFMT(LogASC, Log, "GameplayEvent 처리 시작 - EventTag: {0}", *EventTag.ToString());
 
-	// 1. 태그 유효성 검사
+	//@Event Tag
 	if (!FGameplayTag::RequestGameplayTag(EventTag.GetTagName()).IsValid())
 	{
 		UE_LOGFMT(LogASC, Warning, "유효하지 않은 Event Tag: {0}", *EventTag.ToString());
 		return 0;
 	}
 
-	// 2. 체인 액션 종료 이벤트 처리
+	//@체인 액션 종료 이벤트 처리
 	if (EventTag.MatchesTag(FGameplayTag::RequestGameplayTag("EventTag.OnChainActionFinished")))
 	{
 		UE_LOGFMT(LogASC, Log, "체인 액션 종료 이벤트 처리");
@@ -400,7 +400,7 @@ int32 UBaseAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, co
 		return 0;
 	}
 
-	// 3. 체인 윈도우가 활성화된 상태라면
+	//@Chain Window 활성화 시
 	if (bChainWindowActive)
 	{
 		UE_LOGFMT(LogASC, Log, "체인 윈도우 활성화 상태에서 이벤트 처리 시작 - EventTag: {0}",
@@ -449,7 +449,7 @@ int32 UBaseAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, co
 		}
 	}
 
-	// 4. Immediate 모드에서의 이벤트 처리
+	//@체인 시스템의 실행 모드가 "즉시 실행"일 경우.
 	if (CurrentChainMode == EChainActionMode::ImmediateActivation &&
 		EventTag == ChainActionEventTag)
 	{

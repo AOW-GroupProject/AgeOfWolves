@@ -574,9 +574,10 @@ void ABaseAIController::UnbindTargetActorStateEvents(AActor* OldTarget)
 void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
 {
 
+    //@Perception 주체
     ACharacterBase* OwningCharacter = Cast<ACharacterBase>(GetPawn());
+    //@Perception 대상
     ACharacterBase* SensedCharacter = Cast<ACharacterBase>(Actor);
-
 
     //@Owning Character, Sensed Character
     if (!OwningCharacter || !SensedCharacter)

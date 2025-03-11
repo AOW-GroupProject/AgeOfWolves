@@ -78,13 +78,20 @@ struct FHitDirectionResult
 {
     GENERATED_BODY()
 
-        FHitDirectionResult()
+public:
+    FHitDirectionResult()
         : Direction(EHitReactDirection::Max)
         , Height(EHitHeight::Max)
         , ImpactLocation(EHitImpactLocation::Max)
-    {
-    }
+    {}
 
+    FHitDirectionResult(const FHitDirectionResult& Other)
+        : Direction(Other.Direction)
+        , Height(Other.Height)
+        , ImpactLocation(Other.ImpactLocation)
+    {}
+
+public:
     UPROPERTY(BlueprintReadOnly, Category = "Hit Direction")
         EHitReactDirection Direction;
 
@@ -94,6 +101,7 @@ struct FHitDirectionResult
     UPROPERTY(BlueprintReadOnly, Category = "Hit Direction")
         EHitImpactLocation ImpactLocation;
 
+public:
     // Getter 함수들
     EHitReactDirection GetDirection() const { return Direction; }
     EHitHeight GetHeight() const { return Height; }
@@ -119,7 +127,7 @@ struct FSlashGameplayCueParams
 {
     GENERATED_BODY()
 
-        UPROPERTY(BlueprintReadOnly)
+    UPROPERTY(BlueprintReadOnly)
         FRotator SlashRotation;
 
     UPROPERTY(BlueprintReadOnly)
@@ -144,17 +152,31 @@ class UCombatLibrary : public UBlueprintFunctionLibrary
 {
     GENERATED_BODY()
 
- //@Defualt Setting
-#pragma region Default Setting
+//@계산 관련...
+#pragma region Calculation
 public:
     //@피격 반응 방향을 계산합니다.
     UFUNCTION(BlueprintCallable, Category = "Combat | 피격 반응")
         static EHitReactDirection CalculateHitDirection(const FVector& ImpactLocation, const AActor* HitActor);
 
+public:
     //@피격 반응 방향을 계산합니다.
-    UFUNCTION(BlueprintCallable, Category = "Combat | 피격 반응")
+    UFUNCTION(BlueprintCallable, Category = "Combat | 충돌 정보")
         static FHitDirectionResult CalculateHitDirectionWithHitResult(const AActor* Instigator, const FHitResult& HitResult);
 
+public:
+    UFUNCTION(BlueprintCallable, Category = "Combat | 충돌 정보 | 피격 반응 방향")
+        static EHitReactDirection CalculateHitReactDirection(const FVector& InstigatorLocation, const AActor* HitActor);
+
+    UFUNCTION(BlueprintCallable, Category = "Combat | 충돌 정보 | 충돌 높이")
+        static EHitHeight CalculateHitHeight(const FVector& ImpactPoint, const ACharacter* Character);
+
+    UFUNCTION(BlueprintCallable, Category = "Combat | 충돌 정보 | 충돌 위치")
+        static EHitImpactLocation CalculateHitImpactLocation(const FVector& ImpactPoint, const AActor* HitActor);
+#pragma endregion
+
+//@이벤트 전달 관련...
+#pragma region Send Event
 public:
     /**
      * 대상 액터에게 GameplayEvent를 전송합니다.
@@ -176,7 +198,10 @@ public:
             float Magnitude = 0.0f,
             UObject* OptionalObject = nullptr,
             UObject* OptionalObject2 = nullptr);
+#pragma endregion
 
+//@이팩트 관련...
+#pragma region Gameplay Cue
 public:
     /**
      * @brief 슬래시 GameplayCue 실행에 필요한 파라미터들을 준비합니다.
@@ -188,19 +213,4 @@ public:
         static FSlashGameplayCueParams PrepareSlashGameplayCueParameters(AActor* InActor, const FHitResult& HitResult);
 #pragma endregion
 
-    //@Property/Info...etc
-#pragma region Property or Subwidgets or Infos...etc
-#pragma endregion
-
-//@Delegates
-#pragma region Delegates
-#pragma endregion
-
-//@Callbacks
-#pragma region Callbacks
-#pragma endregion
-
-//@Utility(Setter, Getter,...etc)
-#pragma region Utility
-#pragma endregion
 };
