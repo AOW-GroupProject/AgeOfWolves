@@ -637,7 +637,7 @@ void ABaseAIController::OnAttributeValueChanged(const FOnAttributeChangeData& Da
 
 void ABaseAIController::OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag)
 {
-    //@"State." 태그가 아니면 즉시 반환
+    //@"State.~"
     if (!CharacterStateTag.GetTagName().ToString().StartsWith("State."))
         return;
 

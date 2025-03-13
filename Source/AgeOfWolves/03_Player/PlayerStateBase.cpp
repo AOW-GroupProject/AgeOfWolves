@@ -227,21 +227,17 @@ void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Dat
 
 void APlayerStateBase::OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag)
 {
-    // 이미 파괴 중이거나 종료 중인 상태라면 무시
+    //@Player State
     if (!IsValid(this) || IsUnreachable())
     {
         return;
     }
 
-    // 필요한 참조들이 모두 유효한지 확인
-    if (!GetOwner() || !GetWorld())
+    //@PC
+    if (!GetOwner())
     {
         return;
     }
-
-    // "State." 태그가 아니면 즉시 반환
-    if (!CharacterStateTag.GetTagName().ToString().StartsWith("State."))
-        return;
 
     // World 확인
     UWorld* World = GetWorld();
@@ -251,7 +247,12 @@ void APlayerStateBase::OnCharacterStateEventOnGameplay(const FGameplayTag& Chara
         return;
     }
 
-    // GameInstance 확인
+    //@"State.~"
+    if (!CharacterStateTag.GetTagName().ToString().StartsWith("State."))
+        return;
+
+
+    //@Game Instance
     UAOWGameInstance* GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(World));
     if (!GameInstance)
     {
@@ -259,14 +260,13 @@ void APlayerStateBase::OnCharacterStateEventOnGameplay(const FGameplayTag& Chara
         return;
     }
     
-    // SaveGame 인스턴스 존재 여부 먼저 확인
+    //@SaveGame
     if (!GameInstance->DoesSaveGameExist())
     {
         UE_LOGFMT(LogPlayerStateBase, Warning, "SaveGame이 존재하지 않습니다.");
         return;
     }
 
-    // 세이브 게임 인스턴스 확인
     UAOWSaveGame* SaveGame = Cast<UAOWSaveGame>(GameInstance->GetSaveGameInstance());
     if (!SaveGame)
     {
@@ -274,7 +274,7 @@ void APlayerStateBase::OnCharacterStateEventOnGameplay(const FGameplayTag& Chara
         return;
     }
 
-    // 현재 플레이어 폰 가져오기
+    //@Pawn
     APawn* ControlledPawn = GetPawn();
     if (!ControlledPawn)
     {

@@ -474,36 +474,6 @@ int32 UBaseAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, co
 	return Super::HandleGameplayEvent(EventTag, Payload);
 }
 
-bool UBaseAbilitySystemComponent::TriggerDamageEvent(const FGameplayTag& EventTag, const FGameplayEventData* Payload)
-{
-	UE_LOGFMT(LogASC, Log, "데미지 이벤트 트리거 시작 - EventTag: {0}", EventTag.ToString());
-
-	if (!EventTag.IsValid())
-	{
-		UE_LOGFMT(LogASC, Warning, "데미지 이벤트 트리거 실패 - 유효하지 않은 이벤트 태그");
-		return false;
-	}
-
-	if (!IsOwnerActorAuthoritative())
-	{
-		UE_LOGFMT(LogASC, Warning, "데미지 이벤트 트리거 실패 - 권한 없음");
-		return false;
-	}
-
-	FGameplayAbilityActorInfo* ActorInfo = AbilityActorInfo.Get();
-	if (!ActorInfo)
-	{
-		UE_LOGFMT(LogASC, Warning, "데미지 이벤트 트리거 실패 - ActorInfo가 유효하지 않음");
-		return false;
-	}
-
-	int32 Count = HandleGameplayEvent(EventTag, Payload);
-
-	UE_LOGFMT(LogASC, Log, "데미지 이벤트 트리거 완료: 활성화된 어빌리티 수 {0}", Count);
-
-	return true;
-}
-
 void UBaseAbilitySystemComponent::StartChainWindowWithTag(const FGameplayTag& InAbilityToBindTag, FGameplayTag InTagToChain)
 {
 	auto TargetSpec = [&]() -> const FGameplayAbilitySpec* {
@@ -757,10 +727,10 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 
 			CharacterStateEventOnGameplay.Broadcast(StateTag);
 
-			// 죽음 상태일 경우 이벤트 발생 전에 모든 구독 해제
+			//@죽음 상태일 경우 이벤트 발생 전에 모든 구독 해제
 			if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
 			{
-				// 이벤트 구독 해제
+				//@이벤트 구독 해제
 				CharacterStateEventOnGameplay.Clear();
 				return;
 			}

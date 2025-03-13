@@ -13,6 +13,7 @@
 DEFINE_LOG_CATEGORY(LogBasePC)
 // UE_LOGFMT(LogBasePC, Log, "");
 
+//@Defualt Setting
 #pragma region Default Setting
 ABasePlayerController::ABasePlayerController(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -127,6 +128,7 @@ void ABasePlayerController::InitializePlayerController()
 }
 #pragma endregion
 
+//@Property/Info...etc
 #pragma region Properties
 void ABasePlayerController::SetupInputModeOnBeginPlay()
 {
@@ -153,11 +155,11 @@ void ABasePlayerController::SetupViewportClientOnBeginPlay()
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
-
 #pragma endregion
 
-
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 UUIComponent* ABasePlayerController::GetUIComponent() const
 {

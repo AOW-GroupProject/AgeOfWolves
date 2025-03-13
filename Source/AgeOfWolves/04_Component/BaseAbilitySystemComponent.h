@@ -111,10 +111,6 @@ protected:
 	virtual int32 HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload) override;
 
 protected:
-	//@Damage Event 발생 시 Armor 어빌리티 활성화
-	bool TriggerDamageEvent(const FGameplayTag& EventTag, const FGameplayEventData* Payload);
-
-protected:
 	//@Death Event 발생 처리
 	void HandleCharacterDead();
 

@@ -33,8 +33,6 @@ class UAbilityManagerSubsystem;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAttributeSetInitialized);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGameplayAttribute, Attribute, float, OldValue, float, NewValue);
-
-
 #pragma endregion
 
 
