@@ -2,18 +2,17 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/Actor.h"
-
 #include "GameplayTagContainer.h"
 
-#include "01_Character/PlayerCharacter.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
-#include "04_Component/ObjectiveDetectionComponent.h"
+#include "01_Character/PlayerCharacter.h"
 
 #include "Area.generated.h"
 
 //@전방 선언
 #pragma region Forward Declaration
 class UBoxComponent;
+class UObjectiveDetectionComponent;
 #pragma endregion
 
 //@열거형
@@ -32,19 +31,19 @@ struct FAreaAIInfo
 {
     GENERATED_BODY()
 
-        // AI의 약한 참조
-        UPROPERTY()
+    //@AI의 약한 참조
+    UPROPERTY()
         TWeakObjectPtr<AActor> AIActor;
 
-    // 현재 상태
+    //@현재 상태
     UPROPERTY()
         FGameplayTag CurrentState;
 
-    // 상태 변경 시간
+    //@상태 변경 시간
     UPROPERTY()
         float StateChangeTime = 0.0f;
 
-    // ASC 약한 참조
+    //@ASC 약한 참조
     UPROPERTY()
         TWeakObjectPtr<UBaseAbilitySystemComponent> AIASC;
 
@@ -55,8 +54,8 @@ struct FAreaAIInfo
         , CurrentState(InState)
         , StateChangeTime(0.0f)
         , AIASC(InASC)
-    {
-    }
+    {}
+
 };
 
 /*
@@ -73,10 +72,6 @@ struct FPlayerBindingInfo
     UPROPERTY()
         TWeakObjectPtr<APlayerCharacter> PlayerCharacter;
 
-    //@Objective Detection Component 약한 참조
-    UPROPERTY()
-        TWeakObjectPtr<UObjectiveDetectionComponent> ObjectiveComponent;
-
     //@마지막 진입/이탈 시간
     float LastExitTime = 0.0f;
 
@@ -85,25 +80,24 @@ struct FPlayerBindingInfo
 
     FPlayerBindingInfo() {}
 
-    FPlayerBindingInfo(APlayerCharacter* InPlayer, UObjectiveDetectionComponent* InObjectiveComp)
+    FPlayerBindingInfo(APlayerCharacter* InPlayer)
         : PlayerCharacter(InPlayer)
-        , ObjectiveComponent(InObjectiveComp)
         , LastExitTime(0.0f)
-    {
-    }
+    {}
 
     //@지연 해제 필요 여부 확인
     bool ShouldDelayUnbind(float CurrentTime) const
     {
         return (CurrentTime - LastExitTime) < UnbindDelay;
     }
+
 };
 #pragma endregion
 
 //@이벤트/델리게이트
 #pragma region Delegates
 //@AI 상태 변경 델리게이트
-DECLARE_MULTICAST_DELEGATE_FourParams(FAreaAIStateChanged, AActor*, const FGameplayTag&, AActor*, FName);
+DECLARE_MULTICAST_DELEGATE_FourParams(FAreaAIStateChanged, AActor*, const FGameplayTag&, AActor*, const FGuid&);
 #pragma endregion
 
 /*
@@ -140,7 +134,7 @@ protected:
     void InitializeArea();
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
     void InitializeAreaAIInfos();
@@ -163,7 +157,7 @@ protected:
 protected:
     //@영역 식별자
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
-        FName AreaID;
+        FGuid AreaID;
 
     //@영역 태그 (전투 지역, 휴식 지역 등 특성)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
@@ -227,12 +221,12 @@ public:
 //@Callbacks
 #pragma region Callbacks
 public:
-    //@충돌 처리 함수
+    //@충돌 시작 이벤트를 구독하는 콜백
     UFUNCTION()
         void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
             UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
             bool bFromSweep, const FHitResult& SweepResult);
-
+    //@충돌 종료 이벤트를 구독하는 콜백
     UFUNCTION()
         void OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
             UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
@@ -240,15 +234,15 @@ public:
 protected:
     //@AI ASC 이벤트 콜백
     UFUNCTION()
-        void OnAICharacterStateEvent(const FGameplayTag& StateTag, AActor* SourceActor);
+        void OnAICharacterStateEvent(const FGameplayTag& StateTag);
 #pragma endregion
 
-    //@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
     //@영역 ID 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
-        FName GetAreaID() const { return AreaID; }
+        FGuid GetAreaID() const { return AreaID; }
 
     //@영역 태그 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
@@ -261,8 +255,5 @@ public:
     //@영역 내 AI 목록 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
         TArray<AActor*> GetAIInArea() const;
-
-    //@플레이어의 ObjectiveDetectionComponent 찾기
-    UObjectiveDetectionComponent* GetPlayerObjectiveComponent(APlayerCharacter* Player);
 #pragma endregion
 };

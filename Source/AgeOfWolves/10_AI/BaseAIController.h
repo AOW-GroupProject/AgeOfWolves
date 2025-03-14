@@ -25,6 +25,7 @@ struct FBaseAbilitySet_GrantedHandles;
 class UBaseAbilitySystemComponent;
 class UAbilityManagerSubsystem;
 class UAIAbilitySequencerComponent;
+class UObjectiveDetectionComponent;
 #pragma endregion
 
 //@열거형
@@ -118,6 +119,7 @@ protected:
 	void InternalBindToPerceptionComp();
 	void InternalBindingToASC();
 	void InternalBindingToAISequencerComp();
+	void InternalBindingToODComp();
 
 public:
 	//@초기화
@@ -170,6 +172,14 @@ protected:
 	UPROPERTY()
 		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
 
+	//@AI Combat Pattern 컴포넌트
+	UPROPERTY(Transient)
+		UAIAbilitySequencerComponent* AIAbilitySequencerComponent;
+
+	//@Objective Detection Comp
+	UPROPERTY(Transient)
+		UObjectiveDetectionComponent* ODComponent;
+
 protected:
 	//@BT
 	UPROPERTY(Transient)
@@ -177,12 +187,6 @@ protected:
 	//@BB
 	UPROPERTY(Transient)
 		UBlackboardComponent* BBComponent;
-
-protected:
-	//@AI Combat Pattern 컴포넌트
-	UPROPERTY(Transient)
-		UAIAbilitySequencerComponent* AIAbilitySequencerComponent;
-
 
 protected:
 	//@Character Tag

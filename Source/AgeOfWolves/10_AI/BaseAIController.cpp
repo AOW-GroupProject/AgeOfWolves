@@ -19,6 +19,7 @@
 #include "14_Subsystem/AbilityManagerSubsystem.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "04_Component/AIAbilitySequencerComponent.h"
+#include "04_Component/ObjectiveDetectionComponent.h"
 
 #include "15_SaveGame/AOWSaveGame.h"
 #include "00_GameInstance/AOWGameInstance.h"
@@ -43,6 +44,8 @@ ABaseAIController::ABaseAIController(const FObjectInitializer& ObjectInitializer
     AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
     //@AI Combat Component
     AIAbilitySequencerComponent = CreateDefaultSubobject<UAIAbilitySequencerComponent>(TEXT("AI Combat Pattern Component"));
+    //@Objective Detection Component
+    ODComponent = CreateDefaultSubobject<UObjectiveDetectionComponent>(TEXT("Objective Detection Comopnent"));
 
     //@AI Sense Config - Sight
     Sight = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("AI Sight Config"));
@@ -69,7 +72,6 @@ ABaseAIController::ABaseAIController(const FObjectInitializer& ObjectInitializer
     AIPerceptionComponent->ConfigureSense(*Hearing);
     AIPerceptionComponent->SetDominantSense(Sight->GetSenseImplementation());
     AIPerceptionComponent->bAutoActivate = true;
-
 }
 
 void ABaseAIController::BeginPlay()
@@ -97,12 +99,13 @@ void ABaseAIController::PostInitializeComponents()
 
     //@비동기 초기화
     RequestStartInitByAI.AddUFunction(AIAbilitySequencerComponent, "InitializeCombatPatternComponent");
-    RequestStartCombatPattern.BindUFunction(AIAbilitySequencerComponent, "OnRequestActivateAICombatLoop");
+    RequestStartInitByAI.AddUFunction(ODComponent, "InitializeODComponent");
 
     //@내부 바인딩...
     InternalBindToPerceptionComp();
     InternalBindingToASC();
     InternalBindingToAISequencerComp();
+    InternalBindingToODComp();
 
     //@Ability Manager Subsystem
     const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
@@ -272,6 +275,18 @@ void ABaseAIController::InternalBindingToAISequencerComp()
     AIAbilitySequencerComponent->NotifyCombatPatternExitComplete.BindUFunction(this, "OnCombatPatternExitComplete");
 
     UE_LOGFMT(LogBaseAIC, Log, "AI Sequencer Component 이벤트 바인딩 완료");
+}
+
+void ABaseAIController::InternalBindingToODComp()
+{
+    //@Objective Detection Component
+    if (!ODComponent)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "InternalBindingToODComp: Objective Detection 컴포넌트가 유효하지 않습니다");
+        return;
+    }
+
+    UE_LOGFMT(LogBaseAIC, Log, "Objective Detection 컴포넌트 내부 바인딩 완료");
 }
 
 void ABaseAIController::InitializeAIController(APawn* InPawn)
@@ -760,3 +775,11 @@ ETeamAttitude::Type ABaseAIController::GetTeamAttitudeTowards(const AActor& Othe
         : ETeamAttitude::Hostile;
 }
 #pragma endregion
+
+void InternalBindingToAISequencerComp()
+{
+}
+
+void InternalBindingToODComp()
+{
+}

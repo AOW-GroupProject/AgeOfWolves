@@ -37,10 +37,12 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FAbilityEnded, UGameplayAbility*);
 //@어빌리티 취소 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FAbilityCancelled, UGameplayAbility*);
 
+//@연결 동작 활성화 이벤트
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionActivated, FGameplayTag, ChainActionAbilityTag);
-
+//@연결 동작 활성화 종료 이벤트
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionFinished, FGameplayTag, ChainActionAbilityTag);
 
+//@상태 변화 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FCharacterStateEventOnGameplay, const FGameplayTag&)
 #pragma endregion
 

@@ -1,12 +1,508 @@
 #include "ObjectiveDetectionComponent.h"
+#include "Logging/StructuredLog.h"
 
+#include "Camera/CameraComponent.h"
+#include "Kismet/GameplayStatics.h"
+#include "Kismet/KismetMathLibrary.h"
+
+#include "10_AI/BaseAIController.h"
+#include "GameFramework/Controller.h"
+#include "01_Character/PlayerCharacter.h"
+#include "GameFramework/PlayerController.h"
+
+#include "Components/CapsuleComponent.h"
+
+//@UE_LOGFMT 활용을 위한 로그 매크로 정의
+DEFINE_LOG_CATEGORY(LogObjectiveDetection)
+
+//@Defualt Setting
+#pragma region Default Setting
 UObjectiveDetectionComponent::UObjectiveDetectionComponent()
 {
-	PrimaryComponentTick.bCanEverTick = false;
-}
+    PrimaryComponentTick.bCanEverTick = false;
 
+    // 기본적으로 감지할 상태 태그 설정
+    StateTagsToDetect.Add(FGameplayTag::RequestGameplayTag("State.Fragile"));
+    StateTagsToDetect.Add(FGameplayTag::RequestGameplayTag("State.Dead"));
+
+    // 컴포넌트 고유 ID 생성
+    ComponentID = FGuid::NewGuid();
+
+    // 배열 초기화
+    BoundAreas.Empty();
+}
 
 void UObjectiveDetectionComponent::BeginPlay()
 {
-	Super::BeginPlay();
+    Super::BeginPlay();
 }
+
+void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
+{
+    //@타이머 정리
+    if (GetWorld())
+    {
+        GetWorld()->GetTimerManager().ClearTimer(CleanupTimerHandle);
+    }
+
+    //@Pawn 이벤트 바인딩 해제
+    UnbindFromPawnCapsuleEvents();
+
+    //@모든 Area 바인딩 해제
+    TArray<AArea*> AreasToUnbind;
+    for (const FAreaBindingInfo& AreaInfo : BoundAreas)
+    {
+        if (AreaInfo.AreaRef.IsValid())
+        {
+            AreasToUnbind.Add(AreaInfo.AreaRef.Get());
+        }
+    }
+
+    //@바인딩 된 Area 정리
+    for (AArea* Area : AreasToUnbind)
+    {
+        UnbindFromAreaEvents(Area);
+    }
+
+    //@Bound Areas
+    BoundAreas.Empty();
+
+    Super::EndPlay(EndPlayReason);
+}
+
+void UObjectiveDetectionComponent::ExternalBindToPawnCapsuleComponent()
+{
+    //@Capsule Component
+    UCapsuleComponent* CapsuleComp = GetPawnCapsuleComponent();
+    if (!CapsuleComp)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "Pawn의 CapsuleComponent를 찾을 수 없음");
+        return;
+    }
+
+    //@외부 바인딩...
+    CapsuleComp->OnComponentBeginOverlap.AddDynamic(this, &UObjectiveDetectionComponent::OnPawnBeginOverlap);
+    CapsuleComp->OnComponentEndOverlap.AddDynamic(this, &UObjectiveDetectionComponent::OnPawnEndOverlap);
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "Pawn({0})의 캡슐 이벤트 바인딩 완료",
+        ControlledPawn.IsValid() ? *ControlledPawn->GetName() : TEXT("Unknown"));
+}
+
+void UObjectiveDetectionComponent::UnbindFromPawnCapsuleEvents()
+{
+    //@Capusle Component
+    UCapsuleComponent* CapsuleComp = GetPawnCapsuleComponent();
+    if (!CapsuleComp)
+    {
+        return;
+    }
+
+    //@외부 바인딩 해제...
+    CapsuleComp->OnComponentBeginOverlap.RemoveAll(this);
+    CapsuleComp->OnComponentEndOverlap.RemoveAll(this);
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "Pawn의 캡슐 이벤트 언바인딩 완료");
+}
+
+void UObjectiveDetectionComponent::ExternalBindToArea(AArea* Area)
+{
+    //@Area
+    if (!Area)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "유효하지 않은 Area와 바인딩 시도");
+        return;
+    }
+
+    //@FGuid
+    FGuid AreaID = Area->GetAreaID();
+
+    for (const FAreaBindingInfo& AreaInfo : BoundAreas)
+    {
+        if (AreaInfo.AreaID == AreaID)
+        {
+            UE_LOGFMT(LogObjectiveDetection, Verbose, "이미 바인딩된 Area: {0}", *Area->GetName());
+            return;
+        }
+    }
+
+    //@현재 시간
+    float CurrentTime = GetWorld()->GetTimeSeconds();
+
+    //@외부 바인딩...
+    Area->AreaAIStateChanged.AddUFunction(this, "OnAreaObjectiveStateChanged");
+
+    //@바인딩 정보 생성 및 추가
+    FAreaBindingInfo BindingInfo(Area, AreaID, CurrentTime);
+    BoundAreas.Add(BindingInfo);
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}와 바인딩 완료", *Area->GetName());
+}
+
+void UObjectiveDetectionComponent::UnbindFromAreaEvents(AArea* Area)
+{
+    //@Area
+    if (!IsValid(Area))
+    {
+        return;
+    }
+
+    //@FGuid
+    FGuid AreaID = Area->GetAreaID();
+
+    //@외부 바인딩 해제...
+    Area->AreaAIStateChanged.RemoveAll(this);
+
+    //@바인딩된 Area 목록에서 제거
+    BoundAreas.RemoveAll([AreaID](const FAreaBindingInfo& AreaInfo) {
+        return AreaInfo.AreaID == AreaID;
+        });
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}와 바인딩 해제 완료", *Area->GetName());
+}
+
+void UObjectiveDetectionComponent::InitializeODComponent()
+{
+    //@Controller
+    AController* Controller = Cast<AController>(GetOwner());
+    if (!Controller)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Error, "ObjectiveDetectionComponent의 소유자가 Controller가 아님");
+        return;
+    }
+
+    //@Pawn
+    APawn* CurrentPawn = Controller->GetPawn();
+    if (!CurrentPawn)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "Controller({0})에 연결된 Pawn이 없음", *Controller->GetName());
+        return;
+    }
+
+    //@Controlled Pawn 업데이트
+    ControlledPawn = CurrentPawn;
+    UE_LOGFMT(LogObjectiveDetection, Log, "Controlled Pawn 설정: {0}", *CurrentPawn->GetName());
+
+    //@AI
+    if (IsOwnerAIController())
+    {
+        // AI는 시야 체크를 사용하지 않음
+        bOnlyDetectInCameraView = false;
+
+        UE_LOGFMT(LogObjectiveDetection, Log, "AI용 ObjectiveDetectionComponent 초기화 (소유자: {0}, Pawn: {1})",
+            *Controller->GetName(), *CurrentPawn->GetName());
+    }
+    //@Player
+    else if (IsOwnerPlayerController())
+    {
+        // PlayerController는 기본적으로 시야 체크 사용
+        bOnlyDetectInCameraView = true;
+
+        UE_LOGFMT(LogObjectiveDetection, Log, "플레이어용 ObjectiveDetectionComponent 초기화 (소유자: {0}, Pawn: {1})",
+            *Controller->GetName(), *CurrentPawn->GetName());
+    }
+    else
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "알 수 없는 컨트롤러 유형: {0}", *Controller->GetClass()->GetName());
+    }
+
+    // Pawn이 유효한 경우 캡슐 컴포넌트 이벤트 바인딩
+    if (!ControlledPawn.IsValid())
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "초기화 중 유효한 Pawn을 찾을 수 없음");
+        return;
+    }
+
+    // 캡슐 컴포넌트 확인
+    UCapsuleComponent* CapsuleComp = GetPawnCapsuleComponent();
+    if (!CapsuleComp)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Error, "Pawn({0})에 CapsuleComponent가 없음", *CurrentPawn->GetName());
+        return;
+    }
+
+    ExternalBindToPawnCapsuleComponent();
+    UE_LOGFMT(LogObjectiveDetection, Log, "초기 Pawn 바인딩 완료: {0} (컴포넌트: {1})",
+        *ControlledPawn->GetName(), *CapsuleComp->GetName());
+
+    //@Timer
+    GetWorld()->GetTimerManager().SetTimer(
+        CleanupTimerHandle,
+        this,
+        &UObjectiveDetectionComponent::CleanupInvalidReferences,
+        CleanupInterval,
+        true
+    );
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "정리 타이머 설정 완료 (간격: {0}초)", CleanupInterval);
+
+    // 컴포넌트 ID 로그
+    UE_LOGFMT(LogObjectiveDetection, Log, "ObjectiveDetectionComponent 초기화 완료 (ID: {0})", *ComponentID.ToString());
+}
+#pragma endregion
+
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+void UObjectiveDetectionComponent::UpdateControlledPawn(APawn* NewPawn)
+{
+    // 이전 Pawn의 이벤트 바인딩 해제
+    UnbindFromPawnCapsuleEvents();
+
+    // 새 Pawn 설정
+    ControlledPawn = NewPawn;
+
+    // 유효성 검사
+    if (!ControlledPawn.IsValid())
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "Pawn이 유효하지 않음");
+        return;
+    }
+
+    // 새 Pawn의 이벤트 바인딩
+    ExternalBindToPawnCapsuleComponent();
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "컨트롤된 Pawn 업데이트: {0}", *NewPawn->GetName());
+}
+
+void UObjectiveDetectionComponent::CleanupInvalidReferences()
+{
+    // 무효한 Area 참조 수집
+    int32 RemovedCount = BoundAreas.RemoveAll([](const FAreaBindingInfo& AreaInfo) {
+        return !AreaInfo.IsValid();
+        });
+
+    if (RemovedCount > 0)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Verbose, "참조 정리 완료: 제거된 Area: {0}", RemovedCount);
+    }
+}
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+void UObjectiveDetectionComponent::OnPawnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
+    bool bFromSweep, const FHitResult& SweepResult)
+{
+    // 충돌한 액터가 유효한지 확인
+    if (!IsValid(OtherActor))
+    {
+        UE_LOGFMT(LogObjectiveDetection, Verbose, "오버랩 이벤트: 유효하지 않은 액터");
+        return;
+    }
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "({0})과 충돌!", OtherActor->GetName());
+
+    // Area 확인
+    AArea* Area = Cast<AArea>(OtherActor);
+    if (!Area)
+    {
+        // Area가 아닌 경우 무시
+        UE_LOGFMT(LogObjectiveDetection, Verbose, "오버랩 이벤트: {0}은(는) Area가 아님 (클래스: {1})",
+            *OtherActor->GetName(), *OtherActor->GetClass()->GetName());
+        return;
+    }
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "Pawn이 Area({0})에 진입, 바인딩 시작", *Area->GetName());
+
+    // Area 이벤트에 바인딩
+    ExternalBindToArea(Area);
+}
+
+void UObjectiveDetectionComponent::OnPawnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
+    UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
+{
+    // 충돌한 액터가 유효한지 확인
+    if (!IsValid(OtherActor))
+    {
+        UE_LOGFMT(LogObjectiveDetection, Verbose, "오버랩 종료 이벤트: 유효하지 않은 액터");
+        return;
+    }
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "({0})과 충돌 종료", OtherActor->GetName());
+
+    // Area 확인
+    AArea* Area = Cast<AArea>(OtherActor);
+    if (!Area)
+    {
+        // Area가 아닌 경우 무시
+        UE_LOGFMT(LogObjectiveDetection, Verbose, "오버랩 종료 이벤트: {0}은(는) Area가 아님", *OtherActor->GetName());
+        return;
+    }
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "Pawn이 Area({0})에서 이탈, 바인딩 해제 시작", *Area->GetName());
+
+    // Area 이벤트에서 언바인딩
+    UnbindFromAreaEvents(Area);
+}
+
+void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* ObjectiveActor, const FGameplayTag& StateTag, AArea* SourceArea, const FGuid& AreaID)
+{
+    //@인자 유효성 검사
+    if (!IsValid(ObjectiveActor) || !IsValid(SourceArea))
+    {
+        return;
+    }
+
+    //@StateTagsToDetect 필터링 - 관심 있는 상태 태그만 처리
+    if (!StateTagsToDetect.Contains(StateTag))
+    {
+        return;
+    }
+
+    //@시야 내 액터만 감지하는 옵션이 켜져있는 경우, 시야 체크
+    if (bOnlyDetectInCameraView && IsOwnerPlayerController())
+    {
+        if (!IsActorInCameraView(ObjectiveActor))
+        {
+            UE_LOGFMT(LogObjectiveDetection, Verbose, "시야 밖 목표물 무시: {0}", *ObjectiveActor->GetName());
+            return;
+        }
+    }
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}에서 상태 변경 통지: {1} -> {2}",
+        *SourceArea->GetName(), *ObjectiveActor->GetName(), *StateTag.ToString());
+}
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+bool UObjectiveDetectionComponent::IsOwnerAIController() const
+{
+    return GetOwner() && GetOwner()->IsA(ABaseAIController::StaticClass());
+}
+
+bool UObjectiveDetectionComponent::IsOwnerPlayerController() const
+{
+    return GetOwner() && GetOwner()->IsA(APlayerController::StaticClass());
+}
+
+APawn* UObjectiveDetectionComponent::GetControlledPawn() const
+{
+    // 소유자가 컨트롤러인지 확인
+    AController* Controller = Cast<AController>(GetOwner());
+    if (!Controller)
+    {
+        return nullptr;
+    }
+
+    // 컨트롤러의 Pawn 반환
+    return Controller->GetPawn();
+}
+
+FVector UObjectiveDetectionComponent::GetPawnLocation() const
+{
+    // ControlledPawn이 유효한 경우 해당 위치 반환
+    if (ControlledPawn.IsValid())
+    {
+        return ControlledPawn->GetActorLocation();
+    }
+
+    // 그렇지 않으면 현재 컨트롤 중인 Pawn의 위치 계산
+    APawn* CurrentPawn = GetControlledPawn();
+    if (CurrentPawn)
+    {
+        return CurrentPawn->GetActorLocation();
+    }
+
+    // 실패 시 Zero 반환
+    return FVector::ZeroVector;
+}
+
+UCapsuleComponent* UObjectiveDetectionComponent::GetPawnCapsuleComponent() const
+{
+    //@ControlledPawn이 유효한지 확인
+    if (!ControlledPawn.IsValid())
+    {
+        return nullptr;
+    }
+
+    // Pawn의 캡슐 컴포넌트 찾기
+    return ControlledPawn->FindComponentByClass<UCapsuleComponent>();
+}
+
+bool UObjectiveDetectionComponent::IsActorInCameraView(AActor* Actor) const
+{
+    // 유효성 검사
+    if (!IsValid(Actor))
+    {
+        return false;
+    }
+
+    // PlayerController가 아니면 항상 true 반환
+    if (!IsOwnerPlayerController())
+    {
+        return true;
+    }
+
+    // 플레이어 컨트롤러와 폰 가져오기
+    APlayerController* PC = Cast<APlayerController>(GetOwner());
+    if (!PC || !ControlledPawn.IsValid())
+    {
+        return false;
+    }
+
+    // 플레이어 캐릭터 확인
+    APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(ControlledPawn.Get());
+    if (!PlayerChar)
+    {
+        return false;
+    }
+
+    // 카메라 컴포넌트 가져오기
+    UCameraComponent* Camera = PlayerChar->FindComponentByClass<UCameraComponent>();
+    if (!Camera)
+    {
+        return false;
+    }
+
+    // 카메라 위치와 전방 벡터 가져오기
+    FVector CameraLocation = Camera->GetComponentLocation();
+    FVector CameraForward = Camera->GetForwardVector();
+
+    // 카메라에서 액터까지의 방향 벡터 계산
+    FVector DirectionToActor = (Actor->GetActorLocation() - CameraLocation).GetSafeNormal();
+
+    // 카메라 시야 내에 있는지 확인 (내적 사용)
+    float DotProduct = FVector::DotProduct(CameraForward, DirectionToActor);
+
+    // FOV 확장을 적용한 시야각 계산
+    float HalfFOV = FMath::Cos(FMath::DegreesToRadians((Camera->FieldOfView + FOVExpansion) * 0.5f));
+
+    // 시야 내에 있으면 true 반환
+    return DotProduct > HalfFOV;
+}
+
+AArea* UObjectiveDetectionComponent::FindAreaByGuid(const FGuid& AreaGuid) const
+{
+    for (const FAreaBindingInfo& AreaInfo : BoundAreas)
+    {
+        if (AreaInfo.AreaID == AreaGuid && AreaInfo.AreaRef.IsValid())
+        {
+            return AreaInfo.AreaRef.Get();
+        }
+    }
+    return nullptr;
+}
+
+TArray<FAreaBindingInfo> UObjectiveDetectionComponent::GetBoundAreas() const
+{
+    return BoundAreas;
+}
+
+bool UObjectiveDetectionComponent::IsAreaBound(const FGuid& AreaID) const
+{
+    for (const FAreaBindingInfo& AreaInfo : BoundAreas)
+    {
+        if (AreaInfo.AreaID == AreaID)
+        {
+            return true;
+        }
+    }
+    return false;
+}
+
+FGuid UObjectiveDetectionComponent::GetComponentID() const
+{
+    return ComponentID;
+}
+#pragma endregion

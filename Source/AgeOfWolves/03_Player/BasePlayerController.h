@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -9,36 +7,37 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogBasePC, Log, All)
 
-//@Àü¹æ ¼±¾ğ
+//@ì „ë°© ì„ ì–¸
 #pragma region Forward Declaration
 class APawn;
 class UUIComponent;
 class UBaseInputComponent;
+class UObjectiveDetectionComponent;
 #pragma endregion
 
-//@¿­°ÅÇü
+//@ì—´ê±°í˜•
 #pragma region Enums
 #pragma endregion
 
-//@±¸Á¶Ã¼
+//@êµ¬ì¡°ì²´
 #pragma region Structs
 #pragma endregion
 
-//@ÀÌº¥Æ®/µ¨¸®°ÔÀÌÆ®
+//@ì´ë²¤íŠ¸/ë¸ë¦¬ê²Œì´íŠ¸
 #pragma region Delegates
-//@ÃÊ±âÈ­ ¿äÃ» ÀÌº¥Æ®
+//@ì´ˆê¸°í™” ìš”ì²­ ì´ë²¤íŠ¸
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByPC)
 #pragma endregion
 
 /**
  * @ABasePlayerController
  * 
- * »ç¿ëÀÚ ÄÁÆ®·Ñ·¯¸¦ ¼³Á¤ÇÕ´Ï´Ù.
+ * ì‚¬ìš©ì ì»¨íŠ¸ë¡¤ëŸ¬ë¥¼ ì„¤ì •í•©ë‹ˆë‹¤.
  */
 UCLASS()
 class AGEOFWOLVES_API ABasePlayerController : public APlayerController
 {
-    //@Ä£Ãß Å¬·¡½º
+//@ì¹œì¶” í´ë˜ìŠ¤
 #pragma region Friend Class
 #pragma endregion
 
@@ -71,6 +70,7 @@ protected:
     //~End of APlayerController
 
 protected:
+    //@ì´ˆê¸°í™”
     void InitializePlayerController();
 #pragma endregion
 
@@ -81,16 +81,21 @@ protected:
     void SetupViewportClientOnBeginPlay();
 
 private:
+    //@UI ì»´í¬ë„ŒíŠ¸
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
         UUIComponent* UIComponent;
+    //@ì…ë ¥ ì»´í¬ë„ŒíŠ¸
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
         UBaseInputComponent* BaseInputComponent;
+    //@ì£¼ë³€ ëª©í‘œë¬¼ ì¸ì‹ ì»´í¬ë„ŒíŠ¸
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+        UObjectiveDetectionComponent* ODComponent;
 #pragma endregion
 
 //@Delegates
 #pragma region Delegates
 public:
-    //@ÃÊ±âÈ­ ¿äÃ» ÀÌº¥Æ®(ºñµ¿±â ÃÊ±âÈ­ ÀÛ¾÷)
+    //@ì´ˆê¸°í™” ìš”ì²­ ì´ë²¤íŠ¸(ë¹„ë™ê¸° ì´ˆê¸°í™” ì‘ì—…)
     FRequestStartInitByPC RequestStartInitByPC;
 #pragma endregion
 

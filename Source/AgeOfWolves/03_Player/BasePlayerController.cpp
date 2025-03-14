@@ -8,10 +8,9 @@
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "04_Component/UIComponent.h"
 #include "04_Component/BaseInputComponent.h"
-
+#include "04_Component/ObjectiveDetectionComponent.h"
 
 DEFINE_LOG_CATEGORY(LogBasePC)
-// UE_LOGFMT(LogBasePC, Log, "");
 
 //@Defualt Setting
 #pragma region Default Setting
@@ -20,6 +19,7 @@ ABasePlayerController::ABasePlayerController(const FObjectInitializer& ObjectIni
 {
 	UIComponent = CreateDefaultSubobject<UUIComponent>(TEXT("UI Component"));
     InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
+    ODComponent = CreateDefaultSubobject< UObjectiveDetectionComponent>(TEXT("Objective Detection Component"));
 }
 
 void ABasePlayerController::PreInitializeComponents()
@@ -32,7 +32,7 @@ void ABasePlayerController::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
     
-    //@¹ÙÀÎµù
+    //@ë°”ì¸ë”©
     if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
     {
         UIComponent->UIsForAttributeSetReady.BindUFunction(PS, "LoadGameAbilitySystem"); 
@@ -66,10 +66,10 @@ void ABasePlayerController::AcknowledgePossession(APawn* P)
 {
     Super::AcknowledgePossession(P);
 
-    //@ÃÊ±âÈ­ ÇÔ¼ö
+    //@ì´ˆê¸°í™” í•¨ìˆ˜
     InitializePlayerController();
 
-    //@Delegate : °¢ ÄÄÆ÷³ÍÆ®ÀÇ ÃÊ±âÈ­ ÀÛ¾÷À» À¯µµÇÏ´Â DelegateÀÌ¹Ç·Î, Binding ÀÌÈÄ¿¡ ½ÇÇà
+    //@Delegate : ê° ì»´í¬ë„ŒíŠ¸ì˜ ì´ˆê¸°í™” ì‘ì—…ì„ ìœ ë„í•˜ëŠ” Delegateì´ë¯€ë¡œ, Binding ì´í›„ì— ì‹¤í–‰
     RequestStartInitByPC.Broadcast();
 }
 
@@ -99,24 +99,24 @@ void ABasePlayerController::PostProcessInput(const float DeltaTime, const bool b
 
 void ABasePlayerController::InitializePlayerController()
 {
-    //@TODO: ÃÊ±â ÀÔ·Â ¸ğµå ¼³Á¤Àº Å×½ºÆ®ÀÔ´Ï´Ù. ÀÌÈÄ ¼öÁ¤ ÀÛ¾÷ ÁøÇà ¾Æ·¡¿¡¼­...
+    //@TODO: ì´ˆê¸° ì…ë ¥ ëª¨ë“œ ì„¤ì •ì€ í…ŒìŠ¤íŠ¸ì…ë‹ˆë‹¤. ì´í›„ ìˆ˜ì • ì‘ì—… ì§„í–‰ ì•„ë˜ì—ì„œ...
 
-    //@Input Mode ¼³Á¤
+    //@Input Mode ì„¤ì •
     SetupInputModeOnBeginPlay();
 
-    //@ViewportClient ¼³Á¤
+    //@ViewportClient ì„¤ì •
     SetupViewportClientOnBeginPlay();
 
     //@Input Comp
     if (UBaseInputComponent* BaseInputComp = Cast<UBaseInputComponent>(InputComponent))
     {
-        //@ÃÊ±âÈ­ ÀÛ¾÷ µ¿±âÈ­
+        //@ì´ˆê¸°í™” ì‘ì—… ë™ê¸°í™”
         RequestStartInitByPC.AddUFunction(BaseInputComp, "InitializeInputComponent");
     }
     //@UI Comp
     if (UIComponent)
     {
-        //@ÃÊ±âÈ­ ÀÛ¾÷ µ¿±âÈ­
+        //@ì´ˆê¸°í™” ì‘ì—… ë™ê¸°í™”
         RequestStartInitByPC.AddUFunction(UIComponent, "InitializeUIComponent");
     }
     //@PS
@@ -124,7 +124,11 @@ void ABasePlayerController::InitializePlayerController()
     {
         RequestStartInitByPC.AddUFunction(PS, "InitializePlayerState");
     }
-
+    //@OD Component
+    if (ODComponent)
+    {
+        RequestStartInitByPC.AddUFunction(ODComponent, "InitializeODComponent");
+    }
 }
 #pragma endregion
 

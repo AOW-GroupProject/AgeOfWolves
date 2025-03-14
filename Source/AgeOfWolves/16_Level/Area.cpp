@@ -3,12 +3,9 @@
 
 #include "Components/BoxComponent.h"
 
-#include "01_Character/CharacterBase.h"
-
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetSystemLibrary.h"
 #include "DrawDebugHelpers.h"
-
 
 DEFINE_LOG_CATEGORY_STATIC(LogArea, Log, All);
 
@@ -24,10 +21,13 @@ AArea::AArea()
 
     AreaBounds->SetCollisionProfileName(TEXT("OverlapAll"));
     AreaBounds->SetCollisionResponseToAllChannels(ECR_Overlap);
-    AreaBounds->SetBoxExtent(FVector(500.0f, 500.0f, 200.0f));
+
+    // 더 큰 범위의 Box Extent 설정
+    // 가로 2000, 세로 2000, 높이 500 단위로 설정
+    AreaBounds->SetBoxExtent(FVector(2000.0f, 2000.0f, 500.0f));
 
     //@Area ID
-    AreaID = FName(*GetName());
+    AreaID = FGuid::NewGuid();
 
     //@초기화
     AIInfoMap.Empty();
@@ -54,15 +54,9 @@ void AArea::EndPlay(const EEndPlayReason::Type EndPlayReason)
     //@모든 플레이어 바인딩 해제
     for (auto& Pair : PlayerBindings)
     {
-        if (Pair.Key.IsValid() && Pair.Value.ObjectiveComponent.IsValid())
+        if (Pair.Key.IsValid())
         {
-            UObjectiveDetectionComponent* ObjectiveComp = Pair.Value.ObjectiveComponent.Get();
-            if (ObjectiveComp)
-            {
-                // ObjectiveDetectionComponent에서 Area 언바인딩 메서드 호출
-                // ObjectiveComp->UnbindFromArea(this); 
-                // 주의: ObjectiveDetectionComponent 구현 후 주석 해제
-            }
+
         }
     }
 
@@ -214,8 +208,8 @@ void AArea::RegisterAI(AActor* AIActor)
 
     //@ASC
     IAbilitySystemInterface* AbilityInterface = Cast<IAbilitySystemInterface>(AIActor);
-    UBaseAbilitySystemComponent* AIComponent = Cast<UBaseAbilitySystemComponent>(AbilityInterface->GetAbilitySystemComponent());
-    if (!AIComponent)
+    UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(AbilityInterface->GetAbilitySystemComponent());
+    if (!BaseASC)
     {
         UE_LOGFMT(LogArea, Warning, "Area {0}: AI {1}의 BaseAbilitySystemComponent를 찾을 수 없음",
             *AreaID.ToString(), *AIActor->GetName());
@@ -226,12 +220,12 @@ void AArea::RegisterAI(AActor* AIActor)
     FGameplayTag CurrentState = FGameplayTag::EmptyTag;
 
     //@AI 정보 생성 및 저장
-    FAreaAIInfo AIInfo(AIActor, CurrentState, AIComponent);
+    FAreaAIInfo AIInfo(AIActor, CurrentState, BaseASC);
     AIInfo.StateChangeTime = GetWorld()->GetTimeSeconds();
     AIInfoMap.Add(AIActorPtr, AIInfo);
 
     //@ASC 이벤트에 바인딩
-    AIComponent->CharacterStateEventOnGameplay.AddUFunction(this, "OnAICharacterStateEvent");
+    BaseASC->CharacterStateEventOnGameplay.AddUFunction(this, "OnAICharacterStateEvent");
 
     UE_LOGFMT(LogArea, Log, "Area {0}: AI {1} 등록 완료",
         *AreaID.ToString(), *AIActor->GetName());
@@ -284,15 +278,6 @@ void AArea::RegisterPlayer(APlayerCharacter* Player)
     //@TWeakObjectPtr
     TWeakObjectPtr<APlayerCharacter> PlayerPtr(Player);
 
-    //@Objective Detection Component
-    UObjectiveDetectionComponent* ObjectiveComp = GetPlayerObjectiveComponent(Player);
-    if (!ObjectiveComp)
-    {
-        UE_LOGFMT(LogArea, Warning, "Area {0}: 플레이어 {1}의 ObjectiveDetectionComponent를 찾을 수 없음",
-            *AreaID.ToString(), *Player->GetName());
-        return;
-    }
-
     //@중복 체크
     if (PlayerBindings.Contains(PlayerPtr))
     {
@@ -303,7 +288,7 @@ void AArea::RegisterPlayer(APlayerCharacter* Player)
     }
 
     //@FPlayerBindingInfo
-    FPlayerBindingInfo BindingInfo(Player, ObjectiveComp);
+    FPlayerBindingInfo BindingInfo(Player);
     PlayerBindings.Add(PlayerPtr, BindingInfo);
 
     // 컴포넌트와 Area 연결
@@ -398,14 +383,9 @@ void AArea::HandleAIStateChanged(const FGameplayTag& StateTag, AActor* AIActor)
     //@플레이어들에게 알림
     for (auto& Pair : PlayerBindings)
     {
-        if (Pair.Key.IsValid() && Pair.Value.ObjectiveComponent.IsValid() && Pair.Value.LastExitTime == 0.0f)
+        if (Pair.Key.IsValid() && Pair.Value.LastExitTime == 0.0f)
         {
-            UObjectiveDetectionComponent* ObjectiveComp = Pair.Value.ObjectiveComponent.Get();
-            if (ObjectiveComp)
-            {
-                // ObjectiveComp->OnAreaObjectiveStateChanged(AIActor, StateTag, this, AreaID);
-                // 주의: ObjectiveDetectionComponent 구현 후 주석 해제
-            }
+
         }
     }
 
@@ -450,15 +430,9 @@ void AArea::CleanupInvalidReferences()
     for (auto& PlayerRef : PlayersToRemove)
     {
         // 컴포넌트가 유효하면 언바인딩 처리
-        if (PlayerBindings.Contains(PlayerRef) &&
-            PlayerBindings[PlayerRef].ObjectiveComponent.IsValid())
+        if (PlayerBindings.Contains(PlayerRef))
         {
-            UObjectiveDetectionComponent* ObjectiveComp = PlayerBindings[PlayerRef].ObjectiveComponent.Get();
-            if (ObjectiveComp)
-            {
-                // ObjectiveComp->UnbindFromArea(this);
-                // 주의: ObjectiveDetectionComponent 구현 후 주석 해제
-            }
+
         }
 
         PlayerBindings.Remove(PlayerRef);
@@ -525,15 +499,15 @@ void AArea::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor
     if (AICharacter && !Cast<APlayerCharacter>(AICharacter))
     {
         // AI 등록 해제는 지연시키지 않고 바로 처리
-        UnregisterAI(AICharacter);
+        //UnregisterAI(AICharacter);
         return;
     }
 }
 
-void AArea::OnAICharacterStateEvent(const FGameplayTag& StateTag, AActor* SourceActor)
+void AArea::OnAICharacterStateEvent(const FGameplayTag& StateTag)
 {
     //@상태 변경 처리 함수 호출
-    HandleAIStateChanged(StateTag, SourceActor);
+    HandleAIStateChanged(StateTag);
 }
 #pragma endregion
 
@@ -552,22 +526,5 @@ TArray<AActor*> AArea::GetAIInArea() const
     }
 
     return Result;
-}
-
-UObjectiveDetectionComponent* AArea::GetPlayerObjectiveComponent(APlayerCharacter* Player)
-{
-    if (!IsValid(Player))
-    {
-        return nullptr;
-    }
-
-    //@Ojbective Detection Component
-    UObjectiveDetectionComponent* ObjectiveComp = Player->FindComponentByClass<UObjectiveDetectionComponent>();
-    if (!ObjectiveComp)
-    {
-        UE_LOGFMT(LogArea, Warning, "플레이어 {0}에서 ObjectiveDetectionComponent를 찾을 수 없음", *Player->GetName());
-    }
-
-    return ObjectiveComp;
 }
 #pragma endregion
