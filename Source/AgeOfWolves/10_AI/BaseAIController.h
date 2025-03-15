@@ -259,7 +259,7 @@ protected:
 protected:
 	//@캐릭터 상태 관련 이벤트 발생 시 호출되는 콜백
 	UFUNCTION()
-		void OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag);
+		void OnCharacterStateEventOnGameplay(AActor* Actor, const FGameplayTag& CharacterStateTag);
 
 protected:
 	//@전투 패턴 Exit Block 완료 콜백
@@ -269,7 +269,7 @@ protected:
 protected:
 	// Target Actor 상태 변화 콜백
 	UFUNCTION()
-		void OnTargetActorStateChanged(const FGameplayTag& StateTag);
+		void OnTargetActorStateChanged(AActor* Actor, const FGameplayTag& StateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

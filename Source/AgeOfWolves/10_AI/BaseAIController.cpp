@@ -254,7 +254,7 @@ void ABaseAIController::InternalBindingToASC()
     }
 
     //@내부 바인딩
-    AbilitySystemComponent->CharacterStateEventOnGameplay.AddUObject(this, &ABaseAIController::OnCharacterStateEventOnGameplay);
+    AbilitySystemComponent->CharacterStateEventOnGameplay.AddUFunction(this, "OnCharacterStateEventOnGameplay");
 
     UE_LOGFMT(LogBaseAIC, Log, "캐릭터 상태 이벤트 콜백이 성공적으로 바인딩되었습니다");
 }
@@ -559,8 +559,8 @@ void ABaseAIController::BindTargetActorStateEvents(AActor* NewTarget)
         Cast<UBaseAbilitySystemComponent>(TargetCharacter->GetAbilitySystemComponent()))
     {
         // 상태 변화 이벤트 바인딩
-        TargetASC->CharacterStateEventOnGameplay.AddUObject(
-            this, &ABaseAIController::OnTargetActorStateChanged);
+        TargetASC->CharacterStateEventOnGameplay.AddUFunction(
+            this, "OnTargetActorStateChanged");
 
         UE_LOGFMT(LogBaseAIC, Log, "타겟 {0}에 대한 상태 이벤트 바인딩 완료",
             *NewTarget->GetName());
@@ -650,7 +650,7 @@ void ABaseAIController::OnAttributeValueChanged(const FOnAttributeChangeData& Da
 {
 }
 
-void ABaseAIController::OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag)
+void ABaseAIController::OnCharacterStateEventOnGameplay(AActor* Actor, const FGameplayTag& CharacterStateTag)
 {
     //@"State.~"
     if (!CharacterStateTag.GetTagName().ToString().StartsWith("State."))
@@ -718,7 +718,7 @@ bool ABaseAIController::OnCombatPatternExitComplete()
     return NotifyCombatPatternExitComplete.Execute();
 }
 
-void ABaseAIController::OnTargetActorStateChanged(const FGameplayTag& StateTag)
+void ABaseAIController::OnTargetActorStateChanged(AActor* Actor, const FGameplayTag& StateTag)
 {
     // 죽음 상태 태그 체크
     if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))

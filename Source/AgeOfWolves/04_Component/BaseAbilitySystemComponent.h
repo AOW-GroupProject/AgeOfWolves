@@ -43,7 +43,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionActivated, FGameplayTag, ChainActi
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionFinished, FGameplayTag, ChainActionAbilityTag);
 
 //@상태 변화 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FCharacterStateEventOnGameplay, const FGameplayTag&)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FCharacterStateEventOnGameplay, AActor*, const FGameplayTag&)
 #pragma endregion
 
 /**	

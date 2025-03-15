@@ -7,7 +7,6 @@
 
 #include "ObjectiveDetectionComponent.generated.h"
 
-//@UE_LOGFMT 활용을 위한 로그 매크로 선언
 DECLARE_LOG_CATEGORY_EXTERN(LogObjectiveDetection, Log, All)
 
 //@전방 선언
@@ -93,8 +92,6 @@ public:
 
 //@이벤트/델리게이트
 #pragma region Delegates
-// 목표물 감지 관련 델리게이트 정의
-// (구현부는 별도 작성)
 #pragma endregion
 
 /*
@@ -187,6 +184,7 @@ protected:
             UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
             bool bFromSweep, const FHitResult& SweepResult);
 
+    //@Pawn의 CapsuleComponent 오버랩 종료 이벤트를 구독하는 콜백
     UFUNCTION()
         void OnPawnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
             UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);

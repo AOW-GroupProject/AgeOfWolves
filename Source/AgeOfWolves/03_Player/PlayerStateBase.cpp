@@ -85,7 +85,7 @@ void APlayerStateBase::InternalBindingToASC()
     }
 
     //@내부 바인딩
-    AbilitySystemComponent->CharacterStateEventOnGameplay.AddUObject(this, &APlayerStateBase::OnCharacterStateEventOnGameplay);
+    AbilitySystemComponent->CharacterStateEventOnGameplay.AddUFunction(this, "OnCharacterStateEventOnGameplay");
 
     UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 상태 관련 이벤트 콜백이 성공적으로 바인딩되었습니다");
 }

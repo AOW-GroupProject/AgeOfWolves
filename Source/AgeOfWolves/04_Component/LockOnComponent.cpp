@@ -93,7 +93,7 @@ void ULockOnComponent::ExternalBindToASCComp()
     }
 
     //@상태 변화 이벤트 구독
-    BaseASC->CharacterStateEventOnGameplay.AddUObject(this, &ULockOnComponent::OnOwnerStateChanged);
+    BaseASC->CharacterStateEventOnGameplay.AddUFunction(this, "OnOwnerStateChanged");
 
     UE_LOGFMT(LogLockOn, Log, "어빌리티 시스템 컴포넌트 바인딩 완료");
 }
@@ -423,7 +423,7 @@ void ULockOnComponent::BindCurrentTargetStateEvents()
     if (UBaseAbilitySystemComponent* TargetASC = Cast<UBaseAbilitySystemComponent>(Character->GetAbilitySystemComponent()))
     {
         //@상태 변화 이벤트 바인딩
-        TargetASC->CharacterStateEventOnGameplay.AddUObject(this, &ULockOnComponent::OnTargetStateChanged);
+        TargetASC->CharacterStateEventOnGameplay.AddUFunction(this, "OnTargetStateChanged");
 
         UE_LOGFMT(LogLockOn, Log, "타겟 {0}에 대한 상태 이벤트 바인딩 완료", *TargetEnemyRef->GetName());
     }
@@ -710,7 +710,7 @@ void ULockOnComponent::OnLockOnTargetChanged(const FGameplayTag& InputTag, const
     UE_LOGFMT(LogLockOn, Log, "Lock On 타겟이 변경되었습니다: {0}", *NewTarget->GetName());
 }
 
-void ULockOnComponent::OnOwnerStateChanged(const FGameplayTag& StateTag)
+void ULockOnComponent::OnOwnerStateChanged(AActor* Owner, const FGameplayTag& StateTag)
 {
     //@죽음 상태 태그 체크
     if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
@@ -746,7 +746,7 @@ void ULockOnComponent::OnOwnerStateChanged(const FGameplayTag& StateTag)
     }
 }
 
-void ULockOnComponent::OnTargetStateChanged(const FGameplayTag& StateTag)
+void ULockOnComponent::OnTargetStateChanged(AActor* Target, const FGameplayTag& StateTag)
 {
     // 죽음 상태 태그 체크
     if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))

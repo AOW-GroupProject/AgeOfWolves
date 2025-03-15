@@ -204,7 +204,7 @@ protected:
 protected:
     //@AI 상태 변경 처리
     UFUNCTION()
-        void HandleAIStateChanged(const FGameplayTag& StateTag, AActor* AIActor);
+        void HandleAIStateChanged(AActor* AIActor, const FGameplayTag& StateTag);
 
 protected:
     //@자원 정리
@@ -234,7 +234,7 @@ public:
 protected:
     //@AI ASC 이벤트 콜백
     UFUNCTION()
-        void OnAICharacterStateEvent(const FGameplayTag& StateTag);
+        void OnAICharacterStateEvent(AActor* Actor, const FGameplayTag& StateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

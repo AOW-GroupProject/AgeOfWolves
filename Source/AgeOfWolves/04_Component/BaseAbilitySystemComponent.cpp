@@ -725,7 +725,8 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 		{
 			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *StateTag.ToString());
 
-			CharacterStateEventOnGameplay.Broadcast(StateTag);
+			//@캐릭터 상태 이벤트
+			CharacterStateEventOnGameplay.Broadcast(GetAvatarActor(), StateTag);
 
 			//@죽음 상태일 경우 이벤트 발생 전에 모든 구독 해제
 			if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))

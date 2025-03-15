@@ -217,7 +217,7 @@ void AArea::RegisterAI(AActor* AIActor)
     }
 
     //@현재 상태 가져오기 (GlobalStateManager 없이 직접 ASC에서 가져옴)
-    FGameplayTag CurrentState = FGameplayTag::EmptyTag;
+    FGameplayTag CurrentState = FGameplayTag::RequestGameplayTag("State.Alive");
 
     //@AI 정보 생성 및 저장
     FAreaAIInfo AIInfo(AIActor, CurrentState, BaseASC);
@@ -339,7 +339,7 @@ void AArea::UnregisterPlayer(APlayerCharacter* Player)
         *AreaID.ToString(), *Player->GetName());
 }
 
-void AArea::HandleAIStateChanged(const FGameplayTag& StateTag, AActor* AIActor)
+void AArea::HandleAIStateChanged(AActor* AIActor, const FGameplayTag& StateTag)
 {
     //@Actor
     if (!IsValid(AIActor))
@@ -504,10 +504,10 @@ void AArea::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor
     }
 }
 
-void AArea::OnAICharacterStateEvent(const FGameplayTag& StateTag)
+void AArea::OnAICharacterStateEvent(AActor* Actor, const FGameplayTag& StateTag)
 {
     //@상태 변경 처리 함수 호출
-    HandleAIStateChanged(StateTag);
+    HandleAIStateChanged(Actor, StateTag);
 }
 #pragma endregion
 

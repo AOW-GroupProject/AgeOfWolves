@@ -157,12 +157,12 @@ public:
 protected:
     //@Owner 캐릭터의 상태 변화 콜백
     UFUNCTION()
-        void OnOwnerStateChanged(const FGameplayTag& StateTag);
+        void OnOwnerStateChanged(AActor* Owner, const FGameplayTag& StateTag);
 
 protected:
     //@주변 적들 목록에 추가된 적들의 상태 변화 이벤트를 구독하는 콜백
     UFUNCTION()
-        void OnTargetStateChanged(const FGameplayTag& StateTag);
+        void OnTargetStateChanged(AActor* Target, const FGameplayTag& StateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
