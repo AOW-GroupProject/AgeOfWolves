@@ -129,7 +129,10 @@ protected:
         UBillboardComponent* LockOnBillboardComponent;
 
     UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
-        TSoftObjectPtr<UTexture2D> LockOnTexture;
+        TSoftObjectPtr<UTexture2D> LockOnIndicator;
+
+    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
+        TSoftObjectPtr<UTexture2D> ExecutableIndicator;
 
     UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
         float BillboardForwardOffset = 100.0f;

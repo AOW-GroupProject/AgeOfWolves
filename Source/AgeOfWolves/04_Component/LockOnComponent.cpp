@@ -116,14 +116,24 @@ void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
         LockOnBillboardComponent->RegisterComponent();
     }
 
-
-    //@Billobard Component 초기화
-    if (!LockOnTexture.IsNull())
+    //@Lock On Indicator
+    if (!LockOnIndicator.IsNull())
     {
-        LockOnTexture.LoadSynchronous();
-        if (UTexture2D* LoadedTexture = LockOnTexture.Get())
+        LockOnIndicator.LoadSynchronous();
+        if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
         {
             LockOnBillboardComponent->SetSprite(LoadedTexture);
+            // 원래 크기의 0.1배로 설정
+            LockOnBillboardComponent->SetRelativeScale3D(FVector(0.1f));
+        }
+    }
+
+    //@Executable Indicator
+    if (!ExecutableIndicator.IsNull())
+    {
+        ExecutableIndicator.LoadSynchronous();
+        if (UTexture2D* LoadedTexture = ExecutableIndicator.Get())
+        {
             // 원래 크기의 0.1배로 설정
             LockOnBillboardComponent->SetRelativeScale3D(FVector(0.1f));
         }
@@ -137,7 +147,6 @@ void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
         UE_LOGFMT(LogLockOn, Warning, "컴포넌트 초기화 실패: 컨트롤러가 유효하지 않음");
         return;
     }
-
 
     const auto Owner = GetOwner();
     if (!Owner)
@@ -187,8 +196,6 @@ void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
         UE_LOGFMT(LogLockOn, Warning, "컴포넌트 초기화 실패: 입력 컴포넌트가 유효하지 않음");
         return;
     }
-
-
 
     UE_LOGFMT(LogLockOn, Log, "락온 컴포넌트 초기화 완료");
 }
@@ -748,11 +755,46 @@ void ULockOnComponent::OnOwnerStateChanged(AActor* Owner, const FGameplayTag& St
 
 void ULockOnComponent::OnTargetStateChanged(AActor* Target, const FGameplayTag& StateTag)
 {
-    // 죽음 상태 태그 체크
+    //@죽음 상태 태그 체크
     if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
     {
         UE_LOGFMT(LogLockOn, Log, "타겟 {0}이(가) 사망하여 Lock On을 취소합니다.", *TargetEnemyRef->GetName());
         CancelLockOn();
+
+        return;
+    }
+
+    //@Fragile 상태(처형 가능한 상태)
+    else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
+    {
+        UE_LOGFMT(LogLockOn, Log, "타겟 {0}이(가) Fragile 상태가 되었습니다.", *TargetEnemyRef->GetName());
+
+        //@Billboard Comopnent 업데이트
+        if (LockOnBillboardComponent && !ExecutableIndicator.IsNull())
+        {
+            ExecutableIndicator.LoadSynchronous();
+            if (UTexture2D* LoadedTexture = ExecutableIndicator.Get())
+            {
+                LockOnBillboardComponent->SetSprite(LoadedTexture);
+                UE_LOGFMT(LogLockOn, Log, "Executable 인디케이터로 변경됨");
+            }
+        }
+    }
+    //@Normal 상태 태그 체크
+    else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
+    {
+        UE_LOGFMT(LogLockOn, Log, "타겟 {0}이(가) Normal 상태가 되었습니다.", *TargetEnemyRef->GetName());
+
+        //@Billboard Comopnent 업데이트
+        if (LockOnBillboardComponent && !LockOnIndicator.IsNull())
+        {
+            LockOnIndicator.LoadSynchronous();
+            if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
+            {
+                LockOnBillboardComponent->SetSprite(LoadedTexture);
+                UE_LOGFMT(LogLockOn, Log, "LockOn 인디케이터로 변경됨");
+            }
+        }
     }
 }
 #pragma endregion
