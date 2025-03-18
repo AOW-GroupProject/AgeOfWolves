@@ -626,7 +626,7 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
         BindTargetActorStateEvents(Actor);
 
         //@Lock On 이벤트 호출
-        AILockOnStateChanged.Broadcast(true);
+        AILockOnStateChanged.Broadcast(true, Actor);
     }
 
 }
@@ -640,7 +640,7 @@ void ABaseAIController::OnTargetPerceptionLost(AActor* Actor)
     // [기존의 타겟 소실 처리 코드...]
 
     //@Lock On 상태 변경 이벤트 호출
-    AILockOnStateChanged.Broadcast(false);
+    AILockOnStateChanged.Broadcast(false, nullptr);
     UE_LOGFMT(LogBaseAIC, Log, "AI가 {0}을(를) 놓쳐 Lock On 상태 해제", *Actor->GetName());
 
     // [기존의 상태 변경 코드...]
@@ -734,7 +734,7 @@ void ABaseAIController::OnTargetActorStateChanged(AActor* Actor, const FGameplay
         }
 
         // Lock On 상태 해제
-        AILockOnStateChanged.Broadcast(false);
+        AILockOnStateChanged.Broadcast(false, nullptr);
 
         UE_LOGFMT(LogBaseAIC, Log, "타겟 사망으로 인한 상태 초기화 완료");
     }

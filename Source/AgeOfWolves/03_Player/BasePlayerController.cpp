@@ -17,6 +17,8 @@ DEFINE_LOG_CATEGORY(LogBasePC)
 ABasePlayerController::ABasePlayerController(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
+    PrimaryActorTick.bCanEverTick = true;
+
 	UIComponent = CreateDefaultSubobject<UUIComponent>(TEXT("UI Component"));
     InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
     ODComponent = CreateDefaultSubobject< UObjectiveDetectionComponent>(TEXT("Objective Detection Component"));
@@ -43,6 +45,12 @@ void ABasePlayerController::PostInitializeComponents()
 void ABasePlayerController::BeginPlay()
 {
 	Super::BeginPlay();
+
+}
+
+void ABasePlayerController::Tick(float DeltaTime)
+{
+    Super::Tick(DeltaTime);
 
 }
 
@@ -183,5 +191,15 @@ UBaseInputComponent* ABasePlayerController::GetBaseInputComponent() const
     }
 
     return nullptr;
+}
+
+UObjectiveDetectionComponent* ABasePlayerController::GetODComponent() const
+{
+    if (!ODComponent)
+    {
+        return nullptr;
+    }
+
+    return ODComponent;
 }
 #pragma endregion

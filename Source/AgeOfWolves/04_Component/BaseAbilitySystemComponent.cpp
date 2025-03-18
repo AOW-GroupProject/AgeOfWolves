@@ -741,6 +741,7 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 
 bool UBaseAbilitySystemComponent::OnRequestActivateAbilityBlockUnitByAI(const FGameplayTag& AbilityTag)
 {
+	//@FGameplayTag
 	if (!AbilityTag.IsValid())
 	{
 		UE_LOGFMT(LogASC, Warning, "어빌리티 활성화 요청 실패: 유효하지 않은 태그");
@@ -757,7 +758,7 @@ bool UBaseAbilitySystemComponent::OnRequestActivateAbilityBlockUnitByAI(const FG
 			break;
 		}
 	}
-
+	//@Spec Handle
 	if (!SpecHandle.IsValid())
 	{
 		UE_LOGFMT(LogASC, Warning, "어빌리티 활성화 요청 실패: 태그({0})에 해당하는 어빌리티를 찾을 수 없음",

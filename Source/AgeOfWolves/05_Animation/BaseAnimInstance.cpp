@@ -321,7 +321,7 @@ void UBaseAnimInstance::ListenToCombatStateAttributeChange()
 
 //@Callbacks
 #pragma region Callbacks
-void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
+void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn, AActor* LockOnTargetActor)
 {
     if (!OwnerCharacterBaseRef.IsValid() || !CharacterMovementCompRef.IsValid())
     {

@@ -2,11 +2,13 @@
 #include "Logging/StructuredLog.h"
 
 #include "01_Character/PlayerCharacter.h"
-#include "04_Component/BaseInputComponent.h"
 #include "05_Animation/BaseAnimInstance.h"
 #include "03_Player/BasePlayerController.h"
+
+#include "04_Component/BaseInputComponent.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
+#include "04_Component/ObjectiveDetectionComponent.h"
 
 #include "Kismet/KismetSystemLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -14,7 +16,6 @@
 
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
-#include "Components/BillboardComponent.h"
 
 DEFINE_LOG_CATEGORY(LogLockOn)
 
@@ -30,6 +31,7 @@ ULockOnComponent::ULockOnComponent()
     EnemyMap.Reset();
 
     TargetEnemyRef.Reset();
+
     PlayerCharacterRef.Reset();
     BaseAnimInstanceRef.Reset();
     SpringArmComponentRef.Reset();
@@ -98,49 +100,32 @@ void ULockOnComponent::ExternalBindToASCComp()
     UE_LOGFMT(LogLockOn, Log, "어빌리티 시스템 컴포넌트 바인딩 완료");
 }
 
+void ULockOnComponent::ExternalBindToODComp(const AController* Controller)
+{
+    auto PC = Cast<ABasePlayerController>(Controller);
+    if (!PC)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "입력 컴포넌트 바인딩 실패: BasePlayerController가 유효하지 않음");
+        return;
+    }
+
+    auto* ODComp = PC->GetODComponent();
+    if (!ODComp)
+    {
+        UE_LOGFMT(LogLockOn, Warning, "주변 인지 컴포넌트 바인딩 실패: OD Component가 유효하지 않음");
+        return;
+    }
+
+    //@외부 바인딩...
+    ODComp->DetectedAIStateChanged.AddUFunction(this, "OnDetectedAIStateChanged");
+}
+
 void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
 {
     //@외부 바인딩...
     ExternalBindToInputComp(Controller);
     ExternalBindToASCComp();
-
-    //@컴포넌트 등록
-    if (!LockOnBillboardComponent)
-    {
-        LockOnBillboardComponent = NewObject<UBillboardComponent>(GetOwner());
-        if (!LockOnBillboardComponent)
-        {
-            UE_LOGFMT(LogLockOn, Warning, "빌보드 컴포넌트 생성 실패");
-            return;
-        }
-        LockOnBillboardComponent->RegisterComponent();
-    }
-
-    //@Lock On Indicator
-    if (!LockOnIndicator.IsNull())
-    {
-        LockOnIndicator.LoadSynchronous();
-        if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
-        {
-            LockOnBillboardComponent->SetSprite(LoadedTexture);
-            // 원래 크기의 0.1배로 설정
-            LockOnBillboardComponent->SetRelativeScale3D(FVector(0.1f));
-        }
-    }
-
-    //@Executable Indicator
-    if (!ExecutableIndicator.IsNull())
-    {
-        ExecutableIndicator.LoadSynchronous();
-        if (UTexture2D* LoadedTexture = ExecutableIndicator.Get())
-        {
-            // 원래 크기의 0.1배로 설정
-            LockOnBillboardComponent->SetRelativeScale3D(FVector(0.1f));
-        }
-    }
-
-    LockOnBillboardComponent->SetVisibility(false);
-    LockOnBillboardComponent->bHiddenInGame = false;
+    ExternalBindToODComp(Controller);
 
     if (!Controller)
     {
@@ -219,16 +204,6 @@ void ULockOnComponent::StartLockOn()
         return;
     }
 
-    //@현재 타겟의 상태 변화 이벤트에 바인딩 수행
-    BindCurrentTargetStateEvents();
-
-    //@시각 효과
-    if (!LockOnBillboardComponent)
-    {
-        UE_LOGFMT(LogLockOn, Warning, "락온 시작 실패: 빌보드 컴포넌트가 유효하지 않음");
-        return;
-    }
-
     if (!TargetEnemyRef.IsValid())
     {
         UE_LOGFMT(LogLockOn, Warning, "락온 시작 실패: 타겟이 유효하지 않음");
@@ -242,12 +217,6 @@ void ULockOnComponent::StartLockOn()
         return;
     }
 
-    //@Billboard Component 부착
-    if (LockOnBillboardComponent && PlayerCharacterRef.IsValid() && TargetEnemyRef.IsValid())
-    {
-        UpdateBillboardComponent(true);
-    }
-
     //@Spring Arm(Camera) 설정 업데이트
     UpdateSpringArmSettings(true);
 
@@ -255,7 +224,7 @@ void ULockOnComponent::StartLockOn()
     bLockOn = true;
 
     //@Lock On 상태 이벤트
-    LockOnStateChanged.Broadcast(bLockOn);
+    LockOnStateChanged.Broadcast(bLockOn, TargetEnemyRef.Get());
 
     UE_LOGFMT(LogLockOn, Log, "Lock On 시작: 타겟 = {0}", *TargetEnemyRef->GetName());
 }
@@ -269,12 +238,6 @@ void ULockOnComponent::CancelLockOn()
         return;
     }
 
-    //@타겟의 상태 변화 이벤트 언바인딩
-    UnbindCurrentTargetStateEvents();
-
-    //@Billboard
-    UpdateBillboardComponent(false);
-
     //@Spring Arm 설정 업데이트
     UpdateSpringArmSettings(false);
 
@@ -282,7 +245,7 @@ void ULockOnComponent::CancelLockOn()
     bLockOn = false;
 
     //@Lock On 상태 이벤트
-    LockOnStateChanged.Broadcast(bLockOn);
+    LockOnStateChanged.Broadcast(bLockOn, nullptr);
 
     //@초기화
     NearByEnemies.Empty();
@@ -417,39 +380,6 @@ bool ULockOnComponent::FindTargetEnemy()
     return IsValid(TargetEnemyRef.Get());
 }
 
-void ULockOnComponent::BindCurrentTargetStateEvents()
-{
-    //@Target Enemy
-    if (!TargetEnemyRef.IsValid()) return;
-
-    //@CharacterBase로 캐스팅
-    ACharacterBase* Character = Cast<ACharacterBase>(TargetEnemyRef.Get());
-    if (!Character) return;
-
-    //@ASC
-    if (UBaseAbilitySystemComponent* TargetASC = Cast<UBaseAbilitySystemComponent>(Character->GetAbilitySystemComponent()))
-    {
-        //@상태 변화 이벤트 바인딩
-        TargetASC->CharacterStateEventOnGameplay.AddUFunction(this, "OnTargetStateChanged");
-
-        UE_LOGFMT(LogLockOn, Log, "타겟 {0}에 대한 상태 이벤트 바인딩 완료", *TargetEnemyRef->GetName());
-    }
-}
-
-void ULockOnComponent::UnbindCurrentTargetStateEvents()
-{
-    if (!TargetEnemyRef.IsValid()) return;
-
-    ACharacterBase* Character = Cast<ACharacterBase>(TargetEnemyRef.Get());
-    if (!Character) return;
-
-    if (UBaseAbilitySystemComponent* TargetASC = Cast<UBaseAbilitySystemComponent>(Character->GetAbilitySystemComponent()))
-    {
-        TargetASC->CharacterStateEventOnGameplay.RemoveAll(this);
-        UE_LOGFMT(LogLockOn, Log, "타겟 {0}에 대한 상태 이벤트 바인딩 해제", *TargetEnemyRef->GetName());
-    }
-}
-
 void ULockOnComponent::UpdateSpringArmSettings(bool bIsLockingOn)
 {
     if (!SpringArmComponentRef.IsValid())
@@ -520,11 +450,6 @@ void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
         UE_LOGFMT(LogLockOn, Verbose, "높이 차이: {0}, 임계값({1}) 미만, Pitch 적용 안함", HeightDifference, HeightThreshold);
     }
 
-    //@시각 효과
-    if (LockOnBillboardComponent && TargetEnemyRef.IsValid())
-    {
-        UpdateBillboardComponent(true, true);
-    }
 }
 
 void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& TargetRotation)
@@ -553,84 +478,6 @@ void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& 
     // 스프링암 최종 변환 적용
     SpringArmComponentRef->SocketOffset.X = FMath::Lerp(0, -200, DistanceFromTargetEnemy / 70);
     SpringArmComponentRef->SetWorldRotation(CameraFinalRotation);
-}
-
-void ULockOnComponent::UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly)
-{
-    if (!LockOnBillboardComponent || !TargetEnemyRef.IsValid() || !PlayerCharacterRef.IsValid() || !FollowCameraComponentRef.IsValid())
-    {
-        UE_LOGFMT(LogLockOn, Warning, "빌보드 업데이트 실패: 필요한 컴포넌트가 유효하지 않음");
-        return;
-    }
-
-    if (!bVisible)
-    {
-        LockOnBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // 타겟의 스켈레탈 메시 컴포넌트 가져오기
-    USkeletalMeshComponent* TargetMesh = Cast<USkeletalMeshComponent>(
-        TargetEnemyRef->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
-
-    if (!TargetMesh)
-    {
-        UE_LOGFMT(LogLockOn, Warning, "빌보드 업데이트 실패: 타겟의 스켈레탈 메시를 찾을 수 없음");
-        return;
-    }
-
-    FName SpineSocketName = FName("spine_03");
-
-    // 소켓 존재 여부 확인
-    if (!TargetMesh->DoesSocketExist(SpineSocketName))
-    {
-        UE_LOGFMT(LogLockOn, Warning, "빌보드 업데이트 실패: spine_03 소켓이 존재하지 않음");
-        return;
-    }
-
-    // 타겟의 소켓 위치 가져오기
-    FVector SocketLocation = TargetMesh->GetSocketLocation(SpineSocketName);
-
-    // 카메라 위치 가져오기
-    FVector CameraLocation = FollowCameraComponentRef->GetComponentLocation();
-
-    // 카메라에서 소켓으로의 방향 계산
-    FVector DirectionToSocket = (SocketLocation - CameraLocation).GetSafeNormal();
-
-    // 소켓 위치에서 카메라 방향의 반대로 약간 앞으로 이동 + 높이 오프셋 적용
-    FVector UpVector = FVector(0.0f, 0.0f, 1.0f);
-    FVector TargetBillboardLocation = SocketLocation - DirectionToSocket * BillboardForwardOffset + UpVector;
-
-    // 현재 빌보드 위치에서 목표 위치로 부드럽게 보간
-    FVector CurrentLocation = LockOnBillboardComponent->GetComponentLocation();
-    FVector InterpolatedLocation = UKismetMathLibrary::VInterpTo(
-        CurrentLocation,
-        TargetBillboardLocation,
-        GetWorld()->GetDeltaSeconds(),
-        BillboardInterpolationSpeed
-    );
-
-    // 빌보드가 항상 카메라를 향하도록 회전 설정
-    FRotator TargetRotation = (CameraLocation - SocketLocation).Rotation();
-    FRotator CurrentRotation = LockOnBillboardComponent->GetComponentRotation();
-    FRotator InterpolatedRotation = UKismetMathLibrary::RInterpTo(
-        CurrentRotation,
-        TargetRotation,
-        GetWorld()->GetDeltaSeconds(),
-        BillboardInterpolationSpeed
-    );
-
-    // 빌보드 위치 및 회전 설정
-    LockOnBillboardComponent->SetWorldLocation(InterpolatedLocation);
-    LockOnBillboardComponent->SetWorldRotation(InterpolatedRotation);
-
-    // 크기 설정
-    LockOnBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
-
-    if (!bChangeTransformOnly)
-    {
-        LockOnBillboardComponent->SetVisibility(true);
-    }
 }
 #pragma endregion
 
@@ -671,9 +518,6 @@ void ULockOnComponent::OnLockOnTargetChanged(const FGameplayTag& InputTag, const
         return;
     }
 
-    // 이전 타겟의 이벤트 바인딩 해제
-    UnbindCurrentTargetStateEvents();
-
     //@새 인덱스 계산
     int32 NewIndex;
     if (Value < 0.0f)  //@휠 다운(음수) -> 오른쪽으로 이동
@@ -693,26 +537,7 @@ void ULockOnComponent::OnLockOnTargetChanged(const FGameplayTag& InputTag, const
         return;
     }
 
-    //@Billboard Component 업데이트
-    if (!LockOnBillboardComponent)
-    {
-        UE_LOGFMT(LogLockOn, Warning, "타겟 변경 실패: 빌보드 컴포넌트가 유효하지 않음");
-        return;
-    }
-
-    USceneComponent* NewTargetRoot = NewTarget->GetRootComponent();
-    if (!NewTargetRoot)
-    {
-        UE_LOGFMT(LogLockOn, Warning, "타겟 변경 실패: 새 타겟의 루트 컴포넌트가 유효하지 않음");
-        return;
-    }
-
-    UpdateBillboardComponent(true, true);
-
     TargetEnemyRef = NewTarget;
-
-    // 새로운 타겟에 대한 이벤트 바인딩
-    BindCurrentTargetStateEvents();
 
     UE_LOGFMT(LogLockOn, Log, "Lock On 타겟이 변경되었습니다: {0}", *NewTarget->GetName());
 }
@@ -753,48 +578,25 @@ void ULockOnComponent::OnOwnerStateChanged(AActor* Owner, const FGameplayTag& St
     }
 }
 
-void ULockOnComponent::OnTargetStateChanged(AActor* Target, const FGameplayTag& StateTag)
+void ULockOnComponent::OnDetectedAIStateChanged(const FGameplayTag& StateTag, AActor* Target)
 {
-    //@죽음 상태 태그 체크
-    if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+    // 현재 Lock On 중이 아니면 처리하지 않음
+    if (!bLockOn)
     {
-        UE_LOGFMT(LogLockOn, Log, "타겟 {0}이(가) 사망하여 Lock On을 취소합니다.", *TargetEnemyRef->GetName());
-        CancelLockOn();
-
         return;
     }
 
-    //@Fragile 상태(처형 가능한 상태)
-    else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
+    // 현재 Lock On 타겟과 전달받은 Target이 동일한지 확인
+    if (!TargetEnemyRef.IsValid() || TargetEnemyRef.Get() != Target)
     {
-        UE_LOGFMT(LogLockOn, Log, "타겟 {0}이(가) Fragile 상태가 되었습니다.", *TargetEnemyRef->GetName());
-
-        //@Billboard Comopnent 업데이트
-        if (LockOnBillboardComponent && !ExecutableIndicator.IsNull())
-        {
-            ExecutableIndicator.LoadSynchronous();
-            if (UTexture2D* LoadedTexture = ExecutableIndicator.Get())
-            {
-                LockOnBillboardComponent->SetSprite(LoadedTexture);
-                UE_LOGFMT(LogLockOn, Log, "Executable 인디케이터로 변경됨");
-            }
-        }
+        return;
     }
-    //@Normal 상태 태그 체크
-    else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
-    {
-        UE_LOGFMT(LogLockOn, Log, "타겟 {0}이(가) Normal 상태가 되었습니다.", *TargetEnemyRef->GetName());
 
-        //@Billboard Comopnent 업데이트
-        if (LockOnBillboardComponent && !LockOnIndicator.IsNull())
-        {
-            LockOnIndicator.LoadSynchronous();
-            if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
-            {
-                LockOnBillboardComponent->SetSprite(LoadedTexture);
-                UE_LOGFMT(LogLockOn, Log, "LockOn 인디케이터로 변경됨");
-            }
-        }
+    // 죽음 상태 태그 체크
+    if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+    {
+        UE_LOGFMT(LogLockOn, Log, "Lock On 타겟 {0}이(가) 사망하여 Lock On을 취소합니다.", *Target->GetName());
+        CancelLockOn();
     }
 }
 #pragma endregion

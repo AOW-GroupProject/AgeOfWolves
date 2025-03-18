@@ -11,15 +11,18 @@
 #include "GameFramework/PlayerController.h"
 
 #include "Components/CapsuleComponent.h"
+#include "04_Component/LockOnComponent.h"
+#include "Components/BillboardComponent.h"
 
-//@UE_LOGFMT 활용을 위한 로그 매크로 정의
 DEFINE_LOG_CATEGORY(LogObjectiveDetection)
 
 //@Defualt Setting
 #pragma region Default Setting
 UObjectiveDetectionComponent::UObjectiveDetectionComponent()
 {
-    PrimaryComponentTick.bCanEverTick = false;
+    PrimaryComponentTick.bCanEverTick = true;
+
+    SetComponentTickEnabled(true);
 
     // 기본적으로 감지할 상태 태그 설정
     StateTagsToDetect.Add(FGameplayTag::RequestGameplayTag("State.Fragile"));
@@ -30,11 +33,21 @@ UObjectiveDetectionComponent::UObjectiveDetectionComponent()
 
     // 배열 초기화
     BoundAreas.Empty();
+
+    CurrentTargetAI.Reset();
 }
 
 void UObjectiveDetectionComponent::BeginPlay()
 {
     Super::BeginPlay();
+}
+
+void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
+{
+    Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
+
+    UpdateBillboardComponent(true, true);
+    
 }
 
 void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -66,6 +79,12 @@ void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
 
     //@Bound Areas
     BoundAreas.Empty();
+
+    if (IndicatorBillboardComponent)
+    {
+        IndicatorBillboardComponent->DestroyComponent();
+        IndicatorBillboardComponent = nullptr;
+    }
 
     Super::EndPlay(EndPlayReason);
 }
@@ -160,8 +179,42 @@ void UObjectiveDetectionComponent::UnbindFromAreaEvents(AArea* Area)
     UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}와 바인딩 해제 완료", *Area->GetName());
 }
 
+void UObjectiveDetectionComponent::ExternalBindToLockOnComponent()
+{
+    //@Player Controller
+    APlayerController* PC = Cast<APlayerController>(GetOwner());
+    if (!PC)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Error, "Owner가 PlayerController가 아닙니다.");
+        return;
+    }
+
+    //@Pawn 가져오기
+    APawn* PlayerPawn = PC->GetPawn();
+    if (!PlayerPawn)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "PlayerController의 Pawn이 유효하지 않습니다.");
+        return;
+    }
+
+    //@LockOnComponent 찾기
+    ULockOnComponent* LockOnComp = PlayerPawn->FindComponentByClass<ULockOnComponent>();
+    if (!LockOnComp)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "Pawn에서 LockOnComponent를 찾을 수 없습니다.");
+        return;
+    }
+
+    //@LockOnStateChanged 델리게이트에 콜백 바인딩
+    LockOnComp->LockOnStateChanged.AddUObject(this, &UObjectiveDetectionComponent::OnLockOnStateChanged);
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "LockOnComponent의 상태 변경 이벤트에 성공적으로 바인딩되었습니다.");
+}
+
 void UObjectiveDetectionComponent::InitializeODComponent()
 {
+    //@외부 바인딩...
+
     //@Controller
     AController* Controller = Cast<AController>(GetOwner());
     if (!Controller)
@@ -224,6 +277,9 @@ void UObjectiveDetectionComponent::InitializeODComponent()
     UE_LOGFMT(LogObjectiveDetection, Log, "초기 Pawn 바인딩 완료: {0} (컴포넌트: {1})",
         *ControlledPawn->GetName(), *CapsuleComp->GetName());
 
+  
+    ExternalBindToLockOnComponent();
+
     //@Timer
     GetWorld()->GetTimerManager().SetTimer(
         CleanupTimerHandle,
@@ -234,6 +290,30 @@ void UObjectiveDetectionComponent::InitializeODComponent()
     );
 
     UE_LOGFMT(LogObjectiveDetection, Log, "정리 타이머 설정 완료 (간격: {0}초)", CleanupInterval);
+
+    //@Billboard 컴포넌트 등록
+    if (!IndicatorBillboardComponent && ControlledPawn.IsValid())
+    {
+        IndicatorBillboardComponent = NewObject<UBillboardComponent>(ControlledPawn.Get());
+        IndicatorBillboardComponent->SetupAttachment(nullptr);
+        IndicatorBillboardComponent->SetMobility(EComponentMobility::Movable);
+        IndicatorBillboardComponent->RegisterComponent();
+    }
+
+    //@Billobard Component 초기화
+    if (!LockOnIndicator.IsNull())
+    {
+        LockOnIndicator.LoadSynchronous();
+        if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
+        {
+            IndicatorBillboardComponent->SetSprite(LoadedTexture);
+            // 원래 크기의 0.1배로 설정
+            IndicatorBillboardComponent->SetRelativeScale3D(FVector(0.1f));
+        }
+    }
+
+    IndicatorBillboardComponent->SetVisibility(false);
+    IndicatorBillboardComponent->bHiddenInGame = false;
 
     // 컴포넌트 ID 로그
     UE_LOGFMT(LogObjectiveDetection, Log, "ObjectiveDetectionComponent 초기화 완료 (ID: {0})", *ComponentID.ToString());
@@ -273,6 +353,129 @@ void UObjectiveDetectionComponent::CleanupInvalidReferences()
     if (RemovedCount > 0)
     {
         UE_LOGFMT(LogObjectiveDetection, Verbose, "참조 정리 완료: 제거된 Area: {0}", RemovedCount);
+    }
+}
+
+void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly)
+{
+
+    if (!CurrentTargetAI.IsValid())
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "타겟이 없습니다");
+        return;
+    }
+
+    // 필요한 모든 컴포넌트 유효성 검사
+    if (!IndicatorBillboardComponent)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 필요한 컴포넌트가 유효하지 않음");
+        return;
+    }
+
+    // 플레이어 컨트롤러 확인
+    APlayerController* PC = Cast<APlayerController>(GetOwner());
+    if (!PC)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 소유자가 PlayerController가 아님");
+        return;
+    }
+
+    // 플레이어 폰 확인
+    APawn* PlayerPawn = PC->GetPawn();
+    if (!PlayerPawn)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: PlayerController에 연결된 Pawn이 없음");
+        return;
+    }
+
+    // 플레이어 캐릭터 확인
+    APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(PlayerPawn);
+    if (!PlayerChar)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: Pawn이 PlayerCharacter가 아님");
+        return;
+    }
+
+    // 카메라 컴포넌트 직접 접근
+    UCameraComponent* CameraComp = PlayerChar->GetCameraComponent();
+    if (!CameraComp)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 카메라 컴포넌트를 찾을 수 없음");
+        return;
+    }
+
+    // 가시성이 false인 경우 숨기고 종료
+    if (!bVisible)
+    {
+        IndicatorBillboardComponent->SetVisibility(false);
+        return;
+    }
+
+    // 타겟의 스켈레탈 메시 컴포넌트 가져오기
+    AActor* TargetActor = CurrentTargetAI.Get();
+    USkeletalMeshComponent* TargetMesh = Cast<USkeletalMeshComponent>(
+        TargetActor->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
+
+    if (!TargetMesh)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 타겟의 스켈레탈 메시를 찾을 수 없음");
+        return;
+    }
+
+    FName SpineSocketName = FName("spine_03");
+
+    // 소켓 존재 여부 확인
+    if (!TargetMesh->DoesSocketExist(SpineSocketName))
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: spine_03 소켓이 존재하지 않음");
+        return;
+    }
+
+    // 타겟의 소켓 위치 가져오기
+    FVector SocketLocation = TargetMesh->GetSocketLocation(SpineSocketName);
+
+    // 카메라 위치 가져오기
+    FVector CameraLocation = CameraComp->GetComponentLocation();
+
+    // 카메라에서 소켓으로의 방향 계산
+    FVector DirectionToSocket = (SocketLocation - CameraLocation).GetSafeNormal();
+
+    // 소켓 위치에서 카메라 방향의 반대로 약간 앞으로 이동 + 높이 오프셋 적용
+    FVector UpVector = FVector(0.0f, 0.0f, 1.0f);
+    FVector TargetBillboardLocation = SocketLocation - DirectionToSocket * BillboardForwardOffset + UpVector;
+
+    //@현재 빌보드 위치에서 목표 위치로 부드럽게 보간
+    FVector CurrentLocation = IndicatorBillboardComponent->GetComponentLocation();
+    FVector InterpolatedLocation = UKismetMathLibrary::VInterpTo(
+        CurrentLocation,
+        TargetBillboardLocation,
+        GetWorld()->GetDeltaSeconds(),
+        BillboardInterpolationSpeed
+    );
+
+    // 빌보드가 항상 카메라를 향하도록 회전 설정
+    FRotator TargetRotation = (CameraLocation - SocketLocation).Rotation();
+    FRotator CurrentRotation = IndicatorBillboardComponent->GetComponentRotation();
+    FRotator InterpolatedRotation = UKismetMathLibrary::RInterpTo(
+        CurrentRotation,
+        TargetRotation,
+        GetWorld()->GetDeltaSeconds(),
+        BillboardInterpolationSpeed
+    );
+
+    // 빌보드 위치 및 회전 설정
+    IndicatorBillboardComponent->SetWorldLocation(InterpolatedLocation);
+    IndicatorBillboardComponent->SetWorldRotation(InterpolatedRotation);
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "{0}, {1}, {2}", InterpolatedLocation.X, InterpolatedLocation.Y, InterpolatedLocation.Z);
+
+    // 크기 설정
+    IndicatorBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
+
+    // 가시성 설정 (변환만 변경하는 경우는 제외)
+    if (!bChangeTransformOnly)
+    {
+        IndicatorBillboardComponent->SetVisibility(true);
     }
 }
 #pragma endregion
@@ -335,11 +538,44 @@ void UObjectiveDetectionComponent::OnPawnEndOverlap(UPrimitiveComponent* Overlap
     UnbindFromAreaEvents(Area);
 }
 
+void UObjectiveDetectionComponent::OnLockOnStateChanged(bool bIsLockOn, AActor* TargetActor)
+{
+    // 기본 상태 변화 로그 - 이벤트 발생 시 항상 출력
+    UE_LOGFMT(LogObjectiveDetection, Log, "Lock On 상태 변경: {0}, 타겟: {1}",
+        bIsLockOn ? TEXT("활성화") : TEXT("비활성화"),
+        TargetActor ? *TargetActor->GetName() : TEXT("없음"));
+
+    // Billboard 컴포넌트 유효성 확인
+    if (!IndicatorBillboardComponent)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "Lock On 표시 실패: Billboard 컴포넌트가 유효하지 않음");
+        return;
+    }
+
+    // Lock On 상태에 따라 처리
+    if (bIsLockOn && TargetActor)
+    {
+        SetCurrentTargetAI(TargetActor);
+        UpdateBillboardComponent(true);
+    }
+    else
+    {
+        SetCurrentTargetAI(nullptr);
+        UpdateBillboardComponent(false);
+    }
+
+    // 처리 완료 로그
+    UE_LOGFMT(LogObjectiveDetection, Log, "Lock On 상태 처리 완료");
+}
+
 void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* ObjectiveActor, const FGameplayTag& StateTag, AArea* SourceArea, const FGuid& AreaID)
 {
     //@인자 유효성 검사
     if (!IsValid(ObjectiveActor) || !IsValid(SourceArea))
     {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "유효하지 않은 객체: {0} 또는 {1}",
+            ObjectiveActor ? TEXT("유효한 객체") : TEXT("유효하지 않은 객체"),
+            SourceArea ? TEXT("유효한 Area") : TEXT("유효하지 않은 Area"));
         return;
     }
 
@@ -359,7 +595,65 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
         }
     }
 
-    UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}에서 상태 변경 통지: {1} -> {2}",
+    // 현재 타겟 액터와 동일한지 확인
+    if (CurrentTargetAI.IsValid()  && CurrentTargetAI.Get() == ObjectiveActor)
+    {
+        // Fragile(처형 가능) 상태 태그 확인
+        if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
+        {
+            // Executable 인디케이터로 변경
+            if (IndicatorBillboardComponent && !ExecutableIndicator.IsNull())
+            {
+                ExecutableIndicator.LoadSynchronous();
+                if (UTexture2D* LoadedTexture = ExecutableIndicator.Get())
+                {
+                    SetIndicatorTexture(LoadedTexture);
+                    UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Fragile 상태로 변경되어 Executable 인디케이터로 변경됨", *ObjectiveActor->GetName());
+                }
+                else
+                {
+                    UE_LOGFMT(LogObjectiveDetection, Warning, "ExecutableIndicator 텍스처 로드 실패");
+                }
+            }
+        }
+        // Normal 상태 태그 확인
+        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
+        {
+            // LockOn 인디케이터로 변경
+            if (IndicatorBillboardComponent && !LockOnIndicator.IsNull())
+            {
+                LockOnIndicator.LoadSynchronous();
+                if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
+                {
+                    SetIndicatorTexture(LoadedTexture);
+                    UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경되어 LockOn 인디케이터로 변경됨", *ObjectiveActor->GetName());
+                }
+                else
+                {
+                    UE_LOGFMT(LogObjectiveDetection, Warning, "LockOnIndicator 텍스처 로드 실패");
+                }
+            }
+        }
+        //@Dead 상태 태그 확인
+        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+        {
+            // Billboard 컴포넌트 숨기기
+            if (IndicatorBillboardComponent)
+            {
+                UpdateBillboardComponent(false);
+            }
+
+            // 타겟 해제
+            SetCurrentTargetAI(nullptr);
+
+            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) 사망하여 인디케이터를 비활성화 및 타겟 해제함", *ObjectiveActor->GetName());
+        }
+    }
+
+    //@감지 가능한 AI의 상태 변화 이벤트 호출
+    DetectedAIStateChanged.Broadcast(StateTag, ObjectiveActor);
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}에서 상태 변경 처리 완료: {1} -> {2}",
         *SourceArea->GetName(), *ObjectiveActor->GetName(), *StateTag.ToString());
 }
 #pragma endregion
@@ -504,5 +798,65 @@ bool UObjectiveDetectionComponent::IsAreaBound(const FGuid& AreaID) const
 FGuid UObjectiveDetectionComponent::GetComponentID() const
 {
     return ComponentID;
+}
+
+void UObjectiveDetectionComponent::SetCurrentTargetAI(AActor* NewTargetActor)
+{
+    // 이전 타겟 저장
+    AActor* PreviousTarget = CurrentTargetAI.Get();
+
+    // 새 타겟 설정
+    CurrentTargetAI = NewTargetActor;
+
+    // 로그 출력
+    if (PreviousTarget != NewTargetActor)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Log, "타겟 변경: {0} -> {1}",
+            PreviousTarget ? *PreviousTarget->GetName() : TEXT("없음"),
+            NewTargetActor ? *NewTargetActor->GetName() : TEXT("없음"));
+    }
+}
+
+AActor* UObjectiveDetectionComponent::GetCurrentTargetAI() const
+{
+    return CurrentTargetAI.IsValid() ? CurrentTargetAI.Get() : nullptr;
+}
+
+void UObjectiveDetectionComponent::SetIndicatorTexture(UTexture2D* NewTexture)
+{
+    // Billboard 컴포넌트 유효성 확인
+    if (!IndicatorBillboardComponent || !NewTexture)
+    {
+        return;
+    }
+
+    // 텍스처 설정
+    IndicatorBillboardComponent->SetSprite(NewTexture);
+}
+
+UCameraComponent* UObjectiveDetectionComponent::GetPlayerCameraComponent() const
+{
+    // 플레이어 컨트롤러 확인
+    APlayerController* PC = Cast<APlayerController>(GetOwner());
+    if (!PC)
+    {
+        return nullptr;
+    }
+
+    // 컨트롤된 폰 확인
+    APawn* PlayerPawn = PC->GetPawn();
+    if (!PlayerPawn)
+    {
+        return nullptr;
+    }
+
+    auto PlayerCharacter = Cast<APlayerCharacter>(PlayerPawn);
+    if (!PlayerCharacter)
+    {
+        return nullptr;
+    }
+
+    // 카메라 컴포넌트 직접 찾기
+    return PlayerCharacter->GetCameraComponent();
 }
 #pragma endregion

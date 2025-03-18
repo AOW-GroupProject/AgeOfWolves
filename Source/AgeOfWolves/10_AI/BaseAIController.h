@@ -71,7 +71,7 @@ DECLARE_MULTICAST_DELEGATE(FRequestStartInitByAI)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAIAttributeSetInitialized);
 
 //@타겟 발견
-DECLARE_MULTICAST_DELEGATE_OneParam(FAILockOnStateChanged, bool)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FAILockOnStateChanged, bool, AActor*)
 
 //@전투 패턴 활성화 요청
 DECLARE_DELEGATE_RetVal(bool, FRequestStartCombatPattern)

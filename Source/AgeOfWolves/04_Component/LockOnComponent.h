@@ -17,7 +17,6 @@ class USpringArmComponent;
 class UCameraComponent;
 class UBaseInputComponent;
 struct FInputActionValue;
-class UBillboardComponent;
 class AController;
 #pragma endregion
 
@@ -31,7 +30,8 @@ class AController;
 
 //@이벤트/델리게이트
 #pragma region Delegates
-DECLARE_MULTICAST_DELEGATE_OneParam(FLockOnStateChanged, bool)
+//@락온 상태 변화 이벤트
+DECLARE_MULTICAST_DELEGATE_TwoParams(FLockOnStateChanged, bool, AActor*)
 #pragma endregion
 
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
@@ -59,6 +59,7 @@ protected:
     //@외부 바인딩
     void ExternalBindToInputComp(const AController* Controller);
     void ExternalBindToASCComp();
+    void ExternalBindToODComp(const AController* Controller);
 
 protected:
     //@초기화
@@ -75,22 +76,12 @@ protected:
 protected:
     bool FindTargetEnemy();
 
-protected:
-    //@현재 타겟의 상태 변화 이벤트 바인딩/언바인딩
-    void BindCurrentTargetStateEvents();
-    void UnbindCurrentTargetStateEvents();
-
 private:
     void UpdateSpringArmSettings(bool bIsLockingOn);
 
 protected:
     void UpdateControllerRotation(float DeltaTime);
     void UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& TargetRotation);
-
-private:
-    void UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly = false);
-    void AttachBillboardToSpineSocket(bool bVisible);
-
 
 protected:
     UPROPERTY(BlueprintReadWrite, Category = "Lock On")
@@ -122,26 +113,8 @@ protected:
 
     //@Target으로 설정한 적의 약한 참조
     UPROPERTY()
+        //TWeakObjectPtr<AActor> TargetEnemyRef;
         TWeakObjectPtr<AActor> TargetEnemyRef;
-
-protected:
-    UPROPERTY()
-        UBillboardComponent* LockOnBillboardComponent;
-
-    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
-        TSoftObjectPtr<UTexture2D> LockOnIndicator;
-
-    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
-        TSoftObjectPtr<UTexture2D> ExecutableIndicator;
-
-    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
-        float BillboardForwardOffset = 100.0f;
-
-    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
-        float TextureScale = 0.05f;
-
-    UPROPERTY(EditDefaultsOnly, Category = "락온 | 효과")
-        float BillboardInterpolationSpeed = 30.0f;
 #pragma endregion
 
 //@Delegates
@@ -165,7 +138,7 @@ protected:
 protected:
     //@주변 적들 목록에 추가된 적들의 상태 변화 이벤트를 구독하는 콜백
     UFUNCTION()
-        void OnTargetStateChanged(AActor* Target, const FGameplayTag& StateTag);
+        void OnDetectedAIStateChanged(const FGameplayTag& StateTag, AActor* Target);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

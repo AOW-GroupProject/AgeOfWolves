@@ -52,7 +52,8 @@ protected:
     //~AActor Interface
     virtual void PreInitializeComponents() override;
     virtual void PostInitializeComponents() override;
-    virtual void BeginPlay() override; // Load
+    virtual void BeginPlay() override;
+    virtual void Tick(float DeltaTime) override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     //~End of AActor
 
@@ -84,9 +85,11 @@ private:
     //@UI 컴포넌트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
         UUIComponent* UIComponent;
+    
     //@입력 컴포넌트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
         UBaseInputComponent* BaseInputComponent;
+
     //@주변 목표물 인식 컴포넌트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
         UObjectiveDetectionComponent* ODComponent;
@@ -110,6 +113,8 @@ public:
         UUIComponent* GetUIComponent() const;
     UFUNCTION(BlueprintCallable, Category = "Input")
         UBaseInputComponent* GetBaseInputComponent() const;
+    UFUNCTION(BlueprintCallable, Category = "Objective Detection")
+        UObjectiveDetectionComponent* GetODComponent() const;
 #pragma endregion
 
 };

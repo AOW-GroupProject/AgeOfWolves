@@ -14,6 +14,8 @@ DECLARE_LOG_CATEGORY_EXTERN(LogObjectiveDetection, Log, All)
 class ABaseAIController;
 class APlayerController;
 class UCapsuleComponent;
+class UBillboardComponent;
+class UTexture2D; 
 #pragma endregion
 
 //@열거형
@@ -76,13 +78,13 @@ public:
         return !(*this == Other);
     }
 
-    // Area 유효성 확인
+    //@Area 유효성 확인
     bool IsValid() const
     {
         return AreaRef.IsValid() && AreaID.IsValid();
     }
 
-    // 업데이트 시간 갱신
+    //@업데이트 시간 갱신
     void UpdateTime(float NewTime)
     {
         LastUpdateTime = NewTime;
@@ -92,6 +94,8 @@ public:
 
 //@이벤트/델리게이트
 #pragma region Delegates
+//@시야 안에 있는 AI의 상태 변화 이벤트
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDetectedAIStateChanged, const FGameplayTag&, const AActor*)
 #pragma endregion
 
 /*
@@ -119,6 +123,7 @@ public:
 protected:
     virtual void BeginPlay() override;
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
+    virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
 protected:
     //@내부 바인딩
@@ -130,6 +135,8 @@ protected:
 
     void ExternalBindToArea(AArea* Area);
     void UnbindFromAreaEvents(AArea* Area);
+
+    void ExternalBindToLockOnComponent();
 
 protected:
     //@초기화
@@ -146,6 +153,38 @@ protected:
 protected:
     //@유효하지 않은 Area들 정리
     void CleanupInvalidReferences();
+
+protected:
+    // Billboard 컴포넌트 업데이트 (위치, 회전, 가시성)
+    void UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly = false);
+
+protected:
+    UPROPERTY()
+        UBillboardComponent* IndicatorBillboardComponent;
+
+    // LockOn 인디케이터 텍스처
+    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
+        TSoftObjectPtr<UTexture2D> LockOnIndicator;
+
+    // Executable(처형 가능) 인디케이터 텍스처
+    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
+        TSoftObjectPtr<UTexture2D> ExecutableIndicator;
+
+    //@현재 타겟 액터 참조
+    UPROPERTY()
+        TWeakObjectPtr<AActor> CurrentTargetAI;
+
+    // 텍스처 크기 스케일
+    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
+        float TextureScale = 0.1f;
+
+    // 빌보드 전방 오프셋 (타겟으로부터 얼마나 앞에 표시할지)
+    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
+        float BillboardForwardOffset = 100.0f;
+
+    // 빌보드 보간 속도
+    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
+        float BillboardInterpolationSpeed = 10.0f;
 
 protected:
     //@바인딩된 Area 배열
@@ -173,6 +212,9 @@ protected:
 
 //@Delegates
 #pragma region Delegates
+public:
+    //@목표 AI의 상태 변화 이벤트
+    FDetectedAIStateChanged DetectedAIStateChanged;
 #pragma endregion
 
 //@Callbacks
@@ -189,6 +231,11 @@ protected:
         void OnPawnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
             UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 
+protected:
+    UFUNCTION()
+        void OnLockOnStateChanged(bool bIsLockOn, AActor* TargetActor = nullptr);
+
+protected:
     //@목표물 상태 변경 통지 (Area에서 호출)
     UFUNCTION()
         void OnAreaObjectiveStateChanged(AActor* ObjectiveActor, const FGameplayTag& StateTag, AArea* SourceArea, const FGuid& AreaID);
@@ -232,6 +279,19 @@ public:
     //@컴포넌트 고유 ID 가져오기
     UFUNCTION(BlueprintCallable, Category = "Objective Detection")
         FGuid GetComponentID() const;
+
+protected:
+    // 현재 타겟 액터 설정
+    void SetCurrentTargetAI(AActor* NewTargetActor);
+
+    // 현재 타겟 액터 가져오기
+    AActor* GetCurrentTargetAI() const;
+
+    // 인디케이터 텍스처 변경
+    void SetIndicatorTexture(UTexture2D* NewTexture);
+
+    // 카메라 컴포넌트 가져오기 (플레이어용)
+    UCameraComponent* GetPlayerCameraComponent() const;
 
 private:
     // 컴포넌트 고유 ID
