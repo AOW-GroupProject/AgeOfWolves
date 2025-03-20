@@ -174,17 +174,17 @@ protected:
     UPROPERTY()
         TWeakObjectPtr<AActor> CurrentTargetAI;
 
-    // 텍스처 크기 스케일
+    //@텍스처 크기 스케일, 기본 0.05 스케일
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
-        float TextureScale = 0.1f;
+        float TextureScale = 0.05f;
 
-    // 빌보드 전방 오프셋 (타겟으로부터 얼마나 앞에 표시할지)
+    //@빌보드 전방 오프셋 (타겟으로부터 얼마나 앞에 표시할지)
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
         float BillboardForwardOffset = 100.0f;
 
-    // 빌보드 보간 속도
+    //@빌보드 보간 속도, 기본 30
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
-        float BillboardInterpolationSpeed = 10.0f;
+        float BillboardInterpolationSpeed = 30.0f;
 
 protected:
     //@바인딩된 Area 배열

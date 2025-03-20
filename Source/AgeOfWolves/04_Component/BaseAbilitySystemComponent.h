@@ -60,6 +60,7 @@ class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemCompone
 	friend class UBaseGameplayAbility;
 	friend class UANS_AllowChainAction;
 	friend class ABaseAIController;
+	friend class APlayerStateBase;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -75,6 +76,7 @@ protected:
 protected:
 	//@외부 바인딩
 	void ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC);
+	void ExternalBindToInteractionComp(AController* Controller);
 
 protected:
 	//@초기화
@@ -200,6 +202,10 @@ protected:
 	//@태그 기반 어빌리티 활성화 요청
 	UFUNCTION()
 		bool OnRequestActivateAbilityBlockUnitByAI(const FGameplayTag& AbilityTag);
+
+protected:
+	UFUNCTION()
+		void OnPotentialInteractionChanged(AActor* TargetActor, const FPotentialInteraction& Interaction);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

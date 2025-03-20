@@ -75,6 +75,9 @@ protected:
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "팀 설정")
+		FGameplayTag CharacterTag;
+
+	UPROPERTY(EditDefaultsOnly, Category = "팀 설정")
 		FGenericTeamId TeamId;
 
 private:
@@ -105,21 +108,25 @@ public:
 		UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpComponent; }
 
 public:
+	FORCEINLINE UStaticMeshComponent* GetWeaponMesh() { return KatanaMesh; }
+	FORCEINLINE UStaticMeshComponent* GetSayaMesh() { return SayaMesh; }
+	FORCEINLINE UStaticMeshComponent* GetFullWeaponMesh() { return FullMesh; }
+	FORCEINLINE UNiagaraComponent* GetSkeletalFXComponent() { return SkeletalFXComponent; }
+
+public:
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
 
 public:
 	void SetAbilitySystemComponent(UAbilitySystemComponent* ASC);
+
+public:
+	FORCEINLINE FGameplayTag GetCharacterTag() const { return CharacterTag; }
+
 	void SetTeamId(const FGenericTeamId& NewTeamId)
 	{
 		TeamId = NewTeamId;
 	}
-
-public:
-	FORCEINLINE UStaticMeshComponent* GetWeaponMesh() { return KatanaMesh; }
-	FORCEINLINE UStaticMeshComponent* GetSayaMesh() { return SayaMesh; }
-	FORCEINLINE UStaticMeshComponent* GetFullWeaponMesh() { return FullMesh; }
-	FORCEINLINE UNiagaraComponent* GetSkeletalFXComponent() { return SkeletalFXComponent; }
 #pragma endregion
 };
 

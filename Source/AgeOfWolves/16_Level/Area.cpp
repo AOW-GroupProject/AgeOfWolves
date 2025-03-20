@@ -194,7 +194,7 @@ void AArea::RegisterAI(AActor* AIActor)
     TWeakObjectPtr<AActor> AIActorPtr(AIActor);
     if (AIInfoMap.Contains(AIActorPtr))
     {
-        UE_LOGFMT(LogArea, Verbose, "Area {0}: 이미 등록된 AI {1}", *AreaID.ToString(), *AIActor->GetName());
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 이미 등록된 AI {1}", *AreaID.ToString(), *AIActor->GetName());
         return;
     }
 
@@ -282,7 +282,7 @@ void AArea::RegisterPlayer(APlayerCharacter* Player)
     if (PlayerBindings.Contains(PlayerPtr))
     {
         PlayerBindings[PlayerPtr].LastExitTime = 0.0f;
-        UE_LOGFMT(LogArea, Verbose, "Area {0}: 플레이어 {1} 바인딩 갱신",
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 플레이어 {1} 바인딩 갱신",
             *AreaID.ToString(), *Player->GetName());
         return;
     }

@@ -27,6 +27,7 @@ UObjectiveDetectionComponent::UObjectiveDetectionComponent()
     // 기본적으로 감지할 상태 태그 설정
     StateTagsToDetect.Add(FGameplayTag::RequestGameplayTag("State.Fragile"));
     StateTagsToDetect.Add(FGameplayTag::RequestGameplayTag("State.Dead"));
+    StateTagsToDetect.Add(FGameplayTag::RequestGameplayTag("State.Normal"));
 
     // 컴포넌트 고유 ID 생성
     ComponentID = FGuid::NewGuid();
@@ -46,7 +47,11 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    UpdateBillboardComponent(true, true);
+    //@Billboard, Lock On Target
+    if(!!IndicatorBillboardComponent && !!CurrentTargetAI.IsValid())
+    {
+        UpdateBillboardComponent(true, true);
+    }
     
 }
 
@@ -139,7 +144,7 @@ void UObjectiveDetectionComponent::ExternalBindToArea(AArea* Area)
     {
         if (AreaInfo.AreaID == AreaID)
         {
-            UE_LOGFMT(LogObjectiveDetection, Verbose, "이미 바인딩된 Area: {0}", *Area->GetName());
+            UE_LOGFMT(LogObjectiveDetection, Warning, "이미 바인딩된 Area: {0}", *Area->GetName());
             return;
         }
     }
@@ -352,27 +357,26 @@ void UObjectiveDetectionComponent::CleanupInvalidReferences()
 
     if (RemovedCount > 0)
     {
-        UE_LOGFMT(LogObjectiveDetection, Verbose, "참조 정리 완료: 제거된 Area: {0}", RemovedCount);
+        UE_LOGFMT(LogObjectiveDetection, Log, "참조 정리 완료: 제거된 Area: {0}", RemovedCount);
     }
 }
 
 void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly)
 {
-
+    //@락온 타겟
     if (!CurrentTargetAI.IsValid())
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "타겟이 없습니다");
         return;
     }
 
-    // 필요한 모든 컴포넌트 유효성 검사
+    //@Billobard
     if (!IndicatorBillboardComponent)
     {
         UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 필요한 컴포넌트가 유효하지 않음");
         return;
     }
 
-    // 플레이어 컨트롤러 확인
+    //@Player Controller
     APlayerController* PC = Cast<APlayerController>(GetOwner());
     if (!PC)
     {
@@ -380,7 +384,7 @@ void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool 
         return;
     }
 
-    // 플레이어 폰 확인
+    //@Pawn
     APawn* PlayerPawn = PC->GetPawn();
     if (!PlayerPawn)
     {
@@ -388,7 +392,7 @@ void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool 
         return;
     }
 
-    // 플레이어 캐릭터 확인
+    //@Player Character
     APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(PlayerPawn);
     if (!PlayerChar)
     {
@@ -396,7 +400,7 @@ void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool 
         return;
     }
 
-    // 카메라 컴포넌트 직접 접근
+    //@Camera Comp
     UCameraComponent* CameraComp = PlayerChar->GetCameraComponent();
     if (!CameraComp)
     {
@@ -404,15 +408,16 @@ void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool 
         return;
     }
 
-    // 가시성이 false인 경우 숨기고 종료
+    //@가시성
     if (!bVisible)
     {
         IndicatorBillboardComponent->SetVisibility(false);
         return;
     }
 
-    // 타겟의 스켈레탈 메시 컴포넌트 가져오기
+    //@Actor
     AActor* TargetActor = CurrentTargetAI.Get();
+    //@Skeletal Mesh
     USkeletalMeshComponent* TargetMesh = Cast<USkeletalMeshComponent>(
         TargetActor->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
 
@@ -422,6 +427,7 @@ void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool 
         return;
     }
 
+    //@Skeletal Mesh의 Socket 위치
     FName SpineSocketName = FName("spine_03");
 
     // 소켓 존재 여부 확인
@@ -467,8 +473,6 @@ void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool 
     IndicatorBillboardComponent->SetWorldLocation(InterpolatedLocation);
     IndicatorBillboardComponent->SetWorldRotation(InterpolatedRotation);
 
-    UE_LOGFMT(LogObjectiveDetection, Log, "{0}, {1}, {2}", InterpolatedLocation.X, InterpolatedLocation.Y, InterpolatedLocation.Z);
-
     // 크기 설정
     IndicatorBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
 
@@ -489,7 +493,7 @@ void UObjectiveDetectionComponent::OnPawnBeginOverlap(UPrimitiveComponent* Overl
     // 충돌한 액터가 유효한지 확인
     if (!IsValid(OtherActor))
     {
-        UE_LOGFMT(LogObjectiveDetection, Verbose, "오버랩 이벤트: 유효하지 않은 액터");
+        UE_LOGFMT(LogObjectiveDetection, Warning, "오버랩 이벤트: 유효하지 않은 액터");
         return;
     }
 
@@ -500,7 +504,7 @@ void UObjectiveDetectionComponent::OnPawnBeginOverlap(UPrimitiveComponent* Overl
     if (!Area)
     {
         // Area가 아닌 경우 무시
-        UE_LOGFMT(LogObjectiveDetection, Verbose, "오버랩 이벤트: {0}은(는) Area가 아님 (클래스: {1})",
+        UE_LOGFMT(LogObjectiveDetection, Warning, "오버랩 이벤트: {0}은(는) Area가 아님 (클래스: {1})",
             *OtherActor->GetName(), *OtherActor->GetClass()->GetName());
         return;
     }
@@ -517,7 +521,7 @@ void UObjectiveDetectionComponent::OnPawnEndOverlap(UPrimitiveComponent* Overlap
     // 충돌한 액터가 유효한지 확인
     if (!IsValid(OtherActor))
     {
-        UE_LOGFMT(LogObjectiveDetection, Verbose, "오버랩 종료 이벤트: 유효하지 않은 액터");
+        UE_LOGFMT(LogObjectiveDetection, Warning, "오버랩 종료 이벤트: 유효하지 않은 액터");
         return;
     }
 
@@ -528,7 +532,7 @@ void UObjectiveDetectionComponent::OnPawnEndOverlap(UPrimitiveComponent* Overlap
     if (!Area)
     {
         // Area가 아닌 경우 무시
-        UE_LOGFMT(LogObjectiveDetection, Verbose, "오버랩 종료 이벤트: {0}은(는) Area가 아님", *OtherActor->GetName());
+        UE_LOGFMT(LogObjectiveDetection, Warning, "오버랩 종료 이벤트: {0}은(는) Area가 아님", *OtherActor->GetName());
         return;
     }
 
@@ -545,31 +549,33 @@ void UObjectiveDetectionComponent::OnLockOnStateChanged(bool bIsLockOn, AActor* 
         bIsLockOn ? TEXT("활성화") : TEXT("비활성화"),
         TargetActor ? *TargetActor->GetName() : TEXT("없음"));
 
-    // Billboard 컴포넌트 유효성 확인
+    //@Billboard 컴포넌트 유효성 확인
     if (!IndicatorBillboardComponent)
     {
         UE_LOGFMT(LogObjectiveDetection, Warning, "Lock On 표시 실패: Billboard 컴포넌트가 유효하지 않음");
         return;
     }
 
-    // Lock On 상태에 따라 처리
+    //@Lock On 상태에 따른 처리
     if (bIsLockOn && TargetActor)
     {
+        //@Lock On 활성화 시 타겟 설정 및 표시 업데이트
         SetCurrentTargetAI(TargetActor);
         UpdateBillboardComponent(true);
     }
-    else
+    else if (!bIsLockOn)
     {
+        //@Lock On 비활성화 시 타겟 제거 및 표시 숨김
         SetCurrentTargetAI(nullptr);
         UpdateBillboardComponent(false);
     }
 
-    // 처리 완료 로그
     UE_LOGFMT(LogObjectiveDetection, Log, "Lock On 상태 처리 완료");
 }
 
 void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* ObjectiveActor, const FGameplayTag& StateTag, AArea* SourceArea, const FGuid& AreaID)
 {
+
     //@인자 유효성 검사
     if (!IsValid(ObjectiveActor) || !IsValid(SourceArea))
     {
@@ -590,18 +596,18 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
     {
         if (!IsActorInCameraView(ObjectiveActor))
         {
-            UE_LOGFMT(LogObjectiveDetection, Verbose, "시야 밖 목표물 무시: {0}", *ObjectiveActor->GetName());
+            UE_LOGFMT(LogObjectiveDetection, Warning, "시야 밖 목표물 무시: {0}", *ObjectiveActor->GetName());
             return;
         }
     }
 
-    // 현재 타겟 액터와 동일한지 확인
+    //@현재 타겟 액터와 동일한지 확인
     if (CurrentTargetAI.IsValid()  && CurrentTargetAI.Get() == ObjectiveActor)
     {
-        // Fragile(처형 가능) 상태 태그 확인
+        //@Fragile(처형 가능) 상태 태그 확인
         if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
         {
-            // Executable 인디케이터로 변경
+            //@Executable 인디케이터로 변경
             if (IndicatorBillboardComponent && !ExecutableIndicator.IsNull())
             {
                 ExecutableIndicator.LoadSynchronous();
@@ -616,7 +622,7 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
                 }
             }
         }
-        // Normal 상태 태그 확인
+        //@Normal 상태 태그 확인
         else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
         {
             // LockOn 인디케이터로 변경
@@ -831,6 +837,7 @@ void UObjectiveDetectionComponent::SetIndicatorTexture(UTexture2D* NewTexture)
     }
 
     // 텍스처 설정
+    IndicatorBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
     IndicatorBillboardComponent->SetSprite(NewTexture);
 }
 

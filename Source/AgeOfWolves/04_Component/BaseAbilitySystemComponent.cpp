@@ -2,36 +2,42 @@
 #include "Logging/StructuredLog.h"
 
 #include "10_AI/BaseAIController.h"
+#include "03_Player/BasePlayerController.h"
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/AIAbilitySequencerComponent.h"
+#include "04_Component/InteractionComponent.h"
 
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 
 DEFINE_LOG_CATEGORY(LogASC)
-// UE_LOGFMT(LogASC, Warning, "");
 
 //@Defualt Setting
 #pragma region Default Setting
 UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
 {
+	//@Input Handles...
 	InputPressedSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
 	InputHeldSpecHandles.Reset();
 
+	//@Chain Window 활성화
 	bChainWindowActive = false;
+	//@Chain Mapping 목록
 	AllowedChainMappings.Empty();
 }
 
 void UBaseAbilitySystemComponent::ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC)
 {
+	//@AIC
 	if (!BaseAIC)
 	{
 		UE_LOGFMT(LogASC, Warning, "바인딩 실패: AI 컨트롤러가 유효하지 않음");
 		return;
 	}
 
+	//@AI Sequencer
 	auto AISequencer = BaseAIC->FindComponentByClass<UAIAbilitySequencerComponent>();
 	if (!AISequencer)
 	{
@@ -45,9 +51,31 @@ void UBaseAbilitySystemComponent::ExternalBindToAIAbilitySequencer(ABaseAIContro
 	UE_LOGFMT(LogASC, Log, "AI Ability Sequencer 컴포넌트와 바인딩 완료");
 }
 
+void UBaseAbilitySystemComponent::ExternalBindToInteractionComp(AController* Controller)
+{
+	auto PC = Cast<ABasePlayerController>(Controller);
+	if (!PC)
+	{
+		UE_LOGFMT(LogASC, Warning, "{0}: 상호작용 컴포넌트 바인딩 실패: 컨트롤러가 BasePlayerController가 아님", __FUNCDNAME__);
+		return;
+	}
+
+	auto InteractionComp = PC->GetInteractionComponent();
+	if (!InteractionComp)
+	{
+		UE_LOGFMT(LogASC, Warning, "{0}: 상호작용 컴포넌트 바인딩 실패: 유효한 InteractionComponent가 없음", __FUNCDNAME__);
+		return;
+	}
+
+	//@외부 바인딩...
+	InteractionComp->PotentialInteractionChanged.AddDynamic(this, &UBaseAbilitySystemComponent::OnPotentialInteractionChanged);
+
+	UE_LOGFMT(LogASC, Log, "{0}: InteractionComponent와 바인딩 성공 - PC: {1}",
+		__FUNCDNAME__, *PC->GetName());
+}
+
 void UBaseAbilitySystemComponent::InitializeComponent()
 {
-	Super::InitializeComponent();
 
 	// @Ability 생명 주기 이벤트에 커스텀 콜백 함수 등록
 	//@어빌리티 활성화 이벤트
@@ -59,6 +87,8 @@ void UBaseAbilitySystemComponent::InitializeComponent()
 		this,
 		&UBaseAbilitySystemComponent::OnGameplayEffectApplied
 	);
+
+	Super::InitializeComponent();
 }
 #pragma endregion
 
@@ -775,6 +805,40 @@ bool UBaseAbilitySystemComponent::OnRequestActivateAbilityBlockUnitByAI(const FG
 
 	UE_LOGFMT(LogASC, Log, "어빌리티 활성화 성공 - Tag: {0}", *AbilityTag.ToString());
 	return true;
+}
+
+void UBaseAbilitySystemComponent::OnPotentialInteractionChanged(AActor* TargetActor, const FPotentialInteraction& Interaction)
+{
+	// 상호작용 객체의 유효성 체크
+	if (!Interaction.ObjectTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "{0}: 유효하지 않은 상호작용 정보 수신", __FUNCDNAME__);
+		return;
+	}
+
+	//@상호작용 허용 여부 확인
+	bool bIsInteractionAvailable = Interaction.bAdditionalConditionsMet;
+
+	//@새 상호작용 허용
+	if (bIsInteractionAvailable)
+	{
+		UE_LOGFMT(LogASC, Log, "{0}: 상호작용 활성화 - 액터: {1} | 태그: {2} | 타입: {3} | 이벤트: {4}",
+			__FUNCDNAME__,
+			TargetActor ? *TargetActor->GetName() : TEXT("없음"),
+			*Interaction.ObjectTag.ToString(),
+			static_cast<uint8>(Interaction.InteractionType),
+			*Interaction.EventTag.ToString());
+
+	}
+	//@상호작용 취소
+	else
+	{
+		UE_LOGFMT(LogASC, Log, "{0}: 상호작용 비활성화 - 액터: {1} | 태그: {2} | 타입: {3}",
+			__FUNCDNAME__,
+			TargetActor ? *TargetActor->GetName() : TEXT("없음"),
+			*Interaction.ObjectTag.ToString(),
+			static_cast<uint8>(Interaction.InteractionType));
+	}
 }
 #pragma endregion
 

@@ -9,6 +9,7 @@
 #include "04_Component/UIComponent.h"
 #include "04_Component/BaseInputComponent.h"
 #include "04_Component/ObjectiveDetectionComponent.h"
+#include "04_Component/InteractionComponent.h"
 
 DEFINE_LOG_CATEGORY(LogBasePC)
 
@@ -19,9 +20,11 @@ ABasePlayerController::ABasePlayerController(const FObjectInitializer& ObjectIni
 {
     PrimaryActorTick.bCanEverTick = true;
 
+    //@Components...
 	UIComponent = CreateDefaultSubobject<UUIComponent>(TEXT("UI Component"));
     InputComponent = CreateDefaultSubobject<UBaseInputComponent>(TEXT("Input Component"));
     ODComponent = CreateDefaultSubobject< UObjectiveDetectionComponent>(TEXT("Objective Detection Component"));
+    InteractComponent = CreateDefaultSubobject<UInteractionComponent>(TEXT("Interaction Component"));
 }
 
 void ABasePlayerController::PreInitializeComponents()
@@ -137,6 +140,11 @@ void ABasePlayerController::InitializePlayerController()
     {
         RequestStartInitByPC.AddUFunction(ODComponent, "InitializeODComponent");
     }
+    //@Interaction Component
+    if (InteractComponent)
+    {
+        RequestStartInitByPC.AddUFunction(InteractComponent, "InitializeInteractionComp");
+    }
 }
 #pragma endregion
 
@@ -201,5 +209,15 @@ UObjectiveDetectionComponent* ABasePlayerController::GetODComponent() const
     }
 
     return ODComponent;
+}
+
+UInteractionComponent* ABasePlayerController::GetInteractionComponent() const
+{
+    if (!InteractComponent)
+    {
+        return nullptr;
+    }
+
+    return InteractComponent;
 }
 #pragma endregion

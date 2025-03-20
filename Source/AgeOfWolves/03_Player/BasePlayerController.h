@@ -13,6 +13,7 @@ class APawn;
 class UUIComponent;
 class UBaseInputComponent;
 class UObjectiveDetectionComponent;
+class UInteractionComponent;
 #pragma endregion
 
 //@열거형
@@ -93,6 +94,10 @@ private:
     //@주변 목표물 인식 컴포넌트
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
         UObjectiveDetectionComponent* ODComponent;
+
+    //@상호 작용 컴포넌트
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Components", meta = (AllowPrivateAccess = "true"))
+        UInteractionComponent* InteractComponent;
 #pragma endregion
 
 //@Delegates
@@ -115,6 +120,8 @@ public:
         UBaseInputComponent* GetBaseInputComponent() const;
     UFUNCTION(BlueprintCallable, Category = "Objective Detection")
         UObjectiveDetectionComponent* GetODComponent() const;
+    UFUNCTION(BlueprintCallable, Category = "Interaction")
+        UInteractionComponent* GetInteractionComponent() const;
 #pragma endregion
 
 };

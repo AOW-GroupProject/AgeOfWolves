@@ -20,7 +20,7 @@ class UObjectiveDetectionComponent;
 #pragma endregion
 
 //@구조체
-#pragma region Structs
+#pragma region StructsOW
 /*
 *   @FAreaAIInfo
 * 

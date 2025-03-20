@@ -15,9 +15,6 @@
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 
-// @목적 : 로그 메크로입니다. 복사+붙여넣기 활용
-// UE_LOGFMT(LogPlayerStateBase, Log, "");
-
 //@Defualt Setting
 #pragma region Default Setting
 APlayerStateBase::APlayerStateBase()
@@ -107,6 +104,9 @@ void APlayerStateBase::InitializePlayerState()
         UE_LOGFMT(LogPlayerStateBase, Warning, "Pawn이 유효하지 않음");
         return;
     }
+
+    //@ASC의 외부 바인딩...
+    AbilitySystemComponent->ExternalBindToInteractionComp(Controller);
 
     // AbilityManagerSubsystem으로부터 AbilitySet 가져오기
     UBaseAbilitySet* SetToGrant = AbilityManagerSubsystemRef->GetAbilitySet(CharacterTag);
