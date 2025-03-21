@@ -6,7 +6,6 @@
 
 #include "LockOnComponent.generated.h"
 
-//@UE_LOGFMT 활용을 위한 로그 매크로 선언
 DECLARE_LOG_CATEGORY_EXTERN(LogLockOn, Log, All)
 
 //@전방 선언

@@ -4,6 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "02_AbilitySystem/02_GameplayAbility/BaseGameplayAbility.h"
+#include "04_Component/InteractionComponent.h"
 
 #include "BaseAbilitySystemComponent.generated.h"
 
@@ -13,8 +14,9 @@ DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 #pragma region Forward Declaration
 class UANS_AllowChainAction;
 class UBaseAttributeSet;
-struct FDeathInformation;
 class ABaseAIController;
+
+struct FDeathInformation;
 #pragma endregion
 
 //@열거형
@@ -44,6 +46,13 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionFinished, FGameplayTag, ChainActio
 
 //@상태 변화 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FCharacterStateEventOnGameplay, AActor*, const FGameplayTag&)
+
+//@상호작용 허용 이벤트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionAvailable, AActor*, InteractableActor, const FPotentialInteraction&, PotentialInteraction);
+// 상호작용 불가능 이벤트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionUnavailable, AActor*, InteractableActor, const FPotentialInteraction&, PotentialInteraction);
+// 상호작용 완료 이벤트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionCompleted, AActor*, InteractableActor, const FPotentialInteraction&, CompletedInteraction);
 #pragma endregion
 
 /**	
@@ -130,6 +139,17 @@ protected:
 	void EndChainWindow(const FGameplayEventData* Payload);
 
 protected:
+	// 상호작용 시스템 시작
+	void StartInteractionWindow(AActor* TargetActor, const FPotentialInteraction& Interaction);
+
+	// 상호작용 시스템 종료
+	UFUNCTION(BlueprintCallable, Category = "Interaction System")
+		void EndInteractionWindow(bool bSuccess = false);
+
+	// 상호작용 이벤트 처리
+	void HandleInteractionEvent(const FGameplayTag& EventTag);
+
+protected:
 	UPROPERTY(EditAnywhere)
 		TObjectPtr<UAbilityTagRelationshipMapping> AbilityTagRelationshipMapping;
 
@@ -157,6 +177,19 @@ protected:
 	TArray<FChainEventMapping> AllowedChainEventMappings;
 	//@다음 실행할 체인 액션의 이벤트 태그
 	FGameplayTag ChainActionEventTag;
+
+protected:
+	//@현재 가능한 상호작용 정보
+	UPROPERTY()
+		FPotentialInteraction CurrentPotentialInteraction;
+
+	//@상호작용 가능 상태
+	UPROPERTY()
+		bool bInteractionAvailable;
+
+	//@상호작용 타겟 액터
+	UPROPERTY()
+		TWeakObjectPtr<AActor> InteractionTargetActor;
 #pragma endregion
 
 //@Delegates
@@ -182,6 +215,17 @@ public:
 public:
 	//@캐릭터의 게임 플레이 과정에서 발생하는 주요 이벤트
 	FCharacterStateEventOnGameplay CharacterStateEventOnGameplay;
+
+public:
+	// 상호작용 이벤트 델리게이트
+	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
+		FInteractionAvailable InteractionAvailable;
+
+	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
+		FInteractionUnavailable InteractionUnavailable;
+
+	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
+		FInteractionCompleted InteractionCompleted;
 #pragma endregion
 
 //@Callbacks
@@ -225,5 +269,10 @@ public:
 public:
 	FORCEINLINE bool IsChainWindowActive() const { return bChainWindowActive; }
 	FORCEINLINE bool CanChainAction() const { return bCanChainAction; }
+
+public:
+	FORCEINLINE bool IsInteractionAvailable() const { return bInteractionAvailable; }
+	FORCEINLINE const FPotentialInteraction& GetCurrentPotentialInteraction() const { return CurrentPotentialInteraction; }
+	FORCEINLINE AActor* GetInteractionTargetActor() const { return InteractionTargetActor.Get(); }
 #pragma endregion
 };

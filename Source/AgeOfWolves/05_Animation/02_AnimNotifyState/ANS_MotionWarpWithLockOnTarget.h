@@ -7,33 +7,33 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogANS_MotionWarpWithLockOnTarget, Log, All)
 
-//@Àü¹æ ¼±¾ğ
+//@ì „ë°© ì„ ì–¸
 #pragma region Forward Declaration
 #pragma endregion
 
-//@¿­°ÅÇü
+//@ì—´ê±°í˜•
 #pragma region Enums
 #pragma endregion
 
-//@±¸Á¶Ã¼
+//@êµ¬ì¡°ì²´
 #pragma region Structs
 #pragma endregion
 
-//@ÀÌº¥Æ®/µ¨¸®°ÔÀÌÆ®
+//@ì´ë²¤íŠ¸/ë¸ë¦¬ê²Œì´íŠ¸
 #pragma region Delegates
 #pragma endregion
 
 /**
  *	@UANS_MotionWarpWithLockOnTarget
  *
- *	Lock On Target¿¡ Motion Warp ÇÏ±â À§ÇØ È°¿ëµÇ´Â ANS¸¦ ±¸ÇöÇÕ´Ï´Ù.
+ *	Lock On Targetì— Motion Warp í•˜ê¸° ìœ„í•´ í™œìš©ë˜ëŠ” ANSë¥¼ êµ¬í˜„í•©ë‹ˆë‹¤.
  */
-	UCLASS()
-	class AGEOFWOLVES_API UANS_MotionWarpWithLockOnTarget : public UAnimNotifyState_MotionWarping
+UCLASS()
+class AGEOFWOLVES_API UANS_MotionWarpWithLockOnTarget : public UAnimNotifyState_MotionWarping
 {
 	GENERATED_BODY()
 
-//@Ä£Ãß Å¬·¡½º
+//@ì¹œì¶” í´ë˜ìŠ¤
 #pragma region Friend Class
 #pragma endregion
 

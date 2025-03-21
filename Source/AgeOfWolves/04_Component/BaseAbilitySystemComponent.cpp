@@ -5,7 +5,6 @@
 #include "03_Player/BasePlayerController.h"
 #include "03_Player/PlayerStateBase.h"
 #include "04_Component/AIAbilitySequencerComponent.h"
-#include "04_Component/InteractionComponent.h"
 
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
@@ -26,6 +25,10 @@ UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitialize
 	bChainWindowActive = false;
 	//@Chain Mapping 목록
 	AllowedChainMappings.Empty();
+
+	//@상호작용 시스템 초기화
+	bInteractionAvailable = false;
+	InteractionTargetActor = nullptr;
 }
 
 void UBaseAbilitySystemComponent::ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC)
@@ -214,6 +217,7 @@ void UBaseAbilitySystemComponent::ClearAbilityInput()
 
 void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
 {
+	//@Input Tag
 	if (!InputTag.IsValid())
 	{
 		UE_LOGFMT(LogASC, Warning, "입력 Tag가 유효하지 않음");
@@ -221,6 +225,20 @@ void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& Inp
 	}
 
 	UE_LOGFMT(LogASC, Log, "입력된 Input Tag: {0}", *InputTag.ToString());
+
+	//@상호작용
+	if (bInteractionAvailable && InteractionTargetActor.IsValid())
+	{
+		if (CurrentPotentialInteraction.InputTag == InputTag)
+		{
+			UE_LOGFMT(LogASC, Log, "상호작용 입력 태그 매칭 성공 - 입력: {0}",
+				*InputTag.ToString());
+
+			//@상호 작용 성공
+			EndInteractionWindow(true);
+			return;
+		}
+	}
 
 	//@Chain System 활성화 중이 아니면 일반 입력 처리
 	if (!bChainWindowActive || bCanChainAction)
@@ -658,6 +676,93 @@ Cleanup:
 
 	UE_LOGFMT(LogASC, Log, "체인 윈도우 종료 완료");
 }
+
+void UBaseAbilitySystemComponent::StartInteractionWindow(AActor* TargetActor, const FPotentialInteraction& Interaction)
+{
+	//@이미 상호작용 윈도우가 활성화된 경우 종료
+	if (bInteractionAvailable)
+	{
+		UE_LOGFMT(LogASC, Log, "이전 상호작용 윈도우 종료 후 새 상호작용 시작");
+		EndInteractionWindow(false);
+	}
+
+	//@Target Actor, Object Tag, Input Tag
+	if (!TargetActor || !Interaction.ObjectTag.IsValid() || !Interaction.InputTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "상호작용 윈도우 시작 실패 - 유효하지 않은 정보");
+		return;
+	}
+
+	//@Target Actor
+	InteractionTargetActor = TargetActor;
+	//@FPotentailInteraction
+	CurrentPotentialInteraction = Interaction;
+	//@상호 작용 활성화
+	bInteractionAvailable = true;
+
+	UE_LOGFMT(LogASC, Log, "상호작용 윈도우 시작 성공 - 액터: {0} | 태그: {1} | 입력: {2}",
+		*TargetActor->GetName(),
+		*Interaction.ObjectTag.ToString(),
+		*Interaction.InputTag.ToString());
+}
+
+void UBaseAbilitySystemComponent::EndInteractionWindow(bool bSuccess)
+{
+	//@bInteractionAvailable
+	if (!bInteractionAvailable)
+	{
+		UE_LOGFMT(LogASC, Log, "상호작용 윈도우 종료 - 상호작용 윈도우가 활성화되지 않음");
+		return;
+	}
+
+	//@성공, HandleGmaeplayEvent
+	if (bSuccess && CurrentPotentialInteraction.EventTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Log, "상호작용 성공 - 이벤트 태그 발생: {0}",
+			*CurrentPotentialInteraction.EventTag.ToString());
+
+		HandleInteractionEvent(CurrentPotentialInteraction.EventTag);
+
+		//상호 작용 성공 이벤트
+		InteractionCompleted.Broadcast(InteractionTargetActor.Get(), CurrentPotentialInteraction);
+	}
+
+	//@Clean Up
+	AActor* PreviousTargetActor = InteractionTargetActor.Get();
+	FPotentialInteraction PreviousInteraction = CurrentPotentialInteraction;
+
+	InteractionTargetActor = nullptr;
+	CurrentPotentialInteraction = FPotentialInteraction();
+	bInteractionAvailable = false;
+
+	UE_LOGFMT(LogASC, Log, "상호작용 윈도우 종료 완료 - 성공: {0}", bSuccess);
+
+	//@실패한 경우에만 상호작용 불가능 이벤트 발생
+	if (!bSuccess && PreviousTargetActor)
+	{
+		InteractionUnavailable.Broadcast(PreviousTargetActor, PreviousInteraction);
+	}
+}
+
+void UBaseAbilitySystemComponent::HandleInteractionEvent(const FGameplayTag& EventTag)
+{
+	//@Event Tag
+	if (!EventTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "상호작용 이벤트 처리 실패 - 유효하지 않은 이벤트 태그");
+		return;
+	}
+
+	//@Payload
+	FGameplayEventData EventData;
+	EventData.Instigator = GetOwner();
+	EventData.Target = InteractionTargetActor.Get();
+
+	//@Handle Gameplay Event
+	HandleGameplayEvent(EventTag, &EventData);
+
+	UE_LOGFMT(LogASC, Log, "상호작용 이벤트 처리 완료 - 이벤트 태그: {0}", *EventTag.ToString());
+}
 #pragma endregion
 
 //@Callbacks
@@ -819,7 +924,7 @@ void UBaseAbilitySystemComponent::OnPotentialInteractionChanged(AActor* TargetAc
 	//@상호작용 허용 여부 확인
 	bool bIsInteractionAvailable = Interaction.bAdditionalConditionsMet;
 
-	//@새 상호작용 허용
+	//@상호 작용 가능
 	if (bIsInteractionAvailable)
 	{
 		UE_LOGFMT(LogASC, Log, "{0}: 상호작용 활성화 - 액터: {1} | 태그: {2} | 타입: {3} | 이벤트: {4}",
@@ -829,6 +934,11 @@ void UBaseAbilitySystemComponent::OnPotentialInteractionChanged(AActor* TargetAc
 			static_cast<uint8>(Interaction.InteractionType),
 			*Interaction.EventTag.ToString());
 
+		//@잠재적 상호작용 허용 시작
+		StartInteractionWindow(TargetActor, Interaction);
+
+		//@상호작용 가능 이벤트
+		InteractionAvailable.Broadcast(TargetActor, Interaction);
 	}
 	//@상호작용 취소
 	else
@@ -838,6 +948,15 @@ void UBaseAbilitySystemComponent::OnPotentialInteractionChanged(AActor* TargetAc
 			TargetActor ? *TargetActor->GetName() : TEXT("없음"),
 			*Interaction.ObjectTag.ToString(),
 			static_cast<uint8>(Interaction.InteractionType));
+
+		//@현재 상호작용이 취소된 상호작용과 동일한 경우에만 종료
+		if (bInteractionAvailable && CurrentPotentialInteraction.ObjectTag == Interaction.ObjectTag)
+		{
+			EndInteractionWindow(false);
+		}
+
+		//@상호작용 허용 불가 이벤트
+		InteractionUnavailable.Broadcast(TargetActor, Interaction);
 	}
 }
 #pragma endregion

@@ -51,6 +51,10 @@ struct FPotentialInteraction
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
         EInteractionType InteractionType;
 
+    //@상호작용에 요구되는 입력
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
+        FGameplayTag InputTag;
+
     //@상호작용 활성화 시 발생할 이벤트 태그
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
         FGameplayTag EventTag;
