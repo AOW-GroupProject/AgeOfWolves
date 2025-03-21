@@ -68,7 +68,7 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
         HitResult,
         0.0f,
         MainEffectCDO,
-        SubEffectCDO  // nullptr이어도 무방
+        SubEffectCDO
     );
 
     if (!bSuccess)

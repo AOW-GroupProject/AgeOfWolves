@@ -35,7 +35,7 @@ void UInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType, 
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
     //@매 틱마다 상호작용 거리 업데이트
-    UpdateInteractionDistances();
+    CommitInteraction();
 }
 
 void UInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -425,7 +425,7 @@ void UInteractionComponent::RemovePotentialInteraction(AActor* TargetActor, EInt
     }
 }
 
-void UInteractionComponent::UpdateInteractionDistances()
+void UInteractionComponent::CommitInteraction()
 {
     //@PC
     APlayerController* PC = Cast<APlayerController>(GetOwner());
@@ -625,7 +625,6 @@ void UInteractionComponent::TryActivateInteraction(AActor* TargetActor, const FP
         *Interaction.EventTag.ToString());
 }
 
-// 상호작용 취소 이벤트 발생 함수
 void UInteractionComponent::CancelInteractionActivated(AActor* TargetActor, const FPotentialInteraction& Interaction)
 {
     if (!Interaction.ObjectTag.IsValid())

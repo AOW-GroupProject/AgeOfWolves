@@ -10,6 +10,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInteraction, Log, All);
 
 //@전방 선언
 #pragma region Forward Declaration
+class UAnimMontage;
 #pragma endregion
 
 //@열거형
@@ -71,20 +72,39 @@ struct FPotentialInteraction
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction")
         int32 Priority;
 
+    //@상호작용 시 애니메이션 재생 여부
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Animation")
+        bool bPlayMontage;
+
+    //@몽타주가 페어를 이루는지 여부(타겟과 플레이어 동기화)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Animation", meta = (EditCondition = "bPlayMontage", InlineEditConditionToggle))
+        bool bIsMontagesPaired;
+
+    //@상호작용 시 플레이어가 재생할 애니메이션 몽타주
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Animation", meta = (EditCondition = "bPlayMontage"))
+        TSoftObjectPtr<UAnimMontage> PlayerMontage;
+
+    //@상호작용 시 타겟이 재생할 애니메이션 몽타주
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Animation", meta = (EditCondition = "bIsMontagesPaired"))
+        TSoftObjectPtr<UAnimMontage> TargetMontage;
+
     FPotentialInteraction()
         : InteractionType(EInteractionType::None)
         , RequiredDistance(200.0f)
         , bAdditionalConditionsMet(false)
         , Priority(0)
+        , bPlayMontage(false)
+        , bIsMontagesPaired(false)
     {}
 
     FPotentialInteraction(FGameplayTag InObjectTag, EInteractionType InType, FGameplayTag InEventTag, float InDistance = 200.0f, int32 InPriority = 0)
-        : ObjectTag(ObjectTag)
+        : ObjectTag(InObjectTag)
         , InteractionType(InType)
         , EventTag(InEventTag)
         , RequiredDistance(InDistance)
         , bAdditionalConditionsMet(false)
         , Priority(InPriority)
+        , bPlayMontage(false)
     {}
 
     //@오버로딩
@@ -112,6 +132,12 @@ struct FPotentialInteraction
         return ObjectTag.IsValid() && bAdditionalConditionsMet;
     }
 
+    //@애니메이션 몽타주가 유효한지 확인
+    bool HasValidMontages() const
+    {
+        return bPlayMontage && PlayerMontage.IsValid() && TargetMontage.IsValid();
+    }
+
 };
 #pragma endregion
 
@@ -120,6 +146,75 @@ struct FPotentialInteraction
 // 상호작용 이벤트 델리게이트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FPotentialInteractionChanged, AActor*, TargetActor, const FPotentialInteraction&, Interaction);
 #pragma endregion
+
+/**
+ *  @UInteractionData
+ *
+ *  FPotentialInteraction을 감싸는 UObject 래퍼 클래스
+ *  GameplayEvent를 통해 FPotentialInteraction 데이터를 전달하기 위해 사용
+ */
+UCLASS(BlueprintType)
+class AGEOFWOLVES_API UInteractionData : public UObject
+{
+    GENERATED_BODY()
+
+public:
+    // 상호작용 데이터
+    UPROPERTY(BlueprintReadOnly, Category = "Interaction")
+        FPotentialInteraction InteractionData;
+
+    // 초기화 함수
+    void SetInteractionData(const FPotentialInteraction& InInteractionData)
+    {
+        InteractionData = InInteractionData;
+    }
+
+    // Blueprint 접근용 함수들
+    UFUNCTION(BlueprintPure, Category = "Interaction")
+        EInteractionType GetInteractionType() const
+    {
+        return InteractionData.InteractionType;
+    }
+
+    UFUNCTION(BlueprintPure, Category = "Interaction")
+        FGameplayTag GetObjectTag() const
+    {
+        return InteractionData.ObjectTag;
+    }
+
+    UFUNCTION(BlueprintPure, Category = "Interaction")
+        FGameplayTag GetEventTag() const
+    {
+        return InteractionData.EventTag;
+    }
+
+    UFUNCTION(BlueprintPure, Category = "Interaction")
+        bool HasMontages() const
+    {
+        return InteractionData.bPlayMontage &&
+            (InteractionData.bIsMontagesPaired ?
+                InteractionData.PlayerMontage.IsValid() && InteractionData.TargetMontage.IsValid() :
+                InteractionData.PlayerMontage.IsValid());
+    }
+
+    UFUNCTION(BlueprintPure, Category = "Interaction")
+        TSoftObjectPtr<UAnimMontage> GetPlayerMontage() const
+    {
+        return InteractionData.PlayerMontage;
+    }
+
+    UFUNCTION(BlueprintPure, Category = "Interaction")
+        TSoftObjectPtr<UAnimMontage> GetTargetMontage() const
+    {
+        return InteractionData.TargetMontage;
+    }
+
+    UFUNCTION(BlueprintPure, Category = "Interaction")
+        bool IsMontagesPaired() const
+    {
+        return InteractionData.bIsMontagesPaired;
+    }
+};
 
 /**
  *  @UInteractionComponent
@@ -182,7 +277,7 @@ public:
 
 private:
     //@거리 기반으로 상호작용 가능 여부 업데이트
-    void UpdateInteractionDistances();
+    void CommitInteraction();
 
 protected:
     //@상호작용 활성화 이벤트 발생

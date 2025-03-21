@@ -757,6 +757,24 @@ void UBaseAbilitySystemComponent::HandleInteractionEvent(const FGameplayTag& Eve
 	FGameplayEventData EventData;
 	EventData.Instigator = GetOwner();
 	EventData.Target = InteractionTargetActor.Get();
+	EventData.EventTag = EventTag;
+
+	//@InteractionData 생성 및 초기화
+	UInteractionData* InteractionData = NewObject<UInteractionData>(GetOwner());
+	if (!InteractionData)
+	{
+		UE_LOGFMT(LogASC, Warning, "상호작용 데이터 객체 생성 실패");
+	}
+
+	//@현재 상호작용 데이터 설정
+	InteractionData->SetInteractionData(CurrentPotentialInteraction);
+
+	//@OptionalObject1
+	EventData.OptionalObject = InteractionData;
+
+	UE_LOGFMT(LogASC, Log, "상호작용 데이터 객체 생성 성공 - 타입: {0}, 객체 태그: {1}",
+		static_cast<int32>(CurrentPotentialInteraction.InteractionType),
+		*CurrentPotentialInteraction.ObjectTag.ToString());
 
 	//@Handle Gameplay Event
 	HandleGameplayEvent(EventTag, &EventData);
