@@ -24,7 +24,7 @@ class AGEOFWOLVES_API UANS_ActivateAfterImageFX : public UAnimNotifyState
 {
     GENERATED_BODY()
 
-        //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     //@생성자

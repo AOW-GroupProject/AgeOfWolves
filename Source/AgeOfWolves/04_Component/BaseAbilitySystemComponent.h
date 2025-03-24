@@ -4,6 +4,7 @@
 #include "AbilitySystemComponent.h"
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "02_AbilitySystem/02_GameplayAbility/BaseGameplayAbility.h"
+#include "04_Component/InteractionComponent.h"
 
 #include "BaseAbilitySystemComponent.generated.h"
 
@@ -13,8 +14,9 @@ DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 #pragma region Forward Declaration
 class UANS_AllowChainAction;
 class UBaseAttributeSet;
-struct FDeathInformation;
 class ABaseAIController;
+
+struct FDeathInformation;
 #pragma endregion
 
 //@열거형
@@ -37,11 +39,20 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FAbilityEnded, UGameplayAbility*);
 //@어빌리티 취소 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FAbilityCancelled, UGameplayAbility*);
 
+//@연결 동작 활성화 이벤트
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionActivated, FGameplayTag, ChainActionAbilityTag);
-
+//@연결 동작 활성화 종료 이벤트
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionFinished, FGameplayTag, ChainActionAbilityTag);
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FCharacterStateEventOnGameplay, const FGameplayTag&)
+//@상태 변화 이벤트
+DECLARE_MULTICAST_DELEGATE_TwoParams(FCharacterStateEventOnGameplay, AActor*, const FGameplayTag&)
+
+//@상호작용 활성화 이벤트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionActivated, AActor*, InteractableActor, const FPotentialInteraction&, PotentialInteraction);
+//@상호작용 실패 이벤트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionFailed, AActor*, InteractableActor, const FPotentialInteraction&, FailedInteraction);
+//@상호작용 완료 이벤트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionCompleted, AActor*, InteractableActor, const FPotentialInteraction&, CompletedInteraction);
 #pragma endregion
 
 /**	
@@ -58,6 +69,7 @@ class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemCompone
 	friend class UBaseGameplayAbility;
 	friend class UANS_AllowChainAction;
 	friend class ABaseAIController;
+	friend class APlayerStateBase;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -73,6 +85,7 @@ protected:
 protected:
 	//@외부 바인딩
 	void ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC);
+	void ExternalBindToInteractionComp(AController* Controller);
 
 protected:
 	//@초기화
@@ -111,10 +124,6 @@ protected:
 	virtual int32 HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload) override;
 
 protected:
-	//@Damage Event 발생 시 Armor 어빌리티 활성화
-	bool TriggerDamageEvent(const FGameplayTag& EventTag, const FGameplayEventData* Payload);
-
-protected:
 	//@Death Event 발생 처리
 	void HandleCharacterDead();
 
@@ -128,6 +137,17 @@ protected:
 		void EndChainWindow();
 
 	void EndChainWindow(const FGameplayEventData* Payload);
+
+protected:
+	// 상호작용 시스템 시작
+	void StartInteractionWindow(AActor* TargetActor, const FPotentialInteraction& Interaction);
+
+	// 상호작용 시스템 종료
+	UFUNCTION(BlueprintCallable, Category = "Interaction System")
+		void EndInteractionWindow(bool bSuccess = false);
+
+	// 상호작용 이벤트 처리
+	void HandleInteractionEvent(const FGameplayTag& EventTag);
 
 protected:
 	UPROPERTY(EditAnywhere)
@@ -157,6 +177,19 @@ protected:
 	TArray<FChainEventMapping> AllowedChainEventMappings;
 	//@다음 실행할 체인 액션의 이벤트 태그
 	FGameplayTag ChainActionEventTag;
+
+protected:
+	//@현재 가능한 상호작용 정보
+	UPROPERTY()
+		FPotentialInteraction CurrentPotentialInteraction;
+
+	//@상호작용 가능 상태
+	UPROPERTY()
+		bool bInteractionAvailable;
+
+	//@상호작용 타겟 액터
+	UPROPERTY()
+		TWeakObjectPtr<AActor> InteractionTargetActor;
 #pragma endregion
 
 //@Delegates
@@ -182,6 +215,17 @@ public:
 public:
 	//@캐릭터의 게임 플레이 과정에서 발생하는 주요 이벤트
 	FCharacterStateEventOnGameplay CharacterStateEventOnGameplay;
+
+public:
+	// 상호작용 이벤트 델리게이트
+	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
+		FInteractionActivated InteractionActivated;
+
+	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
+		FInteractionFailed InteractionFailed;
+
+	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
+		FInteractionCompleted InteractionCompleted;
 #pragma endregion
 
 //@Callbacks
@@ -191,6 +235,8 @@ protected:
 	void OnAbilityActivated(UGameplayAbility* Ability);
 	//@GA 종료 이벤트 구독
 	virtual void OnAbilityEnded(UGameplayAbility* Ability);
+	//@GA 실패 이벤트 구독 
+	void OnAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& Tags);
 
 protected:
 	void OnGameplayEffectApplied(
@@ -202,6 +248,10 @@ protected:
 	//@태그 기반 어빌리티 활성화 요청
 	UFUNCTION()
 		bool OnRequestActivateAbilityBlockUnitByAI(const FGameplayTag& AbilityTag);
+
+protected:
+	UFUNCTION()
+		void OnPotentialInteractionChanged(AActor* TargetActor, const FPotentialInteraction& Interaction);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -221,5 +271,10 @@ public:
 public:
 	FORCEINLINE bool IsChainWindowActive() const { return bChainWindowActive; }
 	FORCEINLINE bool CanChainAction() const { return bCanChainAction; }
+
+public:
+	FORCEINLINE bool IsInteractionAvailable() const { return bInteractionAvailable; }
+	FORCEINLINE const FPotentialInteraction& GetCurrentPotentialInteraction() const { return CurrentPotentialInteraction; }
+	FORCEINLINE AActor* GetInteractionTargetActor() const { return InteractionTargetActor.Get(); }
 #pragma endregion
 };

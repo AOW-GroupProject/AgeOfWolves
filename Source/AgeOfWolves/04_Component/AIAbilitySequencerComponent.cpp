@@ -84,6 +84,8 @@ void UAIAbilitySequencerComponent::ExternalBindToAIController()
         return;
     }
 
+    //@외부 바인딩...
+    OwnerController->RequestStartCombatPattern.BindUFunction(this, "OnRequestActivateAICombatLoop");
     OwnerController->RequestEndCombatPattern.BindUFunction(this, "OnRequestEndCombatPattern");
 }
 

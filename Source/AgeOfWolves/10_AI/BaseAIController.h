@@ -25,6 +25,7 @@ struct FBaseAbilitySet_GrantedHandles;
 class UBaseAbilitySystemComponent;
 class UAbilityManagerSubsystem;
 class UAIAbilitySequencerComponent;
+class UObjectiveDetectionComponent;
 #pragma endregion
 
 //@열거형
@@ -70,7 +71,7 @@ DECLARE_MULTICAST_DELEGATE(FRequestStartInitByAI)
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAIAttributeSetInitialized);
 
 //@타겟 발견
-DECLARE_MULTICAST_DELEGATE_OneParam(FAILockOnStateChanged, bool)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FAILockOnStateChanged, bool, AActor*)
 
 //@전투 패턴 활성화 요청
 DECLARE_DELEGATE_RetVal(bool, FRequestStartCombatPattern)
@@ -118,6 +119,7 @@ protected:
 	void InternalBindToPerceptionComp();
 	void InternalBindingToASC();
 	void InternalBindingToAISequencerComp();
+	void InternalBindingToODComp();
 
 public:
 	//@초기화
@@ -170,6 +172,14 @@ protected:
 	UPROPERTY()
 		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
 
+	//@AI Combat Pattern 컴포넌트
+	UPROPERTY(Transient)
+		UAIAbilitySequencerComponent* AIAbilitySequencerComponent;
+
+	//@Objective Detection Comp
+	UPROPERTY(Transient)
+		UObjectiveDetectionComponent* ODComponent;
+
 protected:
 	//@BT
 	UPROPERTY(Transient)
@@ -177,12 +187,6 @@ protected:
 	//@BB
 	UPROPERTY(Transient)
 		UBlackboardComponent* BBComponent;
-
-protected:
-	//@AI Combat Pattern 컴포넌트
-	UPROPERTY(Transient)
-		UAIAbilitySequencerComponent* AIAbilitySequencerComponent;
-
 
 protected:
 	//@Character Tag
@@ -255,7 +259,7 @@ protected:
 protected:
 	//@캐릭터 상태 관련 이벤트 발생 시 호출되는 콜백
 	UFUNCTION()
-		void OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag);
+		void OnCharacterStateEventOnGameplay(AActor* Actor, const FGameplayTag& CharacterStateTag);
 
 protected:
 	//@전투 패턴 Exit Block 완료 콜백
@@ -265,7 +269,7 @@ protected:
 protected:
 	// Target Actor 상태 변화 콜백
 	UFUNCTION()
-		void OnTargetActorStateChanged(const FGameplayTag& StateTag);
+		void OnTargetActorStateChanged(AActor* Actor, const FGameplayTag& StateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

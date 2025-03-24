@@ -19,6 +19,7 @@
 #include "14_Subsystem/AbilityManagerSubsystem.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "04_Component/AIAbilitySequencerComponent.h"
+#include "04_Component/ObjectiveDetectionComponent.h"
 
 #include "15_SaveGame/AOWSaveGame.h"
 #include "00_GameInstance/AOWGameInstance.h"
@@ -43,6 +44,8 @@ ABaseAIController::ABaseAIController(const FObjectInitializer& ObjectInitializer
     AbilitySystemComponent = CreateDefaultSubobject<UBaseAbilitySystemComponent>(TEXT("Ability System Component"));
     //@AI Combat Component
     AIAbilitySequencerComponent = CreateDefaultSubobject<UAIAbilitySequencerComponent>(TEXT("AI Combat Pattern Component"));
+    //@Objective Detection Component
+    ODComponent = CreateDefaultSubobject<UObjectiveDetectionComponent>(TEXT("Objective Detection Comopnent"));
 
     //@AI Sense Config - Sight
     Sight = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("AI Sight Config"));
@@ -69,7 +72,6 @@ ABaseAIController::ABaseAIController(const FObjectInitializer& ObjectInitializer
     AIPerceptionComponent->ConfigureSense(*Hearing);
     AIPerceptionComponent->SetDominantSense(Sight->GetSenseImplementation());
     AIPerceptionComponent->bAutoActivate = true;
-
 }
 
 void ABaseAIController::BeginPlay()
@@ -97,12 +99,13 @@ void ABaseAIController::PostInitializeComponents()
 
     //@비동기 초기화
     RequestStartInitByAI.AddUFunction(AIAbilitySequencerComponent, "InitializeCombatPatternComponent");
-    RequestStartCombatPattern.BindUFunction(AIAbilitySequencerComponent, "OnRequestActivateAICombatLoop");
+    RequestStartInitByAI.AddUFunction(ODComponent, "InitializeODComponent");
 
     //@내부 바인딩...
     InternalBindToPerceptionComp();
     InternalBindingToASC();
     InternalBindingToAISequencerComp();
+    InternalBindingToODComp();
 
     //@Ability Manager Subsystem
     const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
@@ -251,7 +254,7 @@ void ABaseAIController::InternalBindingToASC()
     }
 
     //@내부 바인딩
-    AbilitySystemComponent->CharacterStateEventOnGameplay.AddUObject(this, &ABaseAIController::OnCharacterStateEventOnGameplay);
+    AbilitySystemComponent->CharacterStateEventOnGameplay.AddUFunction(this, "OnCharacterStateEventOnGameplay");
 
     UE_LOGFMT(LogBaseAIC, Log, "캐릭터 상태 이벤트 콜백이 성공적으로 바인딩되었습니다");
 }
@@ -272,6 +275,18 @@ void ABaseAIController::InternalBindingToAISequencerComp()
     AIAbilitySequencerComponent->NotifyCombatPatternExitComplete.BindUFunction(this, "OnCombatPatternExitComplete");
 
     UE_LOGFMT(LogBaseAIC, Log, "AI Sequencer Component 이벤트 바인딩 완료");
+}
+
+void ABaseAIController::InternalBindingToODComp()
+{
+    //@Objective Detection Component
+    if (!ODComponent)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "InternalBindingToODComp: Objective Detection 컴포넌트가 유효하지 않습니다");
+        return;
+    }
+
+    UE_LOGFMT(LogBaseAIC, Log, "Objective Detection 컴포넌트 내부 바인딩 완료");
 }
 
 void ABaseAIController::InitializeAIController(APawn* InPawn)
@@ -544,8 +559,8 @@ void ABaseAIController::BindTargetActorStateEvents(AActor* NewTarget)
         Cast<UBaseAbilitySystemComponent>(TargetCharacter->GetAbilitySystemComponent()))
     {
         // 상태 변화 이벤트 바인딩
-        TargetASC->CharacterStateEventOnGameplay.AddUObject(
-            this, &ABaseAIController::OnTargetActorStateChanged);
+        TargetASC->CharacterStateEventOnGameplay.AddUFunction(
+            this, "OnTargetActorStateChanged");
 
         UE_LOGFMT(LogBaseAIC, Log, "타겟 {0}에 대한 상태 이벤트 바인딩 완료",
             *NewTarget->GetName());
@@ -574,9 +589,10 @@ void ABaseAIController::UnbindTargetActorStateEvents(AActor* OldTarget)
 void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
 {
 
+    //@Perception 주체
     ACharacterBase* OwningCharacter = Cast<ACharacterBase>(GetPawn());
+    //@Perception 대상
     ACharacterBase* SensedCharacter = Cast<ACharacterBase>(Actor);
-
 
     //@Owning Character, Sensed Character
     if (!OwningCharacter || !SensedCharacter)
@@ -610,7 +626,7 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
         BindTargetActorStateEvents(Actor);
 
         //@Lock On 이벤트 호출
-        AILockOnStateChanged.Broadcast(true);
+        AILockOnStateChanged.Broadcast(true, Actor);
     }
 
 }
@@ -624,7 +640,7 @@ void ABaseAIController::OnTargetPerceptionLost(AActor* Actor)
     // [기존의 타겟 소실 처리 코드...]
 
     //@Lock On 상태 변경 이벤트 호출
-    AILockOnStateChanged.Broadcast(false);
+    AILockOnStateChanged.Broadcast(false, nullptr);
     UE_LOGFMT(LogBaseAIC, Log, "AI가 {0}을(를) 놓쳐 Lock On 상태 해제", *Actor->GetName());
 
     // [기존의 상태 변경 코드...]
@@ -634,9 +650,9 @@ void ABaseAIController::OnAttributeValueChanged(const FOnAttributeChangeData& Da
 {
 }
 
-void ABaseAIController::OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag)
+void ABaseAIController::OnCharacterStateEventOnGameplay(AActor* Actor, const FGameplayTag& CharacterStateTag)
 {
-    //@"State." 태그가 아니면 즉시 반환
+    //@"State.~"
     if (!CharacterStateTag.GetTagName().ToString().StartsWith("State."))
         return;
 
@@ -702,7 +718,7 @@ bool ABaseAIController::OnCombatPatternExitComplete()
     return NotifyCombatPatternExitComplete.Execute();
 }
 
-void ABaseAIController::OnTargetActorStateChanged(const FGameplayTag& StateTag)
+void ABaseAIController::OnTargetActorStateChanged(AActor* Actor, const FGameplayTag& StateTag)
 {
     // 죽음 상태 태그 체크
     if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
@@ -718,7 +734,7 @@ void ABaseAIController::OnTargetActorStateChanged(const FGameplayTag& StateTag)
         }
 
         // Lock On 상태 해제
-        AILockOnStateChanged.Broadcast(false);
+        AILockOnStateChanged.Broadcast(false, nullptr);
 
         UE_LOGFMT(LogBaseAIC, Log, "타겟 사망으로 인한 상태 초기화 완료");
     }
@@ -759,3 +775,11 @@ ETeamAttitude::Type ABaseAIController::GetTeamAttitudeTowards(const AActor& Othe
         : ETeamAttitude::Hostile;
 }
 #pragma endregion
+
+void InternalBindingToAISequencerComp()
+{
+}
+
+void InternalBindingToODComp()
+{
+}
