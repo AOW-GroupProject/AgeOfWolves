@@ -47,11 +47,11 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionFinished, FGameplayTag, ChainActio
 //@상태 변화 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FCharacterStateEventOnGameplay, AActor*, const FGameplayTag&)
 
-//@상호작용 허용 이벤트
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionAvailable, AActor*, InteractableActor, const FPotentialInteraction&, PotentialInteraction);
-// 상호작용 불가능 이벤트
-DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionUnavailable, AActor*, InteractableActor, const FPotentialInteraction&, PotentialInteraction);
-// 상호작용 완료 이벤트
+//@상호작용 활성화 이벤트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionActivated, AActor*, InteractableActor, const FPotentialInteraction&, PotentialInteraction);
+//@상호작용 실패 이벤트
+DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionFailed, AActor*, InteractableActor, const FPotentialInteraction&, FailedInteraction);
+//@상호작용 완료 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionCompleted, AActor*, InteractableActor, const FPotentialInteraction&, CompletedInteraction);
 #pragma endregion
 
@@ -219,10 +219,10 @@ public:
 public:
 	// 상호작용 이벤트 델리게이트
 	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
-		FInteractionAvailable InteractionAvailable;
+		FInteractionActivated InteractionActivated;
 
 	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
-		FInteractionUnavailable InteractionUnavailable;
+		FInteractionFailed InteractionFailed;
 
 	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
 		FInteractionCompleted InteractionCompleted;
@@ -235,6 +235,8 @@ protected:
 	void OnAbilityActivated(UGameplayAbility* Ability);
 	//@GA 종료 이벤트 구독
 	virtual void OnAbilityEnded(UGameplayAbility* Ability);
+	//@GA 실패 이벤트 구독 
+	void OnAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& Tags);
 
 protected:
 	void OnGameplayEffectApplied(

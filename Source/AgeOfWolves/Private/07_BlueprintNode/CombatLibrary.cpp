@@ -404,6 +404,227 @@ EHitImpactLocation UCombatLibrary::CalculateHitImpactLocation(const FVector& Imp
     UE_LOGFMT(LogCombatLibrary, Log, "충돌 위치: 중앙");
     return EHitImpactLocation::Center;
 }
+
+FSurfacePointResult UCombatLibrary::GetClosestSurfacePointAndNormalFromSocket(
+    const AActor* TargetActor,
+    FName SocketName,
+    EHitImpactLocation DesiredDirection,
+    EHitImpactLocation DesiredNormalDirection)
+{
+    // 기본 리턴값 초기화
+    FSurfacePointResult Result;
+
+    // 유효성 검사
+    if (!IsValid(TargetActor))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "GetClosestSurfacePointAndNormalFromSocket 실패 - 사유: TargetActor가 유효하지 않음");
+        return Result;
+    }
+
+    // Character 캐스팅
+    const ACharacter* Character = Cast<ACharacter>(TargetActor);
+    if (!Character)
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "GetClosestSurfacePointAndNormalFromSocket 실패 - 사유: Character 캐스팅 실패");
+        return Result;
+    }
+
+    // SkeletalMeshComponent 가져오기
+    USkeletalMeshComponent* SkeletalMesh = Character->GetMesh();
+    if (!SkeletalMesh)
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "GetClosestSurfacePointAndNormalFromSocket 실패 - 사유: SkeletalMesh가 유효하지 않음");
+        return Result;
+    }
+
+    // Socket 위치 가져오기
+    const FVector SocketLocation = SkeletalMesh->GetSocketLocation(SocketName);
+    if (SocketLocation.IsZero())
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "GetClosestSurfacePointAndNormalFromSocket 실패 - 사유: Socket({0})을 찾을 수 없음", *SocketName.ToString());
+        return Result;
+    }
+
+    // 방향 벡터 계산
+    FVector DirectionVector;
+
+    // 원하는 방향에 따라 적절한 방향 벡터 설정
+    switch (DesiredDirection)
+    {
+    case EHitImpactLocation::Front:
+        DirectionVector = Character->GetActorForwardVector();
+        break;
+    case EHitImpactLocation::Back:
+        DirectionVector = -Character->GetActorForwardVector();
+        break;
+    case EHitImpactLocation::Left:
+        DirectionVector = -Character->GetActorRightVector();
+        break;
+    case EHitImpactLocation::Right:
+        DirectionVector = Character->GetActorRightVector();
+        break;
+    case EHitImpactLocation::Center:
+    default:
+        // Center의 경우 소켓에서 캐릭터 중심을 향한 방향의 반대 방향 사용
+        DirectionVector = (SocketLocation - Character->GetActorLocation()).GetSafeNormal();
+        break;
+    }
+
+    // 방향 벡터에 적절한 거리 곱하기 (캐릭터 크기에 따라 조정 필요)
+    const float SearchDistance = 70.0f;
+    const FVector SearchPoint = SocketLocation + (DirectionVector * SearchDistance);
+
+    // Physics Asset에서 가장 가까운 지점 찾기
+    FClosestPointOnPhysicsAsset ClosestPointResult;
+    SkeletalMesh->GetClosestPointOnPhysicsAsset(
+        SearchPoint,
+        ClosestPointResult,
+        false
+    );
+
+    // 결과 검증
+    if (ClosestPointResult.ClosestWorldPosition.IsZero())
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "GetClosestSurfacePointAndNormalFromSocket - Physics Asset에서 가까운 지점을 찾지 못함. Socket: {0}", *SocketName.ToString());
+        Result.SurfacePoint = SocketLocation;
+        return Result;
+    }
+
+    // 표면 위치 설정
+    Result.SurfacePoint = ClosestPointResult.ClosestWorldPosition;
+
+    // 표면 노멀 설정 - Physics Asset의 노멀 또는 요청된 방향을 기준으로
+    if (DesiredNormalDirection == DesiredDirection)
+    {
+        // Physics Asset에서 계산된 노멀 사용
+        Result.SurfaceNormal = ClosestPointResult.Normal;
+    }
+    else
+    {
+        // 특별히 요청된 노멀 방향 설정
+        switch (DesiredNormalDirection)
+        {
+        case EHitImpactLocation::Front:
+            Result.SurfaceNormal = Character->GetActorForwardVector();
+            break;
+        case EHitImpactLocation::Back:
+            Result.SurfaceNormal = -Character->GetActorForwardVector();
+            break;
+        case EHitImpactLocation::Left:
+            Result.SurfaceNormal = -Character->GetActorRightVector();
+            break;
+        case EHitImpactLocation::Right:
+            Result.SurfaceNormal = Character->GetActorRightVector();
+            break;
+        case EHitImpactLocation::Center:
+            Result.SurfaceNormal = (Result.SurfacePoint - Character->GetActorLocation()).GetSafeNormal();
+            break;
+        default:
+            Result.SurfaceNormal = ClosestPointResult.Normal;
+            break;
+        }
+    }
+
+    // 디버깅 로그
+    UE_LOGFMT(LogCombatLibrary, Log, "GetClosestSurfacePointAndNormalFromSocket 성공 - Socket: {0}, Direction: {1}, NormalDirection: {2}",
+        *SocketName.ToString(),
+        *UEnum::GetValueAsString(DesiredDirection),
+        *UEnum::GetValueAsString(DesiredNormalDirection)
+    );
+    UE_LOGFMT(LogCombatLibrary, Log, "결과 - 위치: {0}, 노멀: {1}",
+        *Result.SurfacePoint.ToString(),
+        *Result.SurfaceNormal.ToString()
+    );
+
+    //@디버그 시각화 (필요에 따라 활성화)
+//#if ENABLE_DRAW_DEBUG
+//    if (GEngine && TargetActor->GetWorld())
+//    {
+//        // 소켓 위치 (빨간색)
+//        DrawDebugSphere(
+//            TargetActor->GetWorld(),
+//            SocketLocation,
+//            5.0f,
+//            12,
+//            FColor::Red,
+//            false,
+//            3.0f,
+//            0,
+//            1.0f
+//        );
+//
+//        // 검색 지점 (노란색)
+//        DrawDebugSphere(
+//            TargetActor->GetWorld(),
+//            SearchPoint,
+//            5.0f,
+//            12,
+//            FColor::Yellow,
+//            false,
+//            3.0f,
+//            0,
+//            1.0f
+//        );
+//
+//        // 결과 지점 (초록색)
+//        DrawDebugSphere(
+//            TargetActor->GetWorld(),
+//            Result.SurfacePoint,
+//            5.0f,
+//            12,
+//            FColor::Green,
+//            false,
+//            3.0f,
+//            0,
+//            1.0f
+//        );
+//
+//        // 방향 표시 (파란색)
+//        DrawDebugDirectionalArrow(
+//            TargetActor->GetWorld(),
+//            SocketLocation,
+//            SearchPoint,
+//            10.0f,
+//            FColor::Blue,
+//            false,
+//            3.0f,
+//            0,
+//            1.0f
+//        );
+//
+//        // 계산된 노멀 벡터 표시 (하늘색)
+//        DrawDebugDirectionalArrow(
+//            TargetActor->GetWorld(),
+//            Result.SurfacePoint,
+//            Result.SurfacePoint + Result.SurfaceNormal * 30.0f,
+//            10.0f,
+//            FColor::Cyan,
+//            false,
+//            3.0f,
+//            0,
+//            1.0f
+//        );
+//
+//        // Physics Asset의 원본 노멀 표시 (보라색)
+//        if (DesiredNormalDirection != DesiredDirection)
+//        {
+//            DrawDebugDirectionalArrow(
+//                TargetActor->GetWorld(),
+//                Result.SurfacePoint,
+//                Result.SurfacePoint + ClosestPointResult.Normal * 30.0f,
+//                10.0f,
+//                FColor::Purple,
+//                false,
+//                3.0f,
+//                0,
+//                1.0f
+//            );
+//        }
+//    }
+//#endif
+
+    return Result;
+}
 #pragma endregion
 
 //@이벤트 전달 관련...

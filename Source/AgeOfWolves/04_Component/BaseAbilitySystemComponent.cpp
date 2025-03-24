@@ -85,6 +85,9 @@ void UBaseAbilitySystemComponent::InitializeComponent()
 	AbilityActivatedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityActivated);
 	//@어빌리티 활성화 종료 이베느
 	AbilityEndedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityEnded);
+	//@어빌리티 활성화 실패 이벤트
+	AbilityFailedCallbacks.AddUObject(this, &UBaseAbilitySystemComponent::OnAbilityFailed);
+
 	//@GameplayEffect 적용 이벤트
 	OnActiveGameplayEffectAddedDelegateToSelf.AddUObject(
 		this,
@@ -704,6 +707,9 @@ void UBaseAbilitySystemComponent::StartInteractionWindow(AActor* TargetActor, co
 		*TargetActor->GetName(),
 		*Interaction.ObjectTag.ToString(),
 		*Interaction.InputTag.ToString());
+
+	//@상호작용 활성화 이벤트 호출
+	InteractionActivated.Broadcast(TargetActor, Interaction);
 }
 
 void UBaseAbilitySystemComponent::EndInteractionWindow(bool bSuccess)
@@ -722,9 +728,6 @@ void UBaseAbilitySystemComponent::EndInteractionWindow(bool bSuccess)
 			*CurrentPotentialInteraction.EventTag.ToString());
 
 		HandleInteractionEvent(CurrentPotentialInteraction.EventTag);
-
-		//상호 작용 성공 이벤트
-		InteractionCompleted.Broadcast(InteractionTargetActor.Get(), CurrentPotentialInteraction);
 	}
 
 	//@Clean Up
@@ -737,13 +740,13 @@ void UBaseAbilitySystemComponent::EndInteractionWindow(bool bSuccess)
 
 	UE_LOGFMT(LogASC, Log, "상호작용 윈도우 종료 완료 - 성공: {0}", bSuccess);
 
-	//@실패한 경우에만 상호작용 불가능 이벤트 발생
+	//@상호작용 실패 이벤트 호출
 	if (!bSuccess && PreviousTargetActor)
 	{
-		InteractionUnavailable.Broadcast(PreviousTargetActor, PreviousInteraction);
+		InteractionFailed.Broadcast(PreviousTargetActor, PreviousInteraction);
 	}
-}
 
+}
 void UBaseAbilitySystemComponent::HandleInteractionEvent(const FGameplayTag& EventTag)
 {
 	//@Event Tag
@@ -858,10 +861,38 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 		}
 	}
 
+	//@상호작용 어빌리티
+	if (Ability->AbilityTags.HasTag(FGameplayTag::RequestGameplayTag("Ability.Interaction")))
+	{
+		UE_LOGFMT(LogASC, Log, "상호작용 어빌리티 완료 - {0}", *Ability->GetName());
+
+		//@상호작용 완료 이벤트
+		InteractionCompleted.Broadcast(InteractionTargetActor.Get(), CurrentPotentialInteraction);
+	}
+
 	UE_LOGFMT(LogASC, Warning, "{0}가 종료되었습니다.", Ability->GetName());
 
 	// @TODO: Ability 활성화 종료 시점에 ASC에서 할 일들...
 	AbilityEnded.Broadcast(Ability);
+}
+
+void UBaseAbilitySystemComponent::OnAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& ReasonTags)
+{
+	if (!Ability)
+	{
+		UE_LOGFMT(LogASC, Warning, "OnAbilityFailed: 유효하지 않은 어빌리티");
+		return;
+	}
+
+	// 상호작용 어빌리티인지 확인
+	if (Ability->AbilityTags.HasTag(FGameplayTag::RequestGameplayTag("Ability.Interaction")))
+	{
+		UE_LOGFMT(LogASC, Log, "상호작용 어빌리티 실패 - {0}, 실패 사유: {1}",
+			*Ability->GetName(), *ReasonTags.ToString());
+		
+		//@상호작용 실패 이벤트
+		InteractionFailed.Broadcast(InteractionTargetActor.Get(), CurrentPotentialInteraction);
+	}
 }
 
 void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
@@ -954,9 +985,6 @@ void UBaseAbilitySystemComponent::OnPotentialInteractionChanged(AActor* TargetAc
 
 		//@잠재적 상호작용 허용 시작
 		StartInteractionWindow(TargetActor, Interaction);
-
-		//@상호작용 가능 이벤트
-		InteractionAvailable.Broadcast(TargetActor, Interaction);
 	}
 	//@상호작용 취소
 	else
@@ -972,9 +1000,11 @@ void UBaseAbilitySystemComponent::OnPotentialInteractionChanged(AActor* TargetAc
 		{
 			EndInteractionWindow(false);
 		}
-
-		//@상호작용 허용 불가 이벤트
-		InteractionUnavailable.Broadcast(TargetActor, Interaction);
+		else
+		{
+			//@상호작용 실패 이벤트
+			InteractionFailed.Broadcast(TargetActor, Interaction);
+		}
 	}
 }
 #pragma endregion

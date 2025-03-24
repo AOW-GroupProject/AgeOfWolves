@@ -291,10 +291,6 @@ void AArea::RegisterPlayer(APlayerCharacter* Player)
     FPlayerBindingInfo BindingInfo(Player);
     PlayerBindings.Add(PlayerPtr, BindingInfo);
 
-    // 컴포넌트와 Area 연결
-    // ObjectiveComp->SetupWithArea(this); 
-    // 주의: ObjectiveDetectionComponent 구현 후 주석 해제
-
     UE_LOGFMT(LogArea, Log, "Area {0}: 플레이어 {1} 등록 완료",
         *AreaID.ToString(), *Player->GetName());
 
@@ -305,8 +301,6 @@ void AArea::RegisterPlayer(APlayerCharacter* Player)
             Pair.Value.CurrentState.ToString().StartsWith("State."))
         {
             AActor* AIActor = Pair.Key.Get();
-            // ObjectiveComp->OnAreaObjectiveStateChanged(AIActor, Pair.Value.CurrentState, this, AreaID);
-            // 주의: ObjectiveDetectionComponent 구현 후 주석 해제
         }
     }
 }

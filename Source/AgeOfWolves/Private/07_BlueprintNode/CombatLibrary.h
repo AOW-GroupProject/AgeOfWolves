@@ -136,6 +136,29 @@ struct FSlashGameplayCueParams
     UPROPERTY(BlueprintReadOnly)
         FVector ImpactNormal;
 };
+
+/*
+*   @FSurfacePointResult
+* 
+*   Physics Asset 표면 위치 결과를 저장하는 구조체
+*/
+USTRUCT(BlueprintType)
+struct FSurfacePointResult
+{
+    GENERATED_BODY()
+
+public:
+    FSurfacePointResult()
+        : SurfacePoint(FVector::ZeroVector)
+        , SurfaceNormal(FVector::UpVector)
+    {}
+
+    UPROPERTY(BlueprintReadOnly, Category = "Surface Point | 위치")
+        FVector SurfacePoint;
+
+    UPROPERTY(BlueprintReadOnly, Category = "Surface Point | 노말")
+        FVector SurfaceNormal;
+};
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -159,7 +182,6 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Combat | 피격 반응")
         static EHitReactDirection CalculateHitDirection(const FVector& ImpactLocation, const AActor* HitActor);
 
-public:
     //@피격 반응 방향을 계산합니다.
     UFUNCTION(BlueprintCallable, Category = "Combat | 충돌 정보")
         static FHitDirectionResult CalculateHitDirectionWithHitResult(const AActor* Instigator, const FHitResult& HitResult);
@@ -173,6 +195,17 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Combat | 충돌 정보 | 충돌 위치")
         static EHitImpactLocation CalculateHitImpactLocation(const FVector& ImpactPoint, const AActor* HitActor);
+
+public:
+    //@해당 Socket 위치로부터 방향 별로 가장 가까운 Physics Asset 표면 위치를 반환합니다.
+    UFUNCTION(BlueprintCallable, Category = "Combat | 충돌 정보")
+        static FSurfacePointResult GetClosestSurfacePointAndNormalFromSocket(
+            const AActor* TargetActor,
+            FName SocketName,
+            EHitImpactLocation DesiredDirection = EHitImpactLocation::Front,
+            EHitImpactLocation DesiredNormalDirection = EHitImpactLocation::Front
+        );
+
 #pragma endregion
 
 //@이벤트 전달 관련...
