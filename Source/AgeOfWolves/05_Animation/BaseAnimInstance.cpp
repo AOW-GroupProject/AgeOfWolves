@@ -321,7 +321,7 @@ void UBaseAnimInstance::ListenToCombatStateAttributeChange()
 
 //@Callbacks
 #pragma region Callbacks
-void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn)
+void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn, AActor* LockOnTargetActor)
 {
     if (!OwnerCharacterBaseRef.IsValid() || !CharacterMovementCompRef.IsValid())
     {
@@ -351,70 +351,6 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
         static_cast<uint8>(OldCombatType),
         static_cast<uint8>(CombatType),
         NewValue);
-
-    if (!OwnerCharacterBaseRef.IsValid())
-    {
-        UE_LOGFMT(LogAnimInstance, Log, "캐릭터가 유효하지 않습니다.");
-        return;
-    }
-
-    UStaticMeshComponent* WeaponMesh = OwnerCharacterBaseRef->GetWeaponMesh();
-    UStaticMeshComponent* ShealthMesh = OwnerCharacterBaseRef->GetShealthMesh();
-    UStaticMeshComponent* FullMesh = OwnerCharacterBaseRef->GetFullWeaponMesh();
-
-    if (!WeaponMesh || !ShealthMesh || !FullMesh) return;
-
-    const float VisibilityDelay = 0.5f;
-    const bool bIsInCombat = NewValue > 0.f;
-
-    if (bIsInCombat)
-    {
-        // 전투 상태로 전환 (값이 1 이상)
-        FTimerHandle CombatTimerHandle;
-        GetWorld()->GetTimerManager().SetTimer(
-            CombatTimerHandle,
-            [=]()
-            {
-                // FullWeapon의 Static Mesh를 ShealthMesh의 것으로 변경
-                if (UStaticMesh* ShealthStaticMesh = ShealthMesh->GetStaticMesh())
-                {
-                    FullMesh->SetStaticMesh(ShealthStaticMesh);
-                    UE_LOGFMT(LogAnimInstance, Log, "FullWeapon Mesh가 Shealth Mesh로 변경됨");
-                }
-
-                // 가시성 설정
-                WeaponMesh->SetVisibility(true);
-                FullMesh->SetVisibility(true);
-                ShealthMesh->SetVisibility(false);
-            },
-            VisibilityDelay,
-                false
-                );
-    }
-    else
-    {
-        // 비전투 상태로 전환 (값이 0)
-        FTimerHandle NonCombatTimerHandle;
-        GetWorld()->GetTimerManager().SetTimer(
-            NonCombatTimerHandle,
-            [=]()
-            {
-                // FullWeapon 가시성 비활성화
-                FullMesh->SetVisibility(false);
-                WeaponMesh->SetVisibility(false);
-                ShealthMesh->SetVisibility(true);
-
-                // FullWeapon의 Static Mesh를 원래대로 복원
-                if (OriginalFullWeaponMesh)
-                {
-                    FullMesh->SetStaticMesh(OriginalFullWeaponMesh);
-                    UE_LOGFMT(LogAnimInstance, Log, "FullWeapon Mesh가 원본으로 복원됨");
-                }
-            },
-            VisibilityDelay + 1.f,
-                false
-                );
-    }
 }
 #pragma endregion
 

@@ -86,7 +86,7 @@ protected:
 		UInventoryComponent* InventoryComponent;
 
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		ULockOnComponent* LockOnComponent;
+		ULockOnComponent* LockComponent;
 #pragma endregion
 
 //@Delegates
@@ -107,10 +107,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }
 	UFUNCTION(BlueprintCallable)
-		FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockOnComponent; }
-
-//@TODO: 지울 예정
-
+		FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockComponent; }
 #pragma endregion
 
 };

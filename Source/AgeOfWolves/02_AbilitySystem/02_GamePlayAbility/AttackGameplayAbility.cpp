@@ -68,7 +68,7 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
         HitResult,
         0.0f,
         MainEffectCDO,
-        SubEffectCDO  // nullptr이어도 무방
+        SubEffectCDO
     );
 
     if (!bSuccess)
@@ -206,58 +206,58 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
     }
 
      //8. 디버그 드로잉
-#if ENABLE_DRAW_DEBUG
-    const float DrawDuration = 2.0f;
-    const FColor TraceColor = FColor::Red;
-    const FColor HitColor = FColor::Green;
-
-    switch (TraceType)
-    {
-    case EWeaponTraceType::Line:
-    {
-        DrawDebugLine(
-            GetWorld(),
-            StartLocation,
-            EndLocation,
-            TraceColor,
-            false,
-            DrawDuration,
-            0,
-            2.0f
-        );
-        break;
-    }
-    case EWeaponTraceType::Sphere:
-    {
-        DrawDebugSphere(GetWorld(), StartLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
-        DrawDebugSphere(GetWorld(), EndLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
-        DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
-        break;
-    }
-    case EWeaponTraceType::Box:
-    {
-        FQuat Rotation = FRotationMatrix::MakeFromZ(EndLocation - StartLocation).ToQuat();
-        DrawDebugBox(GetWorld(), StartLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
-        DrawDebugBox(GetWorld(), EndLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
-        DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
-        break;
-    }
-    }
-
-    // Hit 지점 표시
-    for (const FHitResult& Hit : HitResults)
-    {
-        DrawDebugPoint(
-            GetWorld(),
-            Hit.ImpactPoint,
-            10.0f,
-            HitColor,
-            false,
-            DrawDuration,
-            0
-        );
-    }
-#endif
+//#if ENABLE_DRAW_DEBUG
+//    const float DrawDuration = 2.0f;
+//    const FColor TraceColor = FColor::Red;
+//    const FColor HitColor = FColor::Green;
+//
+//    switch (TraceType)
+//    {
+//    case EWeaponTraceType::Line:
+//    {
+//        DrawDebugLine(
+//            GetWorld(),
+//            StartLocation,
+//            EndLocation,
+//            TraceColor,
+//            false,
+//            DrawDuration,
+//            0,
+//            2.0f
+//        );
+//        break;
+//    }
+//    case EWeaponTraceType::Sphere:
+//    {
+//        DrawDebugSphere(GetWorld(), StartLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
+//        DrawDebugSphere(GetWorld(), EndLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
+//        DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
+//        break;
+//    }
+//    case EWeaponTraceType::Box:
+//    {
+//        FQuat Rotation = FRotationMatrix::MakeFromZ(EndLocation - StartLocation).ToQuat();
+//        DrawDebugBox(GetWorld(), StartLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
+//        DrawDebugBox(GetWorld(), EndLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
+//        DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
+//        break;
+//    }
+//    }
+//
+//    // Hit 지점 표시
+//    for (const FHitResult& Hit : HitResults)
+//    {
+//        DrawDebugPoint(
+//            GetWorld(),
+//            Hit.ImpactPoint,
+//            10.0f,
+//            HitColor,
+//            false,
+//            DrawDuration,
+//            0
+//        );
+//    }
+//#endif
 
     // 9. 트레이스 결과 처리
     if (HitResults.Num() <= 0)

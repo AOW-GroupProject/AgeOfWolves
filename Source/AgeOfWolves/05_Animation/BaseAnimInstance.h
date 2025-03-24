@@ -241,7 +241,7 @@ protected:
 protected:
 	//@Lock On 상태 변화 이벤트 구독
 	UFUNCTION()
-		void OnLockOnStateChanged(bool bIsLockOn);
+		void OnLockOnStateChanged(bool bIsLockOn, AActor* LockOnTargetActor);
 
 protected:
 	//@Attribute 변화 이벤트 구독
