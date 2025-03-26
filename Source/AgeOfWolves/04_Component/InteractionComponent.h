@@ -24,10 +24,10 @@ UENUM(BlueprintType)
 enum class EInteractionType : uint8
 {
     None,
-    Execution,    
-    ItemPickup,   
-    Dialogue,     
-    UseObject,    
+    Execution   UMETA(DisplayName = "처형"),
+    Ambush      UMETA(DisplayName = "암살"),
+    ItemPickup  UMETA(DisplayName = "아이템 줍기"),
+    Dialogue    UMETA(DisplayName = "대화"),
     MAX,        
 };
 #pragma endregion
@@ -317,6 +317,11 @@ protected:
     //@상태 변경 이벤트 수신 콜백
     UFUNCTION()
         void OnDetectedAIStateChanged(const FGameplayTag& StateTag, AActor* ObjectiveActor);
+
+protected:
+    //@잠재적 암살 타겟 변경 이벤트 구독
+    UFUNCTION()
+        void OnAmbushTargetChanged(AActor* PotentialAmbushTarget);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

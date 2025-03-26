@@ -549,10 +549,10 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
     {
         AActor* AIActor = CurrentTargetAI.Get();
 
-        // 후면 노출 상태 체크
+        //@후면 노출 상태 체크
         bool bIsBackExposed = IsActorBackExposed(AIActor);
 
-        // 후면 노출된 경우 AmbushTarget으로 설정
+        //@후면 노출된 경우 AmbushTarget으로 설정
         if (bIsBackExposed)
         {
             AmbushTarget = AIActor;
@@ -561,7 +561,7 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
     }
     else
     {
-        // 바인딩된 모든 Area 순회
+        //@Bound Areas
         float ClosestDistance = MAX_FLT;
         AActor* ClosestActor = nullptr;
 
@@ -569,23 +569,23 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
         {
             if (!AreaInfo.IsValid()) continue;
 
-            // Area
+            //@Area
             AArea* Area = AreaInfo.AreaRef.Get();
-            // Area AI
+            //@Area AI
             TArray<AActor*> AreaAIActors = Area->GetAIInArea();
 
             for (AActor* AIActor : AreaAIActors)
             {
                 if (!IsValid(AIActor)) continue;
 
-                // 카메라 시야 내에 있는지 확인
+                //@카메라 시야 내에 있는지 확인
                 if (bOnlyDetectInCameraView && !IsActorInCameraView(AIActor))
                     continue;
 
-                // 후면 노출 상태 체크
+                //@후면 노출 상태 체크
                 bool bIsBackExposed = IsActorBackExposed(AIActor);
 
-                // 후면 노출된 경우, 거리 계산하여 가장 가까운 AI 저장
+                //@가장 가까운 AI 타겟
                 if (bIsBackExposed)
                 {
                     FVector PawnLocation = GetPawnLocation();
@@ -601,7 +601,7 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
             }
         }
 
-        // 가장 가까운 후면 노출 AI를 AmbushTarget으로 설정
+        //@가장 가까운 AI
         if (ClosestActor)
         {
             AmbushTarget = ClosestActor;
@@ -609,12 +609,15 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
         }
     }
 
-    // AmbushTarget이 변경되었을 경우 처리
+    //@AmbushTarget
     if (AmbushTarget.Get() != PreviousAmbushTarget)
     {
         UE_LOGFMT(LogObjectiveDetection, Log, "AmbushTarget 변경: {0} -> {1}",
             PreviousAmbushTarget ? *PreviousAmbushTarget->GetName() : TEXT("없음"),
             AmbushTarget.IsValid() ? *AmbushTarget->GetName() : TEXT("없음"));
+
+        //@잠재적 매복 암살 타겟 변경 이벤트
+        AmbushTargetChanged.Broadcast(AmbushTarget.Get());
     }
 }
 #pragma endregion

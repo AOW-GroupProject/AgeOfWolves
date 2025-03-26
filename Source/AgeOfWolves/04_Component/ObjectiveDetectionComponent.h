@@ -96,6 +96,9 @@ public:
 #pragma region Delegates
 //@시야 안에 있는 AI의 상태 변화 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FDetectedAIStateChanged, const FGameplayTag&, const AActor*)
+
+//@시야 안에 있는 AI 중 매복 암살 가능 타겟 변경 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FAmbushTargetChanged, const AActor*)
 #pragma endregion
 
 /*
@@ -238,6 +241,10 @@ protected:
 public:
     //@목표 AI의 상태 변화 이벤트
     FDetectedAIStateChanged DetectedAIStateChanged;
+
+public:
+    //@매복 암살 가능한 AI 타겟 변경 이벤트
+    FAmbushTargetChanged AmbushTargetChanged;
 #pragma endregion
 
 //@Callbacks
