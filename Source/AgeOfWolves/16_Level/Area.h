@@ -168,7 +168,7 @@ protected:
         int32 AreaPriority = 0;
 
 protected:
-    //@수동으로 등록할 AI 액터 (에디터에서 설정)
+    //@수동으로 등록할 AI 액터
     UPROPERTY(EditAnywhere, Category = "Area|AI")
         TArray<AActor*> RegisteredAIActors;
 
@@ -184,11 +184,11 @@ protected:
 protected:
     //@등록된 AI의 Map
     UPROPERTY()
-        TMap<TWeakObjectPtr<AActor>, FAreaAIInfo> AIInfoMap;
+        TMap<TWeakObjectPtr<AActor>, FAreaAIInfo> MAIInfos;
 
     //@영역 내 플레이어 정보
     UPROPERTY()
-        TMap<TWeakObjectPtr<APlayerCharacter>, FPlayerBindingInfo> PlayerBindings;
+        TMap<TWeakObjectPtr<APlayerCharacter>, FPlayerBindingInfo> MPlayerBindings;
 
 protected:
     //@정리 타이머

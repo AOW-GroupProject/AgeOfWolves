@@ -625,6 +625,50 @@ FSurfacePointResult UCombatLibrary::GetClosestSurfacePointAndNormalFromSocket(
 
     return Result;
 }
+
+bool UCombatLibrary::IsActorBackExposed(const AActor* ObserverActor, const AActor* TargetActor, float ExposureAngleThreshold)
+{
+    // 유효성 검사
+    if (!IsValid(ObserverActor) || !IsValid(TargetActor))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "등 노출 확인 실패 - 사유: ObserverActor 또는 TargetActor가 유효하지 않음");
+        return false;
+    }
+
+    // 위치 벡터 계산
+    FVector ObserverLocation = ObserverActor->GetActorLocation();
+    FVector TargetLocation = TargetActor->GetActorLocation();
+
+    // 높이(Z) 차이 무시를 위해 XY 평면에서만 계산
+    ObserverLocation.Z = TargetLocation.Z;
+
+    // 대상 -> 관찰자 방향 벡터 (중요: 대상에서 관찰자 방향으로의 벡터)
+    FVector DirectionToObserver = (ObserverLocation - TargetLocation).GetSafeNormal();
+
+    // 대상의 전방 벡터
+    FVector TargetForward = TargetActor->GetActorForwardVector();
+    TargetForward.Z = 0.0f;
+    TargetForward.Normalize();
+
+    // 내적 계산 (두 벡터 간의 코사인 값)
+    float DotProduct = FVector::DotProduct(TargetForward, DirectionToObserver);
+
+    // 대상의 전방 벡터와 대상->관찰자 방향 벡터의 내적이 음수이면
+    // 관찰자는 대상의 뒤에 있는 것임 (서로 마주보면 양수값이 나옴)
+    bool bIsBackExposed = DotProduct < 0.0f;
+
+    // 추가 로깅으로 벡터와 내적값 확인
+    UE_LOGFMT(LogCombatLibrary, Verbose,
+        "등 노출 계산 - 대상: {0}, 관찰자: {1}, 대상 전방: ({2},{3},{4}), 대상->관찰자: ({5},{6},{7}), 내적: {8}, 결과: {9}",
+        *TargetActor->GetName(),
+        *ObserverActor->GetName(),
+        TargetForward.X, TargetForward.Y, TargetForward.Z,
+        DirectionToObserver.X, DirectionToObserver.Y, DirectionToObserver.Z,
+        DotProduct,
+        bIsBackExposed ? TEXT("노출됨") : TEXT("노출되지 않음"));
+
+    return bIsBackExposed;
+}
 #pragma endregion
 
 //@이벤트 전달 관련...
