@@ -20,6 +20,15 @@ class UTexture2D;
 
 //@열거형
 #pragma region Enums
+UENUM(BlueprintType)
+enum class ETargetState : uint8
+{
+    None                    UMETA(DisplayName = "None"),
+    Normal                  UMETA(DisplayName = "Normal"),       
+    Fragile                 UMETA(DisplayName = "Fragile"),      
+    BackExposed             UMETA(DisplayName = "BackExposed"),  
+    FragileAndBackExposed   UMETA(DisplayName = "FragileAndBackExposed")  
+};
 #pragma endregion
 
 //@구조체
@@ -165,6 +174,10 @@ protected:
     //@Billboard 컴포넌트 업데이트 (위치, 회전, 가시성)
     void UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly = false);
 
+    bool UpdateBillboardPosition(AActor* TargetActor);
+
+    void UpdateBillboardTexture();
+
 protected:
     //@등을 노출하고 있는 AI 정보 업데이트
     void UpdateAIBackExposureState();
@@ -222,6 +235,9 @@ protected:
 
     //@정리 주기 (초)
     float CleanupInterval = 10.0f;
+
+    //@취약 여부
+    bool bIsCurrentTargetFragile = false;
 
 protected:
     //@잠재적 매복 타겟 (후면 노출된 AI)
@@ -332,6 +348,8 @@ protected:
     }
 
 protected:
+    AActor* DetermineTargetActor();
+
     //@현재 타겟 액터 설정
     void SetCurrentTargetAI(AActor* NewTargetActor);
 
@@ -341,8 +359,6 @@ protected:
 protected:
     // 인디케이터 텍스처 변경
     void SetIndicatorTexture(UTexture2D* NewTexture);
-
-
-
 #pragma endregion
+
 };

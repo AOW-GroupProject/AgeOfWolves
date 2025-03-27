@@ -13,6 +13,9 @@ DEFINE_LOG_CATEGORY(LogTimeManipulation);
 #pragma region Default Setting
 void UTimeManipulationSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
+    //@Active Dilation Owner
+    ActiveDilationOwner = nullptr;
+
     Super::Initialize(Collection);
 }
 
@@ -151,18 +154,33 @@ void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDil
         return;
     }
 
+    // 이미 활성화된 시간 조작이 있고 다른 Actor가 요청하는 경우 무시
+    if (ActiveDilationOwner.IsValid() && ActiveDilationOwner.Get() != Owner && bIgnorePreviousRequests)
+    {
+        UE_LOGFMT(LogTimeManipulation, Warning, "타임 딜레이션 시작 무시 - 사유: 다른 액터가 이미 활성화 중 - 현재 액터: {0}, 요청 액터: {1}",
+            *ActiveDilationOwner.Get()->GetName(), *Owner->GetName());
+        return;
+    }
+
     //@목표 Dilation Value
     float TargetValue = CalculateTimeDilationValue(Settings);
 
-    //Already Active?
+    //@Already Active?
     if (!ActiveDilations.Contains(Owner))
     {
-
         UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 시작 - 액터: {0}, 목표값: {1}, 모드: {2}",
             *Owner->GetName(), TargetValue, bGlobal ? TEXT("글로벌") : TEXT("로컬"));
     }
+    else
+    {
+        UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 업데이트 - 액터: {0}, 새 목표값: {1}", *Owner->GetName(), TargetValue);
+    }
 
-    UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 업데이트 - 액터: {0}, 새 목표값: {1}", *Owner->GetName(), TargetValue);
+    //@기존에 활성화된 다른 액터가 있다면 중지
+    if (ActiveDilationOwner.IsValid() && ActiveDilationOwner.Get() != Owner)
+    {
+        StopTimeDilation(ActiveDilationOwner.Get(), false, 0.0f);
+    }
 
     //@Remove
     ActiveDilations.Remove(Owner);
@@ -196,6 +214,9 @@ void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDil
 
     //@Active Dilations
     ActiveDilations.Add(Owner, DilationInfo);
+
+    // 현재 활성화된 소유자 설정
+    ActiveDilationOwner = Owner;
 
     //@Anim Instance 등록
     RegisterAnimInstance(Owner);
@@ -252,7 +273,7 @@ void UTimeManipulationSubsystem::StopTimeDilation(AActor* Owner, bool bSmoothTra
 
         TransitioningDilations.Add(Owner, TransitionInfo);
     }
-    //@즉시 섲ㄴ환
+    //@즉시 전환
     else
     {
         SetTimeDilation(Owner, DilationInfo, DilationInfo.OriginalDilation);
@@ -261,10 +282,15 @@ void UTimeManipulationSubsystem::StopTimeDilation(AActor* Owner, bool bSmoothTra
     //@Remove
     ActiveDilations.Remove(Owner);
 
+    // 현재 활성화된 소유자가 Owner인 경우 초기화
+    if (ActiveDilationOwner.Get() == Owner)
+    {
+        ActiveDilationOwner = nullptr;
+    }
+
     //@Anim Instance 등록 해제
     UnregisterAnimInstance(Owner);
 }
-
 void UTimeManipulationSubsystem::UpdateTimeDilation(AActor* Owner, FTimeDilationInfo& DilationInfo, float DeltaTime)
 {
     //@World
