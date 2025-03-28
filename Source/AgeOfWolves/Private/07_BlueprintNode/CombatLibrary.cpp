@@ -579,47 +579,47 @@ FSurfacePointResult UCombatLibrary::GetClosestSurfacePointAndNormalFromSocket(
 //            1.0f
 //        );
 //
-//        // 방향 표시 (파란색)
-//        DrawDebugDirectionalArrow(
-//            TargetActor->GetWorld(),
-//            SocketLocation,
-//            SearchPoint,
-//            10.0f,
-//            FColor::Blue,
-//            false,
-//            3.0f,
-//            0,
-//            1.0f
-//        );
+//    //    // 방향 표시 (파란색)
+//    //    DrawDebugDirectionalArrow(
+//    //        TargetActor->GetWorld(),
+//    //        SocketLocation,
+//    //        SearchPoint,
+//    //        10.0f,
+//    //        FColor::Blue,
+//    //        false,
+//    //        3.0f,
+//    //        0,
+//    //        1.0f
+//    //    );
 //
-//        // 계산된 노멀 벡터 표시 (하늘색)
-//        DrawDebugDirectionalArrow(
-//            TargetActor->GetWorld(),
-//            Result.SurfacePoint,
-//            Result.SurfacePoint + Result.SurfaceNormal * 30.0f,
-//            10.0f,
-//            FColor::Cyan,
-//            false,
-//            3.0f,
-//            0,
-//            1.0f
-//        );
+//    //    // 계산된 노멀 벡터 표시 (하늘색)
+//    //    DrawDebugDirectionalArrow(
+//    //        TargetActor->GetWorld(),
+//    //        Result.SurfacePoint,
+//    //        Result.SurfacePoint + Result.SurfaceNormal * 30.0f,
+//    //        10.0f,
+//    //        FColor::Cyan,
+//    //        false,
+//    //        3.0f,
+//    //        0,
+//    //        1.0f
+//    //    );
 //
-//        // Physics Asset의 원본 노멀 표시 (보라색)
-//        if (DesiredNormalDirection != DesiredDirection)
-//        {
-//            DrawDebugDirectionalArrow(
-//                TargetActor->GetWorld(),
-//                Result.SurfacePoint,
-//                Result.SurfacePoint + ClosestPointResult.Normal * 30.0f,
-//                10.0f,
-//                FColor::Purple,
-//                false,
-//                3.0f,
-//                0,
-//                1.0f
-//            );
-//        }
+//    //    // Physics Asset의 원본 노멀 표시 (보라색)
+//    //    if (DesiredNormalDirection != DesiredDirection)
+//    //    {
+//    //        DrawDebugDirectionalArrow(
+//    //            TargetActor->GetWorld(),
+//    //            Result.SurfacePoint,
+//    //            Result.SurfacePoint + ClosestPointResult.Normal * 30.0f,
+//    //            10.0f,
+//    //            FColor::Purple,
+//    //            false,
+//    //            3.0f,
+//    //            0,
+//    //            1.0f
+//    //        );
+//    //    }
 //    }
 //#endif
 
