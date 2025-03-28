@@ -125,6 +125,13 @@ protected:
 
 protected:
     //@내부 바인딩
+    void InternalBindToAI(TWeakObjectPtr<AActor> AIActorPtr);
+    void UnbindFromAI(TWeakObjectPtr<AActor> AIActorPtr);
+    void UnbindFromAllAI();
+
+    void InternalBindToPlayer(TWeakObjectPtr<APlayerCharacter> Player);
+    void UnbindFromPlayer(TWeakObjectPtr<APlayerCharacter> Player);
+    void UnbindFromPlayer();
 
 protected:
     //@외부 바인딩
@@ -143,11 +150,13 @@ protected:
     //@AI 처리 함수
     void RegisterAI(AActor* AIActor);
     void UnregisterAI(AActor* AIActor);
+    void UnregisterAllAI();
 
 protected:
     //@플레이어 처리 함수
     void RegisterPlayer(APlayerCharacter* Player);
     void UnregisterPlayer(APlayerCharacter* Player);
+    void UnregisterPlayer();
 
 protected:
     //@영역 경계 박스
@@ -255,5 +264,9 @@ public:
     //@영역 내 AI 목록 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
         TArray<AActor*> GetAIInArea() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Area")
+        TArray<FAreaAIInfo> GetAreaAIInfos() const;
 #pragma endregion
+
 };
