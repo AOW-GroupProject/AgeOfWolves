@@ -21,11 +21,12 @@ class UAISenseConfig_Sight;
 class UAISenseConfig_Hearing;
 class UAIManagerSubsystem;
 class UAOWSaveGame;
-struct FBaseAbilitySet_GrantedHandles;
 class UBaseAbilitySystemComponent;
 class UAbilityManagerSubsystem;
 class UAIAbilitySequencerComponent;
 class UObjectiveDetectionComponent;
+
+struct FBaseAbilitySet_GrantedHandles;
 #pragma endregion
 
 //@열거형
@@ -70,8 +71,11 @@ DECLARE_MULTICAST_DELEGATE(FRequestStartInitByAI)
 //@AI의 Attribute Set 초기화 완료 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAIAttributeSetInitialized);
 
-//@타겟 발견
+//@락온 타겟 설정/해제 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FAILockOnStateChanged, bool, AActor*)
+
+//@타겟 인지 이벤트
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FAIDetectsTarget, bool,  AActor*, AActor*)
 
 //@전투 패턴 활성화 요청
 DECLARE_DELEGATE_RetVal(bool, FRequestStartCombatPattern)
@@ -191,10 +195,10 @@ protected:
 protected:
 	//@Character Tag
 	UPROPERTY(EditDefaultsOnly, Category = "AI | 캐릭터 태그")
-	FGameplayTag CharacterTag;
+		FGameplayTag CharacterTag;
 
 	//@AI 유형
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "AI | AI 유형")
 		EAIType AIType;
 
 private:
@@ -231,6 +235,10 @@ public:
 public:
 	//@AI의 Lock On 상태 변화 이벤트
 	FAILockOnStateChanged AILockOnStateChanged;
+
+public:
+	//@AI의 타겟 인지 이벤트
+	FAIDetectsTarget AIDetectsTarget;
 
 public:
 	//@전투 패턴 활성화 요청 이벤트
@@ -274,6 +282,10 @@ protected:
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+protected:
+	UPROPERTY()
+		TWeakObjectPtr<APawn> AgentPawnRef;
+
 protected:
 	//@AI Manager Subsystem 캐싱
 	UPROPERTY()

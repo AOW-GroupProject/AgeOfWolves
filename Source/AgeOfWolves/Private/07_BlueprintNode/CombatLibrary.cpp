@@ -579,51 +579,114 @@ FSurfacePointResult UCombatLibrary::GetClosestSurfacePointAndNormalFromSocket(
 //            1.0f
 //        );
 //
-//        // 방향 표시 (파란색)
-//        DrawDebugDirectionalArrow(
-//            TargetActor->GetWorld(),
-//            SocketLocation,
-//            SearchPoint,
-//            10.0f,
-//            FColor::Blue,
-//            false,
-//            3.0f,
-//            0,
-//            1.0f
-//        );
+//    //    // 방향 표시 (파란색)
+//    //    DrawDebugDirectionalArrow(
+//    //        TargetActor->GetWorld(),
+//    //        SocketLocation,
+//    //        SearchPoint,
+//    //        10.0f,
+//    //        FColor::Blue,
+//    //        false,
+//    //        3.0f,
+//    //        0,
+//    //        1.0f
+//    //    );
 //
-//        // 계산된 노멀 벡터 표시 (하늘색)
-//        DrawDebugDirectionalArrow(
-//            TargetActor->GetWorld(),
-//            Result.SurfacePoint,
-//            Result.SurfacePoint + Result.SurfaceNormal * 30.0f,
-//            10.0f,
-//            FColor::Cyan,
-//            false,
-//            3.0f,
-//            0,
-//            1.0f
-//        );
+//    //    // 계산된 노멀 벡터 표시 (하늘색)
+//    //    DrawDebugDirectionalArrow(
+//    //        TargetActor->GetWorld(),
+//    //        Result.SurfacePoint,
+//    //        Result.SurfacePoint + Result.SurfaceNormal * 30.0f,
+//    //        10.0f,
+//    //        FColor::Cyan,
+//    //        false,
+//    //        3.0f,
+//    //        0,
+//    //        1.0f
+//    //    );
 //
-//        // Physics Asset의 원본 노멀 표시 (보라색)
-//        if (DesiredNormalDirection != DesiredDirection)
-//        {
-//            DrawDebugDirectionalArrow(
-//                TargetActor->GetWorld(),
-//                Result.SurfacePoint,
-//                Result.SurfacePoint + ClosestPointResult.Normal * 30.0f,
-//                10.0f,
-//                FColor::Purple,
-//                false,
-//                3.0f,
-//                0,
-//                1.0f
-//            );
-//        }
+//    //    // Physics Asset의 원본 노멀 표시 (보라색)
+//    //    if (DesiredNormalDirection != DesiredDirection)
+//    //    {
+//    //        DrawDebugDirectionalArrow(
+//    //            TargetActor->GetWorld(),
+//    //            Result.SurfacePoint,
+//    //            Result.SurfacePoint + ClosestPointResult.Normal * 30.0f,
+//    //            10.0f,
+//    //            FColor::Purple,
+//    //            false,
+//    //            3.0f,
+//    //            0,
+//    //            1.0f
+//    //        );
+//    //    }
 //    }
 //#endif
 
     return Result;
+}
+
+bool UCombatLibrary::IsActorBackExposed(const AActor* ObserverActor, const AActor* TargetActor, float ExposureAngleThreshold)
+{
+    // 유효성 검사
+    if (!IsValid(ObserverActor) || !IsValid(TargetActor))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "등 노출 확인 실패 - 사유: ObserverActor 또는 TargetActor가 유효하지 않음");
+        return false;
+    }
+
+    // 위치 벡터 계산
+    FVector ObserverLocation = ObserverActor->GetActorLocation();
+    FVector TargetLocation = TargetActor->GetActorLocation();
+
+    // 높이(Z) 차이 무시를 위해 XY 평면에서만 계산
+    ObserverLocation.Z = TargetLocation.Z;
+
+    // 대상 -> 관찰자 방향 벡터
+    FVector DirectionToObserver = (ObserverLocation - TargetLocation).GetSafeNormal();
+
+    // 대상의 전방 벡터
+    FVector TargetForward = TargetActor->GetActorForwardVector();
+    TargetForward.Z = 0.0f;
+    TargetForward.Normalize();
+
+    // 대상의 오른쪽 벡터
+    FVector TargetRight = TargetActor->GetActorRightVector();
+    TargetRight.Z = 0.0f;
+    TargetRight.Normalize();
+
+    // 내적 계산 (전방 벡터와의 각도)
+    float ForwardDot = FVector::DotProduct(TargetForward, DirectionToObserver);
+
+    // 오른쪽 벡터와의 내적 계산 (왼쪽/오른쪽 방향 확인용)
+    float RightDot = FVector::DotProduct(TargetRight, DirectionToObserver);
+
+    // 각도 계산 (0-180도)
+    float AngleDegrees = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(ForwardDot, -1.0f, 1.0f)));
+
+    // 후면 노출 임계값 설정 (기본값 120도)
+    float BackExposureAngle = (ExposureAngleThreshold > 0.0f) ? ExposureAngleThreshold : 160.f;
+
+    // 각도가 임계값보다 크면 후면으로 간주
+    bool bIsBackExposed = AngleDegrees > BackExposureAngle;
+
+    // 방향 정보 (디버깅용)
+    FString Direction = RightDot > 0 ? TEXT("오른쪽") : TEXT("왼쪽");
+    if (ForwardDot > 0.7) Direction = TEXT("전방");
+    else if (ForwardDot < -0.7) Direction = TEXT("후방");
+    else Direction = Direction + (ForwardDot > 0 ? TEXT(" 전방") : TEXT(" 후방"));
+
+    // 추가 로깅
+    UE_LOGFMT(LogCombatLibrary, Log,
+        "등 노출 계산 - 대상: {0}, 관찰자: {1}, 각도: {2}°, 방향: {3}, 임계값: {4}°, 결과: {5}",
+        *TargetActor->GetName(),
+        *ObserverActor->GetName(),
+        AngleDegrees,
+        *Direction,
+        BackExposureAngle,
+        bIsBackExposed ? TEXT("노출됨") : TEXT("노출되지 않음"));
+
+    return bIsBackExposed;
 }
 #pragma endregion
 

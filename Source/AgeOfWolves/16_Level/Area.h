@@ -98,6 +98,9 @@ struct FPlayerBindingInfo
 #pragma region Delegates
 //@AI 상태 변경 델리게이트
 DECLARE_MULTICAST_DELEGATE_FourParams(FAreaAIStateChanged, AActor*, const FGameplayTag&, AActor*, const FGuid&);
+
+//@AI의 Player 인지 이벤트
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FAIDetectsPlayer, bool, AActor*, APlayerCharacter*);
 #pragma endregion
 
 /*
@@ -125,6 +128,13 @@ protected:
 
 protected:
     //@내부 바인딩
+    void InternalBindToAI(TWeakObjectPtr<AActor> AIActorPtr);
+    void UnbindFromAI(TWeakObjectPtr<AActor> AIActorPtr);
+    void UnbindFromAllAI();
+
+    void InternalBindToPlayer(TWeakObjectPtr<APlayerCharacter> Player);
+    void UnbindFromPlayer(TWeakObjectPtr<APlayerCharacter> Player);
+    void UnbindFromAllPlayer();
 
 protected:
     //@외부 바인딩
@@ -143,11 +153,13 @@ protected:
     //@AI 처리 함수
     void RegisterAI(AActor* AIActor);
     void UnregisterAI(AActor* AIActor);
+    void UnregisterAllAI();
 
 protected:
     //@플레이어 처리 함수
     void RegisterPlayer(APlayerCharacter* Player);
     void UnregisterPlayer(APlayerCharacter* Player);
+    void UnregisterAllPlayer();
 
 protected:
     //@영역 경계 박스
@@ -168,7 +180,7 @@ protected:
         int32 AreaPriority = 0;
 
 protected:
-    //@수동으로 등록할 AI 액터 (에디터에서 설정)
+    //@수동으로 등록할 AI 액터
     UPROPERTY(EditAnywhere, Category = "Area|AI")
         TArray<AActor*> RegisteredAIActors;
 
@@ -184,11 +196,11 @@ protected:
 protected:
     //@등록된 AI의 Map
     UPROPERTY()
-        TMap<TWeakObjectPtr<AActor>, FAreaAIInfo> AIInfoMap;
+        TMap<TWeakObjectPtr<AActor>, FAreaAIInfo> MAIInfos;
 
     //@영역 내 플레이어 정보
     UPROPERTY()
-        TMap<TWeakObjectPtr<APlayerCharacter>, FPlayerBindingInfo> PlayerBindings;
+        TMap<TWeakObjectPtr<APlayerCharacter>, FPlayerBindingInfo> MPlayerBindings;
 
 protected:
     //@정리 타이머
@@ -216,6 +228,10 @@ protected:
 public:
     //2AI 상태 변경 델리게이트
     FAreaAIStateChanged AreaAIStateChanged;
+
+public:
+    //@AI의 Player 인지 이벤트
+    FAIDetectsPlayer AIDetectsPlayer;
 #pragma endregion
 
 //@Callbacks
@@ -235,6 +251,15 @@ protected:
     //@AI ASC 이벤트 콜백
     UFUNCTION()
         void OnAICharacterStateEvent(AActor* Actor, const FGameplayTag& StateTag);
+
+    //@Player Character 상태 변화 이벤트 구독
+    UFUNCTION()
+        void OnPlayerStateEvent(AActor* Actor, const FGameplayTag& StateTag);
+
+protected:
+    //@AI의 락온 상태 변화 이벤트 구독
+    UFUNCTION()
+        void OnAIDetectsTarget(bool bLockOn, AActor* AI, AActor* DetectedTarget);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -255,5 +280,9 @@ public:
     //@영역 내 AI 목록 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
         TArray<AActor*> GetAIInArea() const;
+
+    UFUNCTION(BlueprintCallable, Category = "Area")
+        TArray<FAreaAIInfo> GetAreaAIInfos() const;
 #pragma endregion
+
 };

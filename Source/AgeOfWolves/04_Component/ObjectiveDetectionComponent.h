@@ -20,6 +20,15 @@ class UTexture2D;
 
 //@열거형
 #pragma region Enums
+UENUM(BlueprintType)
+enum class ETargetState : uint8
+{
+    None                    UMETA(DisplayName = "None"),
+    Normal                  UMETA(DisplayName = "Normal"),       
+    Fragile                 UMETA(DisplayName = "Fragile"),      
+    BackExposed             UMETA(DisplayName = "BackExposed"),  
+    FragileAndBackExposed   UMETA(DisplayName = "FragileAndBackExposed")  
+};
 #pragma endregion
 
 //@구조체
@@ -96,6 +105,9 @@ public:
 #pragma region Delegates
 //@시야 안에 있는 AI의 상태 변화 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FDetectedAIStateChanged, const FGameplayTag&, const AActor*)
+
+//@시야 안에 있는 AI 중 매복 암살 가능 타겟 변경 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FAmbushTargetChanged, const AActor*)
 #pragma endregion
 
 /*
@@ -146,6 +158,10 @@ protected:
 
     //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+private:
+    //@컴포넌트 고유 ID
+    FGuid ComponentID;
+
 protected:
     //@컴포넌트 업데이트 - Pawn이 변경될 때 호출
     void UpdateControlledPawn(APawn* NewPawn);
@@ -155,13 +171,22 @@ protected:
     void CleanupInvalidReferences();
 
 protected:
-    // Billboard 컴포넌트 업데이트 (위치, 회전, 가시성)
+    //@Billboard 컴포넌트 업데이트 (위치, 회전, 가시성)
     void UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly = false);
+
+    bool UpdateBillboardPosition(AActor* TargetActor);
+
+    void UpdateBillboardTexture();
+
+protected:
+    //@등을 노출하고 있는 AI 정보 업데이트
+    void UpdateAIBackExposureState();
 
 protected:
     UPROPERTY()
         UBillboardComponent* IndicatorBillboardComponent;
 
+protected:
     // LockOn 인디케이터 텍스처
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
         TSoftObjectPtr<UTexture2D> LockOnIndicator;
@@ -170,9 +195,6 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
         TSoftObjectPtr<UTexture2D> ExecutableIndicator;
 
-    //@현재 타겟 액터 참조
-    UPROPERTY()
-        TWeakObjectPtr<AActor> CurrentTargetAI;
 
     //@텍스처 크기 스케일, 기본 0.05 스케일
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
@@ -191,6 +213,11 @@ protected:
     UPROPERTY()
         TArray<FAreaBindingInfo> BoundAreas;
 
+protected:
+    //@현재 타겟 액터 참조
+    UPROPERTY()
+        TWeakObjectPtr<AActor> CurrentTargetAI;
+
     //@감지할 상태 태그 설정
     UPROPERTY(EditAnywhere, Category = "Objective Detection")
         TArray<FGameplayTag> StateTagsToDetect;
@@ -208,6 +235,21 @@ protected:
 
     //@정리 주기 (초)
     float CleanupInterval = 10.0f;
+
+    //@취약 여부
+    bool bIsCurrentTargetFragile = false;
+
+protected:
+    //@잠재적 매복 타겟 (후면 노출된 AI)
+    UPROPERTY()
+            TWeakObjectPtr<AActor> AmbushTarget;
+
+    //@후면 노출 상태 체크 간격 (seconds)
+    UPROPERTY(EditAnywhere, Category = "Objective Detection|Advanced")
+        float BackExposureCheckInterval = 0.1f;
+
+    //@마지막 체크 시간
+    float LastBackExposureCheckTime = 0.0f;
 #pragma endregion
 
 //@Delegates
@@ -215,6 +257,10 @@ protected:
 public:
     //@목표 AI의 상태 변화 이벤트
     FDetectedAIStateChanged DetectedAIStateChanged;
+
+public:
+    //@매복 암살 가능한 AI 타겟 변경 이벤트
+    FAmbushTargetChanged AmbushTargetChanged;
 #pragma endregion
 
 //@Callbacks
@@ -239,6 +285,10 @@ protected:
     //@목표물 상태 변경 통지 (Area에서 호출)
     UFUNCTION()
         void OnAreaObjectiveStateChanged(AActor* ObjectiveActor, const FGameplayTag& StateTag, AArea* SourceArea, const FGuid& AreaID);
+
+protected:
+    UFUNCTION()
+        void OnDetectedByAI(bool bIsDetected, AActor* AI, APlayerCharacter* DetectedPlayer);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -249,25 +299,39 @@ protected:
         TWeakObjectPtr<APawn> ControlledPawn;
 
 protected:
+    //@Pawn을 인지하고 있는 AI 목록
+    UPROPERTY()
+        TArray<TWeakObjectPtr<AActor>> AIsDetectingPawn;
+
+protected:
     //@AIController 소유 여부 확인
     bool IsOwnerAIController() const;
+    
     //@PlayerController 소유 여부 확인
     bool IsOwnerPlayerController() const;
 
+protected:
     //@컨트롤러로부터 Pawn 가져오기
     APawn* GetControlledPawn() const;
+    
+protected:
     //@Pawn의 위치 가져오기
     FVector GetPawnLocation() const;
+
     //@Pawn의 CapsuleComponent 가져오기
     UCapsuleComponent* GetPawnCapsuleComponent() const;
 
+    //@카메라 컴포넌트 가져오기 (플레이어용)
+    UCameraComponent* GetPlayerCameraComponent() const;
+
+protected:
     //@Camera View 안에 목표물이 존재하는지 체크합니다.
     bool IsActorInCameraView(AActor* Actor) const;
 
+protected:
     //@Area 찾기 (GUID 기준)
     AArea* FindAreaByGuid(const FGuid& AreaGuid) const;
-
-public:
+    
     //@바인딩된 모든 Area 가져오기
     UFUNCTION(BlueprintCallable, Category = "Objective Detection")
         TArray<FAreaBindingInfo> GetBoundAreas() const;
@@ -276,25 +340,34 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Objective Detection")
         bool IsAreaBound(const FGuid& AreaID) const;
 
+protected:
     //@컴포넌트 고유 ID 가져오기
     UFUNCTION(BlueprintCallable, Category = "Objective Detection")
         FGuid GetComponentID() const;
 
 protected:
-    // 현재 타겟 액터 설정
+    //@액터의 후면 노출 상태 확인
+    UFUNCTION(BlueprintCallable, Category = "Objective Detection")
+        bool IsActorBackExposed(AActor* Actor) const;
+
+    //@현재 시야 내 후면 노출된 AI 목록 가져오기
+    AActor* UObjectiveDetectionComponent::GetAmbushTarget() const
+    {
+        return AmbushTarget.IsValid() ? AmbushTarget.Get() : nullptr;
+    }
+
+protected:
+    AActor* DetermineTargetActor();
+
+    //@현재 타겟 액터 설정
     void SetCurrentTargetAI(AActor* NewTargetActor);
 
-    // 현재 타겟 액터 가져오기
+    //@현재 타겟 액터 가져오기
     AActor* GetCurrentTargetAI() const;
 
+protected:
     // 인디케이터 텍스처 변경
     void SetIndicatorTexture(UTexture2D* NewTexture);
-
-    // 카메라 컴포넌트 가져오기 (플레이어용)
-    UCameraComponent* GetPlayerCameraComponent() const;
-
-private:
-    // 컴포넌트 고유 ID
-    FGuid ComponentID;
 #pragma endregion
+
 };

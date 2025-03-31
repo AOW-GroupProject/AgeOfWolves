@@ -51,6 +51,9 @@ ABaseAIController::ABaseAIController(const FObjectInitializer& ObjectInitializer
     Sight = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("AI Sight Config"));
     //@AI Sense Config - Hearing
     Hearing = CreateDefaultSubobject<UAISenseConfig_Hearing>(TEXT("AI Hearing Config"));
+
+    //@AI Agent Pawn
+    AgentPawnRef.Reset();
     //@AI Manager Subsystem
     AIManagerRef.Reset();
     //@Ability Manger Subsystem
@@ -304,6 +307,14 @@ void ABaseAIController::InitializeAIController(APawn* InPawn)
 #pragma region Property or Subwidgets or Infos...etc
 void ABaseAIController::InitializeAISystem(APawn* InPawn)
 {
+    if (!InPawn)
+    {
+        return;
+    }
+
+    //@캐싱
+    AgentPawnRef = InPawn;
+
     //@소유 캐릭터
     ACharacterBase* OwningCharacter = Cast<ACharacterBase>(InPawn);
     if (!OwningCharacter)
@@ -588,7 +599,6 @@ void ABaseAIController::UnbindTargetActorStateEvents(AActor* OldTarget)
 #pragma region Callbacks
 void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
 {
-
     //@Perception 주체
     ACharacterBase* OwningCharacter = Cast<ACharacterBase>(GetPawn());
     //@Perception 대상
@@ -625,10 +635,19 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
         //@Target Actor의 상태 변화 이벤트에 바인딩 수행
         BindTargetActorStateEvents(Actor);
 
+        //@타겟 인지 성공 이벤트
+        if (!!AgentPawnRef.IsValid())
+        {
+            AIDetectsTarget.Broadcast(true, AgentPawnRef.Get(), Actor);
+        }
+        else
+        {
+            UE_LOGFMT(LogBaseAIC, Warning, "유효하지 않음!");
+        }
+
         //@Lock On 이벤트 호출
         AILockOnStateChanged.Broadcast(true, Actor);
     }
-
 }
 
 void ABaseAIController::OnTargetPerceptionLost(AActor* Actor)
@@ -637,13 +656,17 @@ void ABaseAIController::OnTargetPerceptionLost(AActor* Actor)
 
     UE_LOGFMT(LogBaseAIC, Log, "타겟 {0}에 대한 인지가 소실되었습니다.", *Actor->GetName());
 
-    // [기존의 타겟 소실 처리 코드...]
-
+    //@타겟 인지 성공 이벤트
+    if (!!AgentPawnRef.IsValid())
+    {
+        AIDetectsTarget.Broadcast(false, AgentPawnRef.Get(), Actor);
+    }
+     
     //@Lock On 상태 변경 이벤트 호출
     AILockOnStateChanged.Broadcast(false, nullptr);
+
     UE_LOGFMT(LogBaseAIC, Log, "AI가 {0}을(를) 놓쳐 Lock On 상태 해제", *Actor->GetName());
 
-    // [기존의 상태 변경 코드...]
 }
 
 void ABaseAIController::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
@@ -775,11 +798,3 @@ ETeamAttitude::Type ABaseAIController::GetTeamAttitudeTowards(const AActor& Othe
         : ETeamAttitude::Hostile;
 }
 #pragma endregion
-
-void InternalBindingToAISequencerComp()
-{
-}
-
-void InternalBindingToODComp()
-{
-}

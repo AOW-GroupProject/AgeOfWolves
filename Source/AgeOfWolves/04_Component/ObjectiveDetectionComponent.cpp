@@ -4,6 +4,7 @@
 #include "Camera/CameraComponent.h"
 #include "Kismet/GameplayStatics.h"
 #include "Kismet/KismetMathLibrary.h"
+#include "07_BlueprintNode/CombatLibrary.h"
 
 #include "10_AI/BaseAIController.h"
 #include "GameFramework/Controller.h"
@@ -35,7 +36,10 @@ UObjectiveDetectionComponent::UObjectiveDetectionComponent()
     // 배열 초기화
     BoundAreas.Empty();
 
+    //@현재 락온된 타겟 AI
     CurrentTargetAI.Reset();
+    //@현재 등을 돌려 잠재 매복 타겟 AI
+    AmbushTarget.Reset();
 }
 
 void UObjectiveDetectionComponent::BeginPlay()
@@ -47,12 +51,33 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    //@Billboard, Lock On Target
-    if(!!IndicatorBillboardComponent && !!CurrentTargetAI.IsValid())
+    // 빌보드 업데이트
+    if (IndicatorBillboardComponent)
     {
-        UpdateBillboardComponent(true, true);
+        // 현재 타겟이 있으면 해당 타겟 표시
+        if (CurrentTargetAI.IsValid())
+        {
+            UpdateBillboardComponent(true, false);
+        }
+        // 현재 타겟이 없지만 AmbushTarget이 있는 경우에도 표시
+        else if (AmbushTarget.IsValid())
+        {
+            UpdateBillboardComponent(true, false);
+        }
+        else
+        {
+            // 둘 다 없으면 빌보드 숨기기
+            IndicatorBillboardComponent->SetVisibility(false);
+        }
     }
-    
+
+    // 일정 간격으로 후면 노출 체크
+    float CurrentTime = GetWorld()->GetTimeSeconds();
+    if (CurrentTime - LastBackExposureCheckTime >= BackExposureCheckInterval)
+    {
+        UpdateAIBackExposureState();
+        LastBackExposureCheckTime = CurrentTime;
+    }
 }
 
 void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -154,6 +179,7 @@ void UObjectiveDetectionComponent::ExternalBindToArea(AArea* Area)
 
     //@외부 바인딩...
     Area->AreaAIStateChanged.AddUFunction(this, "OnAreaObjectiveStateChanged");
+    Area->AIDetectsPlayer.AddUFunction(this, "OnDetectedByAI");
 
     //@바인딩 정보 생성 및 추가
     FAreaBindingInfo BindingInfo(Area, AreaID, CurrentTime);
@@ -363,94 +389,77 @@ void UObjectiveDetectionComponent::CleanupInvalidReferences()
 
 void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly)
 {
-    //@락온 타겟
-    if (!CurrentTargetAI.IsValid())
-    {
-        return;
-    }
-
-    //@Billobard
+    // 기본 유효성 검사
     if (!IndicatorBillboardComponent)
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 필요한 컴포넌트가 유효하지 않음");
+        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 컴포넌트가 유효하지 않음");
         return;
     }
 
-    //@Player Controller
-    APlayerController* PC = Cast<APlayerController>(GetOwner());
-    if (!PC)
-    {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 소유자가 PlayerController가 아님");
-        return;
-    }
-
-    //@Pawn
-    APawn* PlayerPawn = PC->GetPawn();
-    if (!PlayerPawn)
-    {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: PlayerController에 연결된 Pawn이 없음");
-        return;
-    }
-
-    //@Player Character
-    APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(PlayerPawn);
-    if (!PlayerChar)
-    {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: Pawn이 PlayerCharacter가 아님");
-        return;
-    }
-
-    //@Camera Comp
-    UCameraComponent* CameraComp = PlayerChar->GetCameraComponent();
-    if (!CameraComp)
-    {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 카메라 컴포넌트를 찾을 수 없음");
-        return;
-    }
-
-    //@가시성
+    // 가시성이 false라면 빌보드 숨기고 종료
     if (!bVisible)
     {
         IndicatorBillboardComponent->SetVisibility(false);
         return;
     }
 
-    //@Actor
-    AActor* TargetActor = CurrentTargetAI.Get();
-    //@Skeletal Mesh
+    // 타겟 액터 결정 및 위치 업데이트
+    AActor* TargetActor = DetermineTargetActor();
+    if (!TargetActor)
+    {
+        IndicatorBillboardComponent->SetVisibility(false);
+        return;
+    }
+
+    // 위치 업데이트
+    if (!UpdateBillboardPosition(TargetActor))
+    {
+        // 위치 업데이트 실패 시 가시성 비활성화
+        IndicatorBillboardComponent->SetVisibility(false);
+        return;
+    }
+
+    // 텍스처 업데이트가 필요한 경우
+    if (!bChangeTransformOnly)
+    {
+        UpdateBillboardTexture();
+    }
+
+    // 가시성 활성화
+    IndicatorBillboardComponent->SetVisibility(true);
+}
+
+bool UObjectiveDetectionComponent::UpdateBillboardPosition(AActor* TargetActor)
+{
+    // 필요한 컴포넌트 확보
+    APlayerController* PC = Cast<APlayerController>(GetOwner());
+    if (!PC) return false;
+
+    APawn* PlayerPawn = PC->GetPawn();
+    if (!PlayerPawn) return false;
+
+    APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(PlayerPawn);
+    if (!PlayerChar) return false;
+
+    UCameraComponent* CameraComp = PlayerChar->GetCameraComponent();
+    if (!CameraComp) return false;
+
+    // 타겟 메시 및 소켓 확인
     USkeletalMeshComponent* TargetMesh = Cast<USkeletalMeshComponent>(
         TargetActor->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
+    if (!TargetMesh) return false;
 
-    if (!TargetMesh)
-    {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 타겟의 스켈레탈 메시를 찾을 수 없음");
-        return;
-    }
-
-    //@Skeletal Mesh의 Socket 위치
     FName SpineSocketName = FName("spine_03");
+    if (!TargetMesh->DoesSocketExist(SpineSocketName)) return false;
 
-    // 소켓 존재 여부 확인
-    if (!TargetMesh->DoesSocketExist(SpineSocketName))
-    {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: spine_03 소켓이 존재하지 않음");
-        return;
-    }
-
-    // 타겟의 소켓 위치 가져오기
+    // 위치 계산
     FVector SocketLocation = TargetMesh->GetSocketLocation(SpineSocketName);
-
-    // 카메라 위치 가져오기
     FVector CameraLocation = CameraComp->GetComponentLocation();
-
-    // 카메라에서 소켓으로의 방향 계산
     FVector DirectionToSocket = (SocketLocation - CameraLocation).GetSafeNormal();
-
-    // 소켓 위치에서 카메라 방향의 반대로 약간 앞으로 이동 + 높이 오프셋 적용
     FVector UpVector = FVector(0.0f, 0.0f, 1.0f);
     FVector TargetBillboardLocation = SocketLocation - DirectionToSocket * BillboardForwardOffset + UpVector;
 
-    //@현재 빌보드 위치에서 목표 위치로 부드럽게 보간
+    // 위치 및 회전 보간
     FVector CurrentLocation = IndicatorBillboardComponent->GetComponentLocation();
     FVector InterpolatedLocation = UKismetMathLibrary::VInterpTo(
         CurrentLocation,
@@ -459,7 +468,6 @@ void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool 
         BillboardInterpolationSpeed
     );
 
-    // 빌보드가 항상 카메라를 향하도록 회전 설정
     FRotator TargetRotation = (CameraLocation - SocketLocation).Rotation();
     FRotator CurrentRotation = IndicatorBillboardComponent->GetComponentRotation();
     FRotator InterpolatedRotation = UKismetMathLibrary::RInterpTo(
@@ -469,17 +477,153 @@ void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool 
         BillboardInterpolationSpeed
     );
 
-    // 빌보드 위치 및 회전 설정
-    IndicatorBillboardComponent->SetWorldLocation(InterpolatedLocation);
-    IndicatorBillboardComponent->SetWorldRotation(InterpolatedRotation);
-
-    // 크기 설정
+    // 위치, 회전, 크기 적용
     IndicatorBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
+    IndicatorBillboardComponent->SetWorldRotation(InterpolatedRotation);
+    IndicatorBillboardComponent->SetWorldLocation(InterpolatedLocation);
 
-    // 가시성 설정 (변환만 변경하는 경우는 제외)
-    if (!bChangeTransformOnly)
+    return true;
+}
+
+void UObjectiveDetectionComponent::UpdateBillboardTexture()
+{
+    // 현재 상태에 따라 텍스처 결정
+    bool bShouldUseExecutableIndicator = false;
+
+    // 1. 현재 타겟이 Fragile 상태인 경우
+    if (CurrentTargetAI.IsValid() && bIsCurrentTargetFragile)
     {
-        IndicatorBillboardComponent->SetVisibility(true);
+        bShouldUseExecutableIndicator = true;
+    }
+    // 2. 현재 타겟이 후면 노출 상태인 경우
+    else if (CurrentTargetAI.IsValid() && AmbushTarget.IsValid() &&
+        CurrentTargetAI.Get() == AmbushTarget.Get())
+    {
+        bShouldUseExecutableIndicator = true;
+    }
+    // 3. 타겟이 없고 AmbushTarget이 있는 경우
+    else if (!CurrentTargetAI.IsValid() && AmbushTarget.IsValid())
+    {
+        bShouldUseExecutableIndicator = true;
+    }
+
+    // 텍스처 로드 및 설정
+    if (bShouldUseExecutableIndicator && !ExecutableIndicator.IsNull())
+    {
+        ExecutableIndicator.LoadSynchronous();
+        if (UTexture2D* LoadedTexture = ExecutableIndicator.Get())
+        {
+            SetIndicatorTexture(LoadedTexture);
+        }
+    }
+    else if (!LockOnIndicator.IsNull())
+    {
+        LockOnIndicator.LoadSynchronous();
+        if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
+        {
+            SetIndicatorTexture(LoadedTexture);
+        }
+    }
+}
+
+void UObjectiveDetectionComponent::UpdateAIBackExposureState()
+{
+    //@이전 AmbushTarget 초기화
+    AActor* PreviousAmbushTarget = AmbushTarget.Get();
+    AmbushTarget.Reset();
+
+    //@CurrentTargetAI가 유효한 경우, 해당 타겟만 체크
+    if (CurrentTargetAI.IsValid())
+    {
+        AActor* AIActor = CurrentTargetAI.Get();
+
+        //@AI가 플레이어를 인지 중인지 확인
+        TWeakObjectPtr<AActor> AIActorPtr(AIActor);
+        if (AIsDetectingPawn.Contains(AIActorPtr))
+        {
+            return;
+        }
+        else
+        {
+            //@후면 노출 상태 체크
+            bool bIsBackExposed = IsActorBackExposed(AIActor);
+
+            //@후면 노출된 경우 AmbushTarget으로 설정
+            if (bIsBackExposed)
+            {
+                AmbushTarget = AIActor;
+                UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 후면 노출됨, AmbushTarget으로 설정", *AIActor->GetName());
+            }
+        }
+    }
+    else
+    {
+        //@Bound Areas
+        float ClosestDistance = MAX_FLT;
+        AActor* ClosestActor = nullptr;
+
+        for (const FAreaBindingInfo& AreaInfo : BoundAreas)
+        {
+            if (!AreaInfo.IsValid()) continue;
+
+            //@Area
+            AArea* Area = AreaInfo.AreaRef.Get();
+            //@Area AI
+            TArray<FAreaAIInfo> AreaAIInfos = Area->GetAreaAIInfos();
+
+            for (auto AIInfo : AreaAIInfos)
+            {
+                if (!AIInfo.AIActor.IsValid() || AIInfo.CurrentState.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead"))) continue;
+
+                auto AI = AIInfo.AIActor.Get();
+
+                //@AI가 플레이어를 인지 중인지 확인
+                TWeakObjectPtr<AActor> AIPtr(AI);
+                if (AIsDetectingPawn.Contains(AIPtr))
+                {
+                    continue;
+                }
+
+                //@카메라 시야 내에 있는지 확인
+                if (bOnlyDetectInCameraView && !IsActorInCameraView(AI))
+                    continue;
+
+                //@후면 노출 상태 체크
+                bool bIsBackExposed = IsActorBackExposed(AI);
+
+                //@가장 가까운 AI 타겟
+                if (bIsBackExposed)
+                {
+                    FVector PawnLocation = GetPawnLocation();
+                    FVector AILocation = AI->GetActorLocation();
+                    float Distance = FVector::Distance(PawnLocation, AILocation);
+
+                    if (Distance < ClosestDistance)
+                    {
+                        ClosestDistance = Distance;
+                        ClosestActor = AI;
+                    }
+                }
+            }
+        }
+
+        //@가장 가까운 AI
+        if (ClosestActor)
+        {
+            AmbushTarget = ClosestActor;
+            UE_LOGFMT(LogObjectiveDetection, Log, "가장 가까운 후면 노출 AI({0})를 AmbushTarget으로 설정", *ClosestActor->GetName());
+        }
+    }
+
+    //@AmbushTarget
+    if (AmbushTarget.Get() != PreviousAmbushTarget)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Log, "AmbushTarget 변경: {0} -> {1}",
+            PreviousAmbushTarget ? *PreviousAmbushTarget->GetName() : TEXT("없음"),
+            AmbushTarget.IsValid() ? *AmbushTarget->GetName() : TEXT("없음"));
+
+        //@잠재적 매복 암살 타겟 변경 이벤트
+        AmbushTargetChanged.Broadcast(AmbushTarget.Get());
     }
 }
 #pragma endregion
@@ -490,7 +634,7 @@ void UObjectiveDetectionComponent::OnPawnBeginOverlap(UPrimitiveComponent* Overl
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
     bool bFromSweep, const FHitResult& SweepResult)
 {
-    // 충돌한 액터가 유효한지 확인
+    //@Ohter Actor
     if (!IsValid(OtherActor))
     {
         UE_LOGFMT(LogObjectiveDetection, Warning, "오버랩 이벤트: 유효하지 않은 액터");
@@ -499,11 +643,10 @@ void UObjectiveDetectionComponent::OnPawnBeginOverlap(UPrimitiveComponent* Overl
 
     UE_LOGFMT(LogObjectiveDetection, Log, "({0})과 충돌!", OtherActor->GetName());
 
-    // Area 확인
+    //@Area 확인
     AArea* Area = Cast<AArea>(OtherActor);
     if (!Area)
     {
-        // Area가 아닌 경우 무시
         UE_LOGFMT(LogObjectiveDetection, Warning, "오버랩 이벤트: {0}은(는) Area가 아님 (클래스: {1})",
             *OtherActor->GetName(), *OtherActor->GetClass()->GetName());
         return;
@@ -511,7 +654,7 @@ void UObjectiveDetectionComponent::OnPawnBeginOverlap(UPrimitiveComponent* Overl
 
     UE_LOGFMT(LogObjectiveDetection, Log, "Pawn이 Area({0})에 진입, 바인딩 시작", *Area->GetName());
 
-    // Area 이벤트에 바인딩
+    //@외부 바인딩...
     ExternalBindToArea(Area);
 }
 
@@ -575,7 +718,6 @@ void UObjectiveDetectionComponent::OnLockOnStateChanged(bool bIsLockOn, AActor* 
 
 void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* ObjectiveActor, const FGameplayTag& StateTag, AArea* SourceArea, const FGuid& AreaID)
 {
-
     //@인자 유효성 검사
     if (!IsValid(ObjectiveActor) || !IsValid(SourceArea))
     {
@@ -604,53 +746,30 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
     //@현재 타겟 액터와 동일한지 확인
     if (CurrentTargetAI.IsValid()  && CurrentTargetAI.Get() == ObjectiveActor)
     {
-        //@Fragile(처형 가능) 상태 태그 확인
+        // Fragile 상태 변경 시
         if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
         {
-            //@Executable 인디케이터로 변경
-            if (IndicatorBillboardComponent && !ExecutableIndicator.IsNull())
-            {
-                ExecutableIndicator.LoadSynchronous();
-                if (UTexture2D* LoadedTexture = ExecutableIndicator.Get())
-                {
-                    SetIndicatorTexture(LoadedTexture);
-                    UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Fragile 상태로 변경되어 Executable 인디케이터로 변경됨", *ObjectiveActor->GetName());
-                }
-                else
-                {
-                    UE_LOGFMT(LogObjectiveDetection, Warning, "ExecutableIndicator 텍스처 로드 실패");
-                }
-            }
+            bIsCurrentTargetFragile = true;
+            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Fragile 상태로 변경됨", *ObjectiveActor->GetName());
+
+            UpdateBillboardComponent(true, false);
         }
-        //@Normal 상태 태그 확인
+        // Normal 상태 변경 시
         else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
         {
-            // LockOn 인디케이터로 변경
-            if (IndicatorBillboardComponent && !LockOnIndicator.IsNull())
-            {
-                LockOnIndicator.LoadSynchronous();
-                if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
-                {
-                    SetIndicatorTexture(LoadedTexture);
-                    UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경되어 LockOn 인디케이터로 변경됨", *ObjectiveActor->GetName());
-                }
-                else
-                {
-                    UE_LOGFMT(LogObjectiveDetection, Warning, "LockOnIndicator 텍스처 로드 실패");
-                }
-            }
+            bIsCurrentTargetFragile = false;
+            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경됨", *ObjectiveActor->GetName());
+            
+            UpdateBillboardComponent(true, false);
         }
         //@Dead 상태 태그 확인
         else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
         {
-            // Billboard 컴포넌트 숨기기
-            if (IndicatorBillboardComponent)
-            {
-                UpdateBillboardComponent(false);
-            }
-
             // 타겟 해제
             SetCurrentTargetAI(nullptr);
+
+            //@Billboard 컴포넌트 숨기기
+            UpdateBillboardComponent(false);
 
             UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) 사망하여 인디케이터를 비활성화 및 타겟 해제함", *ObjectiveActor->GetName());
         }
@@ -661,6 +780,51 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
 
     UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}에서 상태 변경 처리 완료: {1} -> {2}",
         *SourceArea->GetName(), *ObjectiveActor->GetName(), *StateTag.ToString());
+}
+
+void UObjectiveDetectionComponent::OnDetectedByAI(bool bIsDetected, AActor* AI, APlayerCharacter* DetectedPlayer)
+{
+    //@인자 유효성 검사
+    if (!IsValid(AI) || !IsValid(DetectedPlayer))
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "ComponentID: {0} - 유효하지 않은 AI 또는 플레이어", ComponentID.ToString());
+        return;
+    }
+
+    //@ControlledPawn
+    APawn* CurrentPawn = GetControlledPawn();
+    if (!IsValid(CurrentPawn))
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "ComponentID: {0} - 유효하지 않은 ControlledPawn", ComponentID.ToString());
+        return;
+    }
+
+    //@ControlledPawn == DetectedPlayer?
+    APlayerCharacter* PlayerPawn = Cast<APlayerCharacter>(CurrentPawn);
+    if (!PlayerPawn || PlayerPawn != DetectedPlayer)
+    {
+        return;
+    }
+
+    //@AI의 인지 상태에 따라 목록 업데이트
+    TWeakObjectPtr<AActor> AIPtr(AI);
+
+    if (bIsDetected)
+    {
+        //@인지 중인 AI 목록에 추가
+        AIsDetectingPawn.AddUnique(AIPtr);
+
+        UE_LOGFMT(LogObjectiveDetection, Log, "ComponentID: {0} - AI {1}가 플레이어를 인지함",
+            ComponentID.ToString(), AI->GetName());
+    }
+    else
+    {
+        //@인지가 해제된 경우 목록에서 제거
+        AIsDetectingPawn.Remove(AIPtr);
+
+        UE_LOGFMT(LogObjectiveDetection, Log, "ComponentID: {0} - AI {1}가 플레이어 인지를 해제함",
+            ComponentID.ToString(), AI->GetName());
+    }
 }
 #pragma endregion
 
@@ -718,6 +882,32 @@ UCapsuleComponent* UObjectiveDetectionComponent::GetPawnCapsuleComponent() const
 
     // Pawn의 캡슐 컴포넌트 찾기
     return ControlledPawn->FindComponentByClass<UCapsuleComponent>();
+}
+
+UCameraComponent* UObjectiveDetectionComponent::GetPlayerCameraComponent() const
+{
+    // 플레이어 컨트롤러 확인
+    APlayerController* PC = Cast<APlayerController>(GetOwner());
+    if (!PC)
+    {
+        return nullptr;
+    }
+
+    // 컨트롤된 폰 확인
+    APawn* PlayerPawn = PC->GetPawn();
+    if (!PlayerPawn)
+    {
+        return nullptr;
+    }
+
+    auto PlayerCharacter = Cast<APlayerCharacter>(PlayerPawn);
+    if (!PlayerCharacter)
+    {
+        return nullptr;
+    }
+
+    // 카메라 컴포넌트 직접 찾기
+    return PlayerCharacter->GetCameraComponent();
 }
 
 bool UObjectiveDetectionComponent::IsActorInCameraView(AActor* Actor) const
@@ -806,6 +996,30 @@ FGuid UObjectiveDetectionComponent::GetComponentID() const
     return ComponentID;
 }
 
+bool UObjectiveDetectionComponent::IsActorBackExposed(AActor* TargetActor) const
+{
+    if (!ControlledPawn.IsValid() || !IsValid(TargetActor))
+    {
+        return false;
+    }
+
+    return UCombatLibrary::IsActorBackExposed(ControlledPawn.Get(), TargetActor);
+}
+
+AActor* UObjectiveDetectionComponent::DetermineTargetActor()
+{
+    if (CurrentTargetAI.IsValid())
+    {
+        return CurrentTargetAI.Get();
+    }
+    else if (AmbushTarget.IsValid())
+    {
+        return AmbushTarget.Get();
+    }
+
+    return nullptr;
+}
+
 void UObjectiveDetectionComponent::SetCurrentTargetAI(AActor* NewTargetActor)
 {
     // 이전 타겟 저장
@@ -839,31 +1053,5 @@ void UObjectiveDetectionComponent::SetIndicatorTexture(UTexture2D* NewTexture)
     // 텍스처 설정
     IndicatorBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
     IndicatorBillboardComponent->SetSprite(NewTexture);
-}
-
-UCameraComponent* UObjectiveDetectionComponent::GetPlayerCameraComponent() const
-{
-    // 플레이어 컨트롤러 확인
-    APlayerController* PC = Cast<APlayerController>(GetOwner());
-    if (!PC)
-    {
-        return nullptr;
-    }
-
-    // 컨트롤된 폰 확인
-    APawn* PlayerPawn = PC->GetPawn();
-    if (!PlayerPawn)
-    {
-        return nullptr;
-    }
-
-    auto PlayerCharacter = Cast<APlayerCharacter>(PlayerPawn);
-    if (!PlayerCharacter)
-    {
-        return nullptr;
-    }
-
-    // 카메라 컴포넌트 직접 찾기
-    return PlayerCharacter->GetCameraComponent();
 }
 #pragma endregion
