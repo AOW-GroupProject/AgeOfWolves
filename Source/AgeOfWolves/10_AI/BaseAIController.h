@@ -21,11 +21,12 @@ class UAISenseConfig_Sight;
 class UAISenseConfig_Hearing;
 class UAIManagerSubsystem;
 class UAOWSaveGame;
-struct FBaseAbilitySet_GrantedHandles;
 class UBaseAbilitySystemComponent;
 class UAbilityManagerSubsystem;
 class UAIAbilitySequencerComponent;
 class UObjectiveDetectionComponent;
+
+struct FBaseAbilitySet_GrantedHandles;
 #pragma endregion
 
 //@열거형

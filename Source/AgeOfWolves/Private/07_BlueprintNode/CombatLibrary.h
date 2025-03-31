@@ -206,6 +206,10 @@ public:
             EHitImpactLocation DesiredNormalDirection = EHitImpactLocation::Front
         );
 
+public:
+    UFUNCTION(BlueprintCallable, Category = "Combat | Detection", meta = (DisplayName = "Is Actor Back Exposed"))
+        static bool IsActorBackExposed(const AActor* ObserverActor, const AActor* TargetActor, float ExposureAngleThreshold = 120.0f);
+
 #pragma endregion
 
 //@이벤트 전달 관련...

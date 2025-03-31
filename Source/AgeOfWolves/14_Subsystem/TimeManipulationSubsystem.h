@@ -112,13 +112,13 @@ struct FTimeDilationInfo
 UCLASS()
 class AGEOFWOLVES_API UTimeManipulationSubsystem : public UGameInstanceSubsystem, public FTickableGameObject
 {
-    //@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 #pragma endregion
 
     GENERATED_BODY()
 
-        //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -128,7 +128,7 @@ public:
     virtual TStatId GetStatId() const override { return TStatId(); }
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
     UFUNCTION(BlueprintCallable, Category = "Time Manipulation")
@@ -161,9 +161,17 @@ private:
 
     //@애니메이션 인스턴스와 소유자 매핑
     TMap<UAnimInstance*, AActor*> AnimInstanceOwners;
+
+private:
+    //@현재 활성화된 시간 조작 소유자
+    TWeakObjectPtr<AActor> ActiveDilationOwner;
+
+    //@이전 요청을 무시할지 여부
+    UPROPERTY(EditAnywhere, Category = "Time Manipulation")
+        bool bIgnorePreviousRequests = true;
 #pragma endregion
 
-    //@Delegates
+//@Delegates
 #pragma region Delegates
 #pragma endregion
 

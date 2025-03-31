@@ -323,6 +323,7 @@ void UInteractionGameplayAbility::EndInteractionTrace(bool bSuccess, const FHitR
     int32 ClearedCount = ActorsToIgnore.Num();
     ActorsToIgnore.Empty();
 }
+
 void UInteractionGameplayAbility::PerformLineTrace(const FVector& Start, const FVector& End,
     FCollisionQueryParams& QueryParams, TArray<FHitResult>& OutHitResults)
 {
