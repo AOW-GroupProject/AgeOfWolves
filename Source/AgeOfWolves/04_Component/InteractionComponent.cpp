@@ -146,7 +146,7 @@ void UInteractionComponent::ExternalBindToODComp()
 
     //@외부 바인딩...
     ODComp->DetectedAIStateChanged.AddUFunction(this, "OnDetectedAIStateChanged");
-
+    ODComp->AmbushTargetChanged.AddUFunction(this, "OnAmbushTargetChanged");
 }
 
 void UInteractionComponent::UnbindExternalBindToODComp()
@@ -567,6 +567,7 @@ void UInteractionComponent::CommitInteraction()
             if (Interaction.IsFullyAvailable())
             {
                 AvailableCount++;
+
                 //@타겟 위치와 플레이어 위치 계산
                 FVector TargetLocation = TargetActor->GetActorLocation();
                 const float CurrentDistance = FVector::Dist(PlayerLocation, TargetLocation);
@@ -680,6 +681,51 @@ void UInteractionComponent::OnDetectedAIStateChanged(const FGameplayTag& StateTa
     {
         RemovePotentialInteraction(ObjectiveActor);
     }
+}
+
+void UInteractionComponent::OnAmbushTargetChanged(AActor* PotentialAmbushTarget)
+{
+    //@PotentialAmbushTarget
+    if (!PotentialAmbushTarget)
+    {
+        TArray<TWeakObjectPtr<AActor>> ActorsToCheck;
+        MPotentialInteractions.GetKeys(ActorsToCheck);
+
+        for (const auto& ActorWeak : ActorsToCheck)
+        {
+            //@Remove
+            if (ActorWeak.IsValid())
+            {
+                RemovePotentialInteraction(ActorWeak.Get(), EInteractionType::Ambush);
+            }
+        }
+
+        UE_LOGFMT(LogInteraction, Log, "{0}: 암살 타겟 초기화 - 모든 암살 상호작용 제거", __FUNCDNAME__);
+        return;
+    }
+
+    UE_LOGFMT(LogInteraction, Log, "{0}: 암살 타겟 변경 감지 - 액터: {1}",
+        __FUNCDNAME__, *PotentialAmbushTarget->GetName());
+
+    //@새로운 잠재적 암살 타겟 등록
+    RegisterPotentialInteraction(PotentialAmbushTarget, EInteractionType::Ambush);
+
+    //@다른 액터들의 암살 유형 상호작용 제거 
+    TArray<TWeakObjectPtr<AActor>> ActorsToCheck;
+    MPotentialInteractions.GetKeys(ActorsToCheck);
+
+    for (const auto& ActorWeak : ActorsToCheck)
+    {
+        //@Remove
+        if (ActorWeak.IsValid() && ActorWeak.Get() != PotentialAmbushTarget)
+        {
+            // 해당 액터의 암살 유형 상호작용 제거
+            RemovePotentialInteraction(ActorWeak.Get(), EInteractionType::Ambush);
+        }
+    }
+
+    UE_LOGFMT(LogInteraction, Log, "{0}: 암살 타겟 처리 완료 - 액터: {1}에 대한 암살 상호작용 등록",
+        __FUNCDNAME__, *PotentialAmbushTarget->GetName());
 }
 #pragma endregion
 

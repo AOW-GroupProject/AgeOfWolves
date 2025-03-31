@@ -30,8 +30,8 @@ AArea::AArea()
     AreaID = FGuid::NewGuid();
 
     //@초기화
-    AIInfoMap.Empty();
-    PlayerBindings.Empty();
+    MAIInfos.Empty();
+    MPlayerBindings.Empty();
     LastCleanupTime = 0.0f;
 }
 
@@ -45,41 +45,197 @@ void AArea::BeginPlay()
 
 void AArea::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    //@Timer
-    if (GetWorld())
-    {
-        GetWorld()->GetTimerManager().ClearTimer(CleanupTimerHandle);
-    }
 
-    //@모든 플레이어 바인딩 해제
-    for (auto& Pair : PlayerBindings)
-    {
-        if (Pair.Key.IsValid())
-        {
+    //@플레이어 등록 해제
+    UnregisterPlayer();
 
-        }
-    }
-
-    //@모든 AI 바인딩 해제
-    for (auto& Pair : AIInfoMap)
-    {
-        if (Pair.Key.IsValid() && Pair.Value.AIASC.IsValid())
-        {
-            UBaseAbilitySystemComponent* AIComponent = Pair.Value.AIASC.Get();
-            if (AIComponent)
-            {
-                AIComponent->CharacterStateEventOnGameplay.RemoveAll(this);
-            }
-        }
-    }
-
-    //@맵 정리
-    AIInfoMap.Empty();
-    PlayerBindings.Empty();
+    //@모든 AI 등록 해제
+    UnregisterAllAI();
 
     UE_LOGFMT(LogArea, Log, "Area {0} 정리 완료", *AreaID.ToString());
 
     Super::EndPlay(EndPlayReason);
+}
+
+void AArea::InternalBindToAI(TWeakObjectPtr<AActor> AIActorPtr)
+{
+    //@Actor가 유효한지 확인
+    AActor* AIActor = AIActorPtr.Get();
+    if (!IsValid(AIActor))
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 바인딩 실패 - 유효하지 않은 AI", *AreaID.ToString());
+        return;
+    }
+
+    //@AI 정보가 존재하는지 확인
+    if (!MAIInfos.Contains(AIActorPtr))
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 바인딩 실패 - 등록되지 않은 AI {1}",
+            *AreaID.ToString(), *AIActor->GetName());
+        return;
+    }
+
+    //@ASC 가져오기
+    IAbilitySystemInterface* AbilityInterface = Cast<IAbilitySystemInterface>(AIActor);
+    UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(AbilityInterface->GetAbilitySystemComponent());
+    if (!BaseASC)
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: AI {1}의 BaseAbilitySystemComponent를 찾을 수 없음",
+            *AreaID.ToString(), *AIActor->GetName());
+        return;
+    }
+
+    //@AI 정보 업데이트
+    FAreaAIInfo& AIInfo = MAIInfos[AIActorPtr];
+    AIInfo.AIASC = BaseASC;
+
+    //@ASC 이벤트에 바인딩
+    BaseASC->CharacterStateEventOnGameplay.AddUFunction(this, "OnAICharacterStateEvent");
+
+    UE_LOGFMT(LogArea, Log, "Area {0}: AI {1} 이벤트 바인딩 완료",
+        *AreaID.ToString(), *AIActor->GetName());
+}
+
+void AArea::UnbindFromAI(TWeakObjectPtr<AActor> AIActorPtr)
+{
+    //@Actor가 유효한지 확인
+    AActor* AIActor = AIActorPtr.Get();
+    if (!IsValid(AIActor))
+    {
+        UE_LOGFMT(LogArea, Log, "Area {0}: 언바인딩 스킵 - 유효하지 않은 AI", *AreaID.ToString());
+        return;
+    }
+
+    //@AI 정보가 존재하는지 확인
+    if (!MAIInfos.Contains(AIActorPtr))
+    {
+        UE_LOGFMT(LogArea, Log, "Area {0}: 언바인딩 스킵 - 등록되지 않은 AI {1}",
+            *AreaID.ToString(), *AIActor->GetName());
+        return;
+    }
+
+    //@AI 정보 가져오기
+    FAreaAIInfo& AIInfo = MAIInfos[AIActorPtr];
+
+    //@ASC 가져오기
+    UBaseAbilitySystemComponent* BaseASC = AIInfo.AIASC.Get();
+    if (!IsValid(BaseASC))
+    {
+        UE_LOGFMT(LogArea, Log, "Area {0}: 언바인딩 스킵 - AI {1}의 유효한 ASC 없음",
+            *AreaID.ToString(), *AIActor->GetName());
+        return;
+    }
+
+    //@Rmove All
+    BaseASC->CharacterStateEventOnGameplay.RemoveAll(this);
+    
+    
+    AIInfo.AIASC = nullptr;
+
+    UE_LOGFMT(LogArea, Log, "Area {0}: AI {1} 이벤트 언바인딩 완료",
+        *AreaID.ToString(), *AIActor->GetName());
+}
+
+void AArea::UnbindFromAllAI()
+{
+    int32 UnbindCount = 0;
+
+    //@모든 등록된 AI 순회
+    for (auto& Pair : MAIInfos)
+    {
+        TWeakObjectPtr<AActor> AIActorPtr = Pair.Key;
+        FAreaAIInfo& AIInfo = Pair.Value;
+
+        //@ASC가 유효한지 확인
+        UBaseAbilitySystemComponent* BaseASC = AIInfo.AIASC.Get();
+        if (!IsValid(BaseASC))
+        {
+            continue;
+        }
+
+        //@ASC 이벤트에서 언바인딩
+        BaseASC->CharacterStateEventOnGameplay.RemoveAll(this);
+
+        //@AI 정보에서 ASC 제거
+        AIInfo.AIASC = nullptr;
+
+        UnbindCount++;
+    }
+
+    UE_LOGFMT(LogArea, Log, "Area {0}: 모든 AI 이벤트 언바인딩 완료 - 총 {1}개",
+        *AreaID.ToString(), UnbindCount);
+}
+
+void AArea::InternalBindToPlayer(TWeakObjectPtr<APlayerCharacter> Player)
+{
+    //@Player 유효성 검사
+    if (!Player.IsValid())
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 플레이어 바인딩 실패 - 유효하지 않은 플레이어", *AreaID.ToString());
+        return;
+    }
+
+    //@이미 등록된 플레이어인지 확인
+    if (!MPlayerBindings.Contains(Player))
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 플레이어 바인딩 실패 - 등록되지 않은 플레이어 {1}",
+            *AreaID.ToString(), *Player->GetName());
+        return;
+    }
+
+    //@내부 바인딩...
+
+    UE_LOGFMT(LogArea, Log, "Area {0}: 플레이어 {1} 이벤트 바인딩 완료",
+        *AreaID.ToString(), *Player->GetName());
+}
+
+void AArea::UnbindFromPlayer(TWeakObjectPtr<APlayerCharacter> Player)
+{
+    //@Player 유효성 검사
+    if (!Player.IsValid())
+    {
+        UE_LOGFMT(LogArea, Log, "Area {0}: 플레이어 언바인딩 스킵 - 유효하지 않은 플레이어", *AreaID.ToString());
+        return;
+    }
+
+    //@등록된 플레이어인지 확인
+    if (!MPlayerBindings.Contains(Player))
+    {
+        UE_LOGFMT(LogArea, Log, "Area {0}: 플레이어 언바인딩 스킵 - 등록되지 않은 플레이어 {1}",
+            *AreaID.ToString(), *Player->GetName());
+        return;
+    }
+
+    //@내부 바인딩 해제...
+
+    UE_LOGFMT(LogArea, Log, "Area {0}: 플레이어 {1} 이벤트 언바인딩 완료",
+        *AreaID.ToString(), *Player->GetName());
+}
+
+void AArea::UnbindFromPlayer()
+{
+    //@IsEmpty?
+    if (MPlayerBindings.IsEmpty())
+    {
+        UE_LOG(LogArea, Warning, TEXT("[AArea::UnbindFromPlayer] 등록된 플레이어가 없습니다. AreaID: %s"), *AreaID.ToString());
+        return;
+    }
+
+    //@MPlayerBindings
+    for (auto& PlayerBinding : MPlayerBindings)
+    {
+        if (PlayerBinding.Key.IsValid())
+        {
+            
+            UE_LOG(LogArea, Log, TEXT("[AArea::UnbindFromPlayer] 플레이어 바인딩 해제: %s, AreaID: %s"),
+                *PlayerBinding.Key->GetName(), *AreaID.ToString());
+            
+            //@내부 바인딩 해제...
+            UnbindFromPlayer(PlayerBinding.Key);
+        }
+    }
+
+    UE_LOG(LogArea, Log, TEXT("[AArea::UnbindFromPlayer] 모든 플레이어 바인딩 해제 완료. AreaID: %s"), *AreaID.ToString());
 }
 
 void AArea::InitializeArea()
@@ -107,7 +263,7 @@ void AArea::InitializeArea()
         true
     );
 
-    UE_LOGFMT(LogArea, Log, "Area {0} 초기화 완료. 등록된 AI: {1}개", *AreaID.ToString(), AIInfoMap.Num());
+    UE_LOGFMT(LogArea, Log, "Area {0} 초기화 완료. 등록된 AI: {1}개", *AreaID.ToString(), MAIInfos.Num());
 
 #if WITH_EDITOR
     // 에디터에서 디버그 시각화
@@ -189,15 +345,13 @@ void AArea::RegisterAI(AActor* AIActor)
         UE_LOGFMT(LogArea, Warning, "Area {0}: 유효하지 않은 AI 등록 시도", *AreaID.ToString());
         return;
     }
-
     //@중복 체크
     TWeakObjectPtr<AActor> AIActorPtr(AIActor);
-    if (AIInfoMap.Contains(AIActorPtr))
+    if (MAIInfos.Contains(AIActorPtr))
     {
         UE_LOGFMT(LogArea, Warning, "Area {0}: 이미 등록된 AI {1}", *AreaID.ToString(), *AIActor->GetName());
         return;
     }
-
     //@Ability System Insterface
     if (!AIActor->GetClass()->ImplementsInterface(UAbilitySystemInterface::StaticClass()))
     {
@@ -206,26 +360,18 @@ void AArea::RegisterAI(AActor* AIActor)
         return;
     }
 
-    //@ASC
-    IAbilitySystemInterface* AbilityInterface = Cast<IAbilitySystemInterface>(AIActor);
-    UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(AbilityInterface->GetAbilitySystemComponent());
-    if (!BaseASC)
-    {
-        UE_LOGFMT(LogArea, Warning, "Area {0}: AI {1}의 BaseAbilitySystemComponent를 찾을 수 없음",
-            *AreaID.ToString(), *AIActor->GetName());
-        return;
-    }
 
     //@현재 상태 가져오기 (GlobalStateManager 없이 직접 ASC에서 가져옴)
     FGameplayTag CurrentState = FGameplayTag::RequestGameplayTag("State.Alive");
 
     //@AI 정보 생성 및 저장
-    FAreaAIInfo AIInfo(AIActor, CurrentState, BaseASC);
+    FAreaAIInfo AIInfo(AIActor, CurrentState, nullptr);
     AIInfo.StateChangeTime = GetWorld()->GetTimeSeconds();
-    AIInfoMap.Add(AIActorPtr, AIInfo);
+    MAIInfos.Add(AIActorPtr, AIInfo);
 
-    //@ASC 이벤트에 바인딩
-    BaseASC->CharacterStateEventOnGameplay.AddUFunction(this, "OnAICharacterStateEvent");
+    //@내부 바인딩...
+    InternalBindToAI(AIActorPtr);
+
 
     UE_LOGFMT(LogArea, Log, "Area {0}: AI {1} 등록 완료",
         *AreaID.ToString(), *AIActor->GetName());
@@ -243,27 +389,40 @@ void AArea::UnregisterAI(AActor* AIActor)
     TWeakObjectPtr<AActor> AIActorPtr(AIActor);
 
     //@AI 정보 확인
-    if (!AIInfoMap.Contains(AIActorPtr))
+    if (!MAIInfos.Contains(AIActorPtr))
     {
         return;
     }
 
-    //@ASC 이벤트 바인딩 해제
-    const FAreaAIInfo& AIInfo = AIInfoMap[AIActorPtr];
-    if (AIInfo.AIASC.IsValid())
-    {
-        UBaseAbilitySystemComponent* AIComponent = AIInfo.AIASC.Get();
-        if (AIComponent)
-        {
-            AIComponent->CharacterStateEventOnGameplay.RemoveAll(this);
-        }
-    }
+    //@내부 바인딩 해제...
+    UnbindFromAI(AIActorPtr);
 
     //@맵에서 제거
-    AIInfoMap.Remove(AIActorPtr);
+    MAIInfos.Remove(AIActorPtr);
 
     UE_LOGFMT(LogArea, Log, "Area {0}: AI {1} 등록 해제 완료",
         *AreaID.ToString(), *AIActor->GetName());
+}
+
+void AArea::UnregisterAllAI()
+{
+    // AI 등록 정보가 비어있으면 얼리 리턴
+    if (MAIInfos.IsEmpty())
+    {
+        UE_LOG(LogArea, Warning, TEXT("[AArea::UnregisterAllAI] 등록된 AI가 없습니다. AreaID: %s"), *AreaID.ToString());
+        return;
+    }
+
+    UE_LOG(LogArea, Log, TEXT("[AArea::UnregisterAllAI] 영역 내 모든 AI 등록 해제 시작. AreaID: %s, AI 개수: %d"),
+        *AreaID.ToString(), MAIInfos.Num());
+
+    //@모든 AI에 대하여 바인딩 해제
+    UnbindFromAllAI();
+
+    //@MAIInfos 초기화
+    MAIInfos.Empty();
+
+    UE_LOG(LogArea, Log, TEXT("[AArea::UnregisterAllAI] 영역 내 모든 AI 등록 해제 완료. AreaID: %s"), *AreaID.ToString());
 }
 
 void AArea::RegisterPlayer(APlayerCharacter* Player)
@@ -279,9 +438,9 @@ void AArea::RegisterPlayer(APlayerCharacter* Player)
     TWeakObjectPtr<APlayerCharacter> PlayerPtr(Player);
 
     //@중복 체크
-    if (PlayerBindings.Contains(PlayerPtr))
+    if (MPlayerBindings.Contains(PlayerPtr))
     {
-        PlayerBindings[PlayerPtr].LastExitTime = 0.0f;
+        MPlayerBindings[PlayerPtr].LastExitTime = 0.0f;
         UE_LOGFMT(LogArea, Warning, "Area {0}: 플레이어 {1} 바인딩 갱신",
             *AreaID.ToString(), *Player->GetName());
         return;
@@ -289,20 +448,14 @@ void AArea::RegisterPlayer(APlayerCharacter* Player)
 
     //@FPlayerBindingInfo
     FPlayerBindingInfo BindingInfo(Player);
-    PlayerBindings.Add(PlayerPtr, BindingInfo);
+    MPlayerBindings.Add(PlayerPtr, BindingInfo);
+
+    //@내부 바인딩...
+    InternalBindToPlayer(PlayerPtr);
 
     UE_LOGFMT(LogArea, Log, "Area {0}: 플레이어 {1} 등록 완료",
         *AreaID.ToString(), *Player->GetName());
 
-    //@현재 영역 내 모든 AI 상태 정보를 플레이어에게 알림
-    for (auto& Pair : AIInfoMap)
-    {
-        if (Pair.Key.IsValid() && Pair.Value.CurrentState.IsValid() &&
-            Pair.Value.CurrentState.ToString().StartsWith("State."))
-        {
-            AActor* AIActor = Pair.Key.Get();
-        }
-    }
 }
 
 void AArea::UnregisterPlayer(APlayerCharacter* Player)
@@ -317,20 +470,41 @@ void AArea::UnregisterPlayer(APlayerCharacter* Player)
     TWeakObjectPtr<APlayerCharacter> PlayerPtr(Player);
 
     //@Contains?
-    if (!PlayerBindings.Contains(PlayerPtr))
+    if (!MPlayerBindings.Contains(PlayerPtr))
     {
         return;
     }
+
+    //@내부 바인딩 해제...
+    UnbindFromPlayer(PlayerPtr);
 
     //@현재 시간 가져오기
     float CurrentTime = GetWorld()->GetTimeSeconds();
 
     //@지연 해제를 위해 시간 업데이트
-    PlayerBindings[PlayerPtr].LastExitTime = CurrentTime;
+    MPlayerBindings[PlayerPtr].LastExitTime = CurrentTime;
 
     //@일정 시간 후 정리 작업에서 해제
     UE_LOGFMT(LogArea, Log, "Area {0}: 플레이어 {1} 이탈. 바인딩 해제 지연 시작",
         *AreaID.ToString(), *Player->GetName());
+}
+
+void AArea::UnregisterPlayer()
+{
+    // MPlayerBindings이 비어있으면 얼리 리턴
+    if (MPlayerBindings.IsEmpty())
+    {
+        UE_LOG(LogArea, Warning, TEXT("[AArea::UnregisterPlayer] 등록된 플레이어가 없습니다. AreaID: %s"), *AreaID.ToString());
+        return;
+    }
+
+    //@바인딩 해제
+    UnbindFromPlayer();
+
+    //@MPlayerBindings 초기화
+    MPlayerBindings.Empty();
+
+    UE_LOG(LogArea, Log, TEXT("[AArea::UnregisterPlayer] 모든 플레이어 등록 해제 완료. AreaID: %s"), *AreaID.ToString());
 }
 
 void AArea::HandleAIStateChanged(AActor* AIActor, const FGameplayTag& StateTag)
@@ -351,7 +525,7 @@ void AArea::HandleAIStateChanged(AActor* AIActor, const FGameplayTag& StateTag)
     TWeakObjectPtr<AActor> AIActorPtr(AIActor);
 
     //@Contains?
-    if (!AIInfoMap.Contains(AIActorPtr))
+    if (!MAIInfos.Contains(AIActorPtr))
     {
         UE_LOGFMT(LogArea, Warning, "Area {0}: 등록되지 않은 AI {1}의 상태 변경 무시",
             *AreaID.ToString(), *AIActor->GetName());
@@ -359,29 +533,20 @@ void AArea::HandleAIStateChanged(AActor* AIActor, const FGameplayTag& StateTag)
     }
 
     //@이전 상태와 같은지 확인
-    FGameplayTag OldState = AIInfoMap[AIActorPtr].CurrentState;
+    FGameplayTag OldState = MAIInfos[AIActorPtr].CurrentState;
     if (OldState == StateTag)
     {
         return;
     }
 
     //@상태 정보 업데이트
-    AIInfoMap[AIActorPtr].CurrentState = StateTag;
-    AIInfoMap[AIActorPtr].StateChangeTime = GetWorld()->GetTimeSeconds();
+    MAIInfos[AIActorPtr].CurrentState = StateTag;
+    MAIInfos[AIActorPtr].StateChangeTime = GetWorld()->GetTimeSeconds();
 
     UE_LOGFMT(LogArea, Log, "Area {0}: AI {1} 상태 변경: {2} -> {3}",
         *AreaID.ToString(), *AIActor->GetName(),
         OldState.IsValid() ? *OldState.ToString() : TEXT("None"),
         *StateTag.ToString());
-
-    //@플레이어들에게 알림
-    for (auto& Pair : PlayerBindings)
-    {
-        if (Pair.Key.IsValid() && Pair.Value.LastExitTime == 0.0f)
-        {
-
-        }
-    }
 
     //@델리게이트 호출
     AreaAIStateChanged.Broadcast(AIActor, StateTag, this, AreaID);
@@ -395,7 +560,7 @@ void AArea::CleanupInvalidReferences()
     // 1. 무효한 AI 참조 정리
     TArray<TWeakObjectPtr<AActor>> InvalidAIRefs;
 
-    for (auto& Pair : AIInfoMap)
+    for (auto& Pair : MAIInfos)
     {
         if (!Pair.Key.IsValid())
         {
@@ -405,13 +570,13 @@ void AArea::CleanupInvalidReferences()
 
     for (auto& Ref : InvalidAIRefs)
     {
-        AIInfoMap.Remove(Ref);
+        MAIInfos.Remove(Ref);
     }
 
     // 2. 무효하거나 지연 시간이 만료된 플레이어 참조 정리
     TArray<TWeakObjectPtr<APlayerCharacter>> PlayersToRemove;
 
-    for (auto& Pair : PlayerBindings)
+    for (auto& Pair : MPlayerBindings)
     {
         // 무효한 참조이거나, 이탈 후 일정 시간이 지난 경우
         if (!Pair.Key.IsValid() ||
@@ -424,12 +589,12 @@ void AArea::CleanupInvalidReferences()
     for (auto& PlayerRef : PlayersToRemove)
     {
         // 컴포넌트가 유효하면 언바인딩 처리
-        if (PlayerBindings.Contains(PlayerRef))
+        if (MPlayerBindings.Contains(PlayerRef))
         {
 
         }
 
-        PlayerBindings.Remove(PlayerRef);
+        MPlayerBindings.Remove(PlayerRef);
     }
 
     if (InvalidAIRefs.Num() > 0 || PlayersToRemove.Num() > 0)
@@ -487,15 +652,6 @@ void AArea::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor
         UnregisterPlayer(Player);
         return;
     }
-
-    // AI 검사
-    ACharacterBase* AICharacter = Cast<ACharacterBase>(OtherActor);
-    if (AICharacter && !Cast<APlayerCharacter>(AICharacter))
-    {
-        // AI 등록 해제는 지연시키지 않고 바로 처리
-        //UnregisterAI(AICharacter);
-        return;
-    }
 }
 
 void AArea::OnAICharacterStateEvent(AActor* Actor, const FGameplayTag& StateTag)
@@ -511,7 +667,7 @@ TArray<AActor*> AArea::GetAIInArea() const
 {
     TArray<AActor*> Result;
 
-    for (auto& Pair : AIInfoMap)
+    for (auto& Pair : MAIInfos)
     {
         if (Pair.Key.IsValid())
         {
@@ -520,5 +676,20 @@ TArray<AActor*> AArea::GetAIInArea() const
     }
 
     return Result;
+}
+
+TArray<FAreaAIInfo> AArea::GetAreaAIInfos() const
+{
+    TArray<FAreaAIInfo> AIInfos;
+
+    for (auto& AIInfoPair : MAIInfos)
+    {
+        if (AIInfoPair.Key.IsValid())
+        {
+            AIInfos.Add(AIInfoPair.Value);
+        }
+    }
+
+    return AIInfos;
 }
 #pragma endregion
