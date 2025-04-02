@@ -902,23 +902,20 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 {
 	const FGameplayTagContainer& AssetTags = SpecApplied.Def->InheritableGameplayEffectTags.Added;
 
+	// 정적 태그 한 번만 생성 (성능 최적화)
+	static FGameplayTag StateTag = FGameplayTag::RequestGameplayTag("State");
+	static FGameplayTag DeadStateTag = FGameplayTag::RequestGameplayTag("State.Dead");
+
 	//@State 태그 확인 및 이벤트 발생
-	for (const FGameplayTag& StateTag : AssetTags)
+	for (const FGameplayTag& TagFromEffect : AssetTags)
 	{
-		if (StateTag.ToString().StartsWith("State"))
+		// State 계층 태그 확인 (State 또는 모든 자식 태그)
+		if (TagFromEffect.MatchesTag(StateTag))
 		{
-			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *StateTag.ToString());
+			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *TagFromEffect.ToString());
 
 			//@캐릭터 상태 이벤트
-			CharacterStateEventOnGameplay.Broadcast(GetAvatarActor(), StateTag);
-
-			//@죽음 상태일 경우 이벤트 발생 전에 모든 구독 해제
-			if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
-			{
-				//@이벤트 구독 해제
-				CharacterStateEventOnGameplay.Clear();
-				return;
-			}
+			CharacterStateEventOnGameplay.Broadcast(GetAvatarActor(), TagFromEffect);
 		}
 	}
 }

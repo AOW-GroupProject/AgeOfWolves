@@ -63,7 +63,7 @@ void UInteractionGameplayAbility::SendInteractionEvent(const FHitResult& HitResu
     EventData.Target = HitActor;
     EventData.OptionalObject = InteractionData;
 
-    // 이벤트 전송
+    //@이벤트 전송
     bool bSuccess = UCombatLibrary::SendGameplayEventToTarget(
         InteractionData->GetEventTag(),
         HitActor,

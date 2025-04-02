@@ -488,11 +488,25 @@ void ABaseAIController::ChangeAgentAIState(EAIState InStateType)
 
 void ABaseAIController::HandleCharacterStateEvent(const FGameplayTag& CharacterStateTag)
 {
-    if (CharacterStateTag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
+    // 정적 태그들을 한 번만 생성 (성능 최적화)
+    static FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
+    static FGameplayTag ExecutedTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead.Executed"));
+
+    //@사망 상태인지 확인 (State.Dead 또는 하위 태그)
+    if (CharacterStateTag.MatchesTag(DeadTag))
     {
         UE_LOGFMT(LogBaseAIC, Log, "캐릭터 사망 상태 감지. 사망 처리를 시작합니다.");
 
-        //@캐릭터 죽음 처리
+        //@특별히 처형된 경우인지 확인 (State.Dead.Executed)
+        if (CharacterStateTag.MatchesTag(ExecutedTag))
+        {
+            UE_LOGFMT(LogBaseAIC, Log, "캐릭터가 처형되었습니다. 그룹에 정보 전송을 시작합니다.");
+
+            //@처형 정보를 높은 우선순위로 그룹에 공유
+            ShareInfoToGroup(CharacterStateTag, EAISharingInfoType::All, 10);
+        }
+
+        //@캐릭터 죽음 처리 (모든 사망 케이스에 공통)
         ProcessCharacterDeathEvent();
     }
 }
@@ -592,6 +606,37 @@ void ABaseAIController::UnbindTargetActorStateEvents(AActor* OldTarget)
         UE_LOGFMT(LogBaseAIC, Log, "타겟 {0}에 대한 상태 이벤트 바인딩 해제",
             *OldTarget->GetName());
     }
+}
+
+bool ABaseAIController::ShareInfoToGroup(
+    const FGameplayTag& StateTag,
+    EAISharingInfoType SharingType,
+    int32 Priority,
+    float ValidTime)
+{
+    // 소유한 Pawn이 있는지 확인
+    AActor* ControlledActor = GetPawn();
+    if (!IsValid(ControlledActor))
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "정보 공유 실패: 컨트롤러가 유효한 Pawn을 소유하고 있지 않습니다.");
+        return false;
+    }
+
+    //@FSharingInfoWithGroup
+    FSharingInfoWithGroup SharingInfo;
+    SharingInfo.InfoID = FGuid::NewGuid();
+    SharingInfo.SharingType = SharingType;
+    SharingInfo.StateTag = StateTag;
+    SharingInfo.Priority = Priority;
+    SharingInfo.ValidTime = ValidTime;
+
+    //@그룹과 공유할 정보 전달 이벤트
+    SendInfoToBelongingGroup.Broadcast(ControlledActor, SharingInfo);
+
+    UE_LOGFMT(LogBaseAIC, Log, "그룹 정보 공유 완료. 정보 ID: {0}, 상태: {1}, 우선순위: {2}",
+        *SharingInfo.InfoID.ToString(), *StateTag.ToString(), Priority);
+
+    return true;
 }
 #pragma endregion
 

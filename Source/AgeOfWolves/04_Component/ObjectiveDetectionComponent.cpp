@@ -308,7 +308,6 @@ void UObjectiveDetectionComponent::InitializeODComponent()
     UE_LOGFMT(LogObjectiveDetection, Log, "초기 Pawn 바인딩 완료: {0} (컴포넌트: {1})",
         *ControlledPawn->GetName(), *CapsuleComp->GetName());
 
-  
     ExternalBindToLockOnComponent();
 
     //@Timer
@@ -411,15 +410,15 @@ void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool 
         return;
     }
 
-    // 위치 업데이트
+    //@위치 업데이트
     if (!UpdateBillboardPosition(TargetActor))
     {
-        // 위치 업데이트 실패 시 가시성 비활성화
+        //@위치 업데이트 실패 시 가시성 비활성화
         IndicatorBillboardComponent->SetVisibility(false);
         return;
     }
 
-    // 텍스처 업데이트가 필요한 경우
+    //@텍스처 업데이트가 필요한 경우
     if (!bChangeTransformOnly)
     {
         UpdateBillboardTexture();
@@ -573,6 +572,7 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
 
             for (auto AIInfo : AreaAIInfos)
             {
+                //@AI Actor, Current State != State.Dead
                 if (!AIInfo.AIActor.IsValid() || AIInfo.CurrentState.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead"))) continue;
 
                 auto AI = AIInfo.AIActor.Get();
@@ -746,24 +746,8 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
     //@현재 타겟 액터와 동일한지 확인
     if (CurrentTargetAI.IsValid()  && CurrentTargetAI.Get() == ObjectiveActor)
     {
-        // Fragile 상태 변경 시
-        if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
-        {
-            bIsCurrentTargetFragile = true;
-            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Fragile 상태로 변경됨", *ObjectiveActor->GetName());
-
-            UpdateBillboardComponent(true, false);
-        }
-        // Normal 상태 변경 시
-        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
-        {
-            bIsCurrentTargetFragile = false;
-            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경됨", *ObjectiveActor->GetName());
-            
-            UpdateBillboardComponent(true, false);
-        }
         //@Dead 상태 태그 확인
-        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+        if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
         {
             // 타겟 해제
             SetCurrentTargetAI(nullptr);
@@ -772,6 +756,22 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
             UpdateBillboardComponent(false);
 
             UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) 사망하여 인디케이터를 비활성화 및 타겟 해제함", *ObjectiveActor->GetName());
+        }
+        //@Fragile 상태 변경 시
+        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
+        {
+            bIsCurrentTargetFragile = true;
+            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Fragile 상태로 변경됨", *ObjectiveActor->GetName());
+
+            UpdateBillboardComponent(true, false);
+        }
+        //@Normal 상태 변경 시
+        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
+        {
+            bIsCurrentTargetFragile = false;
+            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경됨", *ObjectiveActor->GetName());
+            
+            UpdateBillboardComponent(true, false);
         }
     }
 
