@@ -54,6 +54,22 @@ void UBaseAbilitySystemComponent::ExternalBindToAIAbilitySequencer(ABaseAIContro
 	UE_LOGFMT(LogASC, Log, "AI Ability Sequencer 컴포넌트와 바인딩 완료");
 }
 
+void UBaseAbilitySystemComponent::ExternalBindToAIController(ABaseAIController* BaseAIC)
+{
+	//@AIC
+	if (!BaseAIC)
+	{
+		UE_LOGFMT(LogASC, Warning, "바인딩 실패: AI 컨트롤러가 유효하지 않음");
+		return;
+	}
+
+	//@어빌리티 활성화 요청 이벤트 바인딩
+	BaseAIC->ReceiveInfoToBelongingGroup.AddUFunction(this, "OnReceiveInfoToBelongingGroup");
+
+	UE_LOGFMT(LogASC, Log, "AI Ability Sequencer 컴포넌트와 바인딩 완료");
+}
+
+
 void UBaseAbilitySystemComponent::ExternalBindToInteractionComp(AController* Controller)
 {
 	auto PC = Cast<ABasePlayerController>(Controller);
@@ -747,6 +763,7 @@ void UBaseAbilitySystemComponent::EndInteractionWindow(bool bSuccess)
 	}
 
 }
+
 void UBaseAbilitySystemComponent::HandleInteractionEvent(const FGameplayTag& EventTag)
 {
 	//@Event Tag
@@ -1003,6 +1020,11 @@ void UBaseAbilitySystemComponent::OnPotentialInteractionChanged(AActor* TargetAc
 			InteractionFailed.Broadcast(TargetActor, Interaction);
 		}
 	}
+}
+
+void UBaseAbilitySystemComponent::OnReceiveInfoToBelongingGroup(const FGameplayTag& CrowControlTag)
+{
+
 }
 #pragma endregion
 

@@ -93,6 +93,10 @@ struct FSharingInfoWithGroup
 	UPROPERTY()
 		FGuid InfoID;
 
+	//@그룹 ID
+	UPROPERTY()
+		FGuid GroupID;
+
 	//@정보 공유 유형
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		EAISharingInfoType SharingType = EAISharingInfoType::All;
@@ -183,8 +187,10 @@ DECLARE_DELEGATE_RetVal(bool, FRequestEndCombatPattern)
 //@전투 패턴 Exit Block 완료 통지
 DECLARE_DELEGATE_RetVal(bool, FNotifyCombatPatternExitComplete)
 
-//@인지 정보 전달 이벤트
+//@그룹 공유 정보 전달 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FSendInfoToBelongingGroup, AActor*, FSharingInfoWithGroup)
+//@그룹 공유 정보 수신 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FReceiveInfoToBelongingGroup, const FGameplayTag&)
 #pragma endregion
 
 /**
@@ -198,6 +204,7 @@ class AGEOFWOLVES_API ABaseAIController : public AAIController, public IAbilityS
 //@친추 클래스
 #pragma region Friend Class
 	friend class UBTService_SetFocus;
+	friend class UCrowdControlComponent;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -275,18 +282,14 @@ protected:
 		int32 Priority = 1,
 		float ValidTime = 5.0f);
 
+	//@AI Group으로부터 전달 받은 공유 정보 처리
+	UFUNCTION()
+		void ReceiveInfoFromGroup(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo);
+
 protected:
 	//@AI Perception
 	UPROPERTY(VisibleAnywhere)
 		UAIPerceptionComponent* AIPerceptionComponent;
-
-	//@ASC
-	UPROPERTY()
-		UBaseAbilitySystemComponent* AbilitySystemComponent;
-
-	//@Attribute Set
-	UPROPERTY()
-		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
 
 	//@AI Combat Pattern 컴포넌트
 	UPROPERTY(Transient)
@@ -295,6 +298,15 @@ protected:
 	//@Objective Detection Comp
 	UPROPERTY(Transient)
 		UObjectiveDetectionComponent* ODComponent;
+
+protected:
+	//@ASC
+	UPROPERTY()
+		UBaseAbilitySystemComponent* AbilitySystemComponent;
+
+	//@Attribute Set
+	UPROPERTY()
+		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
 
 protected:
 	//@BT
@@ -312,6 +324,10 @@ protected:
 	//@AI 유형
 	UPROPERTY(EditDefaultsOnly, Category = "AI | AI 유형")
 		EAIType AIType;
+
+	//@AI가 속한 그룹 ID
+	UPROPERTY()
+		FGuid AIGroupID;
 
 private:
 	FBaseAbilitySet_GrantedHandles* SetGrantedHandles;
@@ -363,6 +379,9 @@ public:
 public:
 	//@그룹 공유 정보 전달 이벤트
 	FSendInfoToBelongingGroup SendInfoToBelongingGroup;
+
+	//@그룹 공유 정보 수신 이벤트
+	FReceiveInfoToBelongingGroup ReceiveInfoToBelongingGroup;
 #pragma endregion
 
 //@Callbacks
@@ -419,6 +438,9 @@ public:
 
 public:
 	FORCEINLINE EAIType GetAIType() const { return AIType; }
+
+public:
+	FORCEINLINE void SetAIGroupID(const FGuid& GroupID);
 
 public:
 	FORCEINLINE float GetMinAttackRange() { return MinAttackRange; }

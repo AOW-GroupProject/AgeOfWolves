@@ -174,8 +174,14 @@ DECLARE_MULTICAST_DELEGATE_FourParams(FAreaAIStateChanged, AActor*, const FGamep
 //@AI의 Player 인지 이벤트
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FAIDetectsPlayer, bool, AActor*, APlayerCharacter*);
 
+//@AI의 그룹 등록 완료 이벤트
+DECLARE_MULTICAST_DELEGATE_TwoParams(FAIRegisteredToAIGroup, AActor*, const FGuid&);
+
 //@그룹 상태 변경 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FGroupStatusChanged, const FGuid&, const FString&);
+
+//@그룹 공유 정보 전달 받음 알림 이벤트
+DECLARE_MULTICAST_DELEGATE_TwoParams(FNotifyGroupToShareInfo, AActor*, FSharingInfoWithGroup)
 #pragma endregion
 
 /*
@@ -334,8 +340,15 @@ public:
     FAIDetectsPlayer AIDetectsPlayer;
 
 public:
+    //@AI의 그룹 등록 완료 이벤트
+    FAIRegisteredToAIGroup AIRegisteredToAIGroup;
+
     //@그룹 상태 변화 이벤트
     FGroupStatusChanged GroupStatusChanged;
+
+public:
+    //@AI 그룹이 공유할 정보 알림 이벤트
+    FNotifyGroupToShareInfo NotifyGroupToShareInfo;
 #pragma endregion
 
 //@Callbacks
@@ -364,6 +377,11 @@ protected:
     //@AI의 락온 상태 변화 이벤트 구독
     UFUNCTION()
         void OnAIDetectsTarget(bool bLockOn, AActor* AI, AActor* DetectedTarget);
+
+protected:
+    //@그룹 정보 수신 콜백
+    UFUNCTION()
+        void OnSendInfoToBelongingGroup(AActor* AI, FSharingInfoWithGroup SharingInfo);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

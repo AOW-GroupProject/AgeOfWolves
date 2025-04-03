@@ -372,6 +372,7 @@ void ABaseAIController::InitializeAbilitySystem(APawn* InPawn)
 {
     //@외부 바인딩...
     AbilitySystemComponent->ExternalBindToAIAbilitySequencer(this);
+    AbilitySystemComponent->ExternalBindToAIController(this);
 
     //@Handle
     UBaseAbilitySet* SetToGrant = AbilityManagerRef->GetAbilitySet(CharacterTag);
@@ -638,6 +639,41 @@ bool ABaseAIController::ShareInfoToGroup(
 
     return true;
 }
+
+void ABaseAIController::ReceiveInfoFromGroup(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo)
+{
+    if (!IsValid(SenderAI) || !SharingInfo.StateTag.IsValid())
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "그룹 정보 수신 실패: 유효하지 않은 발신자 또는 상태 태그");
+        return;
+    }
+
+    APawn* ControlledPawn = GetPawn();
+    if (!ControlledPawn)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "그룹 정보 수신 실패: 컨트롤러가 유효한 Pawn을 소유하지 않음");
+        return;
+    }
+
+    //@정보의 상태 태그에 따라 다양한 행동 패턴 적용
+    if (SharingInfo.StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
+    {
+        UE_LOGFMT(LogBaseAIC, Log, "그룹원 사망 정보 수신: 발신자={0}, 상태={1}",
+            *SenderAI->GetName(), *SharingInfo.StateTag.ToString());
+
+    }
+    else if (SharingInfo.StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Fragile")))
+    {
+        UE_LOGFMT(LogBaseAIC, Log, "그룹원 취약 상태 정보 수신: 발신자={0}, 상태={1}",
+            *SenderAI->GetName(), *SharingInfo.StateTag.ToString());
+
+    }
+    else
+    {
+        UE_LOGFMT(LogBaseAIC, Verbose, "그룹원 일반 정보 수신: 발신자={0}, 상태={1}",
+            *SenderAI->GetName(), *SharingInfo.StateTag.ToString());
+    }
+}
 #pragma endregion
 
 //@Callbacks
@@ -814,6 +850,16 @@ void ABaseAIController::OnTargetActorStateChanged(AActor* Actor, const FGameplay
 UAbilitySystemComponent* ABaseAIController::GetAbilitySystemComponent() const
 {
     return AbilitySystemComponent;
+}
+
+void ABaseAIController::SetAIGroupID(const FGuid& ID)
+{
+    if (!ID.IsValid())
+    {
+        return;
+    }
+
+    AIGroupID = ID;
 }
 
 FGenericTeamId ABaseAIController::GetGenericTeamId() const

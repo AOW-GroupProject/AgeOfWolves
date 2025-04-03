@@ -55,16 +55,16 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionFailed, AActor*, Intera
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionCompleted, AActor*, InteractableActor, const FPotentialInteraction&, CompletedInteraction);
 #pragma endregion
 
-/**	
+/**
  *	@UBaseAbilitySystemComponent
- * 
+ *
  *	AOW의 캐릭터 기본 ASC 유형입니다.
- */	
+ */
 UCLASS(meta = (BlueprintSpawnableComponent))
 class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemComponent
 {
 
-//@친추 클래스
+	//@친추 클래스
 #pragma region Friend Class
 	friend class UBaseGameplayAbility;
 	friend class UANS_AllowChainAction;
@@ -85,6 +85,7 @@ protected:
 protected:
 	//@외부 바인딩
 	void ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC);
+	void ExternalBindToAIController(ABaseAIController* BaseAIC);
 	void ExternalBindToInteractionComp(AController* Controller);
 
 protected:
@@ -92,7 +93,7 @@ protected:
 	virtual void InitializeComponent() override;
 #pragma endregion
 
-//@Property/Info...etc
+	//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
 	//@오버로딩
@@ -192,7 +193,7 @@ protected:
 		TWeakObjectPtr<AActor> InteractionTargetActor;
 #pragma endregion
 
-//@Delegates
+	//@Delegates
 #pragma region Delegates
 public:
 	//@어빌리티 등록 이벤트
@@ -228,7 +229,7 @@ public:
 		FInteractionCompleted InteractionCompleted;
 #pragma endregion
 
-//@Callbacks
+	//@Callbacks
 #pragma region Callbacks
 protected:
 	//@GA 활성화 이벤트 구독
@@ -252,9 +253,13 @@ protected:
 protected:
 	UFUNCTION()
 		void OnPotentialInteractionChanged(AActor* TargetActor, const FPotentialInteraction& Interaction);
+
+protected:
+	UFUNCTION()
+		void OnReceiveInfoToBelongingGroup(const FGameplayTag& CrowControlTag);
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+	//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
 	//@Cancel, Block Tag

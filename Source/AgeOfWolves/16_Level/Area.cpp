@@ -67,6 +67,9 @@ void AArea::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
 
+    //@컴포넌트의 외부 바인딩...
+    CrowdControlComponent->ExternalBindingToArea(this);
+
     //@비동기 초기화 요청 바인딩...
     RequestStartInitByArea.AddUFunction(CrowdControlComponent, "InitializeCrowdControlComp");
 }
@@ -152,13 +155,15 @@ void AArea::InternalBindToAI(TWeakObjectPtr<AActor> AIActorPtr)
             *AreaID.ToString(), *AIActor->GetName());
         return;
     }
-
-    // AI 정보 업데이트
+    
+    //@AI 정보 업데이트
     AIInfo->AIASC = BaseASC;
 
-    // 내부 바인딩
-    BaseASC->CharacterStateEventOnGameplay.AddUFunction(this, "OnAICharacterStateEvent");
+    //@내부 바인딩...
     AIController->AIDetectsTarget.AddUFunction(this, "OnAIDetectsTarget");
+    AIController->SendInfoToBelongingGroup.AddUFunction(this, "OnSendInfoToBelongingGroup");
+    BaseASC->CharacterStateEventOnGameplay.AddUFunction(this, "OnAICharacterStateEvent");
+
 
     UE_LOGFMT(LogArea, Log, "Area {0}: AI {1} 이벤트 바인딩 완료",
         *AreaID.ToString(), *AIActor->GetName());
@@ -471,6 +476,7 @@ void AArea::InitializeAreaAIInfos()
 
                 //@Group Members 추가
                 NewGroupInfo.GroupMembers.Add(NewMemberInfo);
+
             }
         }
 
@@ -599,14 +605,17 @@ void AArea::RegisterAI(AActor* AIActor)
         {
             if (MemberInfo.AIActor.Get() == AIActor)
             {
-                // AI가 속한 그룹 발견
+                //@AI가 속한 그룹 발견
                 bGroupAssigned = true;
 
                 // 이미 MAIGroups에 해당 그룹이 등록되어 있는지 확인
                 if (!MAIGroups.Contains(GroupInfo.GroupID))
                 {
-                    // 새 그룹 등록
+                    //@새 그룹 등록
                     MAIGroups.Add(GroupInfo.GroupID, GroupInfo);
+
+                    //@그룹 등록 완료 이벤트
+                    AIRegisteredToAIGroup.Broadcast(AIActor, GroupInfo.GroupID);
 
                     UE_LOGFMT(LogArea, Log, "Area {0}: 그룹 '{1}' (ID: {2}) 등록 완료",
                         *AreaID.ToString(), *GroupInfo.GroupName, GroupInfo.GroupID);
@@ -1129,6 +1138,49 @@ void AArea::OnAIDetectsTarget(bool bLockOn, AActor* AI, AActor* DetectedTarget)
 
     UE_LOGFMT(LogArea, Log, "Area {0}: AI {1}이(가) 플레이어 {2}를 인지함 (락온: {3})",
         *AreaID.ToString(), *AI->GetName(), *PlayerCharacter->GetName(), bLockOn ? TEXT("True") : TEXT("False"));
+}
+
+void AArea::OnSendInfoToBelongingGroup(AActor* AI, FSharingInfoWithGroup SharingInfo)
+{
+    //@AI 유효성 검사
+    if (!IsValid(AI))
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 그룹 정보 전달 실패 - 유효하지 않은 AI", *AreaID.ToString());
+        return;
+    }
+
+    //@상태 태그 유효성 검사
+    if (!SharingInfo.StateTag.IsValid())
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 그룹 정보 전달 실패 - 유효하지 않은 상태 태그", *AreaID.ToString());
+        return;
+    }
+
+    //@AI가 속한 그룹 ID 찾기
+    FGuid GroupID = GetAIGroupID(AI);
+    if (!GroupID.IsValid())
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 그룹 정보 전달 실패 - AI {1}이(가) 속한 그룹을 찾을 수 없음",
+            *AreaID.ToString(), *AI->GetName());
+        return;
+    }
+
+    //@그룹 존재 확인
+    if (!MAIGroups.Contains(GroupID))
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 그룹 정보 전달 실패 - 그룹 ID {1}이(가) 존재하지 않음",
+            *AreaID.ToString(), *GroupID.ToString());
+        return;
+    }
+
+    //@Group ID 업데이트
+    SharingInfo.GroupID = GroupID;
+
+    //@그룹 정보 전달 이벤트 호출
+    NotifyGroupToShareInfo.Broadcast(AI, SharingInfo);
+
+    UE_LOGFMT(LogArea, Log, "Area {0}: AI {1}의 그룹 {2}에 정보 전달 - 상태: {3}, 우선순위: {4}",
+        *AreaID.ToString(), *AI->GetName(), *GroupID.ToString(), *SharingInfo.StateTag.ToString(), SharingInfo.Priority);
 }
 #pragma endregion
 
