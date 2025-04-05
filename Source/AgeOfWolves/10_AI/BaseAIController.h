@@ -101,9 +101,13 @@ struct FSharingInfoWithGroup
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		EAISharingInfoType SharingType = EAISharingInfoType::All;
 
-	//@보낸 AI의 상태 태그
+	//@AI의 상태 태그
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		FGameplayTag StateTag;
+
+	//@AI에게 요청되는 군중 제어 태그
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FGameplayTag ResultTag;
 
 	//@정보의 우선순위 (높을수록 중요)
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -189,8 +193,9 @@ DECLARE_DELEGATE_RetVal(bool, FNotifyCombatPatternExitComplete)
 
 //@그룹 공유 정보 전달 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FSendInfoToBelongingGroup, AActor*, FSharingInfoWithGroup)
-//@그룹 공유 정보 수신 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FReceiveInfoToBelongingGroup, const FGameplayTag&)
+
+//@군중 제어 이벤트
+DECLARE_DELEGATE_OneParam(FCrowdControlEventTriggered, const FGameplayTag&)
 #pragma endregion
 
 /**
@@ -282,9 +287,16 @@ protected:
 		int32 Priority = 1,
 		float ValidTime = 5.0f);
 
+protected:
 	//@AI Group으로부터 전달 받은 공유 정보 처리
 	UFUNCTION()
 		void ReceiveInfoFromGroup(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo);
+
+	//@그룹으로부터 전달 받은 정보를 처리하는 함수
+	void ProcessReceivedGroupInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo);
+
+	//@군중 제어 관련 정보 처리 함수
+	void ProcessCrowdControlInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo);
 
 protected:
 	//@AI Perception
@@ -380,8 +392,9 @@ public:
 	//@그룹 공유 정보 전달 이벤트
 	FSendInfoToBelongingGroup SendInfoToBelongingGroup;
 
-	//@그룹 공유 정보 수신 이벤트
-	FReceiveInfoToBelongingGroup ReceiveInfoToBelongingGroup;
+public:
+	//@군중 제어 발생 이벤트
+	FCrowdControlEventTriggered CrowdControlEventTriggered;
 #pragma endregion
 
 //@Callbacks

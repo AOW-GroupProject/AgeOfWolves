@@ -64,7 +64,7 @@ void UBaseAbilitySystemComponent::ExternalBindToAIController(ABaseAIController* 
 	}
 
 	//@어빌리티 활성화 요청 이벤트 바인딩
-	BaseAIC->ReceiveInfoToBelongingGroup.AddUFunction(this, "OnReceiveInfoToBelongingGroup");
+	BaseAIC->CrowdControlEventTriggered.BindUFunction(this, "OnCrowdControlEventTriggered");
 
 	UE_LOGFMT(LogASC, Log, "AI Ability Sequencer 컴포넌트와 바인딩 완료");
 }
@@ -926,13 +926,18 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 	//@State 태그 확인 및 이벤트 발생
 	for (const FGameplayTag& TagFromEffect : AssetTags)
 	{
-		// State 계층 태그 확인 (State 또는 모든 자식 태그)
+		//@State 계층 태그 확인 (State 또는 모든 자식 태그)
 		if (TagFromEffect.MatchesTag(StateTag))
 		{
 			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *TagFromEffect.ToString());
 
 			//@캐릭터 상태 이벤트
 			CharacterStateEventOnGameplay.Broadcast(GetAvatarActor(), TagFromEffect);
+
+			if (TagFromEffect.MatchesTag(DeadStateTag))
+			{
+				CharacterStateEventOnGameplay.Clear();
+			}
 		}
 	}
 }
@@ -1022,9 +1027,39 @@ void UBaseAbilitySystemComponent::OnPotentialInteractionChanged(AActor* TargetAc
 	}
 }
 
-void UBaseAbilitySystemComponent::OnReceiveInfoToBelongingGroup(const FGameplayTag& CrowControlTag)
+void UBaseAbilitySystemComponent::OnCrowdControlEventTriggered(const FGameplayTag& CrowdControlTag)
 {
+	//@Tag 유효성 검사
+	if (!CrowdControlTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "군중 제어 이벤트 처리 실패: 유효하지 않은 태그");
+		return;
+	}
 
+	UE_LOGFMT(LogASC, Log, "군중 제어 이벤트 수신: {0}", *CrowdControlTag.ToString());
+
+	//@Avatar Actor 체크
+	AActor* Avatar = GetAvatarActor();
+	if (!Avatar)
+	{
+		UE_LOGFMT(LogASC, Warning, "군중 제어 이벤트 처리 실패: 유효한 아바타 액터가 없음");
+		return;
+	}
+
+	//@태그에 따른 이벤트 처리
+	if (CrowdControlTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("CrowdControl.Threatened")))
+	{
+		UE_LOGFMT(LogASC, Log, "위협(Threatened) 군중 제어 처리 시작 - Actor: {0}", *Avatar->GetName());
+
+		//@위협 GameplayEvent 발생
+		FGameplayEventData EventData;
+		EventData.EventTag = FGameplayTag::RequestGameplayTag("EventTag.CrowdControl.OnThreatened");
+		EventData.Instigator = Avatar;
+
+		HandleGameplayEvent(EventData.EventTag, &EventData);
+	}
+
+	UE_LOGFMT(LogASC, Log, "군중 제어 이벤트 처리 완료: {0}", *CrowdControlTag.ToString());
 }
 #pragma endregion
 

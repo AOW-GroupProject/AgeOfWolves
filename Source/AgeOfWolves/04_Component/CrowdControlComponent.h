@@ -94,9 +94,7 @@ protected:
         void ProcessInfoQueue();
 
     //@전달 받은 상태 정보 별 처리
-    void ProcessDeadStateInfo(AActor* SenderAI, AActor* RecipientAI, const FSharingInfoWithGroup& InfoData);
-    void ProcessFragileStateInfo(AActor* SenderAI, AActor* RecipientAI, const FSharingInfoWithGroup& InfoData);
-    void ProcessGenericStateInfo(AActor* SenderAI, AActor* RecipientAI, const FSharingInfoWithGroup& InfoData);
+    void ProcessDeadStateInfo(AActor* SenderAI, const TArray<TWeakObjectPtr<AActor>>& Recipients, const FSharingInfoWithGroup& InfoData);
 
 protected:
     //@만료된 처리 정보 ID 제거

@@ -655,24 +655,65 @@ void ABaseAIController::ReceiveInfoFromGroup(AActor* SenderAI, const FSharingInf
         return;
     }
 
-    //@정보의 상태 태그에 따라 다양한 행동 패턴 적용
-    if (SharingInfo.StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
-    {
-        UE_LOGFMT(LogBaseAIC, Log, "그룹원 사망 정보 수신: 발신자={0}, 상태={1}",
-            *SenderAI->GetName(), *SharingInfo.StateTag.ToString());
+    //@전달 받은 공유 정보 처리
+    ProcessReceivedGroupInfo(SenderAI, SharingInfo);
 
-    }
-    else if (SharingInfo.StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Fragile")))
-    {
-        UE_LOGFMT(LogBaseAIC, Log, "그룹원 취약 상태 정보 수신: 발신자={0}, 상태={1}",
-            *SenderAI->GetName(), *SharingInfo.StateTag.ToString());
+    UE_LOGFMT(LogBaseAIC, Log, "그룹원 사망 정보 수신: 발신자={0}, 요청={1}",
+        *SenderAI->GetName(), *SharingInfo.ResultTag.ToString());
 
-    }
-    else
+}
+
+void ABaseAIController::ProcessReceivedGroupInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo)
+{
+    //@유효성 검사
+    if (!IsValid(SenderAI) || !SharingInfo.StateTag.IsValid())
     {
-        UE_LOGFMT(LogBaseAIC, Verbose, "그룹원 일반 정보 수신: 발신자={0}, 상태={1}",
-            *SenderAI->GetName(), *SharingInfo.StateTag.ToString());
+        UE_LOGFMT(LogBaseAIC, Warning, "정보 처리 실패: 유효하지 않은 발신자 또는 상태 태그");
+        return;
     }
+
+    //@군중 제어 관련 태그 처리
+    if (SharingInfo.ResultTag.MatchesTag(FGameplayTag::RequestGameplayTag("CrowdControl")))
+    {
+        ProcessCrowdControlInfo(SenderAI, SharingInfo);
+    }
+
+    UE_LOGFMT(LogBaseAIC, Log, "그룹 정보 처리 완료 | 발신자: {0}, 태그: {1}, 우선순위: {2}",
+        *SenderAI->GetName(), *SharingInfo.ResultTag.ToString(), SharingInfo.Priority);
+}
+
+void ABaseAIController::ProcessCrowdControlInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo)
+{
+    if (!SharingInfo.ResultTag.IsValid())
+    {
+        return;
+    }
+
+    //@CrowdControl.Threatened : 대상에 대한 '공포' 반응
+    if (SharingInfo.ResultTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("CrowdControl.Threatened")))
+    {
+        //@현재 전투 중인지 확인
+        AActor* CurrentTarget = nullptr;
+        if (BBComponent)
+        {
+            CurrentTarget = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+        }
+
+        //@타겟이 있는 경우만 이벤트 발생
+        if (!IsValid(CurrentTarget))
+        {
+            return;
+        }
+
+        //@군중 제어 발생 이벤트 호출
+        CrowdControlEventTriggered.ExecuteIfBound(SharingInfo.ResultTag);
+
+        UE_LOGFMT(LogBaseAIC, Log, "위협 상태에서 전투 중 - 군중 제어 이벤트 발생 | 타겟: {0}, 우선순위: {1}",
+            *CurrentTarget->GetName(), SharingInfo.Priority);
+    }
+
+    UE_LOGFMT(LogBaseAIC, Log, "군중 제어 이벤트 발생 | 발신자: {0}, 군중 제어 요청: {1}, 우선순위: {2}",
+        *SenderAI->GetName(), *SharingInfo.ResultTag.ToString(), SharingInfo.Priority);
 }
 #pragma endregion
 

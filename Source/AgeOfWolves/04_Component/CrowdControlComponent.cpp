@@ -177,64 +177,68 @@ void UCrowdControlComponent::ProcessInfoQueue()
         //@이미 처리한 정보에 추가
         ProcessedInfoIDs.Add(Query.Info.InfoID, CurrentTime);
 
-        //@Recipients
-        int32 SuccessCount = 0;
-        for (const TWeakObjectPtr<AActor>& RecipientPtr : Query.Recipients)
+        //@사망 정보 특별 처리
+        if (Query.Info.StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
         {
-            if (!RecipientPtr.IsValid())
-            {
-                continue;
-            }
-
-            AActor* Recipient = RecipientPtr.Get();
-            APawn* RecipientPawn = Cast<APawn>(Recipient);
-            if (!RecipientPawn)
-            {
-                continue;
-            }
-
-            //@Base AI Controller
-            ABaseAIController* AIController = Cast<ABaseAIController>(RecipientPawn->GetController());
-            if (AIController)
-            {
-                //@정보 수신
-                AIController->ReceiveInfoFromGroup(Query.SenderAI, Query.Info);
-                SuccessCount++;
-            }
+            ProcessDeadStateInfo(Query.SenderAI, Query.Recipients, Query.Info);
         }
-
-        UE_LOGFMT(LogCrowdCtrl, Log, "그룹 정보 처리 완료: 발신자={0}, 성공한 수신자={1}/{2}, 상태={3}",
-            *Query.SenderAI->GetName(), SuccessCount, Query.Recipients.Num(), *Query.Info.StateTag.ToString());
     }
 }
-void UCrowdControlComponent::ProcessDeadStateInfo(AActor* SenderAI, AActor* RecipientAI, const FSharingInfoWithGroup& InfoData)
+
+void UCrowdControlComponent::ProcessDeadStateInfo(AActor* SenderAI, const TArray<TWeakObjectPtr<AActor>>& Recipients, const FSharingInfoWithGroup& InfoData)
 {
-    UE_LOGFMT(LogCrowdCtrl, Log, "사망 정보 처리: 발신자={0}, 수신자={1}, 상태={2}",
-        SenderAI ? *SenderAI->GetName() : TEXT("Unknown"),
-        RecipientAI ? *RecipientAI->GetName() : TEXT("Unknown"),
-        *InfoData.StateTag.ToString());
+    //@유효성 검사
+    if (!SenderAI)
+    {
+        UE_LOGFMT(LogCrowdCtrl, Warning, "사망 정보 처리 실패: 유효하지 않은 발신자");
+        return;
+    }
 
-    //@TODO: 사망 정보에 대한 실제 처리 로직 구현...
-}
+    UE_LOGFMT(LogCrowdCtrl, Log, "사망 정보 처리: 발신자={0}, 수신자 수={1}, 상태={2}",
+        *SenderAI->GetName(), Recipients.Num(), *InfoData.StateTag.ToString());
 
-void UCrowdControlComponent::ProcessFragileStateInfo(AActor* SenderAI, AActor* RecipientAI, const FSharingInfoWithGroup& InfoData)
-{
-    UE_LOGFMT(LogCrowdCtrl, Log, "취약 상태 정보 처리: 발신자={0}, 수신자={1}, 상태={2}",
-        SenderAI ? *SenderAI->GetName() : TEXT("Unknown"),
-        RecipientAI ? *RecipientAI->GetName() : TEXT("Unknown"),
-        *InfoData.StateTag.ToString());
+    //@처형된 경우 공포 태그로 변환
+    FSharingInfoWithGroup ModifiedInfo = InfoData;
+    bool bIsExecution = InfoData.StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead.Executed"));
 
-    //@TODO: 취약 상태 정보에 대한 실제 처리 로직 구현...
-}
+    if (bIsExecution)
+    {
+        ModifiedInfo.ResultTag = FGameplayTag::RequestGameplayTag("CrowdControl.Threatened");
+        ModifiedInfo.Priority += 2; // 우선순위 상향
 
-void UCrowdControlComponent::ProcessGenericStateInfo(AActor* SenderAI, AActor* RecipientAI, const FSharingInfoWithGroup& InfoData)
-{
-    UE_LOGFMT(LogCrowdCtrl, Log, "일반 정보 처리: 발신자={0}, 수신자={1}, 상태={2}",
-        SenderAI ? *SenderAI->GetName() : TEXT("Unknown"),
-        RecipientAI ? *RecipientAI->GetName() : TEXT("Unknown"),
-        *InfoData.StateTag.ToString());
+        UE_LOGFMT(LogCrowdCtrl, Log, "요청 내용: 태그={0}, 우선순위={1}",
+            *ModifiedInfo.ResultTag.ToString(), ModifiedInfo.Priority);
+    }
 
-    //@TODO: 일반 정보에 대한 실제 처리 로직 구현...
+    //@Recipients 순회하며 정보 전달
+    int32 SuccessCount = 0;
+    for (const TWeakObjectPtr<AActor>& RecipientPtr : Recipients)
+    {
+        if (!RecipientPtr.IsValid())
+        {
+            continue;
+        }
+
+        AActor* Recipient = RecipientPtr.Get();
+        APawn* RecipientPawn = Cast<APawn>(Recipient);
+        if (!RecipientPawn)
+        {
+            continue;
+        }
+
+        //@Base AI Controller
+        ABaseAIController* AIController = Cast<ABaseAIController>(RecipientPawn->GetController());
+        if (AIController)
+        {
+            //@정보 수신 (처형인 경우 변환된 정보 전달)
+            AIController->ReceiveInfoFromGroup(SenderAI, bIsExecution ? ModifiedInfo : InfoData);
+            SuccessCount++;
+        }
+    }
+
+    UE_LOGFMT(LogCrowdCtrl, Log, "사망 정보 처리 완료: 발신자={0}, 성공한 수신자={1}/{2}, 요청={3}",
+        *SenderAI->GetName(), SuccessCount, Recipients.Num(),
+        bIsExecution ? *ModifiedInfo.ResultTag.ToString() : *InfoData.ResultTag.ToString());
 }
 
 void UCrowdControlComponent::CleanupExpiredProcessedInfoIDs(float CurrentTime)
