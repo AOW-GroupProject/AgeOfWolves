@@ -642,7 +642,7 @@ bool UCombatLibrary::IsActorBackExposed(const AActor* ObserverActor, const AActo
     // 높이(Z) 차이 무시를 위해 XY 평면에서만 계산
     ObserverLocation.Z = TargetLocation.Z;
 
-    // 대상 -> 관찰자 방향 벡터 (중요: 대상에서 관찰자 방향으로의 벡터)
+    // 대상 -> 관찰자 방향 벡터
     FVector DirectionToObserver = (ObserverLocation - TargetLocation).GetSafeNormal();
 
     // 대상의 전방 벡터
@@ -650,21 +650,40 @@ bool UCombatLibrary::IsActorBackExposed(const AActor* ObserverActor, const AActo
     TargetForward.Z = 0.0f;
     TargetForward.Normalize();
 
-    // 내적 계산 (두 벡터 간의 코사인 값)
-    float DotProduct = FVector::DotProduct(TargetForward, DirectionToObserver);
+    // 대상의 오른쪽 벡터
+    FVector TargetRight = TargetActor->GetActorRightVector();
+    TargetRight.Z = 0.0f;
+    TargetRight.Normalize();
 
-    // 대상의 전방 벡터와 대상->관찰자 방향 벡터의 내적이 음수이면
-    // 관찰자는 대상의 뒤에 있는 것임 (서로 마주보면 양수값이 나옴)
-    bool bIsBackExposed = DotProduct < 0.0f;
+    // 내적 계산 (전방 벡터와의 각도)
+    float ForwardDot = FVector::DotProduct(TargetForward, DirectionToObserver);
 
-    // 추가 로깅으로 벡터와 내적값 확인
-    UE_LOGFMT(LogCombatLibrary, Verbose,
-        "등 노출 계산 - 대상: {0}, 관찰자: {1}, 대상 전방: ({2},{3},{4}), 대상->관찰자: ({5},{6},{7}), 내적: {8}, 결과: {9}",
+    // 오른쪽 벡터와의 내적 계산 (왼쪽/오른쪽 방향 확인용)
+    float RightDot = FVector::DotProduct(TargetRight, DirectionToObserver);
+
+    // 각도 계산 (0-180도)
+    float AngleDegrees = FMath::RadiansToDegrees(FMath::Acos(FMath::Clamp(ForwardDot, -1.0f, 1.0f)));
+
+    // 후면 노출 임계값 설정 (기본값 120도)
+    float BackExposureAngle = (ExposureAngleThreshold > 0.0f) ? ExposureAngleThreshold : 160.f;
+
+    // 각도가 임계값보다 크면 후면으로 간주
+    bool bIsBackExposed = AngleDegrees > BackExposureAngle;
+
+    // 방향 정보 (디버깅용)
+    FString Direction = RightDot > 0 ? TEXT("오른쪽") : TEXT("왼쪽");
+    if (ForwardDot > 0.7) Direction = TEXT("전방");
+    else if (ForwardDot < -0.7) Direction = TEXT("후방");
+    else Direction = Direction + (ForwardDot > 0 ? TEXT(" 전방") : TEXT(" 후방"));
+
+    // 추가 로깅
+    UE_LOGFMT(LogCombatLibrary, Log,
+        "등 노출 계산 - 대상: {0}, 관찰자: {1}, 각도: {2}°, 방향: {3}, 임계값: {4}°, 결과: {5}",
         *TargetActor->GetName(),
         *ObserverActor->GetName(),
-        TargetForward.X, TargetForward.Y, TargetForward.Z,
-        DirectionToObserver.X, DirectionToObserver.Y, DirectionToObserver.Z,
-        DotProduct,
+        AngleDegrees,
+        *Direction,
+        BackExposureAngle,
         bIsBackExposed ? TEXT("노출됨") : TEXT("노출되지 않음"));
 
     return bIsBackExposed;

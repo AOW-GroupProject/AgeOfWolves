@@ -179,6 +179,7 @@ void UObjectiveDetectionComponent::ExternalBindToArea(AArea* Area)
 
     //@외부 바인딩...
     Area->AreaAIStateChanged.AddUFunction(this, "OnAreaObjectiveStateChanged");
+    Area->AIDetectsPlayer.AddUFunction(this, "OnDetectedByAI");
 
     //@바인딩 정보 생성 및 추가
     FAreaBindingInfo BindingInfo(Area, AreaID, CurrentTime);
@@ -307,7 +308,6 @@ void UObjectiveDetectionComponent::InitializeODComponent()
     UE_LOGFMT(LogObjectiveDetection, Log, "초기 Pawn 바인딩 완료: {0} (컴포넌트: {1})",
         *ControlledPawn->GetName(), *CapsuleComp->GetName());
 
-  
     ExternalBindToLockOnComponent();
 
     //@Timer
@@ -410,15 +410,15 @@ void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool 
         return;
     }
 
-    // 위치 업데이트
+    //@위치 업데이트
     if (!UpdateBillboardPosition(TargetActor))
     {
-        // 위치 업데이트 실패 시 가시성 비활성화
+        //@위치 업데이트 실패 시 가시성 비활성화
         IndicatorBillboardComponent->SetVisibility(false);
         return;
     }
 
-    // 텍스처 업데이트가 필요한 경우
+    //@텍스처 업데이트가 필요한 경우
     if (!bChangeTransformOnly)
     {
         UpdateBillboardTexture();
@@ -536,14 +536,23 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
     {
         AActor* AIActor = CurrentTargetAI.Get();
 
-        //@후면 노출 상태 체크
-        bool bIsBackExposed = IsActorBackExposed(AIActor);
-
-        //@후면 노출된 경우 AmbushTarget으로 설정
-        if (bIsBackExposed)
+        //@AI가 플레이어를 인지 중인지 확인
+        TWeakObjectPtr<AActor> AIActorPtr(AIActor);
+        if (AIsDetectingPawn.Contains(AIActorPtr))
         {
-            AmbushTarget = AIActor;
-            UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 후면 노출됨, AmbushTarget으로 설정", *AIActor->GetName());
+            return;
+        }
+        else
+        {
+            //@후면 노출 상태 체크
+            bool bIsBackExposed = IsActorBackExposed(AIActor);
+
+            //@후면 노출된 경우 AmbushTarget으로 설정
+            if (bIsBackExposed)
+            {
+                AmbushTarget = AIActor;
+                UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 후면 노출됨, AmbushTarget으로 설정", *AIActor->GetName());
+            }
         }
     }
     else
@@ -563,9 +572,17 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
 
             for (auto AIInfo : AreaAIInfos)
             {
+                //@AI Actor, Current State != State.Dead
                 if (!AIInfo.AIActor.IsValid() || AIInfo.CurrentState.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead"))) continue;
 
                 auto AI = AIInfo.AIActor.Get();
+
+                //@AI가 플레이어를 인지 중인지 확인
+                TWeakObjectPtr<AActor> AIPtr(AI);
+                if (AIsDetectingPawn.Contains(AIPtr))
+                {
+                    continue;
+                }
 
                 //@카메라 시야 내에 있는지 확인
                 if (bOnlyDetectInCameraView && !IsActorInCameraView(AI))
@@ -729,24 +746,8 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
     //@현재 타겟 액터와 동일한지 확인
     if (CurrentTargetAI.IsValid()  && CurrentTargetAI.Get() == ObjectiveActor)
     {
-        // Fragile 상태 변경 시
-        if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
-        {
-            bIsCurrentTargetFragile = true;
-            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Fragile 상태로 변경됨", *ObjectiveActor->GetName());
-
-            UpdateBillboardComponent(true, false);
-        }
-        // Normal 상태 변경 시
-        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
-        {
-            bIsCurrentTargetFragile = false;
-            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경됨", *ObjectiveActor->GetName());
-            
-            UpdateBillboardComponent(true, false);
-        }
         //@Dead 상태 태그 확인
-        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+        if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
         {
             // 타겟 해제
             SetCurrentTargetAI(nullptr);
@@ -756,6 +757,22 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
 
             UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) 사망하여 인디케이터를 비활성화 및 타겟 해제함", *ObjectiveActor->GetName());
         }
+        //@Fragile 상태 변경 시
+        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
+        {
+            bIsCurrentTargetFragile = true;
+            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Fragile 상태로 변경됨", *ObjectiveActor->GetName());
+
+            UpdateBillboardComponent(true, false);
+        }
+        //@Normal 상태 변경 시
+        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
+        {
+            bIsCurrentTargetFragile = false;
+            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경됨", *ObjectiveActor->GetName());
+            
+            UpdateBillboardComponent(true, false);
+        }
     }
 
     //@감지 가능한 AI의 상태 변화 이벤트 호출
@@ -763,6 +780,51 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
 
     UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}에서 상태 변경 처리 완료: {1} -> {2}",
         *SourceArea->GetName(), *ObjectiveActor->GetName(), *StateTag.ToString());
+}
+
+void UObjectiveDetectionComponent::OnDetectedByAI(bool bIsDetected, AActor* AI, APlayerCharacter* DetectedPlayer)
+{
+    //@인자 유효성 검사
+    if (!IsValid(AI) || !IsValid(DetectedPlayer))
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "ComponentID: {0} - 유효하지 않은 AI 또는 플레이어", ComponentID.ToString());
+        return;
+    }
+
+    //@ControlledPawn
+    APawn* CurrentPawn = GetControlledPawn();
+    if (!IsValid(CurrentPawn))
+    {
+        UE_LOGFMT(LogObjectiveDetection, Warning, "ComponentID: {0} - 유효하지 않은 ControlledPawn", ComponentID.ToString());
+        return;
+    }
+
+    //@ControlledPawn == DetectedPlayer?
+    APlayerCharacter* PlayerPawn = Cast<APlayerCharacter>(CurrentPawn);
+    if (!PlayerPawn || PlayerPawn != DetectedPlayer)
+    {
+        return;
+    }
+
+    //@AI의 인지 상태에 따라 목록 업데이트
+    TWeakObjectPtr<AActor> AIPtr(AI);
+
+    if (bIsDetected)
+    {
+        //@인지 중인 AI 목록에 추가
+        AIsDetectingPawn.AddUnique(AIPtr);
+
+        UE_LOGFMT(LogObjectiveDetection, Log, "ComponentID: {0} - AI {1}가 플레이어를 인지함",
+            ComponentID.ToString(), AI->GetName());
+    }
+    else
+    {
+        //@인지가 해제된 경우 목록에서 제거
+        AIsDetectingPawn.Remove(AIPtr);
+
+        UE_LOGFMT(LogObjectiveDetection, Log, "ComponentID: {0} - AI {1}가 플레이어 인지를 해제함",
+            ComponentID.ToString(), AI->GetName());
+    }
 }
 #pragma endregion
 

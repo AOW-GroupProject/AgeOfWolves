@@ -19,7 +19,6 @@ UAT_UpdateMotionWarpTarget::UAT_UpdateMotionWarpTarget(const FObjectInitializer&
 	WarpProximity = EMotionWarpProximity::Normal;
 }
 
-// AT_UpdateMotionWarpTarget.cpp - Activate 함수 수정
 void UAT_UpdateMotionWarpTarget::Activate()
 {
 	Super::Activate();
@@ -39,22 +38,25 @@ void UAT_UpdateMotionWarpTarget::Activate()
 		return;
 	}
 
-	// 아바타 캡슐 컴포넌트의 Pawn 채널에 대한 충돌 응답만 변경
-	AActor* Avatar = GetAvatarActor();
-	if (Avatar)
+	// Closest 근접도에서만 충돌 설정 변경
+	if (WarpProximity == EMotionWarpProximity::Closest)
 	{
-		UCapsuleComponent* CapsuleComp = Avatar->FindComponentByClass<UCapsuleComponent>();
-		if (CapsuleComp)
+		AActor* Avatar = GetAvatarActor();
+		if (Avatar)
 		{
-			// 현재 Pawn 채널에 대한 충돌 응답 저장
-			PreviousPawnResponse = CapsuleComp->GetCollisionResponseToChannel(ECC_Pawn);
+			UCapsuleComponent* CapsuleComp = Avatar->FindComponentByClass<UCapsuleComponent>();
+			if (CapsuleComp)
+			{
+				// 현재 Pawn 채널에 대한 충돌 응답 저장
+				PreviousPawnResponse = CapsuleComp->GetCollisionResponseToChannel(ECC_Pawn);
 
-			// Pawn 채널에 대해서만 Overlap으로 변경
-			CapsuleComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+				// Pawn 채널에 대해서만 Overlap으로 변경
+				CapsuleComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
 
-			UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Log, "Pawn 채널 충돌 응답 변경: {0} -> Overlap",
-				PreviousPawnResponse == ECR_Block ? TEXT("Block") :
-				PreviousPawnResponse == ECR_Overlap ? TEXT("Overlap") : TEXT("Ignore"));
+				UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Log, "Closest 근접도 - Pawn 채널 충돌 응답 변경: {0} -> Overlap",
+					PreviousPawnResponse == ECR_Block ? TEXT("Block") :
+					PreviousPawnResponse == ECR_Overlap ? TEXT("Overlap") : TEXT("Ignore"));
+			}
 		}
 	}
 
@@ -62,22 +64,24 @@ void UAT_UpdateMotionWarpTarget::Activate()
 	UpdateWarpTarget();
 }
 
-// OnDestroy 함수 수정
 void UAT_UpdateMotionWarpTarget::OnDestroy(bool bInOwnerFinished)
 {
-	// 충돌 응답 복원
-	AActor* Avatar = GetAvatarActor();
-	if (Avatar)
+	// Closest 근접도인 경우에만 충돌 응답 복원
+	if (WarpProximity == EMotionWarpProximity::Closest)
 	{
-		UCapsuleComponent* CapsuleComp = Avatar->FindComponentByClass<UCapsuleComponent>();
-		if (CapsuleComp)
+		AActor* Avatar = GetAvatarActor();
+		if (Avatar)
 		{
-			// Pawn 채널에 대한 이전 충돌 응답으로 복원
-			CapsuleComp->SetCollisionResponseToChannel(ECC_Pawn, PreviousPawnResponse);
+			UCapsuleComponent* CapsuleComp = Avatar->FindComponentByClass<UCapsuleComponent>();
+			if (CapsuleComp)
+			{
+				// Pawn 채널에 대한 이전 충돌 응답으로 복원
+				CapsuleComp->SetCollisionResponseToChannel(ECC_Pawn, PreviousPawnResponse);
 
-			UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Log, "Pawn 채널 충돌 응답 복원: Overlap -> {0}",
-				PreviousPawnResponse == ECR_Block ? TEXT("Block") :
-				PreviousPawnResponse == ECR_Overlap ? TEXT("Overlap") : TEXT("Ignore"));
+				UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Log, "Closest 근접도 종료 - Pawn 채널 충돌 응답 복원: Overlap -> {0}",
+					PreviousPawnResponse == ECR_Block ? TEXT("Block") :
+					PreviousPawnResponse == ECR_Overlap ? TEXT("Overlap") : TEXT("Ignore"));
+			}
 		}
 	}
 
@@ -256,14 +260,14 @@ float UAT_UpdateMotionWarpTarget::GetProximityScalar() const
 	switch (WarpProximity)
 	{
 	case EMotionWarpProximity::Close:
-		return 70.f; 
+		return 70.f;
 	case EMotionWarpProximity::Closer:
-		return 60.0f; 
+		return 60.0f;
 	case EMotionWarpProximity::Closest:
-		return 50.f;  
+		return 50.f;
 	case EMotionWarpProximity::Normal:
 	default:
-		return 100.0f;   
+		return 100.0f;
 	}
 }
 

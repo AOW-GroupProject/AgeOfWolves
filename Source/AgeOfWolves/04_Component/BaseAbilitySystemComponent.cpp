@@ -54,6 +54,22 @@ void UBaseAbilitySystemComponent::ExternalBindToAIAbilitySequencer(ABaseAIContro
 	UE_LOGFMT(LogASC, Log, "AI Ability Sequencer 컴포넌트와 바인딩 완료");
 }
 
+void UBaseAbilitySystemComponent::ExternalBindToAIController(ABaseAIController* BaseAIC)
+{
+	//@AIC
+	if (!BaseAIC)
+	{
+		UE_LOGFMT(LogASC, Warning, "바인딩 실패: AI 컨트롤러가 유효하지 않음");
+		return;
+	}
+
+	//@어빌리티 활성화 요청 이벤트 바인딩
+	BaseAIC->CrowdControlEventTriggered.BindUFunction(this, "OnCrowdControlEventTriggered");
+
+	UE_LOGFMT(LogASC, Log, "AI Ability Sequencer 컴포넌트와 바인딩 완료");
+}
+
+
 void UBaseAbilitySystemComponent::ExternalBindToInteractionComp(AController* Controller)
 {
 	auto PC = Cast<ABasePlayerController>(Controller);
@@ -747,6 +763,7 @@ void UBaseAbilitySystemComponent::EndInteractionWindow(bool bSuccess)
 	}
 
 }
+
 void UBaseAbilitySystemComponent::HandleInteractionEvent(const FGameplayTag& EventTag)
 {
 	//@Event Tag
@@ -902,22 +919,24 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 {
 	const FGameplayTagContainer& AssetTags = SpecApplied.Def->InheritableGameplayEffectTags.Added;
 
+	// 정적 태그 한 번만 생성 (성능 최적화)
+	static FGameplayTag StateTag = FGameplayTag::RequestGameplayTag("State");
+	static FGameplayTag DeadStateTag = FGameplayTag::RequestGameplayTag("State.Dead");
+
 	//@State 태그 확인 및 이벤트 발생
-	for (const FGameplayTag& StateTag : AssetTags)
+	for (const FGameplayTag& TagFromEffect : AssetTags)
 	{
-		if (StateTag.ToString().StartsWith("State"))
+		//@State 계층 태그 확인 (State 또는 모든 자식 태그)
+		if (TagFromEffect.MatchesTag(StateTag))
 		{
-			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *StateTag.ToString());
+			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *TagFromEffect.ToString());
 
 			//@캐릭터 상태 이벤트
-			CharacterStateEventOnGameplay.Broadcast(GetAvatarActor(), StateTag);
+			CharacterStateEventOnGameplay.Broadcast(GetAvatarActor(), TagFromEffect);
 
-			//@죽음 상태일 경우 이벤트 발생 전에 모든 구독 해제
-			if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+			if (TagFromEffect.MatchesTag(DeadStateTag))
 			{
-				//@이벤트 구독 해제
 				CharacterStateEventOnGameplay.Clear();
-				return;
 			}
 		}
 	}
@@ -1006,6 +1025,41 @@ void UBaseAbilitySystemComponent::OnPotentialInteractionChanged(AActor* TargetAc
 			InteractionFailed.Broadcast(TargetActor, Interaction);
 		}
 	}
+}
+
+void UBaseAbilitySystemComponent::OnCrowdControlEventTriggered(const FGameplayTag& CrowdControlTag)
+{
+	//@Tag 유효성 검사
+	if (!CrowdControlTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "군중 제어 이벤트 처리 실패: 유효하지 않은 태그");
+		return;
+	}
+
+	UE_LOGFMT(LogASC, Log, "군중 제어 이벤트 수신: {0}", *CrowdControlTag.ToString());
+
+	//@Avatar Actor 체크
+	AActor* Avatar = GetAvatarActor();
+	if (!Avatar)
+	{
+		UE_LOGFMT(LogASC, Warning, "군중 제어 이벤트 처리 실패: 유효한 아바타 액터가 없음");
+		return;
+	}
+
+	//@태그에 따른 이벤트 처리
+	if (CrowdControlTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("CrowdControl.Threatened")))
+	{
+		UE_LOGFMT(LogASC, Log, "위협(Threatened) 군중 제어 처리 시작 - Actor: {0}", *Avatar->GetName());
+
+		//@위협 GameplayEvent 발생
+		FGameplayEventData EventData;
+		EventData.EventTag = FGameplayTag::RequestGameplayTag("EventTag.CrowdControl.OnThreatened");
+		EventData.Instigator = Avatar;
+
+		HandleGameplayEvent(EventData.EventTag, &EventData);
+	}
+
+	UE_LOGFMT(LogASC, Log, "군중 제어 이벤트 처리 완료: {0}", *CrowdControlTag.ToString());
 }
 #pragma endregion
 

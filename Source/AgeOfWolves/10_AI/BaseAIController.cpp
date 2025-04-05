@@ -51,6 +51,9 @@ ABaseAIController::ABaseAIController(const FObjectInitializer& ObjectInitializer
     Sight = CreateDefaultSubobject<UAISenseConfig_Sight>(TEXT("AI Sight Config"));
     //@AI Sense Config - Hearing
     Hearing = CreateDefaultSubobject<UAISenseConfig_Hearing>(TEXT("AI Hearing Config"));
+
+    //@AI Agent Pawn
+    AgentPawnRef.Reset();
     //@AI Manager Subsystem
     AIManagerRef.Reset();
     //@Ability Manger Subsystem
@@ -304,6 +307,14 @@ void ABaseAIController::InitializeAIController(APawn* InPawn)
 #pragma region Property or Subwidgets or Infos...etc
 void ABaseAIController::InitializeAISystem(APawn* InPawn)
 {
+    if (!InPawn)
+    {
+        return;
+    }
+
+    //@캐싱
+    AgentPawnRef = InPawn;
+
     //@소유 캐릭터
     ACharacterBase* OwningCharacter = Cast<ACharacterBase>(InPawn);
     if (!OwningCharacter)
@@ -361,6 +372,7 @@ void ABaseAIController::InitializeAbilitySystem(APawn* InPawn)
 {
     //@외부 바인딩...
     AbilitySystemComponent->ExternalBindToAIAbilitySequencer(this);
+    AbilitySystemComponent->ExternalBindToAIController(this);
 
     //@Handle
     UBaseAbilitySet* SetToGrant = AbilityManagerRef->GetAbilitySet(CharacterTag);
@@ -477,11 +489,25 @@ void ABaseAIController::ChangeAgentAIState(EAIState InStateType)
 
 void ABaseAIController::HandleCharacterStateEvent(const FGameplayTag& CharacterStateTag)
 {
-    if (CharacterStateTag.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("State.Dead"))))
+    // 정적 태그들을 한 번만 생성 (성능 최적화)
+    static FGameplayTag DeadTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead"));
+    static FGameplayTag ExecutedTag = FGameplayTag::RequestGameplayTag(TEXT("State.Dead.Executed"));
+
+    //@사망 상태인지 확인 (State.Dead 또는 하위 태그)
+    if (CharacterStateTag.MatchesTag(DeadTag))
     {
         UE_LOGFMT(LogBaseAIC, Log, "캐릭터 사망 상태 감지. 사망 처리를 시작합니다.");
 
-        //@캐릭터 죽음 처리
+        //@특별히 처형된 경우인지 확인 (State.Dead.Executed)
+        if (CharacterStateTag.MatchesTag(ExecutedTag))
+        {
+            UE_LOGFMT(LogBaseAIC, Log, "캐릭터가 처형되었습니다. 그룹에 정보 전송을 시작합니다.");
+
+            //@처형 정보를 높은 우선순위로 그룹에 공유
+            ShareInfoToGroup(CharacterStateTag, EAISharingInfoType::All, 10);
+        }
+
+        //@캐릭터 죽음 처리 (모든 사망 케이스에 공통)
         ProcessCharacterDeathEvent();
     }
 }
@@ -582,13 +608,119 @@ void ABaseAIController::UnbindTargetActorStateEvents(AActor* OldTarget)
             *OldTarget->GetName());
     }
 }
+
+bool ABaseAIController::ShareInfoToGroup(
+    const FGameplayTag& StateTag,
+    EAISharingInfoType SharingType,
+    int32 Priority,
+    float ValidTime)
+{
+    // 소유한 Pawn이 있는지 확인
+    AActor* ControlledActor = GetPawn();
+    if (!IsValid(ControlledActor))
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "정보 공유 실패: 컨트롤러가 유효한 Pawn을 소유하고 있지 않습니다.");
+        return false;
+    }
+
+    //@FSharingInfoWithGroup
+    FSharingInfoWithGroup SharingInfo;
+    SharingInfo.InfoID = FGuid::NewGuid();
+    SharingInfo.SharingType = SharingType;
+    SharingInfo.StateTag = StateTag;
+    SharingInfo.Priority = Priority;
+    SharingInfo.ValidTime = ValidTime;
+
+    //@그룹과 공유할 정보 전달 이벤트
+    SendInfoToBelongingGroup.Broadcast(ControlledActor, SharingInfo);
+
+    UE_LOGFMT(LogBaseAIC, Log, "그룹 정보 공유 완료. 정보 ID: {0}, 상태: {1}, 우선순위: {2}",
+        *SharingInfo.InfoID.ToString(), *StateTag.ToString(), Priority);
+
+    return true;
+}
+
+void ABaseAIController::ReceiveInfoFromGroup(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo)
+{
+    if (!IsValid(SenderAI) || !SharingInfo.StateTag.IsValid())
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "그룹 정보 수신 실패: 유효하지 않은 발신자 또는 상태 태그");
+        return;
+    }
+
+    APawn* ControlledPawn = GetPawn();
+    if (!ControlledPawn)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "그룹 정보 수신 실패: 컨트롤러가 유효한 Pawn을 소유하지 않음");
+        return;
+    }
+
+    //@전달 받은 공유 정보 처리
+    ProcessReceivedGroupInfo(SenderAI, SharingInfo);
+
+    UE_LOGFMT(LogBaseAIC, Log, "그룹원 사망 정보 수신: 발신자={0}, 요청={1}",
+        *SenderAI->GetName(), *SharingInfo.ResultTag.ToString());
+
+}
+
+void ABaseAIController::ProcessReceivedGroupInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo)
+{
+    //@유효성 검사
+    if (!IsValid(SenderAI) || !SharingInfo.StateTag.IsValid())
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "정보 처리 실패: 유효하지 않은 발신자 또는 상태 태그");
+        return;
+    }
+
+    //@군중 제어 관련 태그 처리
+    if (SharingInfo.ResultTag.MatchesTag(FGameplayTag::RequestGameplayTag("CrowdControl")))
+    {
+        ProcessCrowdControlInfo(SenderAI, SharingInfo);
+    }
+
+    UE_LOGFMT(LogBaseAIC, Log, "그룹 정보 처리 완료 | 발신자: {0}, 태그: {1}, 우선순위: {2}",
+        *SenderAI->GetName(), *SharingInfo.ResultTag.ToString(), SharingInfo.Priority);
+}
+
+void ABaseAIController::ProcessCrowdControlInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo)
+{
+    if (!SharingInfo.ResultTag.IsValid())
+    {
+        return;
+    }
+
+    //@CrowdControl.Threatened : 대상에 대한 '공포' 반응
+    if (SharingInfo.ResultTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("CrowdControl.Threatened")))
+    {
+        //@현재 전투 중인지 확인
+        AActor* CurrentTarget = nullptr;
+        if (BBComponent)
+        {
+            CurrentTarget = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+        }
+
+        //@타겟이 있는 경우만 이벤트 발생
+        if (!IsValid(CurrentTarget))
+        {
+            return;
+        }
+
+        //@군중 제어 발생 이벤트 호출
+        CrowdControlEventTriggered.ExecuteIfBound(SharingInfo.ResultTag);
+
+        UE_LOGFMT(LogBaseAIC, Log, "위협 상태에서 전투 중 - 군중 제어 이벤트 발생 | 타겟: {0}, 우선순위: {1}",
+            *CurrentTarget->GetName(), SharingInfo.Priority);
+    }
+
+    UE_LOGFMT(LogBaseAIC, Log, "군중 제어 이벤트 발생 | 발신자: {0}, 군중 제어 요청: {1}, 우선순위: {2}",
+        *SenderAI->GetName(), *SharingInfo.ResultTag.ToString(), SharingInfo.Priority);
+}
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
 void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
 {
-
     //@Perception 주체
     ACharacterBase* OwningCharacter = Cast<ACharacterBase>(GetPawn());
     //@Perception 대상
@@ -625,10 +757,19 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
         //@Target Actor의 상태 변화 이벤트에 바인딩 수행
         BindTargetActorStateEvents(Actor);
 
+        //@타겟 인지 성공 이벤트
+        if (!!AgentPawnRef.IsValid())
+        {
+            AIDetectsTarget.Broadcast(true, AgentPawnRef.Get(), Actor);
+        }
+        else
+        {
+            UE_LOGFMT(LogBaseAIC, Warning, "유효하지 않음!");
+        }
+
         //@Lock On 이벤트 호출
         AILockOnStateChanged.Broadcast(true, Actor);
     }
-
 }
 
 void ABaseAIController::OnTargetPerceptionLost(AActor* Actor)
@@ -637,13 +778,17 @@ void ABaseAIController::OnTargetPerceptionLost(AActor* Actor)
 
     UE_LOGFMT(LogBaseAIC, Log, "타겟 {0}에 대한 인지가 소실되었습니다.", *Actor->GetName());
 
-    // [기존의 타겟 소실 처리 코드...]
-
+    //@타겟 인지 성공 이벤트
+    if (!!AgentPawnRef.IsValid())
+    {
+        AIDetectsTarget.Broadcast(false, AgentPawnRef.Get(), Actor);
+    }
+     
     //@Lock On 상태 변경 이벤트 호출
     AILockOnStateChanged.Broadcast(false, nullptr);
+
     UE_LOGFMT(LogBaseAIC, Log, "AI가 {0}을(를) 놓쳐 Lock On 상태 해제", *Actor->GetName());
 
-    // [기존의 상태 변경 코드...]
 }
 
 void ABaseAIController::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
@@ -748,6 +893,16 @@ UAbilitySystemComponent* ABaseAIController::GetAbilitySystemComponent() const
     return AbilitySystemComponent;
 }
 
+void ABaseAIController::SetAIGroupID(const FGuid& ID)
+{
+    if (!ID.IsValid())
+    {
+        return;
+    }
+
+    AIGroupID = ID;
+}
+
 FGenericTeamId ABaseAIController::GetGenericTeamId() const
 {
     const IGenericTeamAgentInterface* TeamAgent = Cast<IGenericTeamAgentInterface>(GetPawn());
@@ -775,11 +930,3 @@ ETeamAttitude::Type ABaseAIController::GetTeamAttitudeTowards(const AActor& Othe
         : ETeamAttitude::Hostile;
 }
 #pragma endregion
-
-void InternalBindingToAISequencerComp()
-{
-}
-
-void InternalBindingToODComp()
-{
-}

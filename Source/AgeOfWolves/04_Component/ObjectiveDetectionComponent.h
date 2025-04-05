@@ -285,6 +285,10 @@ protected:
     //@목표물 상태 변경 통지 (Area에서 호출)
     UFUNCTION()
         void OnAreaObjectiveStateChanged(AActor* ObjectiveActor, const FGameplayTag& StateTag, AArea* SourceArea, const FGuid& AreaID);
+
+protected:
+    UFUNCTION()
+        void OnDetectedByAI(bool bIsDetected, AActor* AI, APlayerCharacter* DetectedPlayer);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -293,6 +297,11 @@ protected:
     //@소유 컨트롤러의 폰에 대한 약한 참조
     UPROPERTY()
         TWeakObjectPtr<APawn> ControlledPawn;
+
+protected:
+    //@Pawn을 인지하고 있는 AI 목록
+    UPROPERTY()
+        TArray<TWeakObjectPtr<AActor>> AIsDetectingPawn;
 
 protected:
     //@AIController 소유 여부 확인

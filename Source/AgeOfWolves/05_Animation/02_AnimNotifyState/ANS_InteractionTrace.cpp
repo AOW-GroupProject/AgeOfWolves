@@ -24,7 +24,6 @@ void UANS_InteractionTrace::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimS
     UE_LOGFMT(LogANS_InteractionTrace, Log, "상호작용 트레이스 시작 - Ability: {0}", *Ability->GetName());
     
     //@Start Trace
-    Ability->StartInteractionTrace();
 }
 
 void UANS_InteractionTrace::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime, const FAnimNotifyEventReference& EventReference)
@@ -38,7 +37,6 @@ void UANS_InteractionTrace::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSe
     }
 
     //@Process Trace
-    Ability->ProcessInteractionTrace();
 }
 
 void UANS_InteractionTrace::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, const FAnimNotifyEventReference& EventReference)
@@ -55,7 +53,6 @@ void UANS_InteractionTrace::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSeq
     UE_LOGFMT(LogANS_InteractionTrace, Log, "상호작용 트레이스 종료 - Ability: {0}", *Ability->GetName());
 
     //@End Trace
-    Ability->EndInteractionTrace(false);
 }
 #pragma endregion
 

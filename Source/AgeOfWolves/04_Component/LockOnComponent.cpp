@@ -59,14 +59,14 @@ void ULockOnComponent::ExternalBindToInputComp(const AController* Controller)
     auto PC = Cast<ABasePlayerController>(Controller);
     if (!PC)
     {
-        UE_LOGFMT(LogPlayer, Warning, "입력 컴포넌트 바인딩 실패: BasePlayerController가 유효하지 않음");
+        UE_LOGFMT(LogLockOn, Warning, "입력 컴포넌트 바인딩 실패: BasePlayerController가 유효하지 않음");
         return;
     }
 
     UBaseInputComponent* BaseInputComp = PC->GetBaseInputComponent();
     if (!BaseInputComp)
     {
-        UE_LOGFMT(LogPlayer, Warning, "입력 컴포넌트 바인딩 실패: BaseInputComponent가 유효하지 않음");
+        UE_LOGFMT(LogLockOn, Warning, "입력 컴포넌트 바인딩 실패: BaseInputComponent가 유효하지 않음");
         return;
     }
 
@@ -118,6 +118,8 @@ void ULockOnComponent::ExternalBindToODComp(const AController* Controller)
 
     //@외부 바인딩...
     ODComp->DetectedAIStateChanged.AddUFunction(this, "OnDetectedAIStateChanged");
+
+    UE_LOGFMT(LogLockOn, Log, "락온 컴포넌트와 주변 인지 컴포넌트(OD) 바인딩 성공: {0}", *PC->GetName());
 }
 
 void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
@@ -580,20 +582,20 @@ void ULockOnComponent::OnOwnerStateChanged(AActor* Owner, const FGameplayTag& St
 
 void ULockOnComponent::OnDetectedAIStateChanged(const FGameplayTag& StateTag, AActor* Target)
 {
-    // 현재 Lock On 중이 아니면 처리하지 않음
+    //@현재 Lock On 중이 아니면 처리하지 않음
     if (!bLockOn)
     {
         return;
     }
 
-    // 현재 Lock On 타겟과 전달받은 Target이 동일한지 확인
+    //@현재 Lock On 타겟과 전달받은 Target이 동일한지 확인
     if (!TargetEnemyRef.IsValid() || TargetEnemyRef.Get() != Target)
     {
         return;
     }
 
-    // 죽음 상태 태그 체크
-    if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+    //@죽음 상태 태그 체크
+    if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
     {
         UE_LOGFMT(LogLockOn, Log, "Lock On 타겟 {0}이(가) 사망하여 Lock On을 취소합니다.", *Target->GetName());
         CancelLockOn();

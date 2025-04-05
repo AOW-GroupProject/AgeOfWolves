@@ -55,11 +55,11 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionFailed, AActor*, Intera
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionCompleted, AActor*, InteractableActor, const FPotentialInteraction&, CompletedInteraction);
 #pragma endregion
 
-/**	
+/**
  *	@UBaseAbilitySystemComponent
- * 
+ *
  *	AOW의 캐릭터 기본 ASC 유형입니다.
- */	
+ */
 UCLASS(meta = (BlueprintSpawnableComponent))
 class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemComponent
 {
@@ -85,6 +85,7 @@ protected:
 protected:
 	//@외부 바인딩
 	void ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC);
+	void ExternalBindToAIController(ABaseAIController* BaseAIC);
 	void ExternalBindToInteractionComp(AController* Controller);
 
 protected:
@@ -252,6 +253,10 @@ protected:
 protected:
 	UFUNCTION()
 		void OnPotentialInteractionChanged(AActor* TargetActor, const FPotentialInteraction& Interaction);
+
+protected:
+	UFUNCTION()
+		void OnCrowdControlEventTriggered(const FGameplayTag& CrowControlTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -277,4 +282,5 @@ public:
 	FORCEINLINE const FPotentialInteraction& GetCurrentPotentialInteraction() const { return CurrentPotentialInteraction; }
 	FORCEINLINE AActor* GetInteractionTargetActor() const { return InteractionTargetActor.Get(); }
 #pragma endregion
+
 };

@@ -58,10 +58,117 @@ enum class EAICombatPhase : uint8
 	Phase3			UMETA(DisplayName = "Phase 3"),
 	Max
 };
+
+/*
+*   @EAISharingInfoType
+*
+*   그룹 내 AI들 간 정보 공유 방식을 정의합니다.
+*/
+UENUM(BlueprintType)
+enum class EAISharingInfoType : uint8
+{
+	All             UMETA(DisplayName = "모든 그룹원에게"),
+	SameRank        UMETA(DisplayName = "동일 계층에게만"),
+	HigherRank      UMETA(DisplayName = "상위 계층에게만"),
+	LowerRank       UMETA(DisplayName = "하위 계층에게만"),
+	Leader          UMETA(DisplayName = "리더에게만"),
+	Exclude         UMETA(DisplayName = "제외 대상 제외"),
+	Custom          UMETA(DisplayName = "커스텀 대상")
+};
 #pragma endregion
 
 //@구조체
 #pragma region Structs
+/*
+*   @FSharingInfoWithGroup
+*
+*   그룹 내 AI들 간 공유하는 정보를 정의하는 구조체입니다.
+*/
+USTRUCT(BlueprintType)
+struct FSharingInfoWithGroup
+{
+	GENERATED_BODY()
+
+	//@정보 식별자 (중복 정보 필터링용)
+	UPROPERTY()
+		FGuid InfoID;
+
+	//@그룹 ID
+	UPROPERTY()
+		FGuid GroupID;
+
+	//@정보 공유 유형
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		EAISharingInfoType SharingType = EAISharingInfoType::All;
+
+	//@AI의 상태 태그
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FGameplayTag StateTag;
+
+	//@AI에게 요청되는 군중 제어 태그
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		FGameplayTag ResultTag;
+
+	//@정보의 우선순위 (높을수록 중요)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		int32 Priority = 0;
+
+	//@정보가 유효한 시간 (초, 0이면 무제한)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+		float ValidTime = 5.0f;
+
+	//@제외할 대상 (SharingType이 Exclude일 때 사용)
+	UPROPERTY()
+		TArray<TWeakObjectPtr<AActor>> ExcludedTargets;
+
+	//@커스텀 대상 (SharingType이 Custom일 때 사용)
+	UPROPERTY()
+		TArray<TWeakObjectPtr<AActor>> CustomTargets;
+
+	// 생성 시간
+	UPROPERTY()
+		float CreationTime = 0.0f;
+
+	// 기본 생성자
+	FSharingInfoWithGroup()
+		: InfoID(FGuid::NewGuid())
+	{
+		CreationTime = GWorld ? GWorld->GetTimeSeconds() : 0.0f;
+	}
+
+	// 매개변수 생성자
+	FSharingInfoWithGroup(
+		EAISharingInfoType InSharingType,
+		const FGameplayTag& InStateTag,
+		int32 InPriority = 0,
+		float InValidTime = 5.0f,
+		const FVector& InLastKnownLocation = FVector::ZeroVector,
+		AActor* InDetectedTarget = nullptr)
+		: InfoID(FGuid::NewGuid())
+		, SharingType(InSharingType)
+		, StateTag(InStateTag)
+		, Priority(InPriority)
+		, ValidTime(InValidTime)
+	{
+		CreationTime = GWorld ? GWorld->GetTimeSeconds() : 0.0f;
+	}
+
+	//@정보가 여전히 유효한지 확인
+	bool IsValid(float CurrentTime) const
+	{
+		//@ValidTime이 0이면 시간 제한 없음
+		if (ValidTime <= 0.0f)
+			return true;
+
+		return (CurrentTime - CreationTime) < ValidTime;
+	}
+
+	//@다른 정보보다 높은 우선순위를 가지는지 확인
+	bool HasHigherPriorityThan(const FSharingInfoWithGroup& OtherInfo) const
+	{
+		return Priority > OtherInfo.Priority;
+	}
+};
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -71,8 +178,11 @@ DECLARE_MULTICAST_DELEGATE(FRequestStartInitByAI)
 //@AI의 Attribute Set 초기화 완료 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAIAttributeSetInitialized);
 
-//@타겟 발견
+//@락온 타겟 설정/해제 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FAILockOnStateChanged, bool, AActor*)
+
+//@타겟 인지 이벤트
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FAIDetectsTarget, bool,  AActor*, AActor*)
 
 //@전투 패턴 활성화 요청
 DECLARE_DELEGATE_RetVal(bool, FRequestStartCombatPattern)
@@ -80,6 +190,12 @@ DECLARE_DELEGATE_RetVal(bool, FRequestStartCombatPattern)
 DECLARE_DELEGATE_RetVal(bool, FRequestEndCombatPattern)
 //@전투 패턴 Exit Block 완료 통지
 DECLARE_DELEGATE_RetVal(bool, FNotifyCombatPatternExitComplete)
+
+//@그룹 공유 정보 전달 이벤트
+DECLARE_MULTICAST_DELEGATE_TwoParams(FSendInfoToBelongingGroup, AActor*, FSharingInfoWithGroup)
+
+//@군중 제어 이벤트
+DECLARE_DELEGATE_OneParam(FCrowdControlEventTriggered, const FGameplayTag&)
 #pragma endregion
 
 /**
@@ -93,6 +209,7 @@ class AGEOFWOLVES_API ABaseAIController : public AAIController, public IAbilityS
 //@친추 클래스
 #pragma region Friend Class
 	friend class UBTService_SetFocus;
+	friend class UCrowdControlComponent;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -112,11 +229,11 @@ protected:
 	//~End Of AAIController Interface
 
 protected:
-	//@외부 바인딩
+	//@외부 바인딩...
 	void ExternalBindToAnimInstance(APawn* InPawn);
 
 protected:
-	//@내부 바인딩
+	//@내부 바인딩...
 	void InternalBindToPerceptionComp();
 	void InternalBindingToASC();
 	void InternalBindingToAISequencerComp();
@@ -163,15 +280,28 @@ protected:
 	void UnbindTargetActorStateEvents(AActor* OldTarget);
 
 protected:
+	//@AI Group에게 공유 정보 전달
+	bool ShareInfoToGroup(
+		const FGameplayTag& StateTag,
+		EAISharingInfoType SharingType = EAISharingInfoType::All,
+		int32 Priority = 1,
+		float ValidTime = 5.0f);
+
+protected:
+	//@AI Group으로부터 전달 받은 공유 정보 처리
+	UFUNCTION()
+		void ReceiveInfoFromGroup(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo);
+
+	//@그룹으로부터 전달 받은 정보를 처리하는 함수
+	void ProcessReceivedGroupInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo);
+
+	//@군중 제어 관련 정보 처리 함수
+	void ProcessCrowdControlInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo);
+
+protected:
 	//@AI Perception
 	UPROPERTY(VisibleAnywhere)
 		UAIPerceptionComponent* AIPerceptionComponent;
-	//@ASC
-	UPROPERTY()
-		UBaseAbilitySystemComponent* AbilitySystemComponent;
-	//@Attribute Set
-	UPROPERTY()
-		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
 
 	//@AI Combat Pattern 컴포넌트
 	UPROPERTY(Transient)
@@ -180,6 +310,15 @@ protected:
 	//@Objective Detection Comp
 	UPROPERTY(Transient)
 		UObjectiveDetectionComponent* ODComponent;
+
+protected:
+	//@ASC
+	UPROPERTY()
+		UBaseAbilitySystemComponent* AbilitySystemComponent;
+
+	//@Attribute Set
+	UPROPERTY()
+		TSoftObjectPtr<UBaseAttributeSet> AttributeSet;
 
 protected:
 	//@BT
@@ -192,11 +331,15 @@ protected:
 protected:
 	//@Character Tag
 	UPROPERTY(EditDefaultsOnly, Category = "AI | 캐릭터 태그")
-	FGameplayTag CharacterTag;
+		FGameplayTag CharacterTag;
 
 	//@AI 유형
-	UPROPERTY(EditDefaultsOnly)
+	UPROPERTY(EditDefaultsOnly, Category = "AI | AI 유형")
 		EAIType AIType;
+
+	//@AI가 속한 그룹 ID
+	UPROPERTY()
+		FGuid AIGroupID;
 
 private:
 	FBaseAbilitySet_GrantedHandles* SetGrantedHandles;
@@ -234,12 +377,24 @@ public:
 	FAILockOnStateChanged AILockOnStateChanged;
 
 public:
+	//@AI의 타겟 인지 이벤트
+	FAIDetectsTarget AIDetectsTarget;
+
+public:
 	//@전투 패턴 활성화 요청 이벤트
 	FRequestStartCombatPattern RequestStartCombatPattern;
 	//@전투 패턴 활성화 종료 요청 이벤트
 	FRequestEndCombatPattern RequestEndCombatPattern;
 	//@전투 패턴 활성화 종료 완료 이벤트
 	FNotifyCombatPatternExitComplete NotifyCombatPatternExitComplete;
+
+public:
+	//@그룹 공유 정보 전달 이벤트
+	FSendInfoToBelongingGroup SendInfoToBelongingGroup;
+
+public:
+	//@군중 제어 발생 이벤트
+	FCrowdControlEventTriggered CrowdControlEventTriggered;
 #pragma endregion
 
 //@Callbacks
@@ -276,6 +431,10 @@ protected:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
+	UPROPERTY()
+		TWeakObjectPtr<APawn> AgentPawnRef;
+
+protected:
 	//@AI Manager Subsystem 캐싱
 	UPROPERTY()
 		TWeakObjectPtr<UAIManagerSubsystem> AIManagerRef;
@@ -292,6 +451,9 @@ public:
 
 public:
 	FORCEINLINE EAIType GetAIType() const { return AIType; }
+
+public:
+	FORCEINLINE void SetAIGroupID(const FGuid& GroupID);
 
 public:
 	FORCEINLINE float GetMinAttackRange() { return MinAttackRange; }

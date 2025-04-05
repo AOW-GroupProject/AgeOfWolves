@@ -208,7 +208,7 @@ public:
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Combat | Detection", meta = (DisplayName = "Is Actor Back Exposed"))
-        static bool IsActorBackExposed(const AActor* ObserverActor, const AActor* TargetActor, float ExposureAngleThreshold = 120.0f);
+        static bool IsActorBackExposed(const AActor* ObserverActor, const AActor* TargetActor, float ExposureAngleThreshold = 160.0f);
 
 #pragma endregion
 
