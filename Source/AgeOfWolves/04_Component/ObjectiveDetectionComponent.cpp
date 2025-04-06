@@ -749,7 +749,10 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
         //@Dead 상태 태그 확인
         if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
         {
-            // 타겟 해제
+            //@Fragile 여부 해제
+            bIsCurrentTargetFragile = false;
+
+            //@타겟 해제
             SetCurrentTargetAI(nullptr);
 
             //@Billboard 컴포넌트 숨기기
@@ -1024,6 +1027,13 @@ void UObjectiveDetectionComponent::SetCurrentTargetAI(AActor* NewTargetActor)
 {
     // 이전 타겟 저장
     AActor* PreviousTarget = CurrentTargetAI.Get();
+
+    // 타겟이 변경될 경우 상태 초기화
+    if (PreviousTarget != NewTargetActor)
+    {
+        // 타겟이 변경되면 Fragile 상태 초기화
+        bIsCurrentTargetFragile = false;
+    }
 
     // 새 타겟 설정
     CurrentTargetAI = NewTargetActor;
