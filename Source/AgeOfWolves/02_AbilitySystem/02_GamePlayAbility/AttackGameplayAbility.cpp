@@ -86,7 +86,7 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
     //@히트 스탑 적용
     if (bEnableHitStop)
     {
-        ApplyHitStop();
+        ApplyHitStop(HitActor);
     }
 }
 
@@ -344,11 +344,11 @@ void UAttackGameplayAbility::PerformLineTrace(const FVector& Start, const FVecto
     );
 }
 
-void UAttackGameplayAbility::ApplyHitStop()
+void UAttackGameplayAbility::ApplyHitStop(AActor* Target)
 {
     //@Avatar
     AActor* SourceActor = GetAvatarActorFromActorInfo();
-    if (!SourceActor)
+    if (!SourceActor || !Target)
     {
         UE_LOGFMT(LogAttackGA, Warning, "HitStop 적용 실패 - 사유: Source Actor가 유효하지 않음");
         return;
@@ -383,7 +383,7 @@ void UAttackGameplayAbility::ApplyHitStop()
     }
 
     //@Time Dilation
-    TimeSystem->ApplyHitStop(SourceActor, HitStopSettings, bGlobalHitStop);
+    TimeSystem->ApplyHitStop(SourceActor, Target, HitStopSettings, bGlobalHitStop);
 
     UE_LOGFMT(LogAttackGA, Log, "HitStop 적용 완료 - 액터: {0}, 모드: {1}, 강도: {2}",
         *SourceActor->GetName(),

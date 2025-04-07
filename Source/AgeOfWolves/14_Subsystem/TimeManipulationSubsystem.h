@@ -84,7 +84,7 @@ struct FTimeDilationInfo
 {
     GENERATED_BODY()
 
-     //@원래 타임 딜레이션 값
+    //@원래 타임 딜레이션 값
     float OriginalDilation = 1.0f;
 
     //@목표 타임 딜레이션 값
@@ -119,7 +119,7 @@ class AGEOFWOLVES_API UTimeManipulationSubsystem : public UGameInstanceSubsystem
 
     GENERATED_BODY()
 
-//@Defualt Setting
+        //@Defualt Setting
 #pragma region Default Setting
 public:
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -132,13 +132,17 @@ public:
     //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
-     //@타임 딜레이션 값을 계산합니다.
+    //@타임 딜레이션 값을 계산합니다.
     UFUNCTION(BlueprintCallable, Category = "Time Manipulation")
         float CalculateTimeDilationValue(const FTimeDilationSettings& Settings) const;
 
+
 protected:
     //@타임 딜레이션 시작
-    void StartTimeDilation(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal);
+    void StartTimeDilation(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal, bool bAllowMultiple = false);
+    //@타임 딜레이션 시작 (여러 액터)
+    void StartTimeDilation(const TArray<AActor*>& Actors, const FTimeDilationSettings& Settings, bool bGlobal);
+
     //@타임 딜레이션 종료
     void StopTimeDilation(AActor* Owner, bool bSmoothTransition, float TransitionDuration);
 
@@ -161,12 +165,9 @@ public:
         void StopLocalTimeDilation(AActor* Owner, bool bSmoothTransition = true, float TransitionDuration = 0.2f);
 
 protected:
-    //@히트 스톱 효과를 적용합니다.
+    //@히트 스톱 효과를 적용합니다. (Owner, Target 버전)
     UFUNCTION(BlueprintCallable, Category = "Time Manipulation")
-        void ApplyHitStop(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal);
-
-     //@히트 스톱 효과를 적용합니다.
-    void ApplyHitStop(AActor* Owner, int32 FrameCount = 2, bool bGlobal = false);
+        void ApplyHitStop(AActor* Owner, AActor* Target, const FTimeDilationSettings& Settings, bool bGlobal);
 
 protected:
     //@타임 딜레이션 업데이트

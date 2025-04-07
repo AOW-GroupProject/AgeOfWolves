@@ -102,7 +102,7 @@ protected:
 protected:
 	//@HitStop 적용 함수
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌 | 연출")
-		void ApplyHitStop();
+		void ApplyHitStop(AActor* Target);
 
 private:
 	// 트레이스 상태 관리를 위한 동기화 객체

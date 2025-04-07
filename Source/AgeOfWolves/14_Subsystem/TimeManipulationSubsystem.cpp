@@ -106,84 +106,7 @@ void UTimeManipulationSubsystem::Tick(float DeltaTime)
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-float UTimeManipulationSubsystem::CalculateTimeDilationValue(const FTimeDilationSettings& Settings) const
-{
-    //@CustomDilationValue
-    if (Settings.CustomDilationValue != 1.0f)
-    {
-        return Settings.CustomDilationValue;
-    }
-
-    float DilationValue = 1.0f;
-    //@Dilation Mode
-    switch (Settings.DilationMode)
-    {
-        //@슬로우 모션
-    case ETimeDilationMode::SlowMotion:
-        switch (Settings.DilationIntensity)
-        {
-        case ETimeDilationIntensity::Low:
-            DilationValue = 0.7f;
-            break;
-        case ETimeDilationIntensity::Medium:
-            DilationValue = 0.5f;
-            break;
-        case ETimeDilationIntensity::High:
-            DilationValue = 0.25f;
-            break;
-        }
-        break;
-        //@패스트 모션
-    case ETimeDilationMode::FastMotion:
-        switch (Settings.DilationIntensity)
-        {
-        case ETimeDilationIntensity::Low:
-            DilationValue = 1.5f;
-            break;
-        case ETimeDilationIntensity::Medium:
-            DilationValue = 2.0f;
-            break;
-        case ETimeDilationIntensity::High:
-            DilationValue = 3.0f;
-            break;
-        }
-        break;
-        //@완전 정지 - 추가
-    case ETimeDilationMode::Stop:
-        switch (Settings.DilationIntensity)
-        {
-        case ETimeDilationIntensity::Low:
-            DilationValue = 0.05f;
-            break;
-        case ETimeDilationIntensity::Medium:
-            DilationValue = 0.02f;
-            break;
-        case ETimeDilationIntensity::High:
-            DilationValue = 0.01f;
-            break;
-        }
-        break;
-        //@히트 스톱 - 강도에 따라 다른 값 사용
-    case ETimeDilationMode::HitStop:
-        switch (Settings.DilationIntensity)
-        {
-        case ETimeDilationIntensity::Low:
-            DilationValue = 0.01f; 
-            break;
-        case ETimeDilationIntensity::Medium:
-            DilationValue = 0.02f; 
-            break;
-        case ETimeDilationIntensity::High:
-            DilationValue = 0.03f; 
-            break;
-        }
-        break;
-    }
-
-    return DilationValue;
-}
-
-void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal)
+void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal, bool bAllowMultiple)
 {
     //@Owner
     if (!IsValid(Owner))
@@ -200,8 +123,9 @@ void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDil
         return;
     }
 
-    // 이미 활성화된 시간 조작이 있고 다른 Actor가 요청하는 경우 무시
-    if (ActiveDilationOwner.IsValid() && ActiveDilationOwner.Get() != Owner && bIgnorePreviousRequests)
+    //@이미 활성화된 시간 조작이 있고 다른 Actor가 요청하는 경우 무시
+    // 다중 적용 허용 시에는 이 제한을 건너뜀
+    if (!bAllowMultiple && ActiveDilationOwner.IsValid() && ActiveDilationOwner.Get() != Owner && bIgnorePreviousRequests)
     {
         UE_LOGFMT(LogTimeManipulation, Warning, "타임 딜레이션 시작 무시 - 사유: 다른 액터가 이미 활성화 중 - 현재 액터: {0}, 요청 액터: {1}",
             *ActiveDilationOwner.Get()->GetName(), *Owner->GetName());
@@ -222,13 +146,13 @@ void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDil
         UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 업데이트 - 액터: {0}, 새 목표값: {1}", *Owner->GetName(), TargetValue);
     }
 
-    //@기존에 활성화된 다른 액터가 있다면 중지
-    if (ActiveDilationOwner.IsValid() && ActiveDilationOwner.Get() != Owner)
+    //@기존에 활성화된 다른 액터가 있다면 중지 (다중 적용 허용 시에는 건너뜀)
+    if (!bAllowMultiple && ActiveDilationOwner.IsValid() && ActiveDilationOwner.Get() != Owner)
     {
         StopTimeDilation(ActiveDilationOwner.Get(), false, 0.0f);
     }
 
-    // 실행 중인 타이머가 있다면 제거
+    //@실행 중인 타이머가 있다면 제거
     if (TimeDilationTimerHandles.Contains(Owner))
     {
         World->GetTimerManager().ClearTimer(TimeDilationTimerHandles[Owner]);
@@ -279,8 +203,11 @@ void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDil
     //@Active Dilations
     ActiveDilations.Add(Owner, DilationInfo);
 
-    // 현재 활성화된 소유자 설정
-    ActiveDilationOwner = Owner;
+    // 현재 활성화된 소유자 설정 (다중 적용 허용 시 기존 소유자 유지)
+    if (!bAllowMultiple || !ActiveDilationOwner.IsValid())
+    {
+        ActiveDilationOwner = Owner;
+    }
 
     //@Anim Instance 등록
     RegisterAnimInstance(Owner);
@@ -347,6 +274,69 @@ void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDil
         break;
     }
 }
+void UTimeManipulationSubsystem::StartTimeDilation(const TArray<AActor*>& Actors, const FTimeDilationSettings& Settings, bool bGlobal)
+{
+    // 배열이 비어있는지 확인
+    if (Actors.Num() == 0)
+    {
+        UE_LOGFMT(LogTimeManipulation, Warning, "타임 딜레이션 시작 실패 - 액터 배열이 비어 있음");
+        return;
+    }
+
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        UE_LOGFMT(LogTimeManipulation, Warning, "타임 딜레이션 시작 실패 - 유효하지 않은 월드");
+        return;
+    }
+
+    UE_LOGFMT(LogTimeManipulation, Log, "여러 액터에 타임 딜레이션 시작 - 액터 수: {0}, 모드: {1}, 다중 적용: 허용",
+        Actors.Num(), bGlobal ? TEXT("글로벌") : TEXT("로컬"));
+
+    // 여러 액터에 대한 처리 준비
+    TArray<AActor*> ValidActors;
+
+    // 유효한 액터만 필터링
+    for (AActor* Actor : Actors)
+    {
+        if (IsValid(Actor))
+        {
+            ValidActors.Add(Actor);
+        }
+        else
+        {
+            UE_LOGFMT(LogTimeManipulation, Warning, "타임 딜레이션 시작 실패 - 유효하지 않은 액터 감지됨");
+        }
+    }
+
+    if (ValidActors.Num() == 0)
+    {
+        UE_LOGFMT(LogTimeManipulation, Warning, "타임 딜레이션 시작 실패 - 유효한 액터가 없음");
+        return;
+    }
+
+    //@동시 다중 적용이 허용되지 않는 경우, 이미 활성화된 액터들의 타임 딜레이션 중지
+    if (ActiveDilationOwner.IsValid() && !Actors.Contains(ActiveDilationOwner.Get()))
+    {
+        UE_LOGFMT(LogTimeManipulation, Log, "기존 활성화된 타임 딜레이션 해제 - 액터: {0}", *ActiveDilationOwner.Get()->GetName());
+        StopTimeDilation(ActiveDilationOwner.Get(), false, 0.0f);
+    }
+
+    // 배열의 첫 번째 유효한 액터를 새로운 ActiveDilationOwner로 설정
+    if (!ActiveDilationOwner.IsValid())
+    {
+        ActiveDilationOwner = ValidActors[0];
+        UE_LOGFMT(LogTimeManipulation, Log, "새 활성화 소유자 설정 - 액터: {0}", *ValidActors[0]->GetName());
+    }
+
+    // 각 액터에 대해 개별적으로 StartTimeDilation 호출
+    // bAllowMultiple=true로 설정하여 액티브 소유자가 중간에 바뀌지 않도록 함
+    for (AActor* Actor : ValidActors)
+    {
+        // 배열 처리 과정에서는 개별 액터에 대한 함수가 서로를 중지시키지 않도록 함
+        StartTimeDilation(Actor, Settings, bGlobal, true);
+    }
+}
 
 void UTimeManipulationSubsystem::StopTimeDilation(AActor* Owner, bool bSmoothTransition, float TransitionDuration)
 {
@@ -372,7 +362,7 @@ void UTimeManipulationSubsystem::StopTimeDilation(AActor* Owner, bool bSmoothTra
         return;
     }
 
-    // 실행 중인 타이머가 있다면 제거
+    //@실행 중인 타이머가 있다면 제거
     if (TimeDilationTimerHandles.Contains(Owner))
     {
         World->GetTimerManager().ClearTimer(TimeDilationTimerHandles[Owner]);
@@ -420,7 +410,7 @@ void UTimeManipulationSubsystem::StopTimeDilation(AActor* Owner, bool bSmoothTra
     }
     else
     {
-        // 부드러운 전환이 아닐 경우 즉시 적용
+        //@부드러운 전환이 아닐 경우 즉시 적용
         SetTimeDilation(Owner, DilationInfo, DilationInfo.OriginalDilation);
     }
 
@@ -520,38 +510,55 @@ void UTimeManipulationSubsystem::StopLocalTimeDilation(AActor* Owner, bool bSmoo
     StopTimeDilation(Owner, bSmoothTransition, TransitionDuration);
 }
 
-void UTimeManipulationSubsystem::ApplyHitStop(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal)
+void UTimeManipulationSubsystem::ApplyHitStop(AActor* Owner, AActor* Target, const FTimeDilationSettings& Settings, bool bGlobal)
 {
     if (!IsValid(Owner))
     {
-        UE_LOGFMT(LogTimeManipulation, Warning, "히트 스톱 적용 실패 - 유효하지 않은 액터");
+        UE_LOGFMT(LogTimeManipulation, Warning, "히트 스톱 적용 실패 - 유효하지 않은 소유자");
         return;
     }
 
-    UE_LOGFMT(LogTimeManipulation, Log, "히트 스톱 적용 시작 - 액터: {0}, 강도: {1}, 글로벌: {2}",
+    if (!IsValid(Target))
+    {
+        UE_LOGFMT(LogTimeManipulation, Verbose, "히트 스톱 적용 - 유효하지 않은 대상, 소유자를 대상으로 사용합니다: {0}", *Owner->GetName());
+        Target = Owner;
+    }
+
+    UE_LOGFMT(LogTimeManipulation, Log, "히트 스톱 적용 시작 - 소유자: {0}, 대상: {1}, 강도: {2}, 글로벌: {3}",
         *Owner->GetName(),
+        *Target->GetName(),
         static_cast<int32>(Settings.DilationIntensity),
         bGlobal ? TEXT("예") : TEXT("아니오"));
 
-    //@히트 스톱 적용
-    StartTimeDilation(Owner, Settings, bGlobal);
-}
-
-void UTimeManipulationSubsystem::ApplyHitStop(AActor* Owner, int32 FrameCount, bool bGlobal)
-{
-    if (!IsValid(Owner))
+    // 히트 스톱 모드가 아닌 경우 설정 수정
+    FTimeDilationSettings HitStopSettings = Settings;
+    if (HitStopSettings.DilationMode != ETimeDilationMode::HitStop)
     {
-        UE_LOGFMT(LogTimeManipulation, Warning, "히트 스톱 적용 실패 - 유효하지 않은 액터");
-        return;
+        HitStopSettings.DilationMode = ETimeDilationMode::HitStop;
     }
 
-    //@FTimeDilationSettings
-    FTimeDilationSettings HitStopSettings;
-    HitStopSettings.DilationMode = ETimeDilationMode::HitStop;
+    // 부드러운 전환 비활성화 (히트 스톱은 항상 즉시 적용)
     HitStopSettings.bSmoothTransition = false;
 
-    //@히트 스톱 적용
-    ApplyHitStop(Owner, HitStopSettings, bGlobal);
+    if (bGlobal)
+    {
+        // 글로벌 효과 적용 (월드 전체에 영향)
+        StartTimeDilation(Owner, HitStopSettings, true, false);
+    }
+    else
+    {
+        // Owner와 Target 모두에게 적용 (배열 버전 활용)
+        TArray<AActor*> Actors;
+        Actors.Add(Owner);
+
+        // Target이 Owner와 다를 경우에만 Target 추가
+        if (Target != Owner)
+        {
+            Actors.Add(Target);
+        }
+
+        StartTimeDilation(Actors, HitStopSettings, false);
+    }
 }
 
 void UTimeManipulationSubsystem::UpdateTimeDilation(AActor* Owner, FTimeDilationInfo& DilationInfo, float DeltaTime)
@@ -822,6 +829,83 @@ void UTimeManipulationSubsystem::OnStopModeTimerExpired(AActor* Owner, bool bSmo
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+float UTimeManipulationSubsystem::CalculateTimeDilationValue(const FTimeDilationSettings& Settings) const
+{
+    //@CustomDilationValue
+    if (Settings.CustomDilationValue != 1.0f)
+    {
+        return Settings.CustomDilationValue;
+    }
+
+    float DilationValue = 1.0f;
+    //@Dilation Mode
+    switch (Settings.DilationMode)
+    {
+        //@슬로우 모션
+    case ETimeDilationMode::SlowMotion:
+        switch (Settings.DilationIntensity)
+        {
+        case ETimeDilationIntensity::Low:
+            DilationValue = 0.7f;
+            break;
+        case ETimeDilationIntensity::Medium:
+            DilationValue = 0.5f;
+            break;
+        case ETimeDilationIntensity::High:
+            DilationValue = 0.25f;
+            break;
+        }
+        break;
+        //@패스트 모션
+    case ETimeDilationMode::FastMotion:
+        switch (Settings.DilationIntensity)
+        {
+        case ETimeDilationIntensity::Low:
+            DilationValue = 1.5f;
+            break;
+        case ETimeDilationIntensity::Medium:
+            DilationValue = 2.0f;
+            break;
+        case ETimeDilationIntensity::High:
+            DilationValue = 3.0f;
+            break;
+        }
+        break;
+        //@완전 정지 - 추가
+    case ETimeDilationMode::Stop:
+        switch (Settings.DilationIntensity)
+        {
+        case ETimeDilationIntensity::Low:
+            DilationValue = 0.05f;
+            break;
+        case ETimeDilationIntensity::Medium:
+            DilationValue = 0.02f;
+            break;
+        case ETimeDilationIntensity::High:
+            DilationValue = 0.01f;
+            break;
+        }
+        break;
+        //@히트 스톱 - 강도에 따라 다른 값 사용
+    case ETimeDilationMode::HitStop:
+        switch (Settings.DilationIntensity)
+        {
+        case ETimeDilationIntensity::Low:
+            DilationValue = 0.06f;
+            break;
+        case ETimeDilationIntensity::Medium:
+            DilationValue = 0.08f;
+            break;
+        case ETimeDilationIntensity::High:
+            DilationValue = 0.1f;
+            break;
+        }
+        break;
+    }
+
+    return DilationValue;
+}
+
 bool UTimeManipulationSubsystem::IsActorTimeDilated(AActor* Owner) const
 {
     return ActiveDilations.Contains(Owner);
