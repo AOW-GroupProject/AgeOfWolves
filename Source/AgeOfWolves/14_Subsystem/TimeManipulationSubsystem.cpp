@@ -168,13 +168,13 @@ float UTimeManipulationSubsystem::CalculateTimeDilationValue(const FTimeDilation
         switch (Settings.DilationIntensity)
         {
         case ETimeDilationIntensity::Low:
-            DilationValue = 0.005f; 
+            DilationValue = 0.01f; 
             break;
         case ETimeDilationIntensity::Medium:
-            DilationValue = 0.002f; 
+            DilationValue = 0.02f; 
             break;
         case ETimeDilationIntensity::High:
-            DilationValue = 0.001f; 
+            DilationValue = 0.03f; 
             break;
         }
         break;
@@ -182,6 +182,7 @@ float UTimeManipulationSubsystem::CalculateTimeDilationValue(const FTimeDilation
 
     return DilationValue;
 }
+
 void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal)
 {
     //@Owner
