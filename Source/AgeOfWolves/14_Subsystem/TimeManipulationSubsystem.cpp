@@ -55,6 +55,53 @@ void UTimeManipulationSubsystem::Deinitialize()
 
     Super::Deinitialize();
 }
+
+void UTimeManipulationSubsystem::Tick(float DeltaTime)
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        return;
+    }
+
+    // 전환 중인 모든 타임 딜레이션 처리
+    TArray<AActor*> ActorsToRemove;
+
+    for (auto& Pair : TransitioningDilations)
+    {
+        AActor* Actor = Pair.Key;
+        FTimeDilationInfo& DilationInfo = Pair.Value;
+
+        if (!IsValid(Actor))
+        {
+            ActorsToRemove.Add(Actor);
+            continue;
+        }
+
+        // 타임 딜레이션 업데이트
+        UpdateTimeDilation(Actor, DilationInfo, DeltaTime);
+
+        // 전환 완료 여부 확인
+        float ElapsedTime = World->GetTimeSeconds() - DilationInfo.StartTime;
+        if (ElapsedTime >= DilationInfo.TransitionDuration)
+        {
+            // 전환 완료, 제거 목록에 추가
+            ActorsToRemove.Add(Actor);
+
+            // 최종 값 설정
+            float FinalValue = ActiveDilations.Contains(Actor) ?
+                DilationInfo.TargetDilation : DilationInfo.OriginalDilation;
+
+            SetTimeDilation(Actor, DilationInfo, FinalValue);
+        }
+    }
+
+    // 완료된 전환 제거
+    for (AActor* Actor : ActorsToRemove)
+    {
+        TransitioningDilations.Remove(Actor);
+    }
+}
 #pragma endregion
 
 //@Property/Info...etc
@@ -116,15 +163,25 @@ float UTimeManipulationSubsystem::CalculateTimeDilationValue(const FTimeDilation
             break;
         }
         break;
-        //@히트 스톱 - 거의 정지에 가까운 값 사용
+        //@히트 스톱 - 강도에 따라 다른 값 사용
     case ETimeDilationMode::HitStop:
-        DilationValue = 0.001f;
+        switch (Settings.DilationIntensity)
+        {
+        case ETimeDilationIntensity::Low:
+            DilationValue = 0.005f; 
+            break;
+        case ETimeDilationIntensity::Medium:
+            DilationValue = 0.002f; 
+            break;
+        case ETimeDilationIntensity::High:
+            DilationValue = 0.001f; 
+            break;
+        }
         break;
     }
 
     return DilationValue;
 }
-
 void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal)
 {
     //@Owner
@@ -228,18 +285,22 @@ void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDil
     RegisterAnimInstance(Owner);
 
     //@@지연 실행/즉시 실행
-    if (DilationInfo.bSmoothTransition && DilationInfo.TransitionDuration > 0.0f)
+    bool bAllowSmoothTransition =
+        (Settings.DilationMode == ETimeDilationMode::SlowMotion ||
+            Settings.DilationMode == ETimeDilationMode::FastMotion);
+
+    if (DilationInfo.bSmoothTransition &&
+        DilationInfo.TransitionDuration > 0.0f &&
+        bAllowSmoothTransition)
     {
-        // 부드러운 전환 사용 시 전환 딜레이션 정보 추가
         TransitioningDilations.Add(Owner, DilationInfo);
     }
     else
     {
-        // 즉시 적용
         SetTimeDilation(Owner, DilationInfo, TargetValue);
     }
 
-    // 타임 딜레이션 모드에 따른 자동 해제 처리
+    //@타임 딜레이션 모드에 따른 자동 해제 처리
     switch (Settings.DilationMode)
     {
     case ETimeDilationMode::Stop:
@@ -265,81 +326,25 @@ void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDil
 
     case ETimeDilationMode::HitStop:
     {
-        // 히트 스톱 모드일 경우 프레임 기반 자동 해제 타이머 설정
-        if (Settings.HitStopFrameCount > 0)
-        {
-            // 게임 프레임 레이트로부터 대략적인 프레임 지속 시간 계산
-            float FrameTime = 1.0f / 60.0f; 
+        UE_LOGFMT(LogTimeManipulation, Log, "히트 스톱 모드 타이머 설정 - 액터: {0}, 예상 지속 시간: {1}초",
+            *Owner->GetName(), TargetValue);
 
-            // 실제 프레임 타임 계산
-            float RealFrameTime = FApp::GetDeltaTime();
-            if (RealFrameTime > 0.0f)
-            {
-                FrameTime = RealFrameTime;
-            }
+        //@타이머 핸들 생성 및 저장
+        FTimerHandle& HitStopTimerHandle = TimeDilationTimerHandles.FindOrAdd(Owner);
 
-            // 지정된 프레임 수에 해당하는 시간 계산
-            float HitStopDuration = FrameTime * Settings.HitStopFrameCount;
-
-            // 최소 지속 시간 보장 (너무 짧으면 타이머가 작동하지 않을 수 있음)
-            HitStopDuration = FMath::Max(HitStopDuration, 0.01f);
-
-            UE_LOGFMT(LogTimeManipulation, Log, "히트 스톱 모드 타이머 설정 - 액터: {0}, 프레임 수: {1}, 예상 지속 시간: {2}초",
-                *Owner->GetName(), Settings.HitStopFrameCount, HitStopDuration);
-
-            // 타이머 핸들 생성 및 저장
-            FTimerHandle& HitStopTimerHandle = TimeDilationTimerHandles.FindOrAdd(Owner);
-
-            // 계산된 지속 시간 후 자동 해제
-            World->GetTimerManager().SetTimer(
-                HitStopTimerHandle,
-                FTimerDelegate::CreateUObject(this, &UTimeManipulationSubsystem::OnHitStopTimerExpired, Owner),
-                HitStopDuration,
-                false
-            );
-        }
+        //@계산된 지속 시간 후 자동 해제
+        World->GetTimerManager().SetTimer(
+            HitStopTimerHandle,
+            FTimerDelegate::CreateUObject(this, &UTimeManipulationSubsystem::OnHitStopTimerExpired, Owner),
+            TargetValue,
+            false
+        );
         break;
     }
 
     default:
-        // 다른 모드는 별도의 자동 해제가 없음
         break;
     }
-}
-
-void UTimeManipulationSubsystem::ApplyHitStop(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal)
-{
-    if (!IsValid(Owner))
-    {
-        UE_LOGFMT(LogTimeManipulation, Warning, "히트 스톱 적용 실패 - 유효하지 않은 액터");
-        return;
-    }
-
-    UE_LOGFMT(LogTimeManipulation, Log, "히트 스톱 적용 시작 - 액터: {0}, 강도: {1}, 글로벌: {2}",
-        *Owner->GetName(),
-        static_cast<int32>(Settings.DilationIntensity),
-        bGlobal ? TEXT("예") : TEXT("아니오"));
-
-    //@히트 스톱 적용
-    StartTimeDilation(Owner, Settings, bGlobal);
-}
-
-void UTimeManipulationSubsystem::ApplyHitStop(AActor* Owner, int32 FrameCount, bool bGlobal)
-{
-    if (!IsValid(Owner))
-    {
-        UE_LOGFMT(LogTimeManipulation, Warning, "히트 스톱 적용 실패 - 유효하지 않은 액터");
-        return;
-    }
-
-    //@FTimeDilationSettings
-    FTimeDilationSettings HitStopSettings;
-    HitStopSettings.DilationMode = ETimeDilationMode::HitStop;
-    HitStopSettings.HitStopFrameCount = FMath::Clamp(FrameCount, 1, 5);
-    HitStopSettings.bSmoothTransition = false;
-
-    //@히트 스톱 적용
-    ApplyHitStop(Owner, HitStopSettings, bGlobal);
 }
 
 void UTimeManipulationSubsystem::StopTimeDilation(AActor* Owner, bool bSmoothTransition, float TransitionDuration)
@@ -380,17 +385,41 @@ void UTimeManipulationSubsystem::StopTimeDilation(AActor* Owner, bool bSmoothTra
         *Owner->GetName(), DilationInfo.OriginalDilation);
 
     //@부드러운 전환
-    if (bSmoothTransition && TransitionDuration > 0.0f)
+    bool bAllowSmoothTransition = false;
+
+    if (ActiveDilations.Contains(Owner))
+    {
+        ETimeDilationMode CurrentMode = ETimeDilationMode::SlowMotion; // 기본값
+
+        // 현재 딜레이션 값으로 모드 추정
+        float CurrentDilation = DilationInfo.TargetDilation;
+        if (CurrentDilation > 1.0f)
+        {
+            CurrentMode = ETimeDilationMode::FastMotion;
+        }
+        else if (CurrentDilation < 0.01f)
+        {
+            CurrentMode = ETimeDilationMode::Stop;
+        }
+
+        bAllowSmoothTransition =
+            (CurrentMode == ETimeDilationMode::SlowMotion ||
+                CurrentMode == ETimeDilationMode::FastMotion);
+    }
+
+    if (bSmoothTransition && TransitionDuration > 0.0f && bAllowSmoothTransition)
     {
         FTimeDilationInfo TransitionInfo = DilationInfo;
         TransitionInfo.StartTime = World->GetTimeSeconds();
         TransitionInfo.TransitionDuration = TransitionDuration;
+        TransitionInfo.bSmoothTransition = true;
 
+        // TransitioningDilations에 추가하여 Tick에서 처리
         TransitioningDilations.Add(Owner, TransitionInfo);
     }
-    //@즉시 전환
     else
     {
+        // 부드러운 전환이 아닐 경우 즉시 적용
         SetTimeDilation(Owner, DilationInfo, DilationInfo.OriginalDilation);
     }
 
@@ -405,6 +434,123 @@ void UTimeManipulationSubsystem::StopTimeDilation(AActor* Owner, bool bSmoothTra
 
     //@Anim Instance 등록 해제
     UnregisterAnimInstance(Owner);
+}
+
+void UTimeManipulationSubsystem::StartGlobalTimeDilation(const FTimeDilationSettings& Settings)
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        UE_LOGFMT(LogTimeManipulation, Warning, "글로벌 타임 딜레이션 시작 실패 - 유효하지 않은 월드");
+        return;
+    }
+
+    // 월드 세팅 액터를 글로벌 타임 딜레이션 소유자로 사용
+    AActor* WorldActor = World->GetWorldSettings();
+    if (!IsValid(WorldActor))
+    {
+        UE_LOGFMT(LogTimeManipulation, Warning, "글로벌 타임 딜레이션 시작 실패 - WorldSettings를 찾을 수 없음");
+        return;
+    }
+
+    // 기존 함수를 이용해 글로벌 타임 딜레이션 적용
+    StartTimeDilation(WorldActor, Settings, true);
+}
+
+void UTimeManipulationSubsystem::StopGlobalTimeDilation(bool bSmoothTransition, float TransitionDuration)
+{
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        UE_LOGFMT(LogTimeManipulation, Warning, "글로벌 타임 딜레이션 종료 실패 - 유효하지 않은 월드");
+        return;
+    }
+
+    // 글로벌 타임 딜레이션 소유자 찾기
+    AActor* GlobalDilationActor = nullptr;
+
+    for (auto& Pair : ActiveDilations)
+    {
+        if (Pair.Value.bGlobal)
+        {
+            GlobalDilationActor = Pair.Key;
+            break;
+        }
+    }
+
+    if (!GlobalDilationActor)
+    {
+        UE_LOGFMT(LogTimeManipulation, Verbose, "글로벌 타임 딜레이션 종료 - 적용된 글로벌 타임 딜레이션 없음");
+        return;
+    }
+
+    // 기존 함수를 이용해 글로벌 타임 딜레이션 종료
+    StopTimeDilation(GlobalDilationActor, bSmoothTransition, TransitionDuration);
+}
+
+void UTimeManipulationSubsystem::StartLocalTimeDilation(AActor* Owner, const FTimeDilationSettings& Settings)
+{
+    if (!IsValid(Owner))
+    {
+        UE_LOGFMT(LogTimeManipulation, Warning, "로컬 타임 딜레이션 시작 실패 - 유효하지 않은 액터");
+        return;
+    }
+
+    // 기존 함수를 이용해 로컬 타임 딜레이션 적용
+    StartTimeDilation(Owner, Settings, false);
+}
+
+void UTimeManipulationSubsystem::StopLocalTimeDilation(AActor* Owner, bool bSmoothTransition, float TransitionDuration)
+{
+    if (!IsValid(Owner))
+    {
+        UE_LOGFMT(LogTimeManipulation, Warning, "로컬 타임 딜레이션 종료 실패 - 유효하지 않은 액터");
+        return;
+    }
+
+    // 로컬 타임 딜레이션 확인
+    if (!ActiveDilations.Contains(Owner) || ActiveDilations[Owner].bGlobal)
+    {
+        UE_LOGFMT(LogTimeManipulation, Verbose, "로컬 타임 딜레이션 종료 - 적용된 로컬 타임 딜레이션 없음 - 액터: {0}", *Owner->GetName());
+        return;
+    }
+
+    // 기존 함수를 이용해 로컬 타임 딜레이션 종료
+    StopTimeDilation(Owner, bSmoothTransition, TransitionDuration);
+}
+
+void UTimeManipulationSubsystem::ApplyHitStop(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal)
+{
+    if (!IsValid(Owner))
+    {
+        UE_LOGFMT(LogTimeManipulation, Warning, "히트 스톱 적용 실패 - 유효하지 않은 액터");
+        return;
+    }
+
+    UE_LOGFMT(LogTimeManipulation, Log, "히트 스톱 적용 시작 - 액터: {0}, 강도: {1}, 글로벌: {2}",
+        *Owner->GetName(),
+        static_cast<int32>(Settings.DilationIntensity),
+        bGlobal ? TEXT("예") : TEXT("아니오"));
+
+    //@히트 스톱 적용
+    StartTimeDilation(Owner, Settings, bGlobal);
+}
+
+void UTimeManipulationSubsystem::ApplyHitStop(AActor* Owner, int32 FrameCount, bool bGlobal)
+{
+    if (!IsValid(Owner))
+    {
+        UE_LOGFMT(LogTimeManipulation, Warning, "히트 스톱 적용 실패 - 유효하지 않은 액터");
+        return;
+    }
+
+    //@FTimeDilationSettings
+    FTimeDilationSettings HitStopSettings;
+    HitStopSettings.DilationMode = ETimeDilationMode::HitStop;
+    HitStopSettings.bSmoothTransition = false;
+
+    //@히트 스톱 적용
+    ApplyHitStop(Owner, HitStopSettings, bGlobal);
 }
 
 void UTimeManipulationSubsystem::UpdateTimeDilation(AActor* Owner, FTimeDilationInfo& DilationInfo, float DeltaTime)
