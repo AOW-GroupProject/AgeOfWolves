@@ -7,6 +7,8 @@
 
 #include "Abilities/GameplayAbilityTypes.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "Kismet/GameplayStatics.h"
+
 #include "07_BlueprintNode/CombatLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogAttackGA)
@@ -80,6 +82,12 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
 
     UE_LOGFMT(LogAttackGA, Log, "데미지 이벤트 전송 완료 - Target: {0}, Instigator: {1}, Impact Location: {2}",
         HitActor->GetName(), SourceActor->GetName(), HitResult.ImpactPoint.ToString());
+
+    //@히트 스탑 적용
+    if (bEnableHitStop)
+    {
+        ApplyHitStop(HitActor);
+    }
 }
 
 void UAttackGameplayAbility::StartWeaponTrace()
@@ -334,6 +342,53 @@ void UAttackGameplayAbility::PerformLineTrace(const FVector& Start, const FVecto
         ECC_Visibility,
         QueryParams
     );
+}
+
+void UAttackGameplayAbility::ApplyHitStop(AActor* Target)
+{
+    //@Avatar
+    AActor* SourceActor = GetAvatarActorFromActorInfo();
+    if (!SourceActor || !Target)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "HitStop 적용 실패 - 사유: Source Actor가 유효하지 않음");
+        return;
+    }
+
+    //@GameInstance
+    UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(SourceActor);
+    if (!GameInstance)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "HitStop 적용 실패 - 사유: GameInstance가 유효하지 않음");
+        return;
+    }
+
+    //@TimeManipulationSubsystem
+    UTimeManipulationSubsystem* TimeSystem = GameInstance->GetSubsystem<UTimeManipulationSubsystem>();
+    if (!TimeSystem)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "HitStop 적용 실패 - 사유: TimeManipulationSubsystem을 찾을 수 없음");
+        return;
+    }
+
+    //@FTimeDilationSettings
+    FTimeDilationSettings HitStopSettings;
+    HitStopSettings.DilationMode = HitStopMode;
+    HitStopSettings.DilationIntensity = HitStopIntensity;
+
+    //@Is Already Applied?
+    if (TimeSystem->IsActorTimeDilated(SourceActor))
+    {
+        UE_LOGFMT(LogAttackGA, Log, "HitStop 적용 스킵 - 사유: 이미 타임 딜레이션이 적용 중");
+        return;
+    }
+
+    //@Time Dilation
+    TimeSystem->ApplyHitStop(SourceActor, Target, HitStopSettings, bGlobalHitStop);
+
+    UE_LOGFMT(LogAttackGA, Log, "HitStop 적용 완료 - 액터: {0}, 모드: {1}, 강도: {2}",
+        *SourceActor->GetName(),
+        "히트 스톱",
+        static_cast<int32>(HitStopIntensity));
 }
 #pragma endregion
 

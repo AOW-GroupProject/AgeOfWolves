@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
+#include "14_Subsystem/TimeManipulationSubsystem.h"
 
 #include "AttackGameplayAbility.generated.h"
 
@@ -98,6 +99,11 @@ protected:
 		}
 	}
 
+protected:
+	//@HitStop 적용 함수
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌 | 연출")
+		void ApplyHitStop(AActor* Target);
+
 private:
 	// 트레이스 상태 관리를 위한 동기화 객체
 	FCriticalSection TraceStateLock;
@@ -137,6 +143,23 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌",
 		meta = (EditCondition = "TraceType == EWeaponTraceType::Box"))
 		FVector BoxTraceHalfSize = FVector(20.0f, 20.0f, 20.0f);
+
+protected:
+	//@HitStop 활성화 여부
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌 | 연출")
+		bool bEnableHitStop = false;
+
+	//@HitStop 모드 설정
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌 | 연출", meta = (EditCondition = "bEnableHitStop"))
+		ETimeDilationMode HitStopMode = ETimeDilationMode::HitStop;
+
+	//@HitStop 강도 설정
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌 | 연출", meta = (EditCondition = "bEnableHitStop"))
+		ETimeDilationIntensity HitStopIntensity = ETimeDilationIntensity::Low;
+
+	//@글로벌 HitStop 적용 여부 (false면 캐릭터에만 적용)
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌 | 연출", meta = (EditCondition = "bEnableHitStop"))
+		bool bGlobalHitStop = true;
 #pragma endregion
 
 //@Delegates

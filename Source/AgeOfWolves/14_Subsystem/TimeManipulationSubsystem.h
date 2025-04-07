@@ -7,10 +7,6 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTimeManipulation, Log, All);
 
-//@전방 선언
-#pragma region Forward Declaration
-#pragma endregion
-
 //@열거형
 #pragma region Enums
 /**
@@ -21,9 +17,10 @@ UENUM(BlueprintType)
 enum class ETimeDilationMode : uint8
 {
     SlowMotion UMETA(DisplayName = "슬로우 모션"),
-    FastMotion UMETA(DisplayName = "빠른 모션")
+    FastMotion UMETA(DisplayName = "빠른 모션"),
+    Stop       UMETA(DisplayName = "완전 정지"),
+    HitStop    UMETA(DisplayName = "히트 스톱")
 };
-
 /**
  * @UENUM 타임 딜레이션 강도
  * 재생 속도 변화의 정도를 결정합니다.
@@ -61,12 +58,19 @@ struct FTimeDilationSettings
         float CustomDilationValue = 1.0f;
 
     //@부드러운 전환 사용 여부
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "타임 딜레이션")
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "타임 딜레이션",
+        meta = (EditCondition = "DilationMode != ETimeDilationMode::HitStop"))
         bool bSmoothTransition = true;
 
     //@전환 시간 (초)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "타임 딜레이션", meta = (EditCondition = "bSmoothTransition", ClampMin = "0.01", ClampMax = "1.0"))
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "타임 딜레이션",
+        meta = (EditCondition = "bSmoothTransition && DilationMode != ETimeDilationMode::HitStop", ClampMin = "0.01", ClampMax = "1.0"))
         float TransitionDuration = 0.2f;
+
+    //@Stop 모드일 때 지속 시간 (초)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "타임 딜레이션",
+        meta = (EditCondition = "DilationMode == ETimeDilationMode::Stop", ClampMin = "0.01", ClampMax = "1.0"))
+        float StopDuration = 0.1f;
 };
 
 /**
@@ -100,10 +104,6 @@ struct FTimeDilationInfo
 };
 #pragma endregion
 
-//@이벤트/델리게이트
-#pragma region Delegates
-#pragma endregion
-
 /**
  *  @UTimeManipulationSubsystem
  *
@@ -112,31 +112,62 @@ struct FTimeDilationInfo
 UCLASS()
 class AGEOFWOLVES_API UTimeManipulationSubsystem : public UGameInstanceSubsystem, public FTickableGameObject
 {
-//@친추 클래스
 #pragma region Friend Class
+    friend class UAttackGameplayAbility;
+    friend class UANS_ApplyDilation;
 #pragma endregion
 
     GENERATED_BODY()
 
-//@Defualt Setting
+        //@Defualt Setting
 #pragma region Default Setting
 public:
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;
-    virtual void Tick(float DeltaTime) override;
     virtual bool IsTickable() const override { return true; }
-    virtual TStatId GetStatId() const override { return TStatId(); }
+    virtual void Tick(float DeltaTime) override;
+    virtual TStatId GetStatId() const override { RETURN_QUICK_DECLARE_CYCLE_STAT(UTimeManipulationSubsystem, STATGROUP_Tickables); }
 #pragma endregion
 
-//@Property/Info...etc
+    //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
+    //@타임 딜레이션 값을 계산합니다.
     UFUNCTION(BlueprintCallable, Category = "Time Manipulation")
         float CalculateTimeDilationValue(const FTimeDilationSettings& Settings) const;
+
+
+protected:
+    //@타임 딜레이션 시작
+    void StartTimeDilation(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal, bool bAllowMultiple = false);
+    //@타임 딜레이션 시작 (여러 액터)
+    void StartTimeDilation(const TArray<AActor*>& Actors, const FTimeDilationSettings& Settings, bool bGlobal);
+
+    //@타임 딜레이션 종료
+    void StopTimeDilation(AActor* Owner, bool bSmoothTransition, float TransitionDuration);
+
+public:
+    //@글로벌 타임 딜레이션 시작
+    UFUNCTION(BlueprintCallable, Category = "Time Manipulation|Global")
+        void StartGlobalTimeDilation(const FTimeDilationSettings& Settings);
+
+    //@글로벌 타임 딜레이션 종료
+    UFUNCTION(BlueprintCallable, Category = "Time Manipulation|Global")
+        void StopGlobalTimeDilation(bool bSmoothTransition = true, float TransitionDuration = 0.2f);
+
+public:
+    //@로컬 타임 딜레이션 시작
+    UFUNCTION(BlueprintCallable, Category = "Time Manipulation|Local")
+        void StartLocalTimeDilation(AActor* Owner, const FTimeDilationSettings& Settings);
+
+    //@로컬 타임 딜레이션 종료
+    UFUNCTION(BlueprintCallable, Category = "Time Manipulation|Local")
+        void StopLocalTimeDilation(AActor* Owner, bool bSmoothTransition = true, float TransitionDuration = 0.2f);
+
+protected:
+    //@히트 스톱 효과를 적용합니다. (Owner, Target 버전)
     UFUNCTION(BlueprintCallable, Category = "Time Manipulation")
-        void StartTimeDilation(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal);
-    UFUNCTION(BlueprintCallable, Category = "Time Manipulation")
-        void StopTimeDilation(AActor* Owner, bool bSmoothTransition = true, float TransitionDuration = 0.2f);
+        void ApplyHitStop(AActor* Owner, AActor* Target, const FTimeDilationSettings& Settings, bool bGlobal);
 
 protected:
     //@타임 딜레이션 업데이트
@@ -162,6 +193,9 @@ private:
     //@애니메이션 인스턴스와 소유자 매핑
     TMap<UAnimInstance*, AActor*> AnimInstanceOwners;
 
+    //@타임 딜레이션 타이머 핸들 맵
+    TMap<AActor*, FTimerHandle> TimeDilationTimerHandles;
+
 private:
     //@현재 활성화된 시간 조작 소유자
     TWeakObjectPtr<AActor> ActiveDilationOwner;
@@ -171,16 +205,20 @@ private:
         bool bIgnorePreviousRequests = true;
 #pragma endregion
 
-//@Delegates
-#pragma region Delegates
-#pragma endregion
-
-//@Callbacks
+    //@Callbacks
 #pragma region Callbacks
 private:
     //@몽타주 종료 이벤트 콜백
     UFUNCTION()
         void OnMontageBlendingOut(UAnimMontage* Montage, bool bInterrupted);
+
+    //@히트 스톱 타이머 만료 콜백
+    UFUNCTION()
+        void OnHitStopTimerExpired(AActor* Owner);
+
+    //@스톱 모드 타이머 만료 콜백
+    UFUNCTION()
+        void OnStopModeTimerExpired(AActor* Owner, bool bSmoothTransition, float TransitionDuration);
 #pragma endregion
 
     //@Utility(Setter, Getter,...etc)
@@ -190,5 +228,4 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Time Manipulation")
         bool IsActorTimeDilated(AActor* Owner) const;
 #pragma endregion
-
 };
