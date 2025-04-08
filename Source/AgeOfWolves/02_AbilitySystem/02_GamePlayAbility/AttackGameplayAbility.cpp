@@ -10,6 +10,7 @@
 #include "Kismet/GameplayStatics.h"
 
 #include "07_BlueprintNode/CombatLibrary.h"
+#include "AbilitySystemBlueprintLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogAttackGA)
 
@@ -88,6 +89,12 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
     {
         ApplyHitStop(HitActor);
     }
+
+    //@이팩트-1 : Impact Effect
+    ExecuteImpactGameplayCue(
+        HitResult,
+        SourceActor);
+
 }
 
 void UAttackGameplayAbility::StartWeaponTrace()
@@ -285,7 +292,7 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
             continue;
         }
 
-        // 이미 무시 목록에 있는지 확인
+        //@이미 무시 목록에 있는지 확인
         bool bAlreadyHit = false;
         for (const TWeakObjectPtr<AActor>& IgnoredActor : ActorsToIgnore)
         {
@@ -306,10 +313,10 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
         UE_LOGFMT(LogAttackGA, Log, "트레이스 히트 상세 정보 - 대상: {0}, 충돌 지점: {1}, 충돌 본: {2}",
             *HitActor->GetName(), *HitResult.ImpactPoint.ToString(), *HitResult.BoneName.ToString());
 
-        // 무시 목록에 추가
+        //@무시 목록에 추가
         ActorsToIgnore.Add(TWeakObjectPtr<AActor>(HitActor));
 
-        // 데미지 이벤트 전송
+        //@데미지 이벤트 전송
         SendDamageEvent(HitResult);
     }
 }
@@ -389,6 +396,38 @@ void UAttackGameplayAbility::ApplyHitStop(AActor* Target)
         *SourceActor->GetName(),
         "히트 스톱",
         static_cast<int32>(HitStopIntensity));
+}
+
+void UAttackGameplayAbility::ExecuteImpactGameplayCue(const FHitResult& HitResult, AActor* SourceActor)
+{
+    //@ImpactEffectCueTag
+    if (!ImpactEffectCueTag.IsValid())
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "ExecuteImpactGameplayCue 실패 - 사유: 유효하지 않은 ImpactEffectCueTag");
+        return;
+    }
+
+    //@Gameplay Cue Param
+    FGameplayCueParameters CueParams;
+    CueParams.Location = HitResult.ImpactPoint;
+    CueParams.Normal = HitResult.ImpactNormal;
+    CueParams.Instigator = SourceActor;
+    CueParams.EffectCauser = SourceActor;
+    CueParams.SourceObject = this;
+
+    //@ASC
+    UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+    if (!ASC)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "ExecuteImpactGameplayCue 실패 - 사유: AbilitySystemComponent가 유효하지 않음");
+        return;
+    }
+
+    //@Execute Gameplay Cue
+    ASC->ExecuteGameplayCue(ImpactEffectCueTag, CueParams);
+
+    UE_LOGFMT(LogAttackGA, Log, "충돌 이펙트 GameplayCue 실행 - 태그: {0}, 위치: {1}",
+        *ImpactEffectCueTag.ToString(), *HitResult.ImpactPoint.ToString());
 }
 #pragma endregion
 

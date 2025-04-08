@@ -101,8 +101,12 @@ protected:
 
 protected:
 	//@HitStop 적용 함수
-	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌 | 연출")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출")
 		void ApplyHitStop(AActor* Target);
+
+protected:
+	//@충돌 위치에 GameplayCue 이펙트 실행
+	void ExecuteImpactGameplayCue(const FHitResult& HitResult, AActor* SourceActor);
 
 private:
 	// 트레이스 상태 관리를 위한 동기화 객체
@@ -146,20 +150,23 @@ protected:
 
 protected:
 	//@HitStop 활성화 여부
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌 | 연출")
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출")
 		bool bEnableHitStop = false;
 
 	//@HitStop 모드 설정
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌 | 연출", meta = (EditCondition = "bEnableHitStop"))
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출", meta = (EditCondition = "bEnableHitStop"))
 		ETimeDilationMode HitStopMode = ETimeDilationMode::HitStop;
 
 	//@HitStop 강도 설정
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌 | 연출", meta = (EditCondition = "bEnableHitStop"))
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출", meta = (EditCondition = "bEnableHitStop"))
 		ETimeDilationIntensity HitStopIntensity = ETimeDilationIntensity::Low;
 
 	//@글로벌 HitStop 적용 여부 (false면 캐릭터에만 적용)
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌 | 연출", meta = (EditCondition = "bEnableHitStop"))
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출", meta = (EditCondition = "bEnableHitStop"))
 		bool bGlobalHitStop = false;
+
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출")
+		FGameplayTag ImpactEffectCueTag;
 #pragma endregion
 
 //@Delegates

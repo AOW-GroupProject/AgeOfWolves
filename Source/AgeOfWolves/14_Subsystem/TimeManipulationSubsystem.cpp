@@ -898,7 +898,7 @@ float UTimeManipulationSubsystem::CalculateTimeDilationValue(const FTimeDilation
         break;
         //@히트 스톱 - 강도에 따라 다른 값 사용
     case ETimeDilationMode::HitStop:
-        DilationValue = 0.f;
+        DilationValue = 0.01f;
         break;
     }
 
@@ -912,7 +912,7 @@ bool UTimeManipulationSubsystem::IsActorTimeDilated(AActor* Owner) const
 
 float UTimeManipulationSubsystem::CalculateHitStopDuration(const ETimeDilationIntensity& Intensity) const
 {
-    const float FrameTime = 0.1f;
+    const float FrameTime = 0.05f;
 
     switch (Intensity)
     {
