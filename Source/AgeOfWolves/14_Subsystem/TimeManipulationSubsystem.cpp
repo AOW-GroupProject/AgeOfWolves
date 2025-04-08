@@ -254,19 +254,24 @@ void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDil
 
     case ETimeDilationMode::HitStop:
     {
-        UE_LOGFMT(LogTimeManipulation, Log, "히트 스톱 모드 타이머 설정 - 액터: {0}, 예상 지속 시간: {1}초",
-            *Owner->GetName(), TargetValue);
 
         //@타이머 핸들 생성 및 저장
         FTimerHandle& HitStopTimerHandle = TimeDilationTimerHandles.FindOrAdd(Owner);
+
+        //@Duration 계산
+        float HitStopDuration = CalculateHitStopDuration(Settings.DilationIntensity);
 
         //@계산된 지속 시간 후 자동 해제
         World->GetTimerManager().SetTimer(
             HitStopTimerHandle,
             FTimerDelegate::CreateUObject(this, &UTimeManipulationSubsystem::OnHitStopTimerExpired, Owner),
-            TargetValue,
+            HitStopDuration,
             false
         );
+
+        UE_LOGFMT(LogTimeManipulation, Log, "히트 스톱 모드 타이머 설정 - 액터: {0}, 예상 지속 시간: {1}초",
+            *Owner->GetName(), HitStopDuration);
+
         break;
     }
 
@@ -274,6 +279,7 @@ void UTimeManipulationSubsystem::StartTimeDilation(AActor* Owner, const FTimeDil
         break;
     }
 }
+
 void UTimeManipulationSubsystem::StartTimeDilation(const TArray<AActor*>& Actors, const FTimeDilationSettings& Settings, bool bGlobal)
 {
     // 배열이 비어있는지 확인
@@ -542,7 +548,7 @@ void UTimeManipulationSubsystem::ApplyHitStop(AActor* Owner, AActor* Target, con
 
     if (bGlobal)
     {
-        // 글로벌 효과 적용 (월드 전체에 영향)
+        //@글로벌 효과 적용 (월드 전체에 영향)
         StartTimeDilation(Owner, HitStopSettings, true, false);
     }
     else
@@ -603,11 +609,15 @@ void UTimeManipulationSubsystem::SetTimeDilation(AActor* Owner, const FTimeDilat
     //@Global?
     if (DilationInfo.bGlobal)
     {
+        UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 설정 (글로벌) - 값: {0}, 액터: {1}", 
+            Value, *Owner->GetName());
         UGameplayStatics::SetGlobalTimeDilation(World, Value);
     }
     //@Local?
     else
     {
+        UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 설정 (로컬) - 액터: {0}, 값: {1}", 
+            *Owner->GetName(), Value);
         Owner->CustomTimeDilation = Value;
     }
 }
@@ -888,18 +898,7 @@ float UTimeManipulationSubsystem::CalculateTimeDilationValue(const FTimeDilation
         break;
         //@히트 스톱 - 강도에 따라 다른 값 사용
     case ETimeDilationMode::HitStop:
-        switch (Settings.DilationIntensity)
-        {
-        case ETimeDilationIntensity::Low:
-            DilationValue = 0.06f;
-            break;
-        case ETimeDilationIntensity::Medium:
-            DilationValue = 0.08f;
-            break;
-        case ETimeDilationIntensity::High:
-            DilationValue = 0.1f;
-            break;
-        }
+        DilationValue = 0.f;
         break;
     }
 
@@ -909,5 +908,25 @@ float UTimeManipulationSubsystem::CalculateTimeDilationValue(const FTimeDilation
 bool UTimeManipulationSubsystem::IsActorTimeDilated(AActor* Owner) const
 {
     return ActiveDilations.Contains(Owner);
+}
+
+float UTimeManipulationSubsystem::CalculateHitStopDuration(const ETimeDilationIntensity& Intensity) const
+{
+    const float FrameTime = 0.1f;
+
+    switch (Intensity)
+    {
+    case ETimeDilationIntensity::Low:
+        return FrameTime * 1;
+    case ETimeDilationIntensity::Medium:
+        return FrameTime * 2;
+    case ETimeDilationIntensity::High:
+        return FrameTime * 3;
+    default:
+        return FrameTime * 2.0f;
+    }
+
+    UE_LOGFMT(LogTimeManipulation, Log, "히트 스톱 지속 시간 계산 - 강도: {0}, 지속 시간: {1}초",
+        static_cast<int32>(Intensity), FrameTime);
 }
 #pragma endregion

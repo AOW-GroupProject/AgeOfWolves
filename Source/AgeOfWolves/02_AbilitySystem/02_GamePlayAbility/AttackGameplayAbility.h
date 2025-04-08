@@ -159,7 +159,7 @@ protected:
 
 	//@글로벌 HitStop 적용 여부 (false면 캐릭터에만 적용)
 	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌 | 연출", meta = (EditCondition = "bEnableHitStop"))
-		bool bGlobalHitStop = true;
+		bool bGlobalHitStop = false;
 #pragma endregion
 
 //@Delegates
