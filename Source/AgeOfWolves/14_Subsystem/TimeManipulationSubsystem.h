@@ -119,7 +119,7 @@ class AGEOFWOLVES_API UTimeManipulationSubsystem : public UGameInstanceSubsystem
 
     GENERATED_BODY()
 
-        //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -129,12 +129,9 @@ public:
     virtual TStatId GetStatId() const override { RETURN_QUICK_DECLARE_CYCLE_STAT(UTimeManipulationSubsystem, STATGROUP_Tickables); }
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
-    //@타임 딜레이션 값을 계산합니다.
-    UFUNCTION(BlueprintCallable, Category = "Time Manipulation")
-        float CalculateTimeDilationValue(const FTimeDilationSettings& Settings) const;
 
 
 protected:
@@ -205,7 +202,7 @@ private:
         bool bIgnorePreviousRequests = true;
 #pragma endregion
 
-    //@Callbacks
+//@Callbacks
 #pragma region Callbacks
 private:
     //@몽타주 종료 이벤트 콜백
@@ -221,11 +218,19 @@ private:
         void OnStopModeTimerExpired(AActor* Owner, bool bSmoothTransition, float TransitionDuration);
 #pragma endregion
 
-    //@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
+public:
+    //@타임 딜레이션 값을 계산합니다.
+    UFUNCTION(BlueprintCallable, Category = "Time Manipulation")
+        float CalculateTimeDilationValue(const FTimeDilationSettings& Settings) const;
+
 public:
     //@해당 액터가 현재 타입 딜레이션 적용중인지 체크
     UFUNCTION(BlueprintCallable, Category = "Time Manipulation")
         bool IsActorTimeDilated(AActor* Owner) const;
+
+protected:
+    float CalculateHitStopDuration(const ETimeDilationIntensity& Intensity) const;
 #pragma endregion
 };
