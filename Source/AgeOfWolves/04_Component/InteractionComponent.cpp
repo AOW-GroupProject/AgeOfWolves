@@ -6,6 +6,7 @@
 
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "04_Component/ObjectiveDetectionComponent.h"
+#include "04_Component/LocationDataComponent.h"
 
 DEFINE_LOG_CATEGORY(LogInteraction)
 

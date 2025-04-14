@@ -536,7 +536,7 @@ void UTimeManipulationSubsystem::ApplyHitStop(AActor* Owner, AActor* Target, con
         static_cast<int32>(Settings.DilationIntensity),
         bGlobal ? TEXT("예") : TEXT("아니오"));
 
-    // 히트 스톱 모드가 아닌 경우 설정 수정
+    //@히트 스톱 모드가 아닌 경우 설정 수정
     FTimeDilationSettings HitStopSettings = Settings;
     if (HitStopSettings.DilationMode != ETimeDilationMode::HitStop)
     {

@@ -11,7 +11,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAttackGA, Log, All);
 //@전방 선언
 #pragma region Forward Declaration
 class ACharacterBase;
-class UCombatComponent;
 class UAnimMontage;
 #pragma endregion
 
@@ -29,11 +28,52 @@ enum class EWeaponTraceType : uint8
 	Sphere  UMETA(DisplayName = "Sphere Trace"),
 	Box     UMETA(DisplayName = "Box Trace")
 };
+
+/*
+*	@EHitStopSettingMode
+* 
+*	히트 스탑 적용 모드를 설정합니다.
+*/
+UENUM(BlueprintType)
+enum class EHitStopSettingMode : uint8
+{
+	//@어빌리티 전체에 하나의 공통 히트스탑 설정 적용
+	Global UMETA(DisplayName = "전역 설정"),
+
+	//@몽타주별로 개별 히트스탑 설정 적용
+	PerMontage UMETA(DisplayName = "몽타주별 설정")
+};
 #pragma endregion
 
 //@구조체
 #pragma region Structs
+/*
+*	@FMontageHitStopSettings
+*
+*	몽타주별 HitStop 설정을 정의합니다.
+*/
+USTRUCT(BlueprintType)
+struct FMontageHitStopSettings
+{
+	GENERATED_BODY()
 
+public:
+	//@HitStop 활성화 여부
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HitStop")
+		bool bEnableHitStop = false;
+
+	//@HitStop 모드 설정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HitStop", meta = (EditCondition = "bEnableHitStop"))
+		ETimeDilationMode HitStopMode = ETimeDilationMode::HitStop;
+
+	//@HitStop 강도 설정
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HitStop", meta = (EditCondition = "bEnableHitStop"))
+		ETimeDilationIntensity HitStopIntensity = ETimeDilationIntensity::Low;
+
+	//@글로벌 HitStop 적용 여부 (false면 캐릭터에만 적용)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HitStop", meta = (EditCondition = "bEnableHitStop"))
+		bool bGlobalHitStop = false;
+};
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -54,10 +94,23 @@ class AGEOFWOLVES_API UAttackGameplayAbility : public UBaseGameplayAbility
 #pragma region Default Setting
 public:
 	UAttackGameplayAbility(const FObjectInitializer& ObjectInitializer);
+
+protected:
+	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+protected:
+	//@인덱스 지정 버전 몽타주 재생
+	UFUNCTION(BlueprintCallable, Category = "Ability|Montage")
+		UAbilityTask_PlayMontageAndWait* PlayMontageWithCallbackAndIndex(
+			UAnimMontage* MontageToPlay,
+			int32 MontageIndex,
+			float Rate = 1.0f,
+			FName StartSection = NAME_None,
+			bool bStopWhenAbilityEnds = true);
+
 protected:
 	//@BP 에서 Damage Info 멤버 설정 필수
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 데미지")
@@ -104,9 +157,18 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출")
 		void ApplyHitStop(AActor* Target);
 
+	//@현재 몽타주 인덱스를 기반으로 HitStop 적용
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출")
+		void ApplyHitStopForCurrentMontage(AActor* Target, int32 MontageIndex = -1);
+
 protected:
 	//@충돌 위치에 GameplayCue 이펙트 실행
 	void ExecuteImpactGameplayCue(const FHitResult& HitResult, AActor* SourceActor);
+
+protected:
+	//@현재 실행 중인 몽타주 인덱스
+	UPROPERTY(BlueprintReadWrite, Category = "어빌리티 | 애니메이션")
+		int32 CurrentMontageIndex = 0;
 
 private:
 	// 트레이스 상태 관리를 위한 동기화 객체
@@ -149,21 +211,34 @@ protected:
 		FVector BoxTraceHalfSize = FVector(20.0f, 20.0f, 20.0f);
 
 protected:
-	//@HitStop 활성화 여부
+	//@HitStop 설정 모드
 	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출")
+		EHitStopSettingMode HitStopSettingMode = EHitStopSettingMode::Global;
+
+	//@HitStop 활성화 여부 (전역 설정 모드)
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출",
+		meta = (EditCondition = "HitStopSettingMode == EHitStopSettingMode::Global"))
 		bool bEnableHitStop = false;
 
-	//@HitStop 모드 설정
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출", meta = (EditCondition = "bEnableHitStop"))
+	//@HitStop 모드 설정 (전역 설정 모드)
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출",
+		meta = (EditCondition = "HitStopSettingMode == EHitStopSettingMode::Global && bEnableHitStop"))
 		ETimeDilationMode HitStopMode = ETimeDilationMode::HitStop;
 
-	//@HitStop 강도 설정
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출", meta = (EditCondition = "bEnableHitStop"))
+	//@HitStop 강도 설정 (전역 설정 모드)
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출",
+		meta = (EditCondition = "HitStopSettingMode == EHitStopSettingMode::Global && bEnableHitStop"))
 		ETimeDilationIntensity HitStopIntensity = ETimeDilationIntensity::Low;
 
-	//@글로벌 HitStop 적용 여부 (false면 캐릭터에만 적용)
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출", meta = (EditCondition = "bEnableHitStop"))
+	//@글로벌 HitStop 적용 여부 (false면 캐릭터에만 적용) (전역 설정 모드)
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출",
+		meta = (EditCondition = "HitStopSettingMode == EHitStopSettingMode::Global && bEnableHitStop"))
 		bool bGlobalHitStop = false;
+
+	//@몽타주별 HitStop 설정 (몽타주별 설정 모드)
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출",
+		meta = (EditCondition = "HitStopSettingMode == EHitStopSettingMode::PerMontage"))
+		TArray<FMontageHitStopSettings> MontageHitStopSettings;
 
 	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출")
 		FGameplayTag ImpactEffectCueTag;

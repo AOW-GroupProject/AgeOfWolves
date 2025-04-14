@@ -19,6 +19,7 @@ class UMotionWarpingComponent;
 class UNiagaraComponent;
 class UBaseAnimInstance;
 class UStaticMeshComponent;
+class ULocationDataComponent;
 #pragma endregion
 
 //@열거형
@@ -73,6 +74,9 @@ protected:
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UStaticMeshComponent* FullMesh;
 
+	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		ULocationDataComponent* LocationDataComponent;
+
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "팀 설정")
 		FGameplayTag CharacterTag;
@@ -115,7 +119,6 @@ public:
 
 public:
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
 
 public:
 	void SetAbilitySystemComponent(UAbilitySystemComponent* ASC);
@@ -123,6 +126,8 @@ public:
 public:
 	FORCEINLINE FGameplayTag GetCharacterTag() const { return CharacterTag; }
 
+public:
+	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
 	void SetTeamId(const FGenericTeamId& NewTeamId)
 	{
 		TeamId = NewTeamId;
