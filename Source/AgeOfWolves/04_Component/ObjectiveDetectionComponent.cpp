@@ -185,6 +185,9 @@ void UObjectiveDetectionComponent::ExternalBindToArea(AArea* Area)
     FAreaBindingInfo BindingInfo(Area, AreaID, CurrentTime);
     BoundAreas.Add(BindingInfo);
 
+    //@바인딩 이벤트 호출
+    PlyaerBoundToArea.Broadcast(BindingInfo, true);
+
     UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}와 바인딩 완료", *Area->GetName());
 }
 
@@ -202,10 +205,24 @@ void UObjectiveDetectionComponent::UnbindFromAreaEvents(AArea* Area)
     //@외부 바인딩 해제...
     Area->AreaAIStateChanged.RemoveAll(this);
 
-    //@바인딩된 Area 목록에서 제거
-    BoundAreas.RemoveAll([AreaID](const FAreaBindingInfo& AreaInfo) {
-        return AreaInfo.AreaID == AreaID;
-        });
+    // 제거할 항목 찾기
+    int32 IndexToRemove = -1;
+    for (int32 i = 0; i < BoundAreas.Num(); i++)
+    {
+        if (BoundAreas[i].AreaID == AreaID)
+        {
+            IndexToRemove = i;
+            break;
+        }
+    }
+
+    // 항목이 있으면 이벤트 호출 후 제거
+    if (IndexToRemove != -1)
+    {
+        // 제거 전에 이벤트 호출
+        PlyaerBoundToArea.Broadcast(BoundAreas[IndexToRemove], false);
+        BoundAreas.RemoveAt(IndexToRemove);
+    }
 
     UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}와 바인딩 해제 완료", *Area->GetName());
 }

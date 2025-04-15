@@ -108,6 +108,9 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FDetectedAIStateChanged, const FGameplayTag
 
 //@시야 안에 있는 AI 중 매복 암살 가능 타겟 변경 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FAmbushTargetChanged, const AActor*)
+
+//@Area와 바인딩/언바인딩 이벤트
+DECLARE_MULTICAST_DELEGATE_TwoParams(FPlyaerBoundToArea, FAreaBindingInfo, bool);
 #pragma endregion
 
 /*
@@ -123,6 +126,8 @@ class AGEOFWOLVES_API UObjectiveDetectionComponent : public UActorComponent
 //@친추 클래스
 #pragma region Friend Class
     friend class AArea;
+    friend class UAT_MonitorAreaBinding;
+    friend class UAsyncTask_MonitorAreaBinding;
 #pragma endregion
 
     GENERATED_BODY()
@@ -261,6 +266,10 @@ public:
 public:
     //@매복 암살 가능한 AI 타겟 변경 이벤트
     FAmbushTargetChanged AmbushTargetChanged;
+
+public:
+    //@Area 바인딩 이벤트
+    FPlyaerBoundToArea PlyaerBoundToArea;
 #pragma endregion
 
 //@Callbacks
