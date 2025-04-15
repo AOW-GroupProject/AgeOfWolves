@@ -8,8 +8,6 @@
 #include "GameFramework/CharacterMovementComponent.h"
 #include "GameFramework/Character.h"
 
-#include "04_Component/LocationDataComponent.h"
-
 DEFINE_LOG_CATEGORY(LOGAT_UpdateMotionWarpTarget)
 
 //@Defualt Setting
@@ -18,8 +16,10 @@ UAT_UpdateMotionWarpTarget::UAT_UpdateMotionWarpTarget(const FObjectInitializer&
 	: Super(ObjectInitializer)
 {
 	bTickingTask = true;
+
 	WarpDirection = EMotionWarpDirection::Normal;
 	WarpProximity = EMotionWarpProximity::Normal;
+	InteractionType = EInteractionType::None;
 }
 
 void UAT_UpdateMotionWarpTarget::Activate()

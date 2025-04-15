@@ -19,7 +19,6 @@ class UMotionWarpingComponent;
 class UNiagaraComponent;
 class UBaseAnimInstance;
 class UStaticMeshComponent;
-class ULocationDataComponent;
 #pragma endregion
 
 //@열거형
@@ -73,9 +72,6 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UStaticMeshComponent* FullMesh;
-
-	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
-		ULocationDataComponent* LocationDataComponent;
 
 protected:
 	UPROPERTY(EditDefaultsOnly, Category = "팀 설정")

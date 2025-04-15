@@ -6,7 +6,6 @@
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "MotionWarpingComponent.h"
 #include "NiagaraComponent.h"
-#include "04_Component/LocationDataComponent.h"
 
 #include "10_AI/BaseAIController.h"
 
@@ -27,10 +26,6 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
 	SkeletalFXComponent = CreateDefaultSubobject<UNiagaraComponent>(TEXT("Skeletal FX Component"));
 	SkeletalFXComponent->SetupAttachment(GetMesh());
 	SkeletalFXComponent->SetAutoActivate(false);
-
-	//@위치 정보 컴포넌트
-	LocationDataComponent = CreateDefaultSubobject<ULocationDataComponent>(TEXT("Location Data Component"));
-	LocationDataComponent->SetupAttachment(GetMesh(), TEXT("Root"));
 
 	//@임시 무기 장착 코드
 	KatanaMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("Katana"));

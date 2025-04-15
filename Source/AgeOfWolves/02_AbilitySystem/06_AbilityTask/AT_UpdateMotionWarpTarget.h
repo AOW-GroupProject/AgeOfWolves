@@ -94,7 +94,6 @@ public:
 			EMotionWarpProximity WarpProximity = EMotionWarpProximity::Normal,
 			EInteractionType InteractionType = EInteractionType::None);
 
-
 protected:
 	//@Warp Target 업데이트
 	void UpdateWarpTarget();
@@ -126,7 +125,7 @@ private:
 private:
 	//@상호작용 유형
 	UPROPERTY()
-		EInteractionType InteractionType = EInteractionType::None;
+		EInteractionType InteractionType;
 
 protected:
 	UPROPERTY()
