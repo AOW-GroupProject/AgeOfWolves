@@ -96,7 +96,7 @@ void UTimeManipulationSubsystem::Tick(float DeltaTime)
         }
     }
 
-    // 완료된 전환 제거
+    //@완료된 전환 제거
     for (AActor* Actor : ActorsToRemove)
     {
         TransitioningDilations.Remove(Actor);
