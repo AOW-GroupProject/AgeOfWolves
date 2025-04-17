@@ -6,7 +6,8 @@
 #include "MotionWarpingComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/CharacterMovementComponent.h"
-#include "GameFramework/Character.h"
+#include "01_Character/PlayerCharacter.h"
+#include "04_Component/LockOnComponent.h"
 
 DEFINE_LOG_CATEGORY(LOGAT_UpdateMotionWarpTarget)
 
@@ -165,17 +166,58 @@ void UAT_UpdateMotionWarpTarget::UpdateWarpTarget()
 	FMotionWarpingTarget WarpTarget;
 	WarpTarget.Name = MotionWarpTargetName;
 
-	//@상호작용 타입이 지정된 경우 직접 위치 사용
-	if (InteractionType != EInteractionType::None && WarpProximity == EMotionWarpProximity::Fit)
+	// 위치 계산 로직
+	bool bIsFitMode = (InteractionType != EInteractionType::None && WarpProximity == EMotionWarpProximity::Fit);
+
+	if (bIsFitMode)
 	{
 		WarpTarget.Location = GetFitLocationFromTargetToTrack();
+
+		// Fit 모드에서는 소켓의 회전값을 사용
+		if (bTrackRotation)
+		{
+			WarpTarget.Rotation = GetFitRotationFromTargetToTrack();
+			UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Log, "Fit 모드 - 소켓 회전값 적용됨: {0}",
+				*WarpTarget.Rotation.ToString());
+		}
 	}
 	else
 	{
-		//@기존 로직: 타겟 위치 + 오프셋
 		FVector BaseLocation = TargetToTrack->GetActorLocation();
 		FVector LocationOffset = CalculatePositionOffset(TargetToTrack.Get());
 		WarpTarget.Location = BaseLocation + LocationOffset;
+	}
+
+	// Fit 모드가 아니거나, Fit 모드지만 bTrackRotation이 false인 경우에만 기존 회전 로직 사용
+	if (!bIsFitMode || (bIsFitMode && !bTrackRotation))
+	{
+		if (bTrackRotation)
+		{
+			//@기존 회전 로직 (타겟의 회전을 따라감)
+			WarpTarget.Rotation = TargetToTrack->GetActorRotation();
+		}
+		else
+		{
+			APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(Avatar);
+			if (PlayerChar && PlayerChar->GetLockOnComponent() && PlayerChar->GetLockOnComponent()->GetbLockOn())
+			{
+				WarpTarget.Rotation = PlayerChar->GetLockOnComponent()->GetFinalRotation();
+
+				UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Log, "LockOn 회전 적용됨: {0}",
+					*WarpTarget.Rotation.ToString());
+			}
+			else
+			{
+				FVector LookAtDirection = TargetToTrack->GetActorLocation() - Avatar->GetActorLocation();
+				if (!LookAtDirection.IsNearlyZero())
+				{
+					WarpTarget.Rotation = LookAtDirection.Rotation();
+
+					UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Log, "타겟 방향 회전 계산됨: {0}",
+						*WarpTarget.Rotation.ToString());
+				}
+			}
+		}
 	}
 
 	MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
@@ -278,6 +320,53 @@ FVector UAT_UpdateMotionWarpTarget::GetFitLocationFromTargetToTrack() const
 		*SocketLocation.ToString());
 
 	return SocketLocation;
+}
+
+FRotator UAT_UpdateMotionWarpTarget::GetFitRotationFromTargetToTrack() const
+{
+	if (!TargetToTrack.IsValid() || InteractionType == EInteractionType::None)
+	{
+		return FRotator::ZeroRotator;
+	}
+
+	// Character로 캐스팅
+	ACharacter* TargetCharacter = Cast<ACharacter>(TargetToTrack.Get());
+	if (!TargetCharacter || !TargetCharacter->GetMesh())
+	{
+		UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Warning, "타겟을 Character로 캐스팅할 수 없거나 메시가 없음 - 타겟: {0}",
+			*TargetToTrack->GetName());
+		return FRotator::ZeroRotator;
+	}
+
+	FName SocketName;
+
+	// 상호작용 타입에 따라 소켓 이름 결정
+	switch (InteractionType)
+	{
+	case EInteractionType::Execution:
+		SocketName = FName("ExecuterTarget");
+		break;
+	case EInteractionType::Ambush:
+		SocketName = FName("AmbusherTarget");
+		break;
+	default:
+		UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Warning, "지원되지 않는 상호작용 타입: {0}",
+			*UEnum::GetValueAsString(InteractionType));
+		return FRotator::ZeroRotator;
+	}
+
+	FRotator SocketRotation = TargetCharacter->GetMesh()->GetSocketRotation(SocketName);
+
+	FRotator MeshRotation = TargetCharacter->GetMesh()->GetComponentRotation();
+	FRotator WorldRotation = FRotator(MeshRotation.Quaternion() * SocketRotation.Quaternion());
+
+	//@회전 값 보정: 상대 캐릭터의 기본 회전 값에 보정 값 추가
+	WorldRotation.Yaw += RotationOffset;
+
+	UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Log, "소켓 회전값 가져옴 (Yaw 보정) - 소켓: {0}, 최종회전: {1}",
+		*SocketName.ToString(), *WorldRotation.ToString());
+
+	return WorldRotation;
 }
 
 UMotionWarpingComponent* UAT_UpdateMotionWarpTarget::GetMotionWarpingComponent() const

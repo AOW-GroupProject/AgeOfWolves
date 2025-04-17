@@ -609,14 +609,14 @@ void UTimeManipulationSubsystem::SetTimeDilation(AActor* Owner, const FTimeDilat
     //@Global?
     if (DilationInfo.bGlobal)
     {
-        UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 설정 (글로벌) - 값: {0}, 액터: {1}", 
+        UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 설정 (글로벌) - 값: {0}, 액터: {1}",
             Value, *Owner->GetName());
         UGameplayStatics::SetGlobalTimeDilation(World, Value);
     }
     //@Local?
     else
     {
-        UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 설정 (로컬) - 액터: {0}, 값: {1}", 
+        UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 설정 (로컬) - 액터: {0}, 값: {1}",
             *Owner->GetName(), Value);
         Owner->CustomTimeDilation = Value;
     }

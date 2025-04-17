@@ -114,6 +114,8 @@ private:
 	UPROPERTY()
 		bool bTrackRotation;
 
+	const float RotationOffset = 120.f;
+
 	//@타겟 기준 워프 방햫
 	UPROPERTY()
 		EMotionWarpDirection WarpDirection;
@@ -148,6 +150,9 @@ public:
 
 public:
 	FVector GetFitLocationFromTargetToTrack() const;
+
+public:
+	FRotator GetFitRotationFromTargetToTrack() const;
 
 public:
 	//@Motion Warp 컴포넌트 가져오기
