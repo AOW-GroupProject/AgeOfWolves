@@ -16,18 +16,6 @@ class UAnimMontage;
 
 //@열거형
 #pragma region Enums
-/*
-*	@상호작용 트레이스 유형
-*
-*	상호작용 감지를 위한 충돌 유형을 정의합니다.
-*/
-UENUM(BlueprintType)
-enum class EInteractionTraceType : uint8
-{
-	Line    UMETA(DisplayName = "Line Trace"),
-	Sphere  UMETA(DisplayName = "Sphere Trace"),
-	Box     UMETA(DisplayName = "Box Trace")
-};
 #pragma endregion
 
 //@구조체

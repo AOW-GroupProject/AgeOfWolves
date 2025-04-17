@@ -59,6 +59,11 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
         {
             UpdateBillboardComponent(true, false);
         }
+        // 현재 타겟이 없지만 처형 타겟이 있는 경우
+        else if (ExecutionTarget.IsValid())
+        {
+            UpdateBillboardComponent(true, false);
+        }
         // 현재 타겟이 없지만 AmbushTarget이 있는 경우에도 표시
         else if (AmbushTarget.IsValid())
         {
@@ -66,20 +71,27 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
         }
         else
         {
-            // 둘 다 없으면 빌보드 숨기기
+            // 모두 없으면 빌보드 숨기기
             IndicatorBillboardComponent->SetVisibility(false);
         }
     }
 
-    // 일정 간격으로 후면 노출 체크
     float CurrentTime = GetWorld()->GetTimeSeconds();
+
+    // 일정 간격으로 후면 노출 체크
     if (CurrentTime - LastBackExposureCheckTime >= BackExposureCheckInterval)
     {
         UpdateAIBackExposureState();
         LastBackExposureCheckTime = CurrentTime;
     }
-}
 
+    // 일정 간격으로 처형 가능 상태 체크
+    if (CurrentTime - LastExecutionCheckTime >= ExecutionCheckInterval)
+    {
+        UpdateExecutionTargetState();
+        LastExecutionCheckTime = CurrentTime;
+    }
+}
 void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     //@타이머 정리
@@ -185,6 +197,9 @@ void UObjectiveDetectionComponent::ExternalBindToArea(AArea* Area)
     FAreaBindingInfo BindingInfo(Area, AreaID, CurrentTime);
     BoundAreas.Add(BindingInfo);
 
+    //@바인딩 이벤트 호출
+    PlyaerBoundToArea.Broadcast(BindingInfo, true);
+
     UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}와 바인딩 완료", *Area->GetName());
 }
 
@@ -202,10 +217,24 @@ void UObjectiveDetectionComponent::UnbindFromAreaEvents(AArea* Area)
     //@외부 바인딩 해제...
     Area->AreaAIStateChanged.RemoveAll(this);
 
-    //@바인딩된 Area 목록에서 제거
-    BoundAreas.RemoveAll([AreaID](const FAreaBindingInfo& AreaInfo) {
-        return AreaInfo.AreaID == AreaID;
-        });
+    // 제거할 항목 찾기
+    int32 IndexToRemove = -1;
+    for (int32 i = 0; i < BoundAreas.Num(); i++)
+    {
+        if (BoundAreas[i].AreaID == AreaID)
+        {
+            IndexToRemove = i;
+            break;
+        }
+    }
+
+    // 항목이 있으면 이벤트 호출 후 제거
+    if (IndexToRemove != -1)
+    {
+        // 제거 전에 이벤트 호출
+        PlyaerBoundToArea.Broadcast(BoundAreas[IndexToRemove], false);
+        BoundAreas.RemoveAt(IndexToRemove);
+    }
 
     UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}와 바인딩 해제 완료", *Area->GetName());
 }
@@ -489,8 +518,9 @@ void UObjectiveDetectionComponent::UpdateBillboardTexture()
     // 현재 상태에 따라 텍스처 결정
     bool bShouldUseExecutableIndicator = false;
 
-    // 1. 현재 타겟이 Fragile 상태인 경우
-    if (CurrentTargetAI.IsValid() && bIsCurrentTargetFragile)
+    // 1. 현재 타겟이 처형 가능한 상태인 경우 (정면 노출 + Fragile)
+    if (CurrentTargetAI.IsValid() && ExecutionTarget.IsValid() &&
+        CurrentTargetAI.Get() == ExecutionTarget.Get())
     {
         bShouldUseExecutableIndicator = true;
     }
@@ -500,7 +530,12 @@ void UObjectiveDetectionComponent::UpdateBillboardTexture()
     {
         bShouldUseExecutableIndicator = true;
     }
-    // 3. 타겟이 없고 AmbushTarget이 있는 경우
+    // 3. 타겟이 없고 처형 가능 타겟이 있는 경우
+    else if (!CurrentTargetAI.IsValid() && ExecutionTarget.IsValid())
+    {
+        bShouldUseExecutableIndicator = true;
+    }
+    // 4. 타겟이 없고 AmbushTarget이 있는 경우
     else if (!CurrentTargetAI.IsValid() && AmbushTarget.IsValid())
     {
         bShouldUseExecutableIndicator = true;
@@ -522,6 +557,108 @@ void UObjectiveDetectionComponent::UpdateBillboardTexture()
         {
             SetIndicatorTexture(LoadedTexture);
         }
+    }
+}
+
+void UObjectiveDetectionComponent::UpdateExecutionTargetState()
+{
+    // 이전 타겟 저장 및 현재 타겟 초기화
+    AActor* PreviousExecutionTarget = ExecutionTarget.Get();
+    ExecutionTarget.Reset();
+
+    // 현재 타겟 AI 처리 (우선순위 높음)
+    if (CurrentTargetAI.IsValid() && bIsCurrentTargetFragile)
+    {
+        AActor* AIActor = CurrentTargetAI.Get();
+        TWeakObjectPtr<AActor> AIActorPtr(AIActor);
+
+        // 정면 노출 상태 체크
+        if (IsActorFrontExposed(AIActor))
+        {
+            ExecutionTarget = AIActor;
+            UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 정면 노출되어 처형 가능 상태, ExecutionTarget으로 설정",
+                *AIActor->GetName());
+            goto CHECK_TARGET_CHANGED;
+        }
+
+        UE_LOGFMT(LogObjectiveDetection, Warning, "현재 타겟({0})이 정면에 노출되지 않아 처형 불가",
+            *AIActor->GetName());
+    }
+
+    //@현재 타겟이 없거나 처형 불가능한 경우, 주변 AI 검색
+    {
+        float ClosestDistance = MAX_FLT;
+        AActor* ClosestActor = nullptr;
+
+        for (const FAreaBindingInfo& AreaInfo : BoundAreas)
+        {
+            if (!AreaInfo.IsValid()) continue;
+
+            AArea* Area = AreaInfo.AreaRef.Get();
+            TArray<FAreaAIInfo> AreaAIInfos = Area->GetAreaAIInfos();
+
+            for (auto AIInfo : AreaAIInfos)
+            {
+                // 기본 조건 검사 (유효성, 상태)
+                if (!AIInfo.AIActor.IsValid() ||
+                    AIInfo.CurrentState.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")) ||
+                    !AIInfo.CurrentState.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
+                {
+                    continue;
+                }
+
+                auto AI = AIInfo.AIActor.Get();
+                TWeakObjectPtr<AActor> AIPtr(AI);
+
+                // 카메라 시야 내 확인
+                if (bOnlyDetectInCameraView && !IsActorInCameraView(AI))
+                {
+                    UE_LOGFMT(LogObjectiveDetection, Warning, "AI({0})가 시야 밖에 있어 처형 대상에서 제외",
+                        *AI->GetName());
+                    continue;
+                }
+
+                // 정면 노출 상태 체크
+                if (!IsActorFrontExposed(AI))
+                {
+                    UE_LOGFMT(LogObjectiveDetection, Warning, "AI({0})가 정면에 노출되지 않아 처형 불가",
+                        *AI->GetName());
+                    continue;
+                }
+
+                // 거리 계산 및 가장 가까운 AI 선택
+                FVector PawnLocation = GetPawnLocation();
+                FVector AILocation = AI->GetActorLocation();
+                float Distance = FVector::Distance(PawnLocation, AILocation);
+
+                if (Distance < ClosestDistance)
+                {
+                    ClosestDistance = Distance;
+                    ClosestActor = AI;
+                    UE_LOGFMT(LogObjectiveDetection, Log, "더 가까운 처형 대상 발견: {0}, 거리: {1}",
+                        *AI->GetName(), Distance);
+                }
+            }
+        }
+
+        //@가장 가까운 처형 가능 AI 선택
+        if (ClosestActor)
+        {
+            ExecutionTarget = ClosestActor;
+            UE_LOGFMT(LogObjectiveDetection, Log, "가장 가까운 처형 가능 AI({0})를 ExecutionTarget으로 설정, 거리: {1}",
+                *ClosestActor->GetName(), ClosestDistance);
+        }
+    }
+
+CHECK_TARGET_CHANGED:
+    // 타겟 변경 확인 및 이벤트 발생
+    if (ExecutionTarget.Get() != PreviousExecutionTarget)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Log, "ExecutionTarget 변경: {0} -> {1}",
+            PreviousExecutionTarget ? *PreviousExecutionTarget->GetName() : TEXT("없음"),
+            ExecutionTarget.IsValid() ? *ExecutionTarget->GetName() : TEXT("없음"));
+
+        ExecutionTargetChanged.Broadcast(ExecutionTarget.Get());
     }
 }
 
@@ -744,7 +881,7 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
     }
 
     //@현재 타겟 액터와 동일한지 확인
-    if (CurrentTargetAI.IsValid()  && CurrentTargetAI.Get() == ObjectiveActor)
+    if (CurrentTargetAI.IsValid() && CurrentTargetAI.Get() == ObjectiveActor)
     {
         //@Dead 상태 태그 확인
         if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
@@ -766,14 +903,28 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
             bIsCurrentTargetFragile = true;
             UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Fragile 상태로 변경됨", *ObjectiveActor->GetName());
 
-            UpdateBillboardComponent(true, false);
+            // Fragile 상태가 되었을 때 즉시 실행처리 하지 않고, 
+            // UpdateExecutionTargetState()가 다음 틱에서 처리하도록 함
+            // 빌보드 업데이트는 계속 필요하지만 텍스처 변경은 차후 정면 체크 후 결정
+            UpdateBillboardComponent(true, true);
         }
         //@Normal 상태 변경 시
         else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
         {
             bIsCurrentTargetFragile = false;
+
+            // ExecutionTarget이 현재 타겟과 동일한 경우 ExecutionTarget 초기화
+            if (ExecutionTarget.IsValid() && ExecutionTarget.Get() == ObjectiveActor)
+            {
+                ExecutionTarget.Reset();
+                // 이벤트 발생
+                ExecutionTargetChanged.Broadcast(nullptr);
+                UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경되어 처형 가능 타겟에서 제외됨", *ObjectiveActor->GetName());
+            }
+
             UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경됨", *ObjectiveActor->GetName());
-            
+
+            // 빌보드 업데이트
             UpdateBillboardComponent(true, false);
         }
     }
@@ -999,6 +1150,38 @@ FGuid UObjectiveDetectionComponent::GetComponentID() const
     return ComponentID;
 }
 
+bool UObjectiveDetectionComponent::IsActorFrontExposed(AActor* Actor) const
+{
+    if (!ControlledPawn.IsValid() || !IsValid(Actor))
+    {
+        return false;
+    }
+
+    //@플레이어 위치
+    FVector PlayerLocation = ControlledPawn->GetActorLocation();
+    //@AI 위치
+    FVector ActorLocation = Actor->GetActorLocation();
+
+    //@플레이어에서 AI로 향하는 방향 벡터
+    FVector DirectionToActor = (ActorLocation - PlayerLocation).GetSafeNormal();
+
+    //@AI의 전방 벡터
+    FVector ActorForward = Actor->GetActorForwardVector();
+
+    //@두 벡터 간의 각도 계산 (내적 사용)
+    float DotProduct = FVector::DotProduct(DirectionToActor, ActorForward);
+
+    //@지정된 임계값보다 크면 정면에서 바라보는 것으로 판단 (cos 값이 클수록 각도가 작음)
+    //@ExecutionAngleThreshold는 0~1 사이 값 (1에 가까울수록 엄격한 각도)
+    bool bIsFrontExposed = FMath::Abs(DotProduct) >= ExecutionAngleThreshold;
+
+    UE_LOGFMT(LogObjectiveDetection, Log, "정면 노출 체크 - 액터: {0}, 결과: {1}, 내적값: {2}, 임계값: {3}",
+        *Actor->GetName(), bIsFrontExposed ? TEXT("노출됨") : TEXT("노출 안됨"),
+        DotProduct, ExecutionAngleThreshold);
+
+    return bIsFrontExposed;
+}
+
 bool UObjectiveDetectionComponent::IsActorBackExposed(AActor* TargetActor) const
 {
     if (!ControlledPawn.IsValid() || !IsValid(TargetActor))
@@ -1011,10 +1194,17 @@ bool UObjectiveDetectionComponent::IsActorBackExposed(AActor* TargetActor) const
 
 AActor* UObjectiveDetectionComponent::DetermineTargetActor()
 {
+    // 1. 현재 LockOn된 타겟이 있으면 우선 사용
     if (CurrentTargetAI.IsValid())
     {
         return CurrentTargetAI.Get();
     }
+    // 2. 처형 가능 타겟이 있으면 다음 우선순위
+    else if (ExecutionTarget.IsValid())
+    {
+        return ExecutionTarget.Get();
+    }
+    // 3. 매복 가능 타겟이 있으면 마지막 우선순위
     else if (AmbushTarget.IsValid())
     {
         return AmbushTarget.Get();

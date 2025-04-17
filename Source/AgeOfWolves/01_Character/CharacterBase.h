@@ -115,7 +115,6 @@ public:
 
 public:
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;
-	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
 
 public:
 	void SetAbilitySystemComponent(UAbilitySystemComponent* ASC);
@@ -123,6 +122,8 @@ public:
 public:
 	FORCEINLINE FGameplayTag GetCharacterTag() const { return CharacterTag; }
 
+public:
+	virtual FGenericTeamId GetGenericTeamId() const override { return TeamId; }
 	void SetTeamId(const FGenericTeamId& NewTeamId)
 	{
 		TeamId = NewTeamId;

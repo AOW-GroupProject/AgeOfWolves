@@ -9,46 +9,10 @@
 
 DEFINE_LOG_CATEGORY(LogAttributeSet)
 
+//@Defualt Setting
+#pragma region Default Setting
 UBaseAttributeSet::UBaseAttributeSet()
 {}
-
-TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
-{
-	TArray<FGameplayAttribute> AllAttributes;
-
-	// 모든 속성을 FGameplayAttribute 객체로 추가
-	AllAttributes.Add(GetHealthAttribute());
-	AllAttributes.Add(GetMaxHealthAttribute());
-	AllAttributes.Add(GetHealthRegenRateAttribute());
-
-	AllAttributes.Add(GetManaAttribute());
-	AllAttributes.Add(GetMaxManaAttribute());
-	AllAttributes.Add(GetManaRegenRateAttribute());
-
-	AllAttributes.Add(GetStaminaAttribute());
-	AllAttributes.Add(GetMaxStaminaAttribute());
-	AllAttributes.Add(GetStaminaRegenRateAttribute());
-
-	AllAttributes.Add(GetPoiseAttribute());
-	AllAttributes.Add(GetDefenseAttribute());
-	AllAttributes.Add(GetOffenseAttribute());
-	AllAttributes.Add(GetMoveSpeedAttribute());
-	AllAttributes.Add(GetCharacterLevelAttribute());
-
-	AllAttributes.Add(GetDamageAttribute());
-
-	AllAttributes.Add(GetSealPointAttribute());
-	AllAttributes.Add(GetGroggyAttribute());
-
-	AllAttributes.Add(GetXPAttribute());
-	AllAttributes.Add(GetGoldAttribute());
-	AllAttributes.Add(GetXPBountyAttribute());
-	AllAttributes.Add(GetGoldBountyAttribute());
-
-	AllAttributes.Add(GetCombatStateAttribute());
-
-	return AllAttributes;
-}
 
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
@@ -106,7 +70,10 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 		SetStamina(FMath::Clamp(GetStamina(), 0.f, GetMaxStamina()));
 	}
 }
+#pragma endregion
 
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 void UBaseAttributeSet::AdjustAttributeForMaxChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty)
 {
 	UAbilitySystemComponent* AbilityComp = GetOwningAbilitySystemComponent();
@@ -122,5 +89,62 @@ void UBaseAttributeSet::AdjustAttributeForMaxChange(FGameplayAttributeData& Affe
 }
 
 void UBaseAttributeSet::AdjustAttributeForCurrentChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty)
+{}
+#pragma endregion
+
+//@Delegates
+#pragma region Delegates
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 {
+	TArray<FGameplayAttribute> AllAttributes;
+
+	// 모든 속성을 FGameplayAttribute 객체로 추가
+	AllAttributes.Add(GetHealthAttribute());
+	AllAttributes.Add(GetMaxHealthAttribute());
+	AllAttributes.Add(GetHealthRegenRateAttribute());
+
+	AllAttributes.Add(GetManaAttribute());
+	AllAttributes.Add(GetMaxManaAttribute());
+	AllAttributes.Add(GetManaRegenRateAttribute());
+
+	AllAttributes.Add(GetStaminaAttribute());
+	AllAttributes.Add(GetMaxStaminaAttribute());
+	AllAttributes.Add(GetStaminaRegenRateAttribute());
+
+	AllAttributes.Add(GetPoiseAttribute());
+
+	AllAttributes.Add(GetDefenseAttribute());
+	
+	AllAttributes.Add(GetOffenseAttribute());
+
+	AllAttributes.Add(GetMoveSpeedAttribute());
+
+	AllAttributes.Add(GetCharacterLevelAttribute());
+
+	AllAttributes.Add(GetDamageAttribute());
+
+	AllAttributes.Add(GetSealPointAttribute());
+
+	AllAttributes.Add(GetGroggyAttribute());
+
+	AllAttributes.Add(GetXPAttribute());
+	AllAttributes.Add(GetXPBountyAttribute());
+
+	AllAttributes.Add(GetGoldAttribute());
+	AllAttributes.Add(GetGoldBountyAttribute());
+
+	AllAttributes.Add(GetCombatStateAttribute());
+
+	AllAttributes.Add(GetAlertLevelAttribute());
+
+	return AllAttributes;
 }
+#pragma endregion

@@ -96,7 +96,7 @@ void UTimeManipulationSubsystem::Tick(float DeltaTime)
         }
     }
 
-    // 완료된 전환 제거
+    //@완료된 전환 제거
     for (AActor* Actor : ActorsToRemove)
     {
         TransitioningDilations.Remove(Actor);
@@ -536,7 +536,7 @@ void UTimeManipulationSubsystem::ApplyHitStop(AActor* Owner, AActor* Target, con
         static_cast<int32>(Settings.DilationIntensity),
         bGlobal ? TEXT("예") : TEXT("아니오"));
 
-    // 히트 스톱 모드가 아닌 경우 설정 수정
+    //@히트 스톱 모드가 아닌 경우 설정 수정
     FTimeDilationSettings HitStopSettings = Settings;
     if (HitStopSettings.DilationMode != ETimeDilationMode::HitStop)
     {
@@ -609,14 +609,14 @@ void UTimeManipulationSubsystem::SetTimeDilation(AActor* Owner, const FTimeDilat
     //@Global?
     if (DilationInfo.bGlobal)
     {
-        UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 설정 (글로벌) - 값: {0}, 액터: {1}", 
+        UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 설정 (글로벌) - 값: {0}, 액터: {1}",
             Value, *Owner->GetName());
         UGameplayStatics::SetGlobalTimeDilation(World, Value);
     }
     //@Local?
     else
     {
-        UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 설정 (로컬) - 액터: {0}, 값: {1}", 
+        UE_LOGFMT(LogTimeManipulation, Log, "타임 딜레이션 설정 (로컬) - 액터: {0}, 값: {1}",
             *Owner->GetName(), Value);
         Owner->CustomTimeDilation = Value;
     }
