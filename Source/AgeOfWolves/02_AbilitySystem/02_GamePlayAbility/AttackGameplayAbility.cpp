@@ -156,24 +156,27 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
     //@히트 스탑 적용 - 설정 모드에 따라 다르게 처리
     switch (HitStopSettingMode)
     {
-    case EHitStopSettingMode::Global:
-        // 전역 설정 모드 - 모든 몽타주에 동일한 설정 적용
-        if (bEnableHitStop)
-        {
-            ApplyHitStop(HitActor);
-        }
-        break;
-
-    case EHitStopSettingMode::PerMontage:
-        // 몽타주별 설정 모드 - 현재 재생 중인 몽타주의 설정 적용
-        ApplyHitStopForCurrentMontage(HitActor);
-        break;
+       //@공통 히트 스탑 설정 적용
+        case EHitStopSettingMode::Global:
+            if (bEnableHitStop)
+            {
+                ApplyHitStop(HitActor);
+            }
+            break;
+        //@몽타주 별 히트 스탑 설정 적용
+        case EHitStopSettingMode::PerMontage:
+            ApplyHitStopForCurrentMontage(HitActor);
+            break;
     }
 
     //@이팩트-1 : Impact Effect
     ExecuteImpactGameplayCue(
         HitResult,
         SourceActor);
+
+    //@이팩트-2 : Slash Effect
+
+
 }
 
 void UAttackGameplayAbility::StartWeaponTrace()

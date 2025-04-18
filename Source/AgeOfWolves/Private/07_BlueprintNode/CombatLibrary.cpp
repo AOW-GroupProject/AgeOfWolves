@@ -28,11 +28,11 @@ EHitReactDirection UCombatLibrary::CalculateHitDirection(const FVector& ImpactLo
     float ForwardDot = FVector::DotProduct(ForwardVector, ToHit);
     float RightDot = FVector::DotProduct(RightVector, ToHit);
 
-    // 방향 판정을 위한 임계값 설정
-    const float ForwardThreshold = FMath::Cos(FMath::DegreesToRadians(30.f));  // 약 0.866 (더 엄격함)
-    const float DiagonalThreshold = FMath::Cos(FMath::DegreesToRadians(60.f)); // 약 0.5 (대각선 판정용)
-    const float BackwardThreshold = FMath::Cos(FMath::DegreesToRadians(45.f)); // Backward는 기존과 동일하게 유지
-    const float SideThreshold = FMath::Cos(FMath::DegreesToRadians(45.f));     // 약 0.707 (좌/우 판정)
+    //@방향 판정을 위한 임계값 설정
+    const float ForwardThreshold = FMath::Cos(FMath::DegreesToRadians(30.f));  
+    const float DiagonalThreshold = FMath::Cos(FMath::DegreesToRadians(60.f)); 
+    const float BackwardThreshold = FMath::Cos(FMath::DegreesToRadians(45.f)); 
+    const float SideThreshold = FMath::Cos(FMath::DegreesToRadians(45.f));     
 
     UE_LOGFMT(LogCombatLibrary, Log, "히트 방향 계산 시작 - Target: {0}", *HitActor->GetName());
     UE_LOGFMT(LogCombatLibrary, Log, "벡터 정보 - Impact: {0}, Actor: {1}, ToHit: {2}",
