@@ -24,9 +24,10 @@ class UAnimMontage;
 UENUM(BlueprintType)
 enum class EWeaponTraceType : uint8
 {
-	Line    UMETA(DisplayName = "Line Trace"),
-	Sphere  UMETA(DisplayName = "Sphere Trace"),
-	Box     UMETA(DisplayName = "Box Trace")
+	Line		UMETA(DisplayName = "Line Trace"),
+	Sphere		UMETA(DisplayName = "Sphere Trace"),
+	Box			UMETA(DisplayName = "Box Trace"),
+	Cylinder	UMETA(DisplayName = "Cylinder Trace")
 };
 
 /*
@@ -209,6 +210,16 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌",
 		meta = (EditCondition = "TraceType == EWeaponTraceType::Box"))
 		FVector BoxTraceHalfSize = FVector(20.0f, 20.0f, 20.0f);
+
+protected:
+	//@Cylinder Trace용 설정
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌",
+		meta = (EditCondition = "TraceType == EWeaponTraceType::Cylinder"))
+		float CylinderRadius = 20.0f;
+
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌",
+		meta = (EditCondition = "TraceType == EWeaponTraceType::Cylinder"))
+		float CylinderHalfHeight = 50.0f;
 
 protected:
 	//@HitStop 설정 모드

@@ -67,7 +67,7 @@ void UAT_UpdateMotionWarpTarget::OnDestroy(bool bInOwnerFinished)
 	//@회전 제어 복원 (Fit 모드인 경우에만)
 	if (WarpProximity == EMotionWarpProximity::Fit)
 	{
-		RestoreRotationControl();
+		//RestoreRotationControl();
 	}
 
 	//@태스크 종료 시 워프 타겟 제거
@@ -200,13 +200,14 @@ void UAT_UpdateMotionWarpTarget::SetupCollisionResponse()
 	//@근접도가 Closest 혹은 Fit일 경우 충돌 설정 변경
 	if (WarpProximity == EMotionWarpProximity::Closest || WarpProximity == EMotionWarpProximity::Fit)
 	{
+		//@Avatar
 		AActor* Avatar = GetAvatarActor();
 		if (!Avatar)
 		{
 			UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Warning, "충돌 설정 변경 실패 - 아바타가 유효하지 않음");
 			return;
 		}
-
+		//@Capsule Component
 		UCapsuleComponent* CapsuleComp = Avatar->FindComponentByClass<UCapsuleComponent>();
 		if (!CapsuleComp)
 		{

@@ -252,51 +252,68 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
         }
     }
 
-    // 7. 트레이스 수행
     TArray<FHitResult> HitResults;
     bool bTraceSuccess = false;
 
     switch (TraceType)
     {
-    case EWeaponTraceType::Line:
-    {
-        bTraceSuccess = GetWorld()->LineTraceMultiByChannel(
-            HitResults,
-            StartLocation,
-            EndLocation,
-            ECC_Visibility,
-            QueryParams
-        );
-        break;
-    }
-    case EWeaponTraceType::Sphere:
-    {
-        FCollisionShape SphereShape = FCollisionShape::MakeSphere(SphereTraceRadius);
-        bTraceSuccess = GetWorld()->SweepMultiByChannel(
-            HitResults,
-            StartLocation,
-            EndLocation,
-            FQuat::Identity,
-            ECC_Visibility,
-            SphereShape,
-            QueryParams
-        );
-        break;
-    }
-    case EWeaponTraceType::Box:
-    {
-        FCollisionShape BoxShape = FCollisionShape::MakeBox(BoxTraceHalfSize);
-        bTraceSuccess = GetWorld()->SweepMultiByChannel(
-            HitResults,
-            StartLocation,
-            EndLocation,
-            FQuat::Identity,
-            ECC_Visibility,
-            BoxShape,
-            QueryParams
-        );
-        break;
-    }
+        case EWeaponTraceType::Line:
+        {
+            bTraceSuccess = GetWorld()->LineTraceMultiByChannel(
+                HitResults,
+                StartLocation,
+                EndLocation,
+                ECC_Visibility,
+                QueryParams
+            );
+            break;
+        }
+        case EWeaponTraceType::Sphere:
+        {
+            FCollisionShape SphereShape = FCollisionShape::MakeSphere(SphereTraceRadius);
+            bTraceSuccess = GetWorld()->SweepMultiByChannel(
+                HitResults,
+                StartLocation,
+                EndLocation,
+                FQuat::Identity,
+                ECC_Visibility,
+                SphereShape,
+                QueryParams
+            );
+            break;
+        }
+        case EWeaponTraceType::Box:
+        {
+            FCollisionShape BoxShape = FCollisionShape::MakeBox(BoxTraceHalfSize);
+            bTraceSuccess = GetWorld()->SweepMultiByChannel(
+                HitResults,
+                StartLocation,
+                EndLocation,
+                FQuat::Identity,
+                ECC_Visibility,
+                BoxShape,
+                QueryParams
+            );
+            break;
+        }
+        case EWeaponTraceType::Cylinder:
+        {
+            FCollisionShape CylinderShape = FCollisionShape::MakeCapsule(CylinderRadius, CylinderHalfHeight);
+            // Z축을 기준으로 회전된 캡슐은 방향 벡터에 맞게 회전시켜야 함
+            FVector Direction = (EndLocation - StartLocation).GetSafeNormal();
+            FQuat Rotation = FQuat::FindBetweenNormals(FVector(0, 0, 1), Direction);
+
+            bTraceSuccess = GetWorld()->SweepMultiByChannel(
+                HitResults,
+                StartLocation,
+                EndLocation,
+                Rotation,
+                ECC_Visibility,
+                CylinderShape,
+                QueryParams
+            );
+            break;
+        }
     }
 
      //8. 디버그 드로잉
@@ -307,38 +324,66 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
 //
 //    switch (TraceType)
 //    {
-//    case EWeaponTraceType::Line:
-//    {
-//        DrawDebugLine(
-//            GetWorld(),
-//            StartLocation,
-//            EndLocation,
-//            TraceColor,
-//            false,
-//            DrawDuration,
-//            0,
-//            2.0f
-//        );
-//        break;
-//    }
-//    case EWeaponTraceType::Sphere:
-//    {
-//        DrawDebugSphere(GetWorld(), StartLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
-//        DrawDebugSphere(GetWorld(), EndLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
-//        DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
-//        break;
-//    }
-//    case EWeaponTraceType::Box:
-//    {
-//        FQuat Rotation = FRotationMatrix::MakeFromZ(EndLocation - StartLocation).ToQuat();
-//        DrawDebugBox(GetWorld(), StartLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
-//        DrawDebugBox(GetWorld(), EndLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
-//        DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
-//        break;
-//    }
+//        case EWeaponTraceType::Line:
+//        {
+//            DrawDebugLine(
+//                GetWorld(),
+//                StartLocation,
+//                EndLocation,
+//                TraceColor,
+//                false,
+//                DrawDuration,
+//                0,
+//                2.0f
+//            );
+//            break;
+//        }
+//        case EWeaponTraceType::Sphere:
+//        {
+//            DrawDebugSphere(GetWorld(), StartLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
+//            DrawDebugSphere(GetWorld(), EndLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
+//            DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
+//            break;
+//        }
+//        case EWeaponTraceType::Box:
+//        {
+//            FQuat Rotation = FRotationMatrix::MakeFromZ(EndLocation - StartLocation).ToQuat();
+//            DrawDebugBox(GetWorld(), StartLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
+//            DrawDebugBox(GetWorld(), EndLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
+//            DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
+//            break;
+//        }
+//        case EWeaponTraceType::Cylinder:
+//        {
+//            FVector Direction = (EndLocation - StartLocation).GetSafeNormal();
+//            FQuat Rotation = FQuat::FindBetweenNormals(FVector(0, 0, 1), Direction);
+//
+//            // 실린더 디버그 드로잉 - 시작점과 끝점에 캡슐 표시
+//            DrawDebugCapsule(
+//                GetWorld(),
+//                StartLocation,
+//                CylinderHalfHeight,
+//                CylinderRadius,
+//                Rotation,
+//                TraceColor,
+//                false,
+//                DrawDuration
+//            );
+//            DrawDebugCapsule(
+//                GetWorld(),
+//                EndLocation,
+//                CylinderHalfHeight,
+//                CylinderRadius,
+//                Rotation,
+//                TraceColor,
+//                false,
+//                DrawDuration
+//            );
+//            DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
+//            break;
+//        }
 //    }
 //
-//    // Hit 지점 표시
 //    for (const FHitResult& Hit : HitResults)
 //    {
 //        DrawDebugPoint(
