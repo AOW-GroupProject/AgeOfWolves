@@ -40,6 +40,7 @@ class AGEOFWOLVES_API ULockOnComponent : public UActorComponent
 #pragma region Friend Class
     friend class UBaseInputComponent;
     friend class APlayerCharacter;
+    friend class UAT_UpdateMotionWarpTarget;
 #pragma endregion
 
     GENERATED_BODY()
