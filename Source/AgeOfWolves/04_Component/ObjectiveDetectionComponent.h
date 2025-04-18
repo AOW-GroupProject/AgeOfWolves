@@ -126,7 +126,7 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FPlyaerBoundToArea, FAreaBindingInfo, bool)
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class AGEOFWOLVES_API UObjectiveDetectionComponent : public UActorComponent
 {
-    //@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
     friend class AArea;
     friend class UAT_MonitorAreaBinding;
@@ -135,7 +135,7 @@ class AGEOFWOLVES_API UObjectiveDetectionComponent : public UActorComponent
 
     GENERATED_BODY()
 
-        //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UObjectiveDetectionComponent();
@@ -164,7 +164,7 @@ protected:
         void InitializeODComponent();
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 private:
     //@컴포넌트 고유 ID
@@ -205,7 +205,6 @@ protected:
     // Executable(처형 가능) 인디케이터 텍스처
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
         TSoftObjectPtr<UTexture2D> ExecutableIndicator;
-
 
     //@텍스처 크기 스케일, 기본 0.05 스케일
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
@@ -269,14 +268,14 @@ protected:
 
     //@정면 처형 각도 허용 범위 (라디안)
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Advanced", meta = (ClampMin = "0.0", ClampMax = "1.0"))
-        float ExecutionAngleThreshold = 0.8f;  // 약 45도 범위 (cos 45° ≈ 0.7)
+        float ExecutionAngleThreshold = 0.9f;  // 약 45도 범위 (cos 45° ≈ 0.7)
 
     //@마지막 체크 시간
     float LastBackExposureCheckTime = 0.0f;
     float LastExecutionCheckTime = 0.0f;
 #pragma endregion
 
-    //@Delegates
+//@Delegates
 #pragma region Delegates
 public:
     //@목표 AI의 상태 변화 이벤트
@@ -294,7 +293,7 @@ public:
     FPlyaerBoundToArea PlyaerBoundToArea;
 #pragma endregion
 
-    //@Callbacks
+//@Callbacks
 #pragma region Callbacks
 protected:
     //@Pawn의 CapsuleComponent 오버랩 이벤트 콜백
@@ -322,7 +321,7 @@ protected:
         void OnDetectedByAI(bool bIsDetected, AActor* AI, APlayerCharacter* DetectedPlayer);
 #pragma endregion
 
-    //@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
     //@소유 컨트롤러의 폰에 대한 약한 참조
