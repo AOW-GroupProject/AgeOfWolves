@@ -13,8 +13,6 @@
 
 DEFINE_LOG_CATEGORY(LogGA)
 
-// UE_LOGFMT(LogGA, Error, "");
-
 //@Defualt Setting
 #pragma region Default Setting
 UBaseGameplayAbility::UBaseGameplayAbility(const FObjectInitializer& ObjectInitializer)

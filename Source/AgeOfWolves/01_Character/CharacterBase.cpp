@@ -39,6 +39,7 @@ ACharacterBase::ACharacterBase(const FObjectInitializer& ObjectInitializer)
 	FullMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("FullWeaponMesh"));
 	FullMesh->SetupAttachment(GetMesh(), TEXT("FullWeapon"));
 	FullMesh->SetVisibility(true);
+
 }
 
 void ACharacterBase::BeginPlay()

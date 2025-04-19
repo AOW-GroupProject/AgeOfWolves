@@ -12,6 +12,7 @@
 
 DEFINE_LOG_CATEGORY_STATIC(LogArea, Log, All);
 
+
 //@Defualt Setting
 #pragma region Default Setting
 AArea::AArea()
