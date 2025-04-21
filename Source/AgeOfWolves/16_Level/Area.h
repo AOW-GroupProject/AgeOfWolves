@@ -15,7 +15,6 @@
 class UBoxComponent;
 class UObjectiveDetectionComponent;
 class UCrowdControlComponent;
-class ACharacterBase;
 #pragma endregion
 
 //@열거형
@@ -44,7 +43,7 @@ struct FAreaAIInfo
 
     //@AI의 약한 참조
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
-        TWeakObjectPtr<ACharacterBase> AIActor;
+        TWeakObjectPtr<AActor> AIActor;
 
     //@계층 타입
     UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -76,7 +75,7 @@ struct FAreaAIInfo
         CurrentState = FGameplayTag::RequestGameplayTag("State.Alive");
     }
 
-    FAreaAIInfo(ACharacterBase* InActor, const FGameplayTag& InState, UBaseAbilitySystemComponent* InASC,
+    FAreaAIInfo(AActor* InActor, const FGameplayTag& InState, UBaseAbilitySystemComponent* InASC,
         EAIHierarchyType InType = EAIHierarchyType::Regular, int32 InPriority = 0,
         const FGuid& InGroupID = FGuid())
         : AIActor(InActor)
