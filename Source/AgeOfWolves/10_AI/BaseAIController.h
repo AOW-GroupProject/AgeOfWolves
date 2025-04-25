@@ -453,6 +453,7 @@ public:
 	FORCEINLINE EAIType GetAIType() const { return AIType; }
 
 public:
+	FORCEINLINE FGuid GetAIGroupID() const { return AIGroupID.IsValid() ? AIGroupID : FGuid(); }
 	FORCEINLINE void SetAIGroupID(const FGuid& GroupID);
 
 public:

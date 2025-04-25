@@ -9,9 +9,11 @@
 #include "DrawDebugHelpers.h"
 
 #include "10_AI/BaseAIController.h"
+#include "01_Character/CharacterBase.h"
+#include "00_GameInstance/AOWGameInstance.h"
+#include "14_Subsystem/AreaManagerSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogArea, Log, All);
-
 
 //@Defualt Setting
 #pragma region Default Setting
@@ -77,7 +79,7 @@ void AArea::PostInitializeComponents()
 
 void AArea::InternalBindToAI(TWeakObjectPtr<AActor> AIActorPtr)
 {
-    // Actor가 유효한지 확인
+    //@Actor가 유효한지 확인
     AActor* AIActor = AIActorPtr.Get();
     if (!IsValid(AIActor))
     {
@@ -85,7 +87,7 @@ void AArea::InternalBindToAI(TWeakObjectPtr<AActor> AIActorPtr)
         return;
     }
 
-    // AI가 속한 그룹 ID 찾기
+    //@AI가 속한 그룹 ID 찾기
     FGuid GroupID = GetAIGroupID(AIActor);
     if (!GroupID.IsValid() || !MAIGroups.Contains(GroupID))
     {
@@ -94,7 +96,7 @@ void AArea::InternalBindToAI(TWeakObjectPtr<AActor> AIActorPtr)
         return;
     }
 
-    // 그룹에서 AI 정보 찾기
+    //@그룹에서 AI 정보 찾기
     FAIGroupInfo& GroupInfo = MAIGroups[GroupID];
     FAreaAIInfo* AIInfo = nullptr;
 
@@ -107,6 +109,7 @@ void AArea::InternalBindToAI(TWeakObjectPtr<AActor> AIActorPtr)
         }
     }
 
+    //@FAreaAIInfo
     if (!AIInfo)
     {
         UE_LOGFMT(LogArea, Warning, "Area {0}: 바인딩 실패 - 그룹 {1}에서 AI {2}의 정보를 찾을 수 없음",
@@ -114,7 +117,7 @@ void AArea::InternalBindToAI(TWeakObjectPtr<AActor> AIActorPtr)
         return;
     }
 
-    // ASC 가져오기
+    //@ASC
     IAbilitySystemInterface* AbilityInterface = Cast<IAbilitySystemInterface>(AIActor);
     if (!AbilityInterface)
     {
@@ -122,7 +125,8 @@ void AArea::InternalBindToAI(TWeakObjectPtr<AActor> AIActorPtr)
             *AreaID.ToString(), *AIActor->GetName());
         return;
     }
-
+    
+    //@BaseASC
     UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(AbilityInterface->GetAbilitySystemComponent());
     if (!BaseASC)
     {
@@ -156,7 +160,7 @@ void AArea::InternalBindToAI(TWeakObjectPtr<AActor> AIActorPtr)
             *AreaID.ToString(), *AIActor->GetName());
         return;
     }
-    
+
     //@AI 정보 업데이트
     AIInfo->AIASC = BaseASC;
 
@@ -405,12 +409,6 @@ void AArea::UnbindFromAllPlayer()
 
 void AArea::InitializeArea()
 {
-    //@Box Component
-    if (!AreaBounds)
-    {
-        UE_LOGFMT(LogArea, Error, "Area {0}: AreaBounds 컴포넌트가 유효하지 않음", *AreaID.ToString());
-        return;
-    }
 
     //@콜리전 이벤트 바인딩
     AreaBounds->OnComponentBeginOverlap.AddDynamic(this, &AArea::OnOverlapBegin);
@@ -427,6 +425,23 @@ void AArea::InitializeArea()
         CleanupInterval,
         true
     );
+
+    //@GameInstance
+    auto GameInst = UGameplayStatics::GetGameInstance(this);
+    if (!GameInst)
+    {
+        return;
+    }
+
+    //@Area Manager
+    auto AreaManager = GameInst->GetSubsystem<UAreaManagerSubsystem>();
+    if (!AreaManager)
+    {
+        return;
+    }
+
+    //@Area 등록
+    AreaManager->RegisterArea(this);
 
     //@비동기 초기화 요청 이벤트
     RequestStartInitByArea.Broadcast(GetAllAIGroupsAsArray());
@@ -458,6 +473,7 @@ void AArea::InitializeAreaAIInfos()
         NewGroupInfo.GroupID = GroupID;
         NewGroupInfo.GroupName = RegisteredGroup.GroupName.IsEmpty() ?
             FString::Printf(TEXT("Group_%s"), *GroupID.ToString().Left(8)) : RegisteredGroup.GroupName;
+        NewGroupInfo.PatrolPath = RegisteredGroup.PatrolPath;
 
         //@FAreaAIInfo
         for (const FAreaAIInfo& MemberInfo : RegisteredGroup.GroupMembers)
@@ -475,9 +491,21 @@ void AArea::InitializeAreaAIInfos()
                 NewMemberInfo.GroupID = GroupID;
                 NewMemberInfo.AlertLevel = 0;
 
+                //@AI의 컨트롤러에 그룹 ID 설정
+                auto* AIChar = Cast<ACharacter>(MemberInfo.AIActor.Get());
+                if (!AIChar) continue;
+
+                ABaseAIController* AIController = Cast<ABaseAIController>(AIChar->GetController());
+                if (!AIController) continue;
+
+                //@Group ID 전달
+                AIController->SetAIGroupID(GroupID);
+
+                UE_LOGFMT(LogArea, Log, "AI {0}의 컨트롤러에 그룹 ID {1} 설정됨",
+                    *AIChar->GetName(), *GroupID.ToString());
+
                 //@Group Members 추가
                 NewGroupInfo.GroupMembers.Add(NewMemberInfo);
-
             }
         }
 
@@ -585,49 +613,46 @@ void AArea::InitializeAreaAIInfos()
 
 void AArea::RegisterAI(AActor* AIActor)
 {
-    //@AI Actor
+    //@AI 
     if (!IsValid(AIActor))
     {
         UE_LOGFMT(LogArea, Warning, "Area {0}: 유효하지 않은 AI 등록 시도", *AreaID.ToString());
         return;
     }
 
-    //@AI 참조 생성
-    TWeakObjectPtr<AActor> AIActorPtr(AIActor);
+    //@Character
+    ACharacterBase* AICharacter = Cast<ACharacterBase>(AIActor);
+    if (!AICharacter)
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: AI {1}을(를) CharacterBase로 캐스팅할 수 없음",
+            *AreaID.ToString(), *AIActor->GetName());
+        return;
+    }
 
-    //@에디터에서 등록된 그룹 정보 확인
+    TWeakObjectPtr<AActor> AIActorPtr(AIActor);
     bool bGroupAssigned = false;
 
-    //@RegisteredAIGroups
+    //@AI Group Info
     for (const FAIGroupInfo& GroupInfo : RegisteredAIGroups)
     {
-        //@각 그룹의 멤버 목록에서 현재 AI 검색
         for (const FAreaAIInfo& MemberInfo : GroupInfo.GroupMembers)
         {
             if (MemberInfo.AIActor.Get() == AIActor)
             {
-                //@AI가 속한 그룹 발견
                 bGroupAssigned = true;
 
-                // 이미 MAIGroups에 해당 그룹이 등록되어 있는지 확인
                 if (!MAIGroups.Contains(GroupInfo.GroupID))
                 {
-                    //@새 그룹 등록
                     MAIGroups.Add(GroupInfo.GroupID, GroupInfo);
-
-                    //@그룹 등록 완료 이벤트
                     AIRegisteredToAIGroup.Broadcast(AIActor, GroupInfo.GroupID);
-
                     UE_LOGFMT(LogArea, Log, "Area {0}: 그룹 '{1}' (ID: {2}) 등록 완료",
-                        *AreaID.ToString(), *GroupInfo.GroupName, GroupInfo.GroupID);
+                        *AreaID.ToString(), *GroupInfo.GroupName, *GroupInfo.GroupID.ToString());
                 }
 
-                // 이미 그룹 리더가 설정되어 있지 않으면 리더 업데이트
                 if (!MAIGroups[GroupInfo.GroupID].GroupLeader.IsValid())
                 {
                     UpdateAIGroupLeader(GroupInfo.GroupID);
                 }
-
                 break;
             }
         }
@@ -636,34 +661,30 @@ void AArea::RegisterAI(AActor* AIActor)
             break;
     }
 
-    //@Default Group?
+    //@Default Group 설정
     if (!bGroupAssigned && bAddUnassignedAIToDefaultGroup)
     {
-        //@Default Group 생성
         if (!MAIGroups.Contains(DefaultGroupID))
         {
             FAIGroupInfo DefaultGroup(DefaultGroupID, DefaultGroupName);
             MAIGroups.Add(DefaultGroupID, DefaultGroup);
-
             UE_LOGFMT(LogArea, Log, "Area {0}: 기본 그룹 '{1}' (ID: {2}) 생성됨",
-                *AreaID.ToString(), *DefaultGroupName, DefaultGroupID);
+                *AreaID.ToString(), *DefaultGroupName, *DefaultGroupID.ToString());
         }
 
-        //@Default Gorup에 추가
         FAIGroupInfo& DefaultGroup = MAIGroups[DefaultGroupID];
 
-        //@AI 계층 타입과 우선순위 기본값 설정
-        FAreaAIInfo NewAIInfo(AIActor, FGameplayTag::RequestGameplayTag("State.Alive"), nullptr);
+        //@Area AI Info
+        FAreaAIInfo NewAIInfo(AICharacter, FGameplayTag::RequestGameplayTag("State.Alive"), nullptr);
         DefaultGroup.GroupMembers.Add(NewAIInfo);
 
-        //@리더 업데이트
         if (!DefaultGroup.GroupLeader.IsValid())
         {
             UpdateAIGroupLeader(DefaultGroupID);
         }
 
         UE_LOGFMT(LogArea, Log, "Area {0}: AI {1} 기본 그룹에 할당됨 (ID: {2})",
-            *AreaID.ToString(), *AIActor->GetName(), DefaultGroupID);
+            *AreaID.ToString(), *AIActor->GetName(), *DefaultGroupID.ToString());
     }
 
     UE_LOGFMT(LogArea, Log, "Area {0}: AI {1} 그룹 등록 처리 완료",
@@ -683,7 +704,7 @@ void AArea::UnregisterAI(AActor* AIActor)
 
     //@Group ID
     FGuid GroupID = GetAIGroupID(AIActor);
-    
+
     if (!GroupID.IsValid() || !MAIGroups.Contains(GroupID))
     {
         UE_LOGFMT(LogArea, Warning, "Area {0}: AI {1}은(는) 등록되지 않았거나 유효한 그룹에 속해있지 않음",
@@ -895,7 +916,7 @@ void AArea::UpdateAIGroupLeader(const FGuid& GroupID)
     FAIGroupInfo& GroupInfo = MAIGroups[GroupID];
 
     AActor* LeaderCandidate = nullptr;
-    EAIHierarchyType HighestRank = EAIHierarchyType::Regular; 
+    EAIHierarchyType HighestRank = EAIHierarchyType::Regular;
     int32 HighestPriority = -1;
 
     //@FAreaAIInfo
@@ -1036,7 +1057,7 @@ void AArea::HandleAIStateChanged(AActor* AIActor, const FGameplayTag& StateTag)
 
 void AArea::CleanupInvalidReferences()
 {
- 
+
 }
 #pragma endregion
 
