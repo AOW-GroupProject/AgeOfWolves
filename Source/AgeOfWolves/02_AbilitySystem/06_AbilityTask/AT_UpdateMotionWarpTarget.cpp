@@ -67,13 +67,14 @@ void UAT_UpdateMotionWarpTarget::OnDestroy(bool bInOwnerFinished)
 	//@회전 제어 복원 (Fit 모드인 경우에만)
 	if (WarpProximity == EMotionWarpProximity::Fit)
 	{
-		RestoreRotationControl();
+		//RestoreRotationControl();
 	}
 
 	//@태스크 종료 시 워프 타겟 제거
 	if (UMotionWarpingComponent* MotionWarpingComp = GetMotionWarpingComponent())
 	{
 		MotionWarpingComp->RemoveWarpTarget(MotionWarpTargetName);
+
 		UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Log, "워프 타겟 제거: {0}", *MotionWarpTargetName.ToString());
 	}
 
