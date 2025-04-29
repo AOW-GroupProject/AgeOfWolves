@@ -146,6 +146,8 @@ void UInteractionComponent::ExternalBindToODComp()
 
     //@외부 바인딩...
     ODComp->DetectedAIStateChanged.AddUFunction(this, "OnDetectedAIStateChanged");
+
+    ODComp->ExecutionTargetChanged.AddUFunction(this, "OnExecutionTargetChanged");
     ODComp->AmbushTargetChanged.AddUFunction(this, "OnAmbushTargetChanged");
 }
 
@@ -666,21 +668,55 @@ void UInteractionComponent::OnDetectedAIStateChanged(const FGameplayTag& StateTa
     UE_LOGFMT(LogInteraction, Log, "{0}: 상태 변경 감지 - 액터: {1} | 상태: {2}",
         __FUNCDNAME__, *ObjectiveActor->GetName(), *StateTag.ToString());
 
-    //@처형 타입의 잠재적 상호작용 추가
-    if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
-    {
-        RegisterPotentialInteraction(ObjectiveActor, EInteractionType::Execution);
-    }
-    //@처형 타입의 잠재적 상호작용 제거
-    else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
-    {
-        RemovePotentialInteraction(ObjectiveActor, EInteractionType::Execution);
-    }
-    //@모든 유형의 잠재적 상호작용 제거
-    else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+    // Fragile 상태 처리는 제거하고 Dead 상태만 처리
+    if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
     {
         RemovePotentialInteraction(ObjectiveActor);
     }
+
+    // State.Normal 처리도 제거 (ExecutionTargetChanged에서 처리)
+}
+
+void UInteractionComponent::OnExecutionTargetChanged(AActor* PotentialExecutionTarget)
+{
+    // 처형 타겟이 없으면 모든 처형 상호작용 제거
+    if (!PotentialExecutionTarget)
+    {
+        TArray<TWeakObjectPtr<AActor>> ActorsToCheck;
+        MPotentialInteractions.GetKeys(ActorsToCheck);
+
+        for (const auto& ActorWeak : ActorsToCheck)
+        {
+            if (ActorWeak.IsValid())
+            {
+                RemovePotentialInteraction(ActorWeak.Get(), EInteractionType::Execution);
+            }
+        }
+
+        UE_LOGFMT(LogInteraction, Log, "{0}: 처형 타겟 초기화 - 모든 처형 상호작용 제거", __FUNCDNAME__);
+        return;
+    }
+
+    UE_LOGFMT(LogInteraction, Log, "{0}: 처형 타겟 변경 감지 - 액터: {1}",
+        __FUNCDNAME__, *PotentialExecutionTarget->GetName());
+
+    //@새로운 처형 타겟 등록
+    RegisterPotentialInteraction(PotentialExecutionTarget, EInteractionType::Execution);
+
+    //@다른 액터들의 처형 상호작용 제거
+    TArray<TWeakObjectPtr<AActor>> ActorsToCheck;
+    MPotentialInteractions.GetKeys(ActorsToCheck);
+
+    for (const auto& ActorWeak : ActorsToCheck)
+    {
+        if (ActorWeak.IsValid() && ActorWeak.Get() != PotentialExecutionTarget)
+        {
+            RemovePotentialInteraction(ActorWeak.Get(), EInteractionType::Execution);
+        }
+    }
+
+    UE_LOGFMT(LogInteraction, Log, "{0}: 처형 타겟 처리 완료 - 액터: {1}에 대한 처형 상호작용 등록",
+        __FUNCDNAME__, *PotentialExecutionTarget->GetName());
 }
 
 void UInteractionComponent::OnAmbushTargetChanged(AActor* PotentialAmbushTarget)

@@ -45,8 +45,8 @@ struct FTimeDilationSettings
 {
     GENERATED_BODY()
 
-    //@타임 딜레이션 모드
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "타임 딜레이션")
+        //@타임 딜레이션 모드
+        UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "타임 딜레이션")
         ETimeDilationMode DilationMode = ETimeDilationMode::SlowMotion;
 
     //@타임 딜레이션 강도
@@ -84,8 +84,8 @@ struct FTimeDilationInfo
 {
     GENERATED_BODY()
 
-    //@원래 타임 딜레이션 값
-    float OriginalDilation = 1.0f;
+        //@원래 타임 딜레이션 값
+        float OriginalDilation = 1.0f;
 
     //@목표 타임 딜레이션 값
     float TargetDilation = 1.0f;
@@ -131,9 +131,6 @@ public:
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-public:
-
-
 protected:
     //@타임 딜레이션 시작
     void StartTimeDilation(AActor* Owner, const FTimeDilationSettings& Settings, bool bGlobal, bool bAllowMultiple = false);
@@ -202,7 +199,7 @@ private:
         bool bIgnorePreviousRequests = true;
 #pragma endregion
 
-//@Callbacks
+    //@Callbacks
 #pragma region Callbacks
 private:
     //@몽타주 종료 이벤트 콜백
@@ -218,7 +215,7 @@ private:
         void OnStopModeTimerExpired(AActor* Owner, bool bSmoothTransition, float TransitionDuration);
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+    //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
     //@타임 딜레이션 값을 계산합니다.

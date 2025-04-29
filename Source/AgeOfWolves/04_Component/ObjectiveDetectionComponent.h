@@ -15,7 +15,7 @@ class ABaseAIController;
 class APlayerController;
 class UCapsuleComponent;
 class UBillboardComponent;
-class UTexture2D; 
+class UTexture2D;
 #pragma endregion
 
 //@열거형
@@ -24,10 +24,10 @@ UENUM(BlueprintType)
 enum class ETargetState : uint8
 {
     None                    UMETA(DisplayName = "None"),
-    Normal                  UMETA(DisplayName = "Normal"),       
-    Fragile                 UMETA(DisplayName = "Fragile"),      
-    BackExposed             UMETA(DisplayName = "BackExposed"),  
-    FragileAndBackExposed   UMETA(DisplayName = "FragileAndBackExposed")  
+    Normal                  UMETA(DisplayName = "Normal"),
+    Fragile                 UMETA(DisplayName = "Fragile"),
+    BackExposed             UMETA(DisplayName = "BackExposed"),
+    FragileAndBackExposed   UMETA(DisplayName = "FragileAndBackExposed")
 };
 #pragma endregion
 
@@ -108,6 +108,12 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FDetectedAIStateChanged, const FGameplayTag
 
 //@시야 안에 있는 AI 중 매복 암살 가능 타겟 변경 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FAmbushTargetChanged, const AActor*)
+
+//@시야 안에 있는 AI 중 처형 가능 타겟 변경 이벤트
+DECLARE_MULTICAST_DELEGATE_OneParam(FExecutionTargetChanged, const AActor*)
+
+//@Area와 바인딩/언바인딩 이벤트
+DECLARE_MULTICAST_DELEGATE_TwoParams(FPlyaerBoundToArea, FAreaBindingInfo, bool);
 #pragma endregion
 
 /*
@@ -123,6 +129,8 @@ class AGEOFWOLVES_API UObjectiveDetectionComponent : public UActorComponent
 //@친추 클래스
 #pragma region Friend Class
     friend class AArea;
+    friend class UAT_MonitorAreaBinding;
+    friend class UAsyncTask_MonitorAreaBinding;
 #pragma endregion
 
     GENERATED_BODY()
@@ -156,7 +164,7 @@ protected:
         void InitializeODComponent();
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 private:
     //@컴포넌트 고유 ID
@@ -182,6 +190,9 @@ protected:
     //@등을 노출하고 있는 AI 정보 업데이트
     void UpdateAIBackExposureState();
 
+    //@처형 가능한 AI 정보 업데이트
+    void UpdateExecutionTargetState();
+
 protected:
     UPROPERTY()
         UBillboardComponent* IndicatorBillboardComponent;
@@ -194,7 +205,6 @@ protected:
     // Executable(처형 가능) 인디케이터 텍스처
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
         TSoftObjectPtr<UTexture2D> ExecutableIndicator;
-
 
     //@텍스처 크기 스케일, 기본 0.05 스케일
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
@@ -242,14 +252,27 @@ protected:
 protected:
     //@잠재적 매복 타겟 (후면 노출된 AI)
     UPROPERTY()
-            TWeakObjectPtr<AActor> AmbushTarget;
+        TWeakObjectPtr<AActor> AmbushTarget;
+
+    //@잠재적 처형 타겟 (정면에서 Fragile한 AI)
+    UPROPERTY()
+        TWeakObjectPtr<AActor> ExecutionTarget;
 
     //@후면 노출 상태 체크 간격 (seconds)
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Advanced")
         float BackExposureCheckInterval = 0.1f;
 
+    //@처형 가능 상태 체크 간격 (seconds)
+    UPROPERTY(EditAnywhere, Category = "Objective Detection|Advanced")
+        float ExecutionCheckInterval = 0.1f;
+
+    //@정면 처형 각도 허용 범위 (라디안)
+    UPROPERTY(EditAnywhere, Category = "Objective Detection|Advanced", meta = (ClampMin = "0.0", ClampMax = "1.0"))
+        float ExecutionAngleThreshold = 0.9f;  // 약 45도 범위 (cos 45° ≈ 0.7)
+
     //@마지막 체크 시간
     float LastBackExposureCheckTime = 0.0f;
+    float LastExecutionCheckTime = 0.0f;
 #pragma endregion
 
 //@Delegates
@@ -261,6 +284,13 @@ public:
 public:
     //@매복 암살 가능한 AI 타겟 변경 이벤트
     FAmbushTargetChanged AmbushTargetChanged;
+
+    //@처형 가능한 AI 타겟 변경 이벤트
+    FExecutionTargetChanged ExecutionTargetChanged;
+
+public:
+    //@Area 바인딩 이벤트
+    FPlyaerBoundToArea PlyaerBoundToArea;
 #pragma endregion
 
 //@Callbacks
@@ -306,14 +336,14 @@ protected:
 protected:
     //@AIController 소유 여부 확인
     bool IsOwnerAIController() const;
-    
+
     //@PlayerController 소유 여부 확인
     bool IsOwnerPlayerController() const;
 
 protected:
     //@컨트롤러로부터 Pawn 가져오기
     APawn* GetControlledPawn() const;
-    
+
 protected:
     //@Pawn의 위치 가져오기
     FVector GetPawnLocation() const;
@@ -328,10 +358,13 @@ protected:
     //@Camera View 안에 목표물이 존재하는지 체크합니다.
     bool IsActorInCameraView(AActor* Actor) const;
 
+    //@정면 처형 가능 여부 확인
+    bool IsActorFrontExposed(AActor* Actor) const;
+
 protected:
     //@Area 찾기 (GUID 기준)
     AArea* FindAreaByGuid(const FGuid& AreaGuid) const;
-    
+
     //@바인딩된 모든 Area 가져오기
     UFUNCTION(BlueprintCallable, Category = "Objective Detection")
         TArray<FAreaBindingInfo> GetBoundAreas() const;
@@ -351,9 +384,15 @@ protected:
         bool IsActorBackExposed(AActor* Actor) const;
 
     //@현재 시야 내 후면 노출된 AI 목록 가져오기
-    AActor* UObjectiveDetectionComponent::GetAmbushTarget() const
+    AActor* GetAmbushTarget() const
     {
         return AmbushTarget.IsValid() ? AmbushTarget.Get() : nullptr;
+    }
+
+    //@현재 시야 내 처형 가능한 AI 가져오기
+    AActor* GetExecutionTarget() const
+    {
+        return ExecutionTarget.IsValid() ? ExecutionTarget.Get() : nullptr;
     }
 
 protected:

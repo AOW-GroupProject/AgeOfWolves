@@ -1,5 +1,6 @@
 #include "AttackGameplayAbility.h"
 #include "Logging/StructuredLog.h"
+#include "UObject/NameTypes.h"
 
 #include "01_Character/CharacterBase.h"
 #include "02_AbilitySystem/AOWGameplayTags.h"
@@ -13,16 +14,85 @@
 #include "AbilitySystemBlueprintLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogAttackGA)
-
 //@Defualt Setting
 #pragma region Default Setting
 UAttackGameplayAbility::UAttackGameplayAbility(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
-{}
+{
+}
+
+void UAttackGameplayAbility::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+    Super::PostEditChangeProperty(PropertyChangedEvent);
+
+    // 몽타주 배열이 변경되었을 때 HitStop 설정 배열 크기를 자동으로 조정
+    FName PropertyName = (PropertyChangedEvent.Property != nullptr) ? PropertyChangedEvent.Property->GetFName() : NAME_None;
+
+    // 속성 이름을 문자열로 직접 비교
+    if (PropertyName == GET_MEMBER_NAME_CHECKED(UBaseGameplayAbility, AnimMontages))
+    {
+        if (HitStopSettingMode == EHitStopSettingMode::PerMontage)
+        {
+            // 몽타주 배열 크기에 맞게 HitStop 설정 배열 크기 조정
+            int32 MontageCount = AnimMontages.Num();
+            int32 SettingsCount = MontageHitStopSettings.Num();
+
+            // 크기가 다른 경우 조정
+            if (MontageCount != SettingsCount)
+            {
+                // 배열 크기 조정 (기존 값은 유지)
+                if (MontageCount > SettingsCount)
+                {
+                    // 새 항목 추가
+                    int32 ItemsToAdd = MontageCount - SettingsCount;
+                    for (int32 i = 0; i < ItemsToAdd; i++)
+                    {
+                        MontageHitStopSettings.Add(FMontageHitStopSettings());
+                    }
+                }
+                else
+                {
+                    // 배열 크기 축소
+                    MontageHitStopSettings.SetNum(MontageCount);
+                }
+
+                UE_LOG(LogAttackGA, Log, TEXT("몽타주 배열 크기 변경 감지 - HitStop 설정 배열 크기 조정됨 (%d)"), MontageCount);
+            }
+        }
+    }
+    // HitStop 설정 모드가 변경되었을 때
+    else if (PropertyName == GET_MEMBER_NAME_CHECKED(UAttackGameplayAbility, HitStopSettingMode))
+    {
+        if (HitStopSettingMode == EHitStopSettingMode::PerMontage)
+        {
+            // 몽타주 배열 크기에 맞게 HitStop 설정 배열 크기 조정
+            int32 MontageCount = AnimMontages.Num();
+            MontageHitStopSettings.SetNum(MontageCount);
+
+            UE_LOG(LogAttackGA, Log, TEXT("HitStop 설정 모드 변경 - 몽타주별 설정 모드로 변경됨, 설정 배열 크기: %d"), MontageCount);
+        }
+    }
+}
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+UAbilityTask_PlayMontageAndWait* UAttackGameplayAbility::PlayMontageWithCallbackAndIndex(
+    UAnimMontage* MontageToPlay,
+    int32 MontageIndex,
+    float Rate,
+    FName StartSection,
+    bool bStopWhenAbilityEnds)
+{
+    //@현재 몽타주 인덱스 설정
+    CurrentMontageIndex = MontageIndex;
+
+    UE_LOGFMT(LogAttackGA, Log, "몽타주 재생 시작 - 몽타주: {0}, 인덱스: {1}, 재생률: {2}",
+        *MontageToPlay->GetName(), MontageIndex, Rate);
+
+    return PlayMontageWithCallback(MontageToPlay, Rate, StartSection, bStopWhenAbilityEnds);
+}
+
 void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
 {
     //@Hit Actor
@@ -84,16 +154,29 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
     UE_LOGFMT(LogAttackGA, Log, "데미지 이벤트 전송 완료 - Target: {0}, Instigator: {1}, Impact Location: {2}",
         HitActor->GetName(), SourceActor->GetName(), HitResult.ImpactPoint.ToString());
 
-    //@히트 스탑 적용
-    if (bEnableHitStop)
+    //@히트 스탑 적용 - 설정 모드에 따라 다르게 처리
+    switch (HitStopSettingMode)
     {
-        ApplyHitStop(HitActor);
+        //@공통 히트 스탑 설정 적용
+    case EHitStopSettingMode::Global:
+        if (bEnableHitStop)
+        {
+            ApplyHitStop(HitActor);
+        }
+        break;
+        //@몽타주 별 히트 스탑 설정 적용
+    case EHitStopSettingMode::PerMontage:
+        ApplyHitStopForCurrentMontage(HitActor);
+        break;
     }
 
     //@이팩트-1 : Impact Effect
     ExecuteImpactGameplayCue(
         HitResult,
         SourceActor);
+
+    //@이팩트-2 : Slash Effect
+
 
 }
 
@@ -173,7 +256,6 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
         }
     }
 
-    // 7. 트레이스 수행
     TArray<FHitResult> HitResults;
     bool bTraceSuccess = false;
 
@@ -218,9 +300,27 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
         );
         break;
     }
+    case EWeaponTraceType::Cylinder:
+    {
+        FCollisionShape CylinderShape = FCollisionShape::MakeCapsule(CylinderRadius, CylinderHalfHeight);
+        // Z축을 기준으로 회전된 캡슐은 방향 벡터에 맞게 회전시켜야 함
+        FVector Direction = (EndLocation - StartLocation).GetSafeNormal();
+        FQuat Rotation = FQuat::FindBetweenNormals(FVector(0, 0, 1), Direction);
+
+        bTraceSuccess = GetWorld()->SweepMultiByChannel(
+            HitResults,
+            StartLocation,
+            EndLocation,
+            Rotation,
+            ECC_Visibility,
+            CylinderShape,
+            QueryParams
+        );
+        break;
+    }
     }
 
-     //8. 디버그 드로잉
+    //8. 디버그 드로잉
 //#if ENABLE_DRAW_DEBUG
 //    const float DrawDuration = 2.0f;
 //    const FColor TraceColor = FColor::Red;
@@ -228,38 +328,66 @@ void UAttackGameplayAbility::ProcessWeaponTrace()
 //
 //    switch (TraceType)
 //    {
-//    case EWeaponTraceType::Line:
-//    {
-//        DrawDebugLine(
-//            GetWorld(),
-//            StartLocation,
-//            EndLocation,
-//            TraceColor,
-//            false,
-//            DrawDuration,
-//            0,
-//            2.0f
-//        );
-//        break;
-//    }
-//    case EWeaponTraceType::Sphere:
-//    {
-//        DrawDebugSphere(GetWorld(), StartLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
-//        DrawDebugSphere(GetWorld(), EndLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
-//        DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
-//        break;
-//    }
-//    case EWeaponTraceType::Box:
-//    {
-//        FQuat Rotation = FRotationMatrix::MakeFromZ(EndLocation - StartLocation).ToQuat();
-//        DrawDebugBox(GetWorld(), StartLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
-//        DrawDebugBox(GetWorld(), EndLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
-//        DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
-//        break;
-//    }
+//        case EWeaponTraceType::Line:
+//        {
+//            DrawDebugLine(
+//                GetWorld(),
+//                StartLocation,
+//                EndLocation,
+//                TraceColor,
+//                false,
+//                DrawDuration,
+//                0,
+//                2.0f
+//            );
+//            break;
+//        }
+//        case EWeaponTraceType::Sphere:
+//        {
+//            DrawDebugSphere(GetWorld(), StartLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
+//            DrawDebugSphere(GetWorld(), EndLocation, SphereTraceRadius, 12, TraceColor, false, DrawDuration);
+//            DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
+//            break;
+//        }
+//        case EWeaponTraceType::Box:
+//        {
+//            FQuat Rotation = FRotationMatrix::MakeFromZ(EndLocation - StartLocation).ToQuat();
+//            DrawDebugBox(GetWorld(), StartLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
+//            DrawDebugBox(GetWorld(), EndLocation, BoxTraceHalfSize, Rotation, TraceColor, false, DrawDuration);
+//            DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
+//            break;
+//        }
+//        case EWeaponTraceType::Cylinder:
+//        {
+//            FVector Direction = (EndLocation - StartLocation).GetSafeNormal();
+//            FQuat Rotation = FQuat::FindBetweenNormals(FVector(0, 0, 1), Direction);
+//
+//            // 실린더 디버그 드로잉 - 시작점과 끝점에 캡슐 표시
+//            DrawDebugCapsule(
+//                GetWorld(),
+//                StartLocation,
+//                CylinderHalfHeight,
+//                CylinderRadius,
+//                Rotation,
+//                TraceColor,
+//                false,
+//                DrawDuration
+//            );
+//            DrawDebugCapsule(
+//                GetWorld(),
+//                EndLocation,
+//                CylinderHalfHeight,
+//                CylinderRadius,
+//                Rotation,
+//                TraceColor,
+//                false,
+//                DrawDuration
+//            );
+//            DrawDebugLine(GetWorld(), StartLocation, EndLocation, TraceColor, false, DrawDuration);
+//            break;
+//        }
 //    }
 //
-//    // Hit 지점 표시
 //    for (const FHitResult& Hit : HitResults)
 //    {
 //        DrawDebugPoint(
@@ -357,7 +485,7 @@ void UAttackGameplayAbility::ApplyHitStop(AActor* Target)
     AActor* SourceActor = GetAvatarActorFromActorInfo();
     if (!SourceActor || !Target)
     {
-        UE_LOGFMT(LogAttackGA, Warning, "HitStop 적용 실패 - 사유: Source Actor가 유효하지 않음");
+        UE_LOGFMT(LogAttackGA, Warning, "HitStop 적용 실패 - 사유: Source Actor 또는 Target이 유효하지 않음");
         return;
     }
 
@@ -392,10 +520,84 @@ void UAttackGameplayAbility::ApplyHitStop(AActor* Target)
     //@Time Dilation
     TimeSystem->ApplyHitStop(SourceActor, Target, HitStopSettings, bGlobalHitStop);
 
-    UE_LOGFMT(LogAttackGA, Log, "HitStop 적용 완료 - 액터: {0}, 모드: {1}, 강도: {2}",
+    UE_LOGFMT(LogAttackGA, Log, "기본 HitStop 적용 완료 - 액터: {0}, 모드: {1}, 강도: {2}",
         *SourceActor->GetName(),
         "히트 스톱",
         static_cast<int32>(HitStopIntensity));
+}
+
+void UAttackGameplayAbility::ApplyHitStopForCurrentMontage(AActor* Target, int32 MontageIndex)
+{
+    //@Avatar
+    AActor* SourceActor = GetAvatarActorFromActorInfo();
+    if (!SourceActor || !Target)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "몽타주별 HitStop 적용 실패 - 사유: Source Actor 또는 Target이 유효하지 않음");
+        return;
+    }
+
+    //@GameInstance
+    UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(SourceActor);
+    if (!GameInstance)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "몽타주별 HitStop 적용 실패 - 사유: GameInstance가 유효하지 않음");
+        return;
+    }
+
+    //@TimeManipulationSubsystem
+    UTimeManipulationSubsystem* TimeSystem = GameInstance->GetSubsystem<UTimeManipulationSubsystem>();
+    if (!TimeSystem)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "몽타주별 HitStop 적용 실패 - 사유: TimeManipulationSubsystem을 찾을 수 없음");
+        return;
+    }
+
+    // 적용할 몽타주 인덱스 결정
+    int32 TargetMontageIndex = (MontageIndex >= 0) ? MontageIndex : CurrentMontageIndex;
+
+    // 인덱스 유효성 검사
+    if (!MontageHitStopSettings.IsValidIndex(TargetMontageIndex))
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "몽타주별 HitStop 적용 실패 - 사유: MontageIndex({0})가 유효하지 않음", TargetMontageIndex);
+        return;
+    }
+
+    // 해당 몽타주에 설정된 HitStop 설정 가져오기
+    const FMontageHitStopSettings& HitStopSetting = MontageHitStopSettings[TargetMontageIndex];
+
+    // HitStop이 비활성화된 경우 스킵
+    if (!HitStopSetting.bEnableHitStop)
+    {
+        UE_LOGFMT(LogAttackGA, Log, "몽타주별 HitStop 적용 스킵 - 사유: 몽타주({0})에 HitStop이 비활성화됨", TargetMontageIndex);
+        return;
+    }
+
+    //@Is Already Applied?
+    if (TimeSystem->IsActorTimeDilated(SourceActor))
+    {
+        UE_LOGFMT(LogAttackGA, Log, "몽타주별 HitStop 적용 스킵 - 사유: 이미 타임 딜레이션이 적용 중");
+        return;
+    }
+
+    //@FTimeDilationSettings
+    FTimeDilationSettings HitStopSettings;
+    HitStopSettings.DilationMode = HitStopSetting.HitStopMode;
+    HitStopSettings.DilationIntensity = HitStopSetting.HitStopIntensity;
+
+    //@Time Dilation
+    TimeSystem->ApplyHitStop(SourceActor, Target, HitStopSettings, HitStopSetting.bGlobalHitStop);
+
+    FString MontageName = "Unknown";
+    if (AnimMontages.IsValidIndex(TargetMontageIndex) && AnimMontages[TargetMontageIndex])
+    {
+        MontageName = AnimMontages[TargetMontageIndex]->GetName();
+    }
+
+    UE_LOGFMT(LogAttackGA, Log, "몽타주별 HitStop 적용 완료 - 액터: {0}, 몽타주: {1}, 모드: {2}, 강도: {3}",
+        *SourceActor->GetName(),
+        *MontageName,
+        "히트 스톱",
+        static_cast<int32>(HitStopSetting.HitStopIntensity));
 }
 
 void UAttackGameplayAbility::ExecuteImpactGameplayCue(const FHitResult& HitResult, AActor* SourceActor)

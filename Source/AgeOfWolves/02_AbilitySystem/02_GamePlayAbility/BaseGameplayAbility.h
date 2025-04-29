@@ -182,6 +182,7 @@ class AGEOFWOLVES_API UBaseGameplayAbility : public UGameplayAbility
 	friend class UBaseAbilitySystemComponent;
 	friend class UPlayerAbilitySystemComponent;
 	friend class UBaseMonsterASC;
+	friend class UAttackGameplayAbility;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -230,6 +231,7 @@ protected:
 	virtual void K2_InputReleased_Implementation() { }
 
 protected:
+	//@인덱스를 통해 몽타주 재생을 수행하는 AT 생성 및 재생
 	UFUNCTION(BlueprintCallable, Category = "Ability|Montage")
 		UAbilityTask_PlayMontageAndWait* PlayMontageWithCallback(
 			UAnimMontage* MontageToPlay,

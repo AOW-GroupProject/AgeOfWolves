@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -8,21 +6,34 @@
 
 #include "BaseAttributeSet.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogAttributeSet, Log, All);
-
-
 /*
 * @목적 : Gameplay Attribute 값들의 Getter&Setter를 위한 매크로 정의
 * @설명 : Get(Attribute_Name)을 통해 간단히 Attirbute 수치를 가져올 수 있도록합니다.
 * @주의 : 직접적으로 Getter와 Setter를 호출하기 보단, Gameplay Effect 활용을 지향합니다.
 */
-// Uses macros from AttributeSet.h
 #define ATTRIBUTE_ACCESSORS(ClassName, PropertyName) \
 	GAMEPLAYATTRIBUTE_PROPERTY_GETTER(ClassName, PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_GETTER(PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_SETTER(PropertyName) \
 	GAMEPLAYATTRIBUTE_VALUE_INITTER(PropertyName)
 
+DECLARE_LOG_CATEGORY_EXTERN(LogAttributeSet, Log, All);
+
+//@전방 선언
+#pragma region Forward Declaration
+#pragma endregion
+
+//@열거형
+#pragma region Enums
+#pragma endregion
+
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+#pragma endregion
 
 /**
  *	@UBaseAttributeSe
@@ -32,9 +43,34 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAttributeSet, Log, All);
 UCLASS()
 class AGEOFWOLVES_API UBaseAttributeSet: public UAttributeSet
 {
+
+//@친추 클래스
+#pragma region Friend Class
+#pragma endregion
+
 	GENERATED_BODY()
 
+//@Defualt Setting
+#pragma region Default Setting
+public:
+	UBaseAttributeSet();
 
+protected:
+	/*
+	* @목적 : Attribute 수치 변화 이벤트 발생 시 항상 호출되는 함수
+	* @설명 : Attribute 수치 변화 발생 시 하한과 상한이 고정된 Attribute 들에 대하여 클램핑을 수행합니다.
+	*/
+	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
+
+	/*
+	* @목적 : Attribute의 변화 이후에 호출되는 Handling Logic
+	* @설명 : Current Health의 Clmap 작업 등 Attribute 값의 변화가 일어난 이후에 발생하는 핸들링 로직을 처리합니다.
+	*/
+	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
+#pragma endregion
+
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
 public:
 	UPROPERTY(BlueprintReadOnly, Category = "Attribute | Health")
 		FGameplayAttributeData Health;
@@ -142,24 +178,12 @@ public:
 		FGameplayAttributeData CombatState;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, CombatState)
 
-public:
-	UBaseAttributeSet();
-
+		//@경계 레벨
+		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Alert Level")
+		FGameplayAttributeData AlertLevel;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, AlertLevel)
 
 protected:
-	/*
-	* @목적 : Attribute 수치 변화 이벤트 발생 시 항상 호출되는 함수
-	* @설명 : Attribute 수치 변화 발생 시 하한과 상한이 고정된 Attribute 들에 대하여 클램핑을 수행합니다.
-	*/
-	// AttributeSet Overrides
-	virtual void PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue) override;
-
-	/*
-	* @목적 : Attribute의 변화 이후에 호출되는 Handling Logic
-	* @설명 : Current Health의 Clmap 작업 등 Attribute 값의 변화가 일어난 이후에 발생하는 핸들링 로직을 처리합니다.
-	*/
-	virtual void PostGameplayEffectExecute(const FGameplayEffectModCallbackData& Data) override;
-
 	/*
 	* @목적 : Attirbute 항목의 Max 값 변경에 따른 Current/Max 퍼센티지 값 변경
 	* @설명 : Attribute 항목의 Max 값 변경은 Current 값과 Max 값의 비율 변경에 영향을 끼치므로, 이 내용을 별도의 함수로 정의합니다.
@@ -171,7 +195,18 @@ protected:
 	* @설명 : Attribute 항목의 현재 값 변경은 Current 값과 Max 값의 비율 변경에 영향을 끼치므로, 이 내용을 별도의 함수로 정의합니다.
 	*/
 	void AdjustAttributeForCurrentChange(FGameplayAttributeData& AffectedAttribute, const FGameplayAttributeData& MaxAttribute, float NewMaxValue, const FGameplayAttribute& AffectedAttributeProperty);
+#pragma endregion
 
+//@Delegates
+#pragma region Delegates
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 public:
 	// @목적 : BaseAttributeSet의 모든 Attribute 항목을 반환하는 함수
 	TArray<FGameplayAttribute> GetAllAttributes() const;
@@ -180,5 +215,6 @@ public:
 	// 블루프린트에서 CombatState 값을 쉽게 가져올 수 있는 함수
 	UFUNCTION(BlueprintPure, Category = "Attributes")
 		float GetCurrentCombatState() const { return GetCombatState(); }
+#pragma endregion
 
 };

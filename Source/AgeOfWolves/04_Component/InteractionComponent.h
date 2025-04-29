@@ -321,6 +321,10 @@ protected:
 protected:
     //@잠재적 암살 타겟 변경 이벤트 구독
     UFUNCTION()
+        void OnExecutionTargetChanged(AActor* PotentialExecutionTarget);
+
+    //@잠재적 암살 타겟 변경 이벤트 구독
+    UFUNCTION()
         void OnAmbushTargetChanged(AActor* PotentialAmbushTarget);
 #pragma endregion
 
@@ -351,4 +355,5 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Interaction")
         FPotentialInteraction GetHighestPriorityInteractionForActor(AActor* TargetActor);
 #pragma endregion
+
 };
