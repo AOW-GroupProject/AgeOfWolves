@@ -79,3 +79,8 @@ void UANS_AllowChainAction::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSeq
     //@Reset
     BaseASCRef.Reset();
 }
+
+FString UANS_AllowChainAction::GetNotifyName_Implementation() const
+{
+    return FString::Printf(TEXT("체인 시스템 허용 구간"));
+}
