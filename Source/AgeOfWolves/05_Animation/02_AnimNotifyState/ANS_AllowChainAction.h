@@ -30,7 +30,7 @@ class UBaseAbilitySystemComponent;
  * 
  *  Chain Action을 특정 구간 동안 허용하는 Anim Notify State를 정의합니다.
  */
-UCLASS()
+UCLASS(meta = (DisplayName = "체인 시스템 허용 구간"))
 class AGEOFWOLVES_API UANS_AllowChainAction : public UAnimNotifyState
 {
 
@@ -48,6 +48,7 @@ public:
 protected:
     virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration) override;
     virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
+    virtual FString GetNotifyName_Implementation() const override;
 #pragma endregion
 
 //@Property/Info...etc
