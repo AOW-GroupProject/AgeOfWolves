@@ -187,7 +187,13 @@ void UAT_UpdateMotionWarpTarget::UpdateWarpTarget()
 	}
 
 	//@워프 타겟 업데이트
-	MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
+	//MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
+
+	MotionWarpingComp->AddOrUpdateWarpTargetFromLocationAndRotation(
+		WarpTarget.Name,
+		WarpTarget.Location,
+		WarpTarget.Rotation
+	);
 
 	UE_LOGFMT(LOGAT_UpdateMotionWarpTarget, Log, "WarpTarget 업데이트 - 타겟: {0} | 위치: {1} | 회전: {2} | 근접도: {3}",
 		*TargetToTrack->GetName(),
