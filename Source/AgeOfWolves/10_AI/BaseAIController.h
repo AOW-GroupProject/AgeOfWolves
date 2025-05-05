@@ -242,7 +242,7 @@ protected:
 public:
 	//@초기화
 	UFUNCTION()
-		void InitializeAIController(class APawn* InPawn);
+		virtual void InitializeAIController(class APawn* InPawn);
 #pragma endregion
 
 //@Property/Info...etc
@@ -344,7 +344,7 @@ protected:
 private:
 	FBaseAbilitySet_GrantedHandles* SetGrantedHandles;
 
-private:
+protected:
 	UPROPERTY(VisibleAnywhere)
 		FRotator TargetRotation = FRotator::ZeroRotator;
 

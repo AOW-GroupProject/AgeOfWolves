@@ -132,7 +132,7 @@ protected:
 #pragma region Property or Subwidgets or Infos...etc
 protected:
 	UFUNCTION(BlueprintCallable)
-		void FindMovementState();
+		virtual void FindMovementState();
 
 	UFUNCTION(BlueprintCallable)
 		void FindMovementDirectionAngle();
