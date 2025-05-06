@@ -88,7 +88,14 @@ void UANS_MotionWarpWithLockOnTarget::NotifyTick(USkeletalMeshComponent* MeshCom
     WarpTarget.Rotation = LockOnComp->GetFinalRotation();
     WarpTarget.Location = TargetEnemy->GetActorLocation();
 
-    MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
+    MotionWarpingComp->AddOrUpdateWarpTargetFromLocationAndRotation(
+        WarpTarget.Name,
+        WarpTarget.Location,
+        WarpTarget.Rotation
+    );
+
+
+    //MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
 
     UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Log, "WarpTarget 업데이트 - 타겟: {0} | 위치: {1} | 회전: {2}",
         *TargetEnemy->GetName(),
@@ -99,6 +106,11 @@ void UANS_MotionWarpWithLockOnTarget::NotifyTick(USkeletalMeshComponent* MeshCom
 void UANS_MotionWarpWithLockOnTarget::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
 {
     Super::NotifyEnd(MeshComp, Animation);
+}
+
+FString UANS_MotionWarpWithLockOnTarget::GetNotifyName_Implementation() const
+{
+    return FString::Printf(TEXT("락온 타겟에 대하여 모션 워핑"));
 }
 #pragma endregion
 

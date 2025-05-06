@@ -32,7 +32,6 @@ enum class EMovementState : uint8
 	MAX         UMETA(DisplayName = "MAX"),
 };
 
-//@TODO: FL, FR, BL, BR 추가 예정 -> Start 애니메이션 추가 시
 /*
 *	@EMovementDirection
 *

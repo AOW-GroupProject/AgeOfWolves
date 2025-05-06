@@ -13,7 +13,6 @@
 #include "Kismet/KismetMathLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogAnimInstance)
-// UE_LOGFMT(LogAnimInstance, Log, "");
 
 //@Defualt Setting
 #pragma region Default Setting
