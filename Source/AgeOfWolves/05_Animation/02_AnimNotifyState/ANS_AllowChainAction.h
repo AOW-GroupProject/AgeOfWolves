@@ -72,5 +72,9 @@ protected:
 private:
     UPROPERTY()
         TWeakObjectPtr<UBaseAbilitySystemComponent> BaseASCRef;
+
+private:
+    UPROPERTY()
+        FGameplayTag CachedAbilityTag;
 #pragma endregion
 };
