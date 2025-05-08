@@ -86,16 +86,13 @@ void UANS_MotionWarpWithLockOnTarget::NotifyTick(USkeletalMeshComponent* MeshCom
     FMotionWarpingTarget WarpTarget;
     WarpTarget.Name = FName("LockOnTarget");
     WarpTarget.Rotation = LockOnComp->GetFinalRotation();
-    WarpTarget.Location = TargetEnemy->GetActorLocation();
+    WarpTarget.Location = Character->GetActorLocation();
 
     MotionWarpingComp->AddOrUpdateWarpTargetFromLocationAndRotation(
         WarpTarget.Name,
         WarpTarget.Location,
         WarpTarget.Rotation
     );
-
-
-    //MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
 
     UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Log, "WarpTarget 업데이트 - 타겟: {0} | 위치: {1} | 회전: {2}",
         *TargetEnemy->GetName(),
@@ -106,6 +103,18 @@ void UANS_MotionWarpWithLockOnTarget::NotifyTick(USkeletalMeshComponent* MeshCom
 void UANS_MotionWarpWithLockOnTarget::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
 {
     Super::NotifyEnd(MeshComp, Animation);
+
+    //@Rmove Warp Target
+    if (MeshComp && MeshComp->GetOwner())
+    {
+        if (auto Character = Cast<APlayerCharacter>(MeshComp->GetOwner()))
+        {
+            if (auto MotionWarpingComp = Character->GetMotionWarpingComponent())
+            {
+                MotionWarpingComp->RemoveWarpTarget(FName("LockOnTarget"));
+            }
+        }
+    }
 }
 
 FString UANS_MotionWarpWithLockOnTarget::GetNotifyName_Implementation() const

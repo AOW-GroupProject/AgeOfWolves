@@ -98,7 +98,7 @@ enum class ECombatType : uint8
 UCLASS()
 class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 {
-	//@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 	friend class UAN_UpdateStopMotionType;
 	friend class UANS_NotifyPlayingRootMotion;
@@ -107,7 +107,7 @@ class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 
 	GENERATED_BODY()
 
-		//@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UBaseAnimInstance(const FObjectInitializer& ObjectInitializer);
@@ -211,7 +211,7 @@ protected:
 protected:
 	//@루트 모션 재생 여부
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
-		bool bIsPlayingRootMotionMontage;
+		bool bIsPlayingRootMotionMontageWithFullBodySlot;
 
 	UPROPERTY()
 		bool bIsRootMotionCooldown;
@@ -231,7 +231,7 @@ protected:
 
 #pragma endregion
 
-	//@Delegates
+//@Delegates
 #pragma region Delegates
 #pragma endregion
 
@@ -246,9 +246,15 @@ protected:
 	//@Attribute 변화 이벤트 구독
 	UFUNCTION()
 		void OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue);
+
+protected:
+	UFUNCTION()
+		void MontageStarted(UAnimMontage* Montage);
+	UFUNCTION()
+		void MontageEnded(UAnimMontage* Montage, bool bInterrupted);
 #pragma endregion
 
-	//@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
 	//@Owner Character 캐싱
@@ -299,11 +305,15 @@ public:
 		ECombatType GetCombatType() const { return CombatType; }
 
 	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
-		FORCEINLINE bool GetIsPlayingRootMotion() const { return bIsPlayingRootMotionMontage; }
+		FORCEINLINE bool GetIsPlayingRootMotionMontageWithFullBodySlot() const { return bIsPlayingRootMotionMontageWithFullBodySlot; }
+
+
+protected:
+	bool IsFullBodySlotMontage(const UAnimMontage* Montage) const;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Animation")
-		FORCEINLINE void SetIsPlayingRootMotionMontage(bool InBool) { bIsPlayingRootMotionMontage = InBool; }
+		FORCEINLINE void SetIsPlayingRootMotionMontageWithFullBodySlot(bool InBool) { bIsPlayingRootMotionMontageWithFullBodySlot = InBool; }
 #pragma endregion
 
 };
