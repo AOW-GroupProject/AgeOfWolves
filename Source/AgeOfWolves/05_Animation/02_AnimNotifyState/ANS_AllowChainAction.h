@@ -54,9 +54,9 @@ protected:
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
-    //@체인 시스템 활성화 도중에 입력 받을 어빌리티 태그
+    //@체인 시스템 허용 기간 동안 기다릴 입력 태그
     UPROPERTY(EditAnywhere, Category = "Chain Action")
-        FGameplayTag TagToChain;
+        FGameplayTag InputTagToChain;
 #pragma endregion
 
 //@Delegates
@@ -72,5 +72,9 @@ protected:
 private:
     UPROPERTY()
         TWeakObjectPtr<UBaseAbilitySystemComponent> BaseASCRef;
+
+private:
+    UPROPERTY()
+        FGameplayTag CachedAbilityTag;
 #pragma endregion
 };

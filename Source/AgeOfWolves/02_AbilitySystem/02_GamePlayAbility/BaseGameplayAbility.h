@@ -117,9 +117,9 @@ public:
 	UPROPERTY(EditDefaultsOnly)
 		EChainActionMode ChainActionMode;
 
-	//@체인 시스템 활성화 중 활성화 요건이 될 어빌리티 태그
+	//@체인 시스템 활성화 중 활성화 요건이 될 입력 태그
 	UPROPERTY(EditDefaultsOnly)
-		FGameplayTag AbilityTag;
+		FGameplayTag InputTag;
 
 	//@체인 액션 성공 시 호출할 이벤트 태그
 	UPROPERTY(EditDefaultsOnly)
@@ -128,7 +128,7 @@ public:
 public:
 	bool Find (const FGameplayTag& Tag) const
 	{
-		return Tag.MatchesTagExact(AbilityTag);
+		return Tag.MatchesTagExact(InputTag);
 	}
 };
 
@@ -389,23 +389,23 @@ public:
 	EChainSystemType GetChainSystemType() const { return ChainSystemType;}
 
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
-		EChainActionMode GetChainActionMode(const FGameplayTag& AbilityTag) const
-	{
-		for (const auto& Mapping : ChainActionMappings)
+		EChainActionMode GetChainActionMode(const FGameplayTag& InputTag) const
 		{
-			if (Mapping.AbilityTag == AbilityTag)
+			for (const auto& Mapping : ChainActionMappings)
 			{
-				return Mapping.ChainActionMode;
+				if (Mapping.InputTag == InputTag)
+				{
+					return Mapping.ChainActionMode;
+				}
 			}
+			return EChainActionMode::DelayedActivation;
 		}
-		return EChainActionMode::DelayedActivation;
-	}
 
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
 		TArray<FChainActionMapping> GetChainActionMappings() const;
 
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
-		FChainActionMapping GetChainActionMapping(const FGameplayTag& AbilityTag) const;
+		FChainActionMapping GetChainActionMapping(const FGameplayTag& InputTag) const;
 
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
 		TArray<FChainEventMapping> GetChainEventMappings() const { return ChainEventMappings; }

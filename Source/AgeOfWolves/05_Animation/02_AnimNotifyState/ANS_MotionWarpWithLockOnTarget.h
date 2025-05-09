@@ -28,7 +28,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogANS_MotionWarpWithLockOnTarget, Log, All)
  *
  *	Lock On Target에 Motion Warp 하기 위해 활용되는 ANS를 구현합니다.
  */
-UCLASS()
+UCLASS(meta = (DisplayName = "락온 타겟에 대하여 모션 워핑"))
 class AGEOFWOLVES_API UANS_MotionWarpWithLockOnTarget : public UAnimNotifyState_MotionWarping
 {
 	GENERATED_BODY()
@@ -43,6 +43,7 @@ protected:
 	virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration) override;
 	void NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime) override;
 	virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
+	virtual FString GetNotifyName_Implementation() const override;
 #pragma endregion
 
 	//@Property/Info...etc

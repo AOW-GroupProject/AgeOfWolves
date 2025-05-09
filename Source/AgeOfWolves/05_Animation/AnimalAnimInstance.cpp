@@ -47,14 +47,6 @@ void UAnimalAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
     Super::NativeUpdateAnimation(DeltaSeconds);
 
-    // 피벗 각도 계산
-    CalculatePivotAngle();
-
-    // 피벗 방향 업데이트
-    UpdatePivotDirection();
-
-    // 피벗 상태 업데이트
-    UpdatePivotState(DeltaSeconds);
 }
 #pragma endregion
 
@@ -62,60 +54,10 @@ void UAnimalAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 #pragma region Property or Subwidgets or Infos...etc
 void UAnimalAnimInstance::FindMovementState()
 {
-    // 피벗 중인 경우
-    if (bIsPivoting)
-    {
-        // MovementState를 Idle로 설정하여 이동 애니메이션이 재생되지 않도록 함
-        LastMovementState = MovementState;
-        MovementState = EMovementState::Idle;
-        return;
-    }
+    //@Pivoting 여부
 
-    // 루트 모션 재생 중인 경우
-    if (bIsPlayingRootMotionMontage)
-    {
-        MovementState = EMovementState::Idle;
-        return;
-    }
 
-    // 이전 이동 상태 저장
-    LastMovementState = MovementState;
-
-    // 현재 속도와 최대 걷기 속도
-    float CurrentSpeed = Speed;
-    float MaxWalkSpeed = OwnerCharacterBaseRef->GetCharacterMovement()->MaxWalkSpeed;
-    bool bIsSprinting = MaxWalkSpeed >= 650.f;
-
-    // 이동 상태 결정
-    if (CurrentSpeed < 0.05f)
-    {
-        MovementState = EMovementState::Idle;
-    }
-    else
-    {
-        MovementState = bIsSprinting ? EMovementState::Sprinting : EMovementState::Walking;
-    }
-
-    // 이동 상태가 변경된 경우
-    if (LastMovementState != MovementState)
-    {
-        // 이동 상태 변경 로그 출력
-        UE_LOGFMT(LogAnimInstance, Log, "{0} - 이동 상태 변경: {1} -> {2}",
-            *OwnerCharacterBaseRef->GetName(),
-            *UEnum::GetValueAsString(LastMovementState),
-            *UEnum::GetValueAsString(MovementState));
-
-        // Idle로 전환 시 이전 상태에 따라 StopMotion 결정
-        if (LastMovementState == EMovementState::Walking || LastMovementState == EMovementState::Sprinting)
-        {
-            LastMovementState == EMovementState::Walking ?
-                UpdateStopMotionType(EStopMotionType::WalkStop)
-                : UpdateStopMotionType(EStopMotionType::SprintStop);
-        }
-
-        // 이동 설정 업데이트
-        UpdateMovementSettings();
-    }
+    Super::FindMovementState();
 }
 
 void UAnimalAnimInstance::CalculatePivotAngle()

@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "05_Animation/BaseAnimInstance.h"
+
 #include "AnimalAnimInstance.generated.h"
 
 //@열거형

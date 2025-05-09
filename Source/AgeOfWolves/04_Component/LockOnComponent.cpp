@@ -307,7 +307,7 @@ bool ULockOnComponent::FindTargetEnemy()
         //@TODO: 임시적으로, Target의 생사여부를 충돌 활성화 여부로 체크
         if (!IsValid(HitActor) || !HitActor->GetActorEnableCollision())
         {
-            UE_LOGFMT(LogLockOn, Verbose, "Skipping actor {0} - collision disabled",
+            UE_LOGFMT(LogLockOn, Log, "Skipping actor {0} - collision disabled",
                 IsValid(HitActor) ? *HitActor->GetName() : TEXT("Invalid"));
             continue;
         }
@@ -441,7 +441,7 @@ void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
         PlayerCharacterRef->GetController()->SetControlRotation(
             FRotator(FinalRotation.Pitch, FinalRotation.Yaw, 0.f));
 
-        UE_LOGFMT(LogLockOn, Verbose, "높이 차이: {0}, Pitch 적용: {1}", HeightDifference, FinalRotation.Pitch);
+        UE_LOGFMT(LogLockOn, Log, "높이 차이: {0}, Pitch 적용: {1}", HeightDifference, FinalRotation.Pitch);
     }
     else
     {
@@ -449,7 +449,7 @@ void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
         PlayerCharacterRef->GetController()->SetControlRotation(
             FRotator(0.f, FinalRotation.Yaw, 0.f));
 
-        UE_LOGFMT(LogLockOn, Verbose, "높이 차이: {0}, 임계값({1}) 미만, Pitch 적용 안함", HeightDifference, HeightThreshold);
+        UE_LOGFMT(LogLockOn, Log, "높이 차이: {0}, 임계값({1}) 미만, Pitch 적용 안함", HeightDifference, HeightThreshold);
     }
 
 }
