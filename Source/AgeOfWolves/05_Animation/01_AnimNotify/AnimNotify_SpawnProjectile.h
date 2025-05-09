@@ -5,9 +5,8 @@
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotify.h"
 #include "GameplayTagContainer.h"
-#include "AnimNotify_SpawnProjectile.generated.h"
 
-class AProjectile;
+#include "AnimNotify_SpawnProjectile.generated.h"
 
 /**
  * 
@@ -29,15 +28,15 @@ public:
 
 
 #pragma region Property or Subwidgets or Infos...etc
-protected:
-	UPROPERTY(EditAnywhere)
-	TSubclassOf<AProjectile> ProjectileFactory;
-
-	UPROPERTY(EditAnywhere)
-	FName BoneSocket;
-
-	UPROPERTY(EditAnywhere)
-	FGameplayTag TriggerGameplayTag;
+//protected:
+//	UPROPERTY(EditAnywhere)
+//	TSubclassOf<AProjectile> ProjectileFactory;
+//
+//	UPROPERTY(EditAnywhere)
+//	FName BoneSocket;
+//
+//	UPROPERTY(EditAnywhere)
+//	FGameplayTag TriggerGameplayTag;
 
 #pragma endregion
 };

@@ -2,7 +2,6 @@
 
 
 #include "05_Animation/01_AnimNotify/AnimNotify_SpawnProjectile.h"
-#include "01_Character/00_Projectile/Projectile.h"
 #include "AbilitySystemBlueprintLibrary.h"
 
 
@@ -20,27 +19,27 @@ void UAnimNotify_SpawnProjectile::Notify(USkeletalMeshComponent* MeshComp, UAnim
 {
 	Super::Notify(MeshComp, Animation, EventReference);
 
-	if (MeshComp)
-	{
-		AActor* OwnerActor = MeshComp->GetOwner();
-		if (OwnerActor)
-		{
-			FGameplayEventData Payload;
+	//if (MeshComp)
+	//{
+	//	AActor* OwnerActor = MeshComp->GetOwner();
+	//	if (OwnerActor)
+	//	{
+	//		FGameplayEventData Payload;
 
-			// ASC°¡ ÀÖ´Ù´Â °¡Á¤ÇÏ¿¡ µ¿ÀÛ
-			UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OwnerActor, TriggerGameplayTag, Payload);
-		}
+	//		// ASCê°€ ìžˆë‹¤ëŠ” ê°€ì •í•˜ì— ë™ìž‘
+	//		UAbilitySystemBlueprintLibrary::SendGameplayEventToActor(OwnerActor, TriggerGameplayTag, Payload);
+	//	}
 
-		if (ProjectileFactory)
-		{
-			// MeshComp¿¡¼­ ¿ùµå °¡Á®¿À±â
-			UWorld* World = MeshComp->GetWorld();
-			if (World)
-			{
-				FTransform Transform = MeshComp->GetSocketTransform(BoneSocket);
-				
-				World->SpawnActor<AProjectile>(ProjectileFactory, Transform.GetLocation(), OwnerActor->GetActorRotation());
-			}
-		}
-	}
+	//	if (ProjectileFactory)
+	//	{
+	//		// MeshCompì—ì„œ ì›”ë“œ ê°€ì ¸ì˜¤ê¸°
+	//		UWorld* World = MeshComp->GetWorld();
+	//		if (World)
+	//		{
+	//			FTransform Transform = MeshComp->GetSocketTransform(BoneSocket);
+	//			
+	//			World->SpawnActor<AProjectile>(ProjectileFactory, Transform.GetLocation(), OwnerActor->GetActorRotation());
+	//		}
+	//	}
+	//}
 }
