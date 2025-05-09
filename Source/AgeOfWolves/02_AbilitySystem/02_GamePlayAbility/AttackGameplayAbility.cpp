@@ -3,7 +3,6 @@
 #include "UObject/NameTypes.h"
 
 #include "01_Character/CharacterBase.h"
-#include "02_AbilitySystem/AOWGameplayTags.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 
 #include "Abilities/GameplayAbilityTypes.h"

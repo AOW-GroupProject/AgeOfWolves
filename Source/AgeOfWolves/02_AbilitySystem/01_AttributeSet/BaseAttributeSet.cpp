@@ -1,7 +1,6 @@
 ﻿#include "BaseAttributeSet.h"
 #include "Logging/StructuredLog.h"
 
-#include "02_AbilitySystem/AOWGameplayTags.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 
 #include "GameplayEffectExtension.h"

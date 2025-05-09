@@ -5,7 +5,6 @@
 
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
-#include "02_AbilitySystem/AOWGameplayTags.h"
 
 #include "GameplayEffectCustomApplicationRequirement.h"
 
@@ -490,11 +489,11 @@ TArray<FChainActionMapping> UBaseGameplayAbility::GetChainActionMappings() const
     return ChainActionMappings;
 }
 
-FChainActionMapping UBaseGameplayAbility::GetChainActionMapping(const FGameplayTag& AbilityTag) const
+FChainActionMapping UBaseGameplayAbility::GetChainActionMapping(const FGameplayTag& InputTag) const
 {
     for (const auto& Mapping : ChainActionMappings)
     {
-        if (Mapping.AbilityTag == AbilityTag)
+        if (Mapping.InputTag == InputTag)
         {
             return Mapping;
         }

@@ -13,7 +13,6 @@
 #include "Kismet/KismetMathLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogAnimInstance)
-// UE_LOGFMT(LogAnimInstance, Log, "");
 
 //@Defualt Setting
 #pragma region Default Setting
@@ -33,7 +32,7 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , BoneTransformLerpSpeed(10.0f)
     , CharacterMovementCompRef(nullptr)
     , CombatType(ECombatType::NonCombat)
-    , bIsPlayingRootMotionMontage(false)
+    , bIsPlayingRootMotionMontageWithFullBodySlot(false)
     , bIsRootMotionCooldown(false)
     , RootMotionCooldownTime(0.0f)
     , RootMotionCooldownDuration(1.5f)
@@ -79,6 +78,11 @@ void UBaseAnimInstance::NativeInitializeAnimation()
         return;
     }
     CharacterMovementCompRef = CharacterMovementComp;
+
+    //@Montage 콜백 등록
+    OnMontageStarted.AddDynamic(this, &UBaseAnimInstance::MontageStarted);
+    OnMontageEnded.AddDynamic(this, &UBaseAnimInstance::MontageEnded);
+
 }
 
 void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -119,6 +123,7 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     FindMovementState();
     //@캐릭터의 이동 방향 각도를 정의합니다.
     FindMovementDirectionAngle();
+
 }
 #pragma endregion
 
@@ -126,7 +131,7 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 #pragma region Property or Subwidgets or Infos...etc
 void UBaseAnimInstance::FindMovementState()
 {
-    if (bIsPlayingRootMotionMontage)
+    if (bIsPlayingRootMotionMontageWithFullBodySlot)
     {
         MovementState = EMovementState::Idle;
         return;
@@ -255,14 +260,14 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
 
 void UBaseAnimInstance::HandleStartRootMotion()
 {
-    bIsPlayingRootMotionMontage = true;
+    bIsPlayingRootMotionMontageWithFullBodySlot = true;
     
     UE_LOGFMT(LogAnimInstance, Log, "Root Motion 시작");
 }
 
 void UBaseAnimInstance::HandleEndRootMotion()
 {
-    bIsPlayingRootMotionMontage = false;
+    bIsPlayingRootMotionMontageWithFullBodySlot = false;
     bIsRootMotionCooldown = true;
     CurrentRootMotionCooldownTime = 0.0f;
 
@@ -352,8 +357,88 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
         static_cast<uint8>(CombatType),
         NewValue);
 }
+
+void UBaseAnimInstance::MontageStarted(UAnimMontage* Montage)
+{
+    //@몽타주 유효성 체크
+    if (!Montage)
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "몽타주 시작 처리 실패: 몽타주가 유효하지 않음");
+        return;
+    }
+
+    bool bIsFullBody = false;
+    if (IsFullBodySlotMontage(Montage))
+        bIsFullBody = true;
+
+    // 전체 바디 몽타주일 경우만 Movement State 억제
+    if (bIsFullBody)
+    {
+        UE_LOGFMT(LogAnimInstance, Log, "전체 바디 몽타주 시작: {0}", *Montage->GetName());
+        HandleStartRootMotion();
+    }
+    else
+    {
+        UE_LOGFMT(LogAnimInstance, Log, "상체 몽타주 시작: {0} - Movement State 유지", *Montage->GetName());
+    }
+}
+
+void UBaseAnimInstance::MontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (!Montage)
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "몽타주 종료 처리 실패: 몽타주가 유효하지 않음");
+        return;
+    }
+
+    if (bInterrupted)
+    {
+        return;
+    }
+
+    // 슬롯 정보 확인
+    bool bIsFullBody = false;
+    if (IsFullBodySlotMontage(Montage))
+        bIsFullBody = true;
+
+    // 전체 바디 몽타주일 경우만 종료 처리
+    if (bIsFullBody && bIsPlayingRootMotionMontageWithFullBodySlot)
+    {
+        UE_LOGFMT(LogAnimInstance, Log, "전체 바디 몽타주 종료: {0}", *Montage->GetName());
+        HandleEndRootMotion();
+    }
+
+    UE_LOGFMT(LogAnimInstance, Log, "몽타주 종료: {0}, 중단됨: {1}", *Montage->GetName(), bInterrupted);
+}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+bool UBaseAnimInstance::IsFullBodySlotMontage(const UAnimMontage* Montage) const
+{
+    if (!Montage || Montage->SlotAnimTracks.Num() == 0)
+    {
+        return false;
+    }
+
+    for (const FSlotAnimationTrack& Track : Montage->SlotAnimTracks)
+    {
+        // 슬롯 이름을 문자열로 변환
+        FString SlotNameStr = Track.SlotName.ToString();
+
+        // 1. 전체 이름이 정확히 일치하는 경우
+        if (Track.SlotName.IsEqual(FName("DefaultGroup.FullBodySlot"), ENameCase::IgnoreCase))
+        {
+            return true;
+        }
+
+        // 2. 슬롯 이름이 "FullBodySlot"으로 끝나는 경우 (그룹명.슬롯명 형식 대응)
+        if (SlotNameStr.EndsWith("FullBodySlot", ESearchCase::IgnoreCase))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 #pragma endregion
