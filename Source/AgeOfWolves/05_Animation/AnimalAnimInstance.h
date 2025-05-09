@@ -5,6 +5,12 @@
 
 #include "AnimalAnimInstance.generated.h"
 
+DECLARE_LOG_CATEGORY_EXTERN(LogAnimalAnim, Log, All)
+
+//@전방 선언
+#pragma region Forward Declaration
+#pragma endregion
+
 //@열거형
 #pragma region Enums
 /*
@@ -41,6 +47,14 @@ enum class EPivotState : uint8
 };
 #pragma endregion
 
+//@구조체
+#pragma region Structs
+#pragma endregion
+
+//@이벤트/델리게이트
+#pragma region Delegates
+#pragma endregion
+
 /**
  *	@UAnimalAnimInstance
  *
@@ -51,7 +65,7 @@ class AGEOFWOLVES_API UAnimalAnimInstance : public UBaseAnimInstance
 {
 	GENERATED_BODY()
 
-	//@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UAnimalAnimInstance(const FObjectInitializer& ObjectInitializer);
@@ -62,14 +76,11 @@ protected:
 	virtual void NativeUpdateAnimation(float DeltaSeconds) override;
 #pragma endregion
 
-	//@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
-	//@이동 상태 찾기 (오버라이드)
+	//@오버라이딩
 	virtual void FindMovementState() override;
-
-	//@피벗 회전 각도 계산
-	void CalculatePivotAngle();
 
 	//@피벗 방향 업데이트
 	void UpdatePivotDirection();
@@ -125,19 +136,23 @@ protected:
 	bool bIsPivotCooldown;
 #pragma endregion
 
-	//@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
+protected:
+	//@피벗 회전 각도 계산
+	void CalculatePivotAngle();
+
 public:
 	//@피벗 방향 반환
 	UFUNCTION(BlueprintPure, Category = "Animation | Animal", meta = (BlueprintThreadSafe))
-	EPivotDirection GetPivotDirection() const { return PivotDirection; }
+		EPivotDirection GetPivotDirection() const { return PivotDirection; }
 
 	//@피벗 상태 반환
 	UFUNCTION(BlueprintPure, Category = "Animation | Animal", meta = (BlueprintThreadSafe))
-	EPivotState GetPivotState() const { return PivotState; }
+		EPivotState GetPivotState() const { return PivotState; }
 
 	//@피벗 중인지 여부 반환
 	UFUNCTION(BlueprintPure, Category = "Animation | Animal", meta = (BlueprintThreadSafe))
-	bool IsPivoting() const { return bIsPivoting; }
+		bool IsPivoting() const { return bIsPivoting; }
 #pragma endregion
 };

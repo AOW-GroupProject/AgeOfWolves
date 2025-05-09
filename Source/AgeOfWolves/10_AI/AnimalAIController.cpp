@@ -23,14 +23,12 @@ void AAnimalAIController::BeginPlay()
     Super::BeginPlay();
 
     // 초기 회전 설정 적용
-    UpdateRotationSettings();
+    //UpdateRotationSettings();
 }
 
 void AAnimalAIController::Tick(float DeltaTime)
 {
     Super::Tick(DeltaTime);
-
-    // Super::Tick에서는 UpdateControlRotation이 호출됨 (오버라이드 됨)
 }
 
 void AAnimalAIController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn)
