@@ -41,23 +41,29 @@ void UAnimalAnimInstance::NativeInitializeAnimation()
 
 void UAnimalAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 {
-    Super::NativeUpdateAnimation(DeltaSeconds);
+    // 기존 코드에서는 Super::NativeUpdateAnimation(DeltaSeconds)가 호출되어
+    // 이미 FindMovementState()가 실행된 후에 피벗 계산을 함
 
-    //@오너 캐릭터 유효성 검사
-    if (!OwnerCharacterBaseRef.IsValid())
+    // Super 호출 전에 필요한 변수 업데이트
+    if (OwnerCharacterBaseRef.IsValid())
     {
-        return;
+        bFalling = OwnerCharacterBaseRef->GetMovementComponent()->IsFalling();
+        Velocity = OwnerCharacterBaseRef->GetVelocity();
+        Speed = Velocity.Length();
+
+        // 피벗 계산을 먼저 수행
+        if (Speed > 0.05f && !bFalling)
+        {
+            CalculatePivotAngle();
+            UpdatePivotDirection();
+        }
     }
 
-    //@피벗 관련 계산 (이동 중이고 공중에 있지 않을 때만)
-    if (Speed > 0.05f && !bFalling)
-    {
-        CalculatePivotAngle();
-        UpdatePivotDirection();
-    }
-
-    //@피벗 상태 업데이트
+    // 피벗 상태 업데이트
     UpdatePivotState(DeltaSeconds);
+
+    // 이후 상위 클래스 호출 (FindMovementState 포함)
+    Super::NativeUpdateAnimation(DeltaSeconds);
 }
 #pragma endregion
 
@@ -136,11 +142,15 @@ void UAnimalAnimInstance::UpdatePivotDirection()
     EPivotDirection PrevDirection = PivotDirection;
     PivotDirection = EPivotDirection::None;
 
+    // 속도 체크
+    if (Velocity.SizeSquared() < 25.0f)
+    {
+        return;
+    }
+
     // 회전 각도가 임계값 미만이면 피벗 없음
     if (RotationDeltaAngle < PivotThreshold60)
     {
-        UE_LOGFMT(LogAnimalAnim, Warning, "피벗 방향 결정 실패: 회전 각도({0}) < 임계값({1})",
-            RotationDeltaAngle, PivotThreshold60);
         return;
     }
 
@@ -148,40 +158,54 @@ void UAnimalAnimInstance::UpdatePivotDirection()
     FVector CurrentForward = OwnerCharacterBaseRef->GetActorForwardVector();
     FVector DesiredDirection = Velocity.GetSafeNormal();
 
-    // 속도가 너무 낮으면 피벗 감지 무시 (현재 주석 처리됨)
-    if (Velocity.SizeSquared() < 25.0f)
-    {
-        UE_LOGFMT(LogAnimalAnim, Warning, "피벗 방향 결정 실패: 속도가 너무 낮음({0})",
-            Velocity.Size());
-        return;
-    }
-
     // 회전 방향 결정 (외적 사용)
     FVector CrossProduct = FVector::CrossProduct(CurrentForward, DesiredDirection);
     bool bIsLeft = CrossProduct.Z < 0.0f;
 
-    // 60도와 120도만 사용하는 피벗 방향 결정
-    if (RotationDeltaAngle >= PivotThreshold90) // 90도 이상이면 120도 피벗 사용
+    // Idle 상태일 때는 90도 피벗도 고려
+    if (MovementState == EMovementState::Idle)
     {
-        PivotDirection = bIsLeft ? EPivotDirection::Left120 : EPivotDirection::Right120;
-        UE_LOGFMT(LogAnimalAnim, Log, "120도 피벗 선택 - 방향: {0}, 각도: {1}°",
-            bIsLeft ? "Left" : "Right", RotationDeltaAngle);
+        // 90도 임계값 확인
+        if (RotationDeltaAngle >= PivotThreshold90)
+        {
+            // 120도 피벗
+            PivotDirection = bIsLeft ? EPivotDirection::Left120 : EPivotDirection::Right120;
+            UE_LOGFMT(LogAnimalAnim, Log, "120도 피벗 선택 - 방향: {0}, 각도: {1}°",
+                bIsLeft ? "Left" : "Right", RotationDeltaAngle);
+        }
+        else if (RotationDeltaAngle >= PivotThreshold60 + 15.0f) // 90도 중간 범위 (75도 이상)
+        {
+            // 90도 피벗
+            PivotDirection = bIsLeft ? EPivotDirection::Left90 : EPivotDirection::Right90;
+            UE_LOGFMT(LogAnimalAnim, Log, "90도 피벗 선택(Idle) - 방향: {0}, 각도: {1}°",
+                bIsLeft ? "Left" : "Right", RotationDeltaAngle);
+        }
+        else
+        {
+            // 60도 피벗
+            PivotDirection = bIsLeft ? EPivotDirection::Left60 : EPivotDirection::Right60;
+            UE_LOGFMT(LogAnimalAnim, Log, "60도 피벗 선택 - 방향: {0}, 각도: {1}°",
+                bIsLeft ? "Left" : "Right", RotationDeltaAngle);
+        }
     }
-    else // 60도 이상 90도 미만이면 60도 피벗 사용
+    else // Walking/Sprinting 상태에서는 60/120도만 사용
     {
-        PivotDirection = bIsLeft ? EPivotDirection::Left60 : EPivotDirection::Right60;
-        UE_LOGFMT(LogAnimalAnim, Log, "60도 피벗 선택 - 방향: {0}, 각도: {1}°",
-            bIsLeft ? "Left" : "Right", RotationDeltaAngle);
-    }
-
-    if (PrevDirection != PivotDirection && PivotDirection != EPivotDirection::None)
-    {
-        UE_LOGFMT(LogAnimalAnim, Log, "피벗 방향 변경: {0} -> {1}",
-            *UEnum::GetValueAsString(PrevDirection),
-            *UEnum::GetValueAsString(PivotDirection));
+        if (RotationDeltaAngle >= PivotThreshold90)
+        {
+            // 120도 피벗
+            PivotDirection = bIsLeft ? EPivotDirection::Left120 : EPivotDirection::Right120;
+            UE_LOGFMT(LogAnimalAnim, Log, "120도 피벗 선택 - 방향: {0}, 각도: {1}°",
+                bIsLeft ? "Left" : "Right", RotationDeltaAngle);
+        }
+        else
+        {
+            // 60도 피벗
+            PivotDirection = bIsLeft ? EPivotDirection::Left60 : EPivotDirection::Right60;
+            UE_LOGFMT(LogAnimalAnim, Log, "60도 피벗 선택 - 방향: {0}, 각도: {1}°",
+                bIsLeft ? "Left" : "Right", RotationDeltaAngle);
+        }
     }
 }
-
 void UAnimalAnimInstance::UpdatePivotState(float DeltaSeconds)
 {
     // 피벗 쿨다운 처리
