@@ -1,4 +1,4 @@
-﻿#include "BaseAnimInstance.h"
+#include "BaseAnimInstance.h"
 #include "Logging/StructuredLog.h"
 
 #include "01_Character/PlayerCharacter.h"
@@ -37,6 +37,7 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , RootMotionCooldownTime(0.0f)
     , RootMotionCooldownDuration(1.5f)
     , CurrentRootMotionCooldownTime(0.0f)
+    , LastMovementDirection(EMovementDirection::Fwd)
 {
     OwnerCharacterBaseRef.Reset();
     CharacterMovementCompRef.Reset();
@@ -187,7 +188,25 @@ void UBaseAnimInstance::FindMovementDirectionAngle()
 
     if (Velocity.SizeSquared() < 25.0f)
     {
-        MovementDirection = EMovementDirection::Fwd;
+        //@현재 유효한 방향이 있다면 마지막 방향으로 저장
+        if (PrevDirection != EMovementDirection::Fwd)
+        {
+            LastMovementDirection = PrevDirection;
+            UE_LOGFMT(LogAnimInstance, Log, "마지막 방향 저장: {0}",
+                *UEnum::GetValueAsString(LastMovementDirection));
+        }
+
+        //@정지 모션 실행 중일 때는 마지막 방향 사용, 아니면 기본 방향
+        if (StopMotionType != EStopMotionType::None)
+        {
+            MovementDirection = LastMovementDirection;
+            UE_LOGFMT(LogAnimInstance, Log, "정지 모션의 방향: {0}",
+                *UEnum::GetValueAsString(MovementDirection));
+        }
+        else
+        {
+            MovementDirection = EMovementDirection::Fwd;
+        }
         return;
     }
 
@@ -255,7 +274,7 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
     //@Stop Motion Type 업데이트
     StopMotionType = Type;
 
-    UE_LOGFMT(LogAnimInstance, Log, "정지 모션 변경: {0}", *UEnum::GetValueAsString(StopMotionType));
+    UE_LOGFMT(LogAnimInstance, Log, "정지 모션 변경: {0}, 방향: {1}", *UEnum::GetValueAsString(StopMotionType), *UEnum::GetValueAsString(MovementDirection));
 }
 
 void UBaseAnimInstance::HandleStartRootMotion()

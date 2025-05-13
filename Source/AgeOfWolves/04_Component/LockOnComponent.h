@@ -97,7 +97,7 @@ protected:
         float HeightThreshold = 20.f;
 
     UPROPERTY(EditDefaultsOnly, Category = "Lock On")
-        float InterpolationSpeed = 10.f;
+        float InterpolationSpeed = 20.f;
 
 protected:
     bool bLockOn;

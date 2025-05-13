@@ -1,4 +1,4 @@
-﻿#pragma once
+#pragma once
 
 #include "CoreMinimal.h"
 #include "Animation/AnimInstance.h"
@@ -178,6 +178,10 @@ protected:
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "이동 | 이동 방향", meta = (AlloPrivateAccess = "true"))
 		EMovementDirection MovementDirection;
 
+	//@직전 이동 방향
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "이동 | 이동 방향", meta = (AlloPrivateAccess = "true"))
+		EMovementDirection LastMovementDirection;
+
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
 		bool bFalling;
@@ -297,6 +301,10 @@ public:
 
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE EStopMotionType GetStopMotionType() const { return StopMotionType; }
+
+	//@마지막 이동 방향 조회
+	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
+		FORCEINLINE EMovementDirection GetLastMovementDirection() const { return LastMovementDirection; }
 
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
 		FORCEINLINE float GetDirectionAngle() const { return DirectionAngle; }
