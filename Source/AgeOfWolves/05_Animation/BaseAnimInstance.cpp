@@ -255,7 +255,7 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
     //@Stop Motion Type 업데이트
     StopMotionType = Type;
 
-    UE_LOGFMT(LogAnimInstance, Log, "정지 모션 변경: {0}", *UEnum::GetValueAsString(StopMotionType));
+    UE_LOGFMT(LogAnimInstance, Log, "정지 모션 변경: {0}, 정지 방향: {1}", *UEnum::GetValueAsString(StopMotionType), *UEnum::GetValueAsString(MovementDirection));
 }
 
 void UBaseAnimInstance::HandleStartRootMotion()
