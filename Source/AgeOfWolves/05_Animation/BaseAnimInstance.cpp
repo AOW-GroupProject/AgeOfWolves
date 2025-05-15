@@ -50,7 +50,6 @@ void UBaseAnimInstance::NativeBeginPlay()
 
     //@Combat State 속성 수치 변화 관찰
     ListenToCombatStateAttributeChange();
-
 }
 
 void UBaseAnimInstance::NativeInitializeAnimation()
@@ -275,6 +274,7 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
     StopMotionType = Type;
 
     UE_LOGFMT(LogAnimInstance, Log, "정지 모션 변경: {0}, 방향: {1}", *UEnum::GetValueAsString(StopMotionType), *UEnum::GetValueAsString(MovementDirection));
+
 }
 
 void UBaseAnimInstance::HandleStartRootMotion()

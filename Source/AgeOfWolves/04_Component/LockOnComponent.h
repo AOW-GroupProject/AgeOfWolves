@@ -17,6 +17,7 @@ class UCameraComponent;
 class UBaseInputComponent;
 struct FInputActionValue;
 class AController;
+class UMotionWarpingComponent;
 #pragma endregion
 
 //@열거형
@@ -97,7 +98,7 @@ protected:
         float HeightThreshold = 20.f;
 
     UPROPERTY(EditDefaultsOnly, Category = "Lock On")
-        float InterpolationSpeed = 20.f;
+        float InterpolationSpeed = 10.f;
 
 protected:
     bool bLockOn;

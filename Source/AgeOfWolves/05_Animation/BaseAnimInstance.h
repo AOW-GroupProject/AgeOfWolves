@@ -232,7 +232,6 @@ protected:
 protected:
 	UPROPERTY()
 		UStaticMesh* OriginalFullWeaponMesh;
-
 #pragma endregion
 
 //@Delegates
