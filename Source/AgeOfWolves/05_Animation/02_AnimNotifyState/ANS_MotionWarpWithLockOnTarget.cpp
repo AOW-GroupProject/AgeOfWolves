@@ -38,11 +38,36 @@ void UANS_MotionWarpWithLockOnTarget::NotifyBegin(USkeletalMeshComponent* MeshCo
         UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - LockOn 상태가 아님. WarpTarget 제거");
         return;
     }
+    
+    auto MotionWarpingComp = Character->GetMotionWarpingComponent();
+    if (!MotionWarpingComp)
+    {
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - MotionWarpingComponent가 없음");
+        return;
+    }
+
+    auto TargetEnemy = LockOnComp->GetTargetEnemy();
+    if (!TargetEnemy)
+    {
+        UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - 타겟 적이 없음");
+        return;
+    }
+
+    FMotionWarpingTarget WarpTarget;
+    WarpTarget.Name = FName("LockOnTarget");
+    WarpTarget.Rotation = LockOnComp->GetFinalRotation();
+    WarpTarget.Location = Character->GetActorLocation();
+
+    MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
+
+    UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Log, "WarpTarget 업데이트 - 타겟: {0} | 위치: {1} | 회전: {2}",
+        *TargetEnemy->GetName(),
+        *WarpTarget.Location.ToString(),
+        *WarpTarget.Rotation.ToString());
 }
 
 void UANS_MotionWarpWithLockOnTarget::NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime)
 {
-    Super::NotifyTick(MeshComp, Animation, FrameDeltaTime);
 
     if (!MeshComp)
     {
@@ -86,7 +111,7 @@ void UANS_MotionWarpWithLockOnTarget::NotifyTick(USkeletalMeshComponent* MeshCom
     FMotionWarpingTarget WarpTarget;
     WarpTarget.Name = FName("LockOnTarget");
     WarpTarget.Rotation = LockOnComp->GetFinalRotation();
-    WarpTarget.Location = TargetEnemy->GetActorLocation();
+    WarpTarget.Location = LockOnComp->GetTargetEnemy()->GetActorLocation();
 
     MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
 
@@ -94,11 +119,41 @@ void UANS_MotionWarpWithLockOnTarget::NotifyTick(USkeletalMeshComponent* MeshCom
         *TargetEnemy->GetName(),
         *WarpTarget.Location.ToString(),
         *WarpTarget.Rotation.ToString());
+
+    Super::NotifyTick(MeshComp, Animation, FrameDeltaTime);
 }
 
 void UANS_MotionWarpWithLockOnTarget::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation)
 {
     Super::NotifyEnd(MeshComp, Animation);
+
+    //if (!MeshComp)
+    //{
+    //    UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - MeshComp가 유효하지 않음");
+    //    return;
+    //}
+
+    //auto Character = Cast<APlayerCharacter>(MeshComp->GetOwner());
+    //if (!Character)
+    //{
+    //    UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - Character 캐스팅 실패. Owner: {0}",
+    //        *GetNameSafe(MeshComp->GetOwner()));
+    //    return;
+    //}
+
+    //auto MotionWarpingComp = Character->GetMotionWarpingComponent();
+    //if (!MotionWarpingComp)
+    //{
+    //    UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - MotionWarpingComponent가 없음");
+    //    return;
+    //}
+
+    //MotionWarpingComp->RemoveWarpTarget(FName("LockOnTarget"));
+}
+
+FString UANS_MotionWarpWithLockOnTarget::GetNotifyName_Implementation() const
+{
+    return FString::Printf(TEXT("락온 타겟에 대하여 모션 워핑"));
 }
 #pragma endregion
 

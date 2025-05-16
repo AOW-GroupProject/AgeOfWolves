@@ -17,6 +17,7 @@ class UCameraComponent;
 class UBaseInputComponent;
 struct FInputActionValue;
 class AController;
+class UMotionWarpingComponent;
 #pragma endregion
 
 //@열거형

@@ -1,4 +1,4 @@
-﻿#include "BaseAnimInstance.h"
+#include "BaseAnimInstance.h"
 #include "Logging/StructuredLog.h"
 
 #include "01_Character/PlayerCharacter.h"
@@ -13,7 +13,6 @@
 #include "Kismet/KismetMathLibrary.h"
 
 DEFINE_LOG_CATEGORY(LogAnimInstance)
-// UE_LOGFMT(LogAnimInstance, Log, "");
 
 //@Defualt Setting
 #pragma region Default Setting
@@ -33,11 +32,12 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , BoneTransformLerpSpeed(10.0f)
     , CharacterMovementCompRef(nullptr)
     , CombatType(ECombatType::NonCombat)
-    , bIsPlayingRootMotionMontage(false)
+    , bIsPlayingRootMotionMontageWithFullBodySlot(false)
     , bIsRootMotionCooldown(false)
     , RootMotionCooldownTime(0.0f)
     , RootMotionCooldownDuration(1.5f)
     , CurrentRootMotionCooldownTime(0.0f)
+    , LastMovementDirection(EMovementDirection::Fwd)
 {
     OwnerCharacterBaseRef.Reset();
     CharacterMovementCompRef.Reset();
@@ -50,7 +50,6 @@ void UBaseAnimInstance::NativeBeginPlay()
 
     //@Combat State 속성 수치 변화 관찰
     ListenToCombatStateAttributeChange();
-
 }
 
 void UBaseAnimInstance::NativeInitializeAnimation()
@@ -79,6 +78,11 @@ void UBaseAnimInstance::NativeInitializeAnimation()
         return;
     }
     CharacterMovementCompRef = CharacterMovementComp;
+
+    //@Montage 콜백 등록
+    OnMontageStarted.AddDynamic(this, &UBaseAnimInstance::MontageStarted);
+    OnMontageEnded.AddDynamic(this, &UBaseAnimInstance::MontageEnded);
+
 }
 
 void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
@@ -119,6 +123,7 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     FindMovementState();
     //@캐릭터의 이동 방향 각도를 정의합니다.
     FindMovementDirectionAngle();
+
 }
 #pragma endregion
 
@@ -126,7 +131,7 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 #pragma region Property or Subwidgets or Infos...etc
 void UBaseAnimInstance::FindMovementState()
 {
-    if (bIsPlayingRootMotionMontage)
+    if (bIsPlayingRootMotionMontageWithFullBodySlot)
     {
         MovementState = EMovementState::Idle;
         return;
@@ -182,7 +187,25 @@ void UBaseAnimInstance::FindMovementDirectionAngle()
 
     if (Velocity.SizeSquared() < 25.0f)
     {
-        MovementDirection = EMovementDirection::Fwd;
+        //@현재 유효한 방향이 있다면 마지막 방향으로 저장
+        if (PrevDirection != EMovementDirection::Fwd)
+        {
+            LastMovementDirection = PrevDirection;
+            UE_LOGFMT(LogAnimInstance, Log, "마지막 방향 저장: {0}",
+                *UEnum::GetValueAsString(LastMovementDirection));
+        }
+
+        //@정지 모션 실행 중일 때는 마지막 방향 사용, 아니면 기본 방향
+        if (StopMotionType != EStopMotionType::None)
+        {
+            MovementDirection = LastMovementDirection;
+            UE_LOGFMT(LogAnimInstance, Log, "정지 모션의 방향: {0}",
+                *UEnum::GetValueAsString(MovementDirection));
+        }
+        else
+        {
+            MovementDirection = EMovementDirection::Fwd;
+        }
         return;
     }
 
@@ -250,19 +273,20 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
     //@Stop Motion Type 업데이트
     StopMotionType = Type;
 
-    UE_LOGFMT(LogAnimInstance, Log, "정지 모션 변경: {0}", *UEnum::GetValueAsString(StopMotionType));
+    UE_LOGFMT(LogAnimInstance, Log, "정지 모션 변경: {0}, 방향: {1}", *UEnum::GetValueAsString(StopMotionType), *UEnum::GetValueAsString(MovementDirection));
+
 }
 
 void UBaseAnimInstance::HandleStartRootMotion()
 {
-    bIsPlayingRootMotionMontage = true;
+    bIsPlayingRootMotionMontageWithFullBodySlot = true;
     
     UE_LOGFMT(LogAnimInstance, Log, "Root Motion 시작");
 }
 
 void UBaseAnimInstance::HandleEndRootMotion()
 {
-    bIsPlayingRootMotionMontage = false;
+    bIsPlayingRootMotionMontageWithFullBodySlot = false;
     bIsRootMotionCooldown = true;
     CurrentRootMotionCooldownTime = 0.0f;
 
@@ -352,8 +376,88 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
         static_cast<uint8>(CombatType),
         NewValue);
 }
+
+void UBaseAnimInstance::MontageStarted(UAnimMontage* Montage)
+{
+    //@몽타주 유효성 체크
+    if (!Montage)
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "몽타주 시작 처리 실패: 몽타주가 유효하지 않음");
+        return;
+    }
+
+    bool bIsFullBody = false;
+    if (IsFullBodySlotMontage(Montage))
+        bIsFullBody = true;
+
+    // 전체 바디 몽타주일 경우만 Movement State 억제
+    if (bIsFullBody)
+    {
+        UE_LOGFMT(LogAnimInstance, Log, "전체 바디 몽타주 시작: {0}", *Montage->GetName());
+        HandleStartRootMotion();
+    }
+    else
+    {
+        UE_LOGFMT(LogAnimInstance, Log, "상체 몽타주 시작: {0} - Movement State 유지", *Montage->GetName());
+    }
+}
+
+void UBaseAnimInstance::MontageEnded(UAnimMontage* Montage, bool bInterrupted)
+{
+    if (!Montage)
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "몽타주 종료 처리 실패: 몽타주가 유효하지 않음");
+        return;
+    }
+
+    if (bInterrupted)
+    {
+        return;
+    }
+
+    // 슬롯 정보 확인
+    bool bIsFullBody = false;
+    if (IsFullBodySlotMontage(Montage))
+        bIsFullBody = true;
+
+    // 전체 바디 몽타주일 경우만 종료 처리
+    if (bIsFullBody && bIsPlayingRootMotionMontageWithFullBodySlot)
+    {
+        UE_LOGFMT(LogAnimInstance, Log, "전체 바디 몽타주 종료: {0}", *Montage->GetName());
+        HandleEndRootMotion();
+    }
+
+    UE_LOGFMT(LogAnimInstance, Log, "몽타주 종료: {0}, 중단됨: {1}", *Montage->GetName(), bInterrupted);
+}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+bool UBaseAnimInstance::IsFullBodySlotMontage(const UAnimMontage* Montage) const
+{
+    if (!Montage || Montage->SlotAnimTracks.Num() == 0)
+    {
+        return false;
+    }
+
+    for (const FSlotAnimationTrack& Track : Montage->SlotAnimTracks)
+    {
+        // 슬롯 이름을 문자열로 변환
+        FString SlotNameStr = Track.SlotName.ToString();
+
+        // 1. 전체 이름이 정확히 일치하는 경우
+        if (Track.SlotName.IsEqual(FName("DefaultGroup.FullBodySlot"), ENameCase::IgnoreCase))
+        {
+            return true;
+        }
+
+        // 2. 슬롯 이름이 "FullBodySlot"으로 끝나는 경우 (그룹명.슬롯명 형식 대응)
+        if (SlotNameStr.EndsWith("FullBodySlot", ESearchCase::IgnoreCase))
+        {
+            return true;
+        }
+    }
+
+    return false;
+}
 #pragma endregion

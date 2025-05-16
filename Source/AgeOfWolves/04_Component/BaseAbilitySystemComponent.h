@@ -131,13 +131,13 @@ protected:
 protected:
 	//@Chain System 시작
 	UFUNCTION(BlueprintCallable, Category = "Chain System")
-		void StartChainWindowWithTag(const FGameplayTag& InAbilityToBindTag, FGameplayTag InTagToChain);
+		void StartChainWindowWithTag(const FGameplayTag& AbilityTagWaitingChainAction, FGameplayTag InputTagToChain);
 
 	//@Chain Sytsem 종료
 	UFUNCTION(BlueprintCallable, Category = "Chain System")
-		void EndChainWindow();
+		void EndChainWindow(const FGameplayTag& AbilityTag);
 
-	void EndChainWindow(const FGameplayEventData* Payload);
+	void EndChainWindow(const FGameplayTag& AbilityTag, const FGameplayEventData* Payload);
 
 protected:
 	// 상호작용 시스템 시작
@@ -166,18 +166,16 @@ protected:
 protected:
 	//@체인 시스템 활성화 여부
 	bool bChainWindowActive;
+
 	//@체인 액션 허용 여부
-	bool bCanChainAction;
-	//@체인 액션 시작한 원본 어빌리티
-	FGameplayTag OriginAbilityTag;
-	//@체인 액션 실행 모드
-	EChainActionMode CurrentChainMode;
-	//@허용 받은 체인 액션들
-	TArray<FChainActionMapping> AllowedChainMappings;
-	//@허용 받은 체인 이벤트들
-	TArray<FChainEventMapping> AllowedChainEventMappings;
-	//@다음 실행할 체인 액션의 이벤트 태그
-	FGameplayTag ChainActionEventTag;
+	TMap<FGameplayTag, TMap<FGameplayTag, bool>> ChainActionAllowedMap;
+
+protected:
+	//@체인 액션 대기 상태의 어빌리티와 해당 어빌리티에 대한 체인 액션 매핑 목록 (복수 지원)
+	TMap<FGameplayTag, TArray<FChainActionMapping>> ActiveChainActions;
+
+	//@체인 이벤트 대기 상태의 어빌리티와 해당 어빌리티에 대한 체인 이벤트 매핑 목록 (복수 지원)
+	TMap<FGameplayTag, TArray<FChainEventMapping>> ActiveChainEvents;
 
 protected:
 	//@현재 가능한 상호작용 정보
@@ -275,7 +273,6 @@ public:
 
 public:
 	FORCEINLINE bool IsChainWindowActive() const { return bChainWindowActive; }
-	FORCEINLINE bool CanChainAction() const { return bCanChainAction; }
 
 public:
 	FORCEINLINE bool IsInteractionAvailable() const { return bInteractionAvailable; }
