@@ -252,6 +252,7 @@ void UBaseAnimInstance::UpdateMovementSettings()
 
     if (bShouldUseDirectionalMovement)
     {
+        //@Rotation Setting
         CharacterMovementCompRef->bUseControllerDesiredRotation = true;
         CharacterMovementCompRef->bOrientRotationToMovement = false;
 
@@ -259,8 +260,12 @@ void UBaseAnimInstance::UpdateMovementSettings()
     }
     else
     {
+        //@Rotation Setting
         CharacterMovementCompRef->bUseControllerDesiredRotation = false;
         CharacterMovementCompRef->bOrientRotationToMovement = true;
+
+        //@Movement Direction
+        MovementDirection = EMovementDirection::Fwd;
 
         UE_LOGFMT(LogAnimInstance, Log, "일반 이동 설정: ControllerDesiredRotation(false), OrientRotationToMovement(true)");
     }
@@ -390,7 +395,7 @@ void UBaseAnimInstance::MontageStarted(UAnimMontage* Montage)
     if (IsFullBodySlotMontage(Montage))
         bIsFullBody = true;
 
-    // 전체 바디 몽타주일 경우만 Movement State 억제
+    //@전체 바디 몽타주일 경우만 Movement State 억제
     if (bIsFullBody)
     {
         UE_LOGFMT(LogAnimInstance, Log, "전체 바디 몽타주 시작: {0}", *Montage->GetName());

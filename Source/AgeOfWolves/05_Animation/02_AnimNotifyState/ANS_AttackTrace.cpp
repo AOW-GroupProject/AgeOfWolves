@@ -48,6 +48,11 @@ void UANS_AttackTrace::NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequence
 
     Ability->EndWeaponTrace();
 }
+
+FString UANS_AttackTrace::GetNotifyName_Implementation() const
+{
+    return FString::Printf(TEXT("충돌 허용 구간"));
+}
 #pragma endregion
 
 //@Property/Info...etc
