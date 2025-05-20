@@ -266,7 +266,7 @@ void UBaseAnimInstance::UpdateMovementSettings()
         //@Movement Direction - Start
         MovementDirection = EMovementDirection::Fwd;
         //@Last Movement Direction - End
-        LastMovementDirection - EMovementDirection::Fwd;
+        LastMovementDirection = EMovementDirection::Fwd;
 
         UE_LOGFMT(LogAnimInstance, Log, "일반 이동 설정: ControllerDesiredRotation(false), OrientRotationToMovement(true)");
     }
