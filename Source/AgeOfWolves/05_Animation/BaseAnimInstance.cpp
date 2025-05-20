@@ -185,31 +185,27 @@ void UBaseAnimInstance::FindMovementDirectionAngle()
     FRotator Rotation = OwnerCharacterBaseRef->GetControlRotation();
     DirectionAngle = CalculateDirection(Velocity, Rotation);
 
-    if (Velocity.SizeSquared() < 25.0f)
+    // 속도가 너무 낮을 때는 별도 처리
+    const float MinVelocitySquared = 25.0f;
+    if (Velocity.SizeSquared() < MinVelocitySquared)
     {
-        //@현재 유효한 방향이 있다면 마지막 방향으로 저장
-        if (PrevDirection != EMovementDirection::Fwd)
-        {
-            LastMovementDirection = PrevDirection;
-            UE_LOGFMT(LogAnimInstance, Log, "마지막 방향 저장: {0}",
-                *UEnum::GetValueAsString(LastMovementDirection));
-        }
+        // 현재 방향을 마지막 방향으로 저장 (Fwd 포함 모든 방향)
+        LastMovementDirection = PrevDirection;
+        UE_LOGFMT(LogAnimInstance, Log, "마지막 방향 저장: {0}",
+            *UEnum::GetValueAsString(LastMovementDirection));
 
-        //@정지 모션 실행 중일 때는 마지막 방향 사용, 아니면 기본 방향
+        // 정지 모션 실행 중일 때는 마지막 방향 사용
         if (StopMotionType != EStopMotionType::None)
         {
             MovementDirection = LastMovementDirection;
             UE_LOGFMT(LogAnimInstance, Log, "정지 모션의 방향: {0}",
                 *UEnum::GetValueAsString(MovementDirection));
         }
-        else
-        {
-            MovementDirection = EMovementDirection::Fwd;
-        }
+
         return;
     }
 
-    // 방향 각도에 따른 이동 방향 설정
+    // 이동 중일 때의 방향 계산 로직 (속도가 충분할 때만 실행됨)
     if (DirectionAngle >= -45.f && DirectionAngle < 45.f)
     {
         MovementDirection = EMovementDirection::Fwd;
@@ -227,14 +223,17 @@ void UBaseAnimInstance::FindMovementDirectionAngle()
         MovementDirection = EMovementDirection::Bwd;
     }
 
+    // 방향이 변경되었을 때 로그 출력
     if (PrevDirection != MovementDirection)
     {
         UE_LOGFMT(LogAnimInstance, Log, "이동 방향 변경: {0} -> {1}",
             *UEnum::GetValueAsString(PrevDirection),
             *UEnum::GetValueAsString(MovementDirection));
+
+        // 여기서도 마지막 방향 업데이트 (모든 방향 변경 시)
+        LastMovementDirection = MovementDirection;
     }
 }
-
 void UBaseAnimInstance::UpdateMovementSettings()
 {
     if (!CharacterMovementCompRef.IsValid())
@@ -252,6 +251,7 @@ void UBaseAnimInstance::UpdateMovementSettings()
 
     if (bShouldUseDirectionalMovement)
     {
+        //@Rotation Setting
         CharacterMovementCompRef->bUseControllerDesiredRotation = true;
         CharacterMovementCompRef->bOrientRotationToMovement = false;
 
@@ -259,8 +259,14 @@ void UBaseAnimInstance::UpdateMovementSettings()
     }
     else
     {
+        //@Rotation Setting
         CharacterMovementCompRef->bUseControllerDesiredRotation = false;
         CharacterMovementCompRef->bOrientRotationToMovement = true;
+
+        //@Movement Direction - Start
+        MovementDirection = EMovementDirection::Fwd;
+        //@Last Movement Direction - End
+        LastMovementDirection - EMovementDirection::Fwd;
 
         UE_LOGFMT(LogAnimInstance, Log, "일반 이동 설정: ControllerDesiredRotation(false), OrientRotationToMovement(true)");
     }
@@ -390,7 +396,7 @@ void UBaseAnimInstance::MontageStarted(UAnimMontage* Montage)
     if (IsFullBodySlotMontage(Montage))
         bIsFullBody = true;
 
-    // 전체 바디 몽타주일 경우만 Movement State 억제
+    //@전체 바디 몽타주일 경우만 Movement State 억제
     if (bIsFullBody)
     {
         UE_LOGFMT(LogAnimInstance, Log, "전체 바디 몽타주 시작: {0}", *Montage->GetName());

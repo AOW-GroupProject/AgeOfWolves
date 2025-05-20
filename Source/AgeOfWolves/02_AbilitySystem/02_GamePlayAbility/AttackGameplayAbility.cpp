@@ -30,11 +30,11 @@ void UAttackGameplayAbility::PostEditChangeProperty(FPropertyChangedEvent& Prope
     // 속성 이름을 문자열로 직접 비교
     if (PropertyName == GET_MEMBER_NAME_CHECKED(UBaseGameplayAbility, AnimMontages))
     {
-        if (HitStopSettingMode == EHitStopSettingMode::PerMontage)
+        if (HitStopSettingMode == EFXApplyRange::PerMontage)
         {
             // 몽타주 배열 크기에 맞게 HitStop 설정 배열 크기 조정
             int32 MontageCount = AnimMontages.Num();
-            int32 SettingsCount = MontageHitStopSettings.Num();
+            int32 SettingsCount = MontageTimeFXSettings.Num();
 
             // 크기가 다른 경우 조정
             if (MontageCount != SettingsCount)
@@ -46,13 +46,13 @@ void UAttackGameplayAbility::PostEditChangeProperty(FPropertyChangedEvent& Prope
                     int32 ItemsToAdd = MontageCount - SettingsCount;
                     for (int32 i = 0; i < ItemsToAdd; i++)
                     {
-                        MontageHitStopSettings.Add(FMontageHitStopSettings());
+                        MontageTimeFXSettings.Add(FTimeFXSetting());
                     }
                 }
                 else
                 {
                     // 배열 크기 축소
-                    MontageHitStopSettings.SetNum(MontageCount);
+                    MontageTimeFXSettings.SetNum(MontageCount);
                 }
 
                 UE_LOG(LogAttackGA, Log, TEXT("몽타주 배열 크기 변경 감지 - HitStop 설정 배열 크기 조정됨 (%d)"), MontageCount);
@@ -62,11 +62,11 @@ void UAttackGameplayAbility::PostEditChangeProperty(FPropertyChangedEvent& Prope
     // HitStop 설정 모드가 변경되었을 때
     else if (PropertyName == GET_MEMBER_NAME_CHECKED(UAttackGameplayAbility, HitStopSettingMode))
     {
-        if (HitStopSettingMode == EHitStopSettingMode::PerMontage)
+        if (HitStopSettingMode == EFXApplyRange::PerMontage)
         {
             // 몽타주 배열 크기에 맞게 HitStop 설정 배열 크기 조정
             int32 MontageCount = AnimMontages.Num();
-            MontageHitStopSettings.SetNum(MontageCount);
+            MontageTimeFXSettings.SetNum(MontageCount);
 
             UE_LOG(LogAttackGA, Log, TEXT("HitStop 설정 모드 변경 - 몽타주별 설정 모드로 변경됨, 설정 배열 크기: %d"), MontageCount);
         }
@@ -153,29 +153,11 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
     UE_LOGFMT(LogAttackGA, Log, "데미지 이벤트 전송 완료 - Target: {0}, Instigator: {1}, Impact Location: {2}",
         HitActor->GetName(), SourceActor->GetName(), HitResult.ImpactPoint.ToString());
 
-    //@히트 스탑 적용 - 설정 모드에 따라 다르게 처리
-    switch (HitStopSettingMode)
-    {
-        //@공통 히트 스탑 설정 적용
-    case EHitStopSettingMode::Global:
-        if (bEnableHitStop)
-        {
-            ApplyHitStop(HitActor);
-        }
-        break;
-        //@몽타주 별 히트 스탑 설정 적용
-    case EHitStopSettingMode::PerMontage:
-        ApplyHitStopForCurrentMontage(HitActor);
-        break;
-    }
+    //@히트스톱 효과 실행
+    ExecuteTimeFX(HitResult, SourceActor);
 
-    //@이팩트-1 : Impact Effect
-    ExecuteImpactGameplayCue(
-        HitResult,
-        SourceActor);
-
-    //@이팩트-2 : Slash Effect
-
+    //@이팩트 실행
+    ExecuteCollisionFX(HitResult, SourceActor);
 
 }
 
@@ -478,6 +460,32 @@ void UAttackGameplayAbility::PerformLineTrace(const FVector& Start, const FVecto
     );
 }
 
+void UAttackGameplayAbility::ExecuteTimeFX(const FHitResult& HitResult, AActor* SourceActor)
+{
+    AActor* HitActor = HitResult.GetActor();
+    if (!HitActor || !SourceActor)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "ExecuteTimeFX 실패 - 사유: Target 또는 Source가 유효하지 않음");
+        return;
+    }
+
+    //@히트 스탑 적용 - 설정 모드에 따라 다르게 처리
+    switch (HitStopSettingMode)
+    {
+        //@공통 히트 스탑 설정 적용
+    case EFXApplyRange::Global:
+        if (bEnableHitStop)
+        {
+            ApplyHitStop(HitActor);
+        }
+        break;
+        //@몽타주 별 히트 스탑 설정 적용
+    case EFXApplyRange::PerMontage:
+        ApplyHitStopForCurrentMontage(HitActor);
+        break;
+    }
+}
+
 void UAttackGameplayAbility::ApplyHitStop(AActor* Target)
 {
     //@Avatar
@@ -555,14 +563,14 @@ void UAttackGameplayAbility::ApplyHitStopForCurrentMontage(AActor* Target, int32
     int32 TargetMontageIndex = (MontageIndex >= 0) ? MontageIndex : CurrentMontageIndex;
 
     // 인덱스 유효성 검사
-    if (!MontageHitStopSettings.IsValidIndex(TargetMontageIndex))
+    if (!MontageTimeFXSettings.IsValidIndex(TargetMontageIndex))
     {
         UE_LOGFMT(LogAttackGA, Warning, "몽타주별 HitStop 적용 실패 - 사유: MontageIndex({0})가 유효하지 않음", TargetMontageIndex);
         return;
     }
 
     // 해당 몽타주에 설정된 HitStop 설정 가져오기
-    const FMontageHitStopSettings& HitStopSetting = MontageHitStopSettings[TargetMontageIndex];
+    const auto& HitStopSetting = MontageTimeFXSettings[TargetMontageIndex];
 
     // HitStop이 비활성화된 경우 스킵
     if (!HitStopSetting.bEnableHitStop)
@@ -599,36 +607,175 @@ void UAttackGameplayAbility::ApplyHitStopForCurrentMontage(AActor* Target, int32
         static_cast<int32>(HitStopSetting.HitStopIntensity));
 }
 
-void UAttackGameplayAbility::ExecuteImpactGameplayCue(const FHitResult& HitResult, AActor* SourceActor)
+void UAttackGameplayAbility::ExecuteCollisionFX(const FHitResult& HitResult, AActor* SourceActor)
 {
-    //@ImpactEffectCueTag
-    if (!ImpactEffectCueTag.IsValid())
+    //@매개변수 유효성 검사
+    if (!SourceActor)
     {
-        UE_LOGFMT(LogAttackGA, Warning, "ExecuteImpactGameplayCue 실패 - 사유: 유효하지 않은 ImpactEffectCueTag");
+        UE_LOGFMT(LogAttackGA, Warning, "ExecuteCollisionFX 실패 - 사유: Source Actor가 유효하지 않음");
+        return;
+    }
+
+    //@설정 모드에 따라 다르게 처리
+    switch (FXSettingMode)
+    {
+        //@공통 FX 설정 적용
+    case EFXApplyRange::Global:
+    {
+        if (!GlobalFXSetting.IsEnabled() || !GlobalFXSetting.GetEffectCueTag().IsValid())
+        {
+            UE_LOGFMT(LogAttackGA, Warning, "ExecuteCollisionFX 실패 - 사유: 전역 FX 설정이 비활성화되었거나 CueTag가 유효하지 않음");
+            return;
+        }
+
+        //@위치 결정: 충돌 위치, 소켓, 또는 커스텀 위치
+        FTransform SpawnTransform = FTransform::Identity;
+
+        // 충돌 위치 우선 사용 여부 확인
+        if (GlobalFXSetting.UseImpactLocation())
+        {
+            // 충돌 위치 직접 사용
+            SpawnTransform.SetLocation(HitResult.ImpactPoint);
+            SpawnTransform.SetRotation(FQuat(FRotator(0.f, 0.f, 0.f)));
+
+            UE_LOGFMT(LogAttackGA, Log, "FX 위치 설정 - 충돌 위치 사용: {0}",
+                *HitResult.ImpactPoint.ToString());
+        }
+        else if (GlobalFXSetting.UseSocket())
+        {
+            //@소켓 위치 가져오기
+            if (!GetSocketTransform(GlobalFXSetting.GetSocketName(), SpawnTransform))
+            {
+                //@소켓 없으면 충돌 위치 사용
+                SpawnTransform.SetLocation(HitResult.ImpactPoint);
+                SpawnTransform.SetRotation(FQuat(FRotator(0.f, 0.f, 0.f)));
+
+                UE_LOGFMT(LogAttackGA, Warning, "FX 위치 설정 - 소켓({0})을 찾을 수 없어 충돌 위치 대체 사용: {1}",
+                    *GlobalFXSetting.GetSocketName().ToString(), *HitResult.ImpactPoint.ToString());
+            }
+            else
+            {
+                UE_LOGFMT(LogAttackGA, Log, "FX 위치 설정 - 소켓({0}) 위치 사용: {1}",
+                    *GlobalFXSetting.GetSocketName().ToString(), *SpawnTransform.GetLocation().ToString());
+            }
+        }
+        else
+        {
+            //@커스텀 위치 사용
+            SpawnTransform.SetLocation(GlobalFXSetting.GetCustomLocation());
+            SpawnTransform.SetRotation(FQuat(GlobalFXSetting.GetEffectRotation()));
+
+            UE_LOGFMT(LogAttackGA, Log, "FX 위치 설정 - 커스텀 위치 사용: {0}",
+                *GlobalFXSetting.GetCustomLocation().ToString());
+        }
+
+        // 회전 설정 - 충돌 위치를 사용하지 않을 때만 커스텀 회전 적용
+        if (!GlobalFXSetting.UseImpactLocation() && !GlobalFXSetting.UseSocket())
+        {
+            SpawnTransform.SetRotation(FQuat(GlobalFXSetting.GetEffectRotation()));
+        }
+
+        //@스케일 설정
+        SpawnTransform.SetScale3D(GlobalFXSetting.GetEffectScale());
+
+        //@이펙트 실행
+        ExecuteGameplayCueAtLocation(GlobalFXSetting.GetEffectCueTag(), SpawnTransform, SourceActor);
+    }
+    break;
+
+    //@몽타주별 FX 설정 적용
+    case EFXApplyRange::PerMontage:
+        ExecuteCollisionFXForCurrentMontage(HitResult, SourceActor);
+        break;
+    }
+}
+
+void UAttackGameplayAbility::ExecuteGameplayCueAtLocation(const FGameplayTag& CueTag, const FTransform& SpawnTransform, AActor* SourceActor)
+{
+    //@태그 유효성 검사
+    if (!CueTag.IsValid())
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "ExecuteGameplayCueAtLocation 실패 - 사유: CueTag가 유효하지 않음");
+        return;
+    }
+
+    //@ASC 유효성 검사
+    UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
+    if (!ASC)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "ExecuteGameplayCueAtLocation 실패 - 사유: AbilitySystemComponent가 유효하지 않음");
         return;
     }
 
     //@Gameplay Cue Param
     FGameplayCueParameters CueParams;
-    CueParams.Location = HitResult.ImpactPoint;
-    CueParams.Normal = HitResult.ImpactNormal;
+    CueParams.Location = SpawnTransform.GetLocation();
+    CueParams.Normal = SpawnTransform.GetRotation().GetForwardVector();
     CueParams.Instigator = SourceActor;
     CueParams.EffectCauser = SourceActor;
     CueParams.SourceObject = this;
 
-    //@ASC
-    UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
-    if (!ASC)
+    //@Execute Gameplay Cue
+    ASC->ExecuteGameplayCue(CueTag, CueParams);
+
+    UE_LOGFMT(LogAttackGA, Log, "GameplayCue 실행 완료 - 태그: {0}, 위치: {1}, 회전: {2}, 스케일: {3}",
+        *CueTag.ToString(), *SpawnTransform.GetLocation().ToString(),
+        *SpawnTransform.GetRotation().Rotator().ToString(), *SpawnTransform.GetScale3D().ToString());
+}
+
+void UAttackGameplayAbility::ExecuteCollisionFXForCurrentMontage(const FHitResult& HitResult, AActor* SourceActor, int32 MontageIndex)
+{
+    //@매개변수 유효성 검사
+    if (!SourceActor)
     {
-        UE_LOGFMT(LogAttackGA, Warning, "ExecuteImpactGameplayCue 실패 - 사유: AbilitySystemComponent가 유효하지 않음");
+        UE_LOGFMT(LogAttackGA, Warning, "ExecuteCollisionFXForCurrentMontage 실패 - 사유: Source Actor가 유효하지 않음");
         return;
     }
 
-    //@Execute Gameplay Cue
-    ASC->ExecuteGameplayCue(ImpactEffectCueTag, CueParams);
+    //@몽타주 인덱스 결정
+    int32 TargetMontageIndex = (MontageIndex >= 0) ? MontageIndex : CurrentMontageIndex;
 
-    UE_LOGFMT(LogAttackGA, Log, "충돌 이펙트 GameplayCue 실행 - 태그: {0}, 위치: {1}",
-        *ImpactEffectCueTag.ToString(), *HitResult.ImpactPoint.ToString());
+    //@인덱스 유효성 검사
+    if (!MontageFXSettings.IsValidIndex(TargetMontageIndex))
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "ExecuteCollisionFXForCurrentMontage 실패 - 사유: 몽타주 인덱스({0})가 유효하지 않음", TargetMontageIndex);
+        return;
+    }
+
+    //@해당 몽타주의 FX 설정 가져오기
+    const FCollisionFXSetting& FXSetting = MontageFXSettings[TargetMontageIndex];
+
+    //@설정 유효성 검사
+    if (!FXSetting.IsEnabled() || !FXSetting.GetEffectCueTag().IsValid())
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "ExecuteCollisionFXForCurrentMontage 실패 - 사유: 몽타주({0})의 FX 설정이 비활성화되었거나 CueTag가 유효하지 않음", TargetMontageIndex);
+        return;
+    }
+
+    //@위치 결정: 소켓 또는 커스텀 위치
+    FTransform SpawnTransform;
+    if (FXSetting.UseSocket())
+    {
+        //@소켓 위치 가져오기
+        if (!GetSocketTransform(FXSetting.GetSocketName(), SpawnTransform))
+        {
+            //@소켓 없으면 충돌 위치 사용
+            SpawnTransform.SetLocation(HitResult.ImpactPoint);
+            SpawnTransform.SetRotation(FQuat(HitResult.ImpactNormal.Rotation()));
+        }
+    }
+    else
+    {
+        //@커스텀 위치 사용
+        SpawnTransform.SetLocation(FXSetting.GetCustomLocation());
+        SpawnTransform.SetRotation(FQuat(FXSetting.GetEffectRotation()));
+    }
+
+    //@스케일 설정
+    SpawnTransform.SetScale3D(FXSetting.GetEffectScale());
+
+    //@이펙트 실행
+    ExecuteGameplayCueAtLocation(FXSetting.GetEffectCueTag(), SpawnTransform, SourceActor);
 }
 #pragma endregion
 
@@ -658,5 +805,36 @@ void UAttackGameplayAbility::OnChainActionFinished_Implementation(FGameplayTag C
 ACharacterBase* UAttackGameplayAbility::GetCharacterFromActorInfo() const
 {
     return Cast<ACharacterBase>(GetAvatarActorFromActorInfo());
+}
+
+bool UAttackGameplayAbility::GetSocketTransform(FName SocketName, FTransform& OutTransform) const
+{
+    //@소켓 이름 유효성 검사
+    if (SocketName.IsNone())
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "GetSocketTransform 실패 - 사유: 소켓 이름이 유효하지 않음");
+        return false;
+    }
+
+    //@캐릭터 및 메시 유효성 검사
+    ACharacterBase* Character = GetCharacterFromActorInfo();
+    if (!Character || !Character->GetMesh())
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "GetSocketTransform 실패 - 사유: 캐릭터 또는 메시가 유효하지 않음");
+        return false;
+    }
+
+    USkeletalMeshComponent* Mesh = Character->GetMesh();
+
+    //@소켓 존재 여부 확인
+    if (!Mesh->DoesSocketExist(SocketName))
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "GetSocketTransform 실패 - 사유: 소켓({0})이 존재하지 않음", *SocketName.ToString());
+        return false;
+    }
+
+    //@소켓 트랜스폼 가져오기
+    OutTransform = Mesh->GetSocketTransform(SocketName);
+    return true;
 }
 #pragma endregion
