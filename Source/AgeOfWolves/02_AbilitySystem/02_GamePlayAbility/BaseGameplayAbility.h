@@ -255,34 +255,34 @@ protected:
 
 protected:
 	//@해당 Gameplay Ability의 활성화 과정에서 Target(GA의 적용 대상)에게 전달하는 Gameplay Effect입니다.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | Gameplay Effect")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | 효과")
 		TSubclassOf<UGameplayEffect> ApplyGameplayEffectClass;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | Gameplay Effect")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 효과")
 		FActiveGameplayEffectHandle ActiveApplyGameplayEffectHandle;
 
 	//@해당 Gameplay Ability의 활성화 과정에서 Target(GA의 적용 대상)에게 전달하는 Sub Gameplay Effect입니다.
-	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | Gameplay Effect")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "어빌리티 | 효과")
 		TSubclassOf<UGameplayEffect> ApplySubGameplayEffectClass;
 
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | Gameplay Effect")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 효과")
 		FActiveGameplayEffectHandle ApplySubGameplayEffectHandle;
 
 protected:
 	//@체인 시스템 활용 여부
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템")
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 연쇄 동작")
 		bool bUseChainSystem;
 	
 	//@체인 시스템 타입
-	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true"))
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "어빌리티 | 연쇄 동작", meta = (EditCondition = "bUseChainSystem == true"))
 		EChainSystemType ChainSystemType;
 
 	//@체인 액션 가능한 어빌리티 태그와 이에 대응되는 이벤트 태그 목록
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true && ChainSystemType == EChainSystemType::Active"))
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 연쇄 동작", meta = (EditCondition = "bUseChainSystem == true && ChainSystemType == EChainSystemType::Active"))
 		TArray<FChainActionMapping> ChainActionMappings;
 
 	//@체인 이벤트 매핑 목록
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 체인 시스템", meta = (EditCondition = "bUseChainSystem == true && ChainSystemType == EChainSystemType::Passive"))
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 연쇄 동작", meta = (EditCondition = "bUseChainSystem == true && ChainSystemType == EChainSystemType::Passive"))
 		TArray<FChainEventMapping> ChainEventMappings;
 
 	//@Chain Action 실행으로인한 취소 여부
@@ -298,38 +298,38 @@ public:
 //@Callbacks
 #pragma region Callbacks
 public:
-	UFUNCTION(BlueprintNativeEvent, category = "체인 시스템")
+	UFUNCTION(BlueprintNativeEvent, category = "연쇄 동작")
 		void OnChainActionActivated(FGameplayTag ChainActionEventTag);
 	virtual void OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag);
 
-	UFUNCTION(BlueprintNativeEvent, category = "체인 시스템")
+	UFUNCTION(BlueprintNativeEvent, category = "연쇄 동작")
 		void OnChainActionFinished(FGameplayTag ChainActionEventTag);
 	virtual void OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag);
 
 protected:
 	//@몽타주 재생 완료
-	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
+	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 애니메이션")
 		void OnMontageCompleted();
 	virtual void OnMontageCompleted_Implementation();
 
 	//@몽타주 블렌드 아웃 시작 시 호출
-	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
+	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 애니메이션")
 		void OnMontageBlendOut();
 	virtual void OnMontageBlendOut_Implementation();
 
 	//@다른 몽타주 재생에 의해 종료 됨
-	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
+	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 애니메이션")
 		void OnMontageInterrupted();
 	virtual void OnMontageInterrupted_Implementation();
 
 	//@외부 요인으로 몽타주 재생 취소 됨
-	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
+	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 애니메이션")
 		void OnMontageCancelled();
 	virtual void OnMontageCancelled_Implementation();
 
 protected:
 	//@특정 타이밍 이벤트 호출을 구독하는 콜백
-	UFUNCTION(BlueprintNativeEvent, Category = "Ability|Montage")
+	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 애니메이션")
 		void OnTimingNotified();
 	virtual void OnTimingNotified_Implementation();
 #pragma endregion
@@ -337,7 +337,7 @@ protected:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
-	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 태그")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티")
 		FGameplayTag GetAbilityTag() const;
 
 public:
@@ -385,10 +385,10 @@ public:
 	}
 
 public:
-	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 연쇄 동작")
 	EChainSystemType GetChainSystemType() const { return ChainSystemType;}
 
-	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 연쇄 동작")
 		EChainActionMode GetChainActionMode(const FGameplayTag& InputTag) const
 		{
 			for (const auto& Mapping : ChainActionMappings)
@@ -401,16 +401,16 @@ public:
 			return EChainActionMode::DelayedActivation;
 		}
 
-	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 연쇄 동작")
 		TArray<FChainActionMapping> GetChainActionMappings() const;
 
-	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 연쇄 동작")
 		FChainActionMapping GetChainActionMapping(const FGameplayTag& InputTag) const;
 
-	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 연쇄 동작")
 		TArray<FChainEventMapping> GetChainEventMappings() const { return ChainEventMappings; }
 
-	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 체인 시스템")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 연쇄 동작")
 		FChainEventMapping GetChainEventMapping(const FGameplayTag& EventTag) const
 	{
 		for (const auto& Mapping : ChainEventMappings)

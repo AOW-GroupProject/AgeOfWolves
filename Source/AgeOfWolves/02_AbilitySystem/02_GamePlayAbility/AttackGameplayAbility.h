@@ -36,7 +36,7 @@ enum class EWeaponTraceType : uint8
 *	히트 스탑 적용 모드를 설정합니다.
 */
 UENUM(BlueprintType)
-enum class EHitStopSettingMode : uint8
+enum class EFXApplyRange : uint8
 {
 	//@어빌리티 전체에 하나의 공통 히트스탑 설정 적용
 	Global UMETA(DisplayName = "전역 설정"),
@@ -44,6 +44,21 @@ enum class EHitStopSettingMode : uint8
 	//@몽타주별로 개별 히트스탑 설정 적용
 	PerMontage UMETA(DisplayName = "몽타주별 설정")
 };
+
+//@충돌 이펙트 유형
+UENUM(BlueprintType)
+enum class ECollisionEffectType : uint8
+{
+	Slash       UMETA(DisplayName = "Slash"),
+	Impact      UMETA(DisplayName = "Impact"),
+	Spark       UMETA(DisplayName = "Spark"),
+	Decal       UMETA(DisplayName = "Decal"),
+	Distortion  UMETA(DisplayName = "Distortion"),
+	Blood       UMETA(DisplayName = "Blood"),
+	MAX         UMETA(DisplayName = "MAX")
+};
+
+
 #pragma endregion
 
 //@구조체
@@ -54,7 +69,7 @@ enum class EHitStopSettingMode : uint8
 *	몽타주별 HitStop 설정을 정의합니다.
 */
 USTRUCT(BlueprintType)
-struct FMontageHitStopSettings
+struct FTimeFXSetting
 {
 	GENERATED_BODY()
 
@@ -74,6 +89,122 @@ public:
 	//@글로벌 HitStop 적용 여부 (false면 캐릭터에만 적용)
 	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "HitStop", meta = (EditCondition = "bEnableHitStop"))
 	bool bGlobalHitStop = false;
+};
+
+/*
+*   @FCollisionFXSetting
+*
+*   충돌 이펙트 정보를 담은 구조체
+*/
+USTRUCT(BlueprintType)
+struct FCollisionFXSetting
+{
+	GENERATED_BODY()
+
+public:
+	// 생성자
+	FCollisionFXSetting()
+		: bEnabled(false)
+		, EffectType(ECollisionEffectType::Impact)
+		, EffectCueTag(FGameplayTag::EmptyTag)
+		, bUseImpactLocation(true)  // 기본적으로 충돌 위치 사용
+		, bUseSocket(false)
+		, SocketName(NAME_None)
+		, CustomLocation(FVector::ZeroVector)
+		, EffectRotation(FRotator::ZeroRotator)
+		, EffectScale(FVector(1.0f, 1.0f, 1.0f))
+	{
+	}
+
+	// 커스텀 생성자
+	FCollisionFXSetting(
+		ECollisionEffectType InEffectType,
+		FGameplayTag InEffectCueTag,
+		bool InUseImpactLocation = true,
+		bool InUseSocket = false,
+		FName InSocketName = NAME_None
+	)
+		: bEnabled(false)
+		, EffectType(InEffectType)
+		, EffectCueTag(InEffectCueTag)
+		, bUseImpactLocation(InUseImpactLocation)
+		, bUseSocket(InUseSocket)
+		, SocketName(InSocketName)
+		, CustomLocation(FVector::ZeroVector)
+		, EffectRotation(FRotator::ZeroRotator)
+		, EffectScale(FVector(1.0f, 1.0f, 1.0f))
+	{
+	}
+
+public:
+	// 이펙트 활성화 여부 (최상위 옵션)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "FX")
+	bool bEnabled = false;
+
+	// 이펙트 유형
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "FX", meta = (EditCondition = "bEnabled"))
+	ECollisionEffectType EffectType = ECollisionEffectType::Impact;
+
+	// 이펙트 GameplayCue 태그
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "FX", meta = (EditCondition = "bEnabled"))
+	FGameplayTag EffectCueTag;
+
+	// 위치 설정 섹션
+
+	// 충돌 위치 직접 사용 여부
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "FX|위치", meta = (EditCondition = "bEnabled"))
+	bool bUseImpactLocation = true;
+
+	// 소켓 사용 여부 (충돌 위치를 사용하지 않을 때만 표시)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "FX|위치", meta = (EditCondition = "bEnabled && !bUseImpactLocation"))
+	bool bUseSocket = false;
+
+	// 소켓 이름 (소켓을 사용할 때만 표시)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "FX|위치", meta = (EditCondition = "bEnabled && !bUseImpactLocation && bUseSocket"))
+	FName SocketName;
+
+	// 커스텀 위치 (소켓도 충돌 위치도 사용하지 않을 때만 표시)
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "FX|위치", meta = (EditCondition = "bEnabled && !bUseImpactLocation && !bUseSocket"))
+	FVector CustomLocation = FVector::ZeroVector;
+
+	// 회전과 스케일 섹션
+
+	// 이펙트 회전값
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "FX|변형", meta = (EditCondition = "bEnabled"))
+	FRotator EffectRotation = FRotator::ZeroRotator;
+
+	// 이펙트 스케일
+	UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "FX|변형", meta = (EditCondition = "bEnabled"))
+	FVector EffectScale = FVector(1.0f, 1.0f, 1.0f);
+
+	// Getter 함수
+	FORCEINLINE ECollisionEffectType GetEffectType() const { return EffectType; }
+	FORCEINLINE FGameplayTag GetEffectCueTag() const { return EffectCueTag; }
+	FORCEINLINE bool UseImpactLocation() const { return bUseImpactLocation; }
+	FORCEINLINE bool UseSocket() const { return !bUseImpactLocation && bUseSocket; }
+	FORCEINLINE FName GetSocketName() const { return SocketName; }
+	FORCEINLINE FVector GetCustomLocation() const { return CustomLocation; }
+	FORCEINLINE FRotator GetEffectRotation() const { return EffectRotation; }
+	FORCEINLINE FVector GetEffectScale() const { return EffectScale; }
+	FORCEINLINE bool IsEnabled() const { return bEnabled; }
+
+	// 유효성 검사 함수
+	FORCEINLINE bool IsValid() const
+	{
+		if (!bEnabled || !EffectCueTag.IsValid())
+			return false;
+
+		// 충돌 위치 사용이면 항상 유효
+		if (bUseImpactLocation)
+			return true;
+
+		// 소켓 사용이면 소켓 이름 유효성 확인
+		if (bUseSocket)
+			return !SocketName.IsNone();
+
+		// 커스텀 위치는 항상 유효
+		return true;
+	}
 };
 #pragma endregion
 
@@ -154,17 +285,30 @@ protected:
 	}
 
 protected:
+	//@시간 배율 조작 실행 함수
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| 시간 배율 조작")
+	void ExecuteTimeFX(const FHitResult& HitResult, AActor* SourceActor);
+
 	//@HitStop 적용 함수
-	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| 시간 배율 조작")
 	void ApplyHitStop(AActor* Target);
 
 	//@현재 몽타주 인덱스를 기반으로 HitStop 적용
-	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출")
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| 시간 배율 조작")
 	void ApplyHitStopForCurrentMontage(AActor* Target, int32 MontageIndex = -1);
 
 protected:
-	//@충돌 위치에 GameplayCue 이펙트 실행
-	void ExecuteImpactGameplayCue(const FHitResult& HitResult, AActor* SourceActor);
+	//@충돌 FX 실행 함수
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| FX")
+	void ExecuteCollisionFX(const FHitResult& HitResult, AActor* SourceActor);
+
+	//@GameplayCue 이펙트 실행
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| FX")
+	void ExecuteGameplayCueAtLocation(const FGameplayTag& CueTag, const FTransform& SpawnTransform, AActor* SourceActor);
+
+	//@현재 몽타주의 FX 설정으로 이펙트 실행
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| FX")
+	void ExecuteCollisionFXForCurrentMontage(const FHitResult& HitResult, AActor* SourceActor, int32 MontageIndex = -1);
 
 protected:
 	//@현재 실행 중인 몽타주 인덱스
@@ -222,37 +366,52 @@ protected:
 	float CylinderHalfHeight = 50.0f;
 
 protected:
-	//@HitStop 설정 모드
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출")
-	EHitStopSettingMode HitStopSettingMode = EHitStopSettingMode::Global;
-
 	//@HitStop 활성화 여부 (전역 설정 모드)
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출",
-		meta = (EditCondition = "HitStopSettingMode == EHitStopSettingMode::Global"))
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| 시간 배율 조작")
 	bool bEnableHitStop = false;
 
+	//@HitStop 설정 모드
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| 시간 배율 조작",
+		meta = (EditCondition = "bEnableHitStop"))
+	EFXApplyRange HitStopSettingMode = EFXApplyRange::Global;
 	//@HitStop 모드 설정 (전역 설정 모드)
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출",
-		meta = (EditCondition = "HitStopSettingMode == EHitStopSettingMode::Global && bEnableHitStop"))
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| 시간 배율 조작",
+		meta = (EditCondition = "HitStopSettingMode == EFXApplyRange::Global && bEnableHitStop"))
 	ETimeDilationMode HitStopMode = ETimeDilationMode::HitStop;
 
 	//@HitStop 강도 설정 (전역 설정 모드)
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출",
-		meta = (EditCondition = "HitStopSettingMode == EHitStopSettingMode::Global && bEnableHitStop"))
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| 시간 배율 조작",
+		meta = (EditCondition = "HitStopSettingMode == EFXApplyRange::Global && bEnableHitStop"))
 	ETimeDilationIntensity HitStopIntensity = ETimeDilationIntensity::Low;
 
 	//@글로벌 HitStop 적용 여부 (false면 캐릭터에만 적용) (전역 설정 모드)
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출",
-		meta = (EditCondition = "HitStopSettingMode == EHitStopSettingMode::Global && bEnableHitStop"))
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| 시간 배율 조작",
+		meta = (EditCondition = "HitStopSettingMode == EFXApplyRange::Global && bEnableHitStop"))
 	bool bGlobalHitStop = false;
 
 	//@몽타주별 HitStop 설정 (몽타주별 설정 모드)
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출",
-		meta = (EditCondition = "HitStopSettingMode == EHitStopSettingMode::PerMontage"))
-	TArray<FMontageHitStopSettings> MontageHitStopSettings;
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| 시간 배율 조작",
+		meta = (EditCondition = "HitStopSettingMode == EFXApplyRange::PerMontage"))
+	TArray<FTimeFXSetting> MontageTimeFXSettings;
 
-	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출")
-	FGameplayTag ImpactEffectCueTag;
+protected:
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| FX")
+		bool bEnableCollisionFX = false;
+
+	//@FX 설정 모드
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| FX",
+		meta = (EditCondition = "bEnableCollisionFX"))
+	EFXApplyRange FXSettingMode = EFXApplyRange::Global;
+
+	//@전역 FX 설정 (전역 설정 모드)
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| FX",
+		meta = (EditCondition = "bEnableCollisionFX && FXSettingMode == EFXApplyRange::Global"))
+	FCollisionFXSetting GlobalFXSetting;
+
+	//@몽타주별 FX 설정 (몽타주별 설정 모드)
+	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| FX",
+		meta = (EditCondition = "bEnableCollisionFX && FXSettingMode == EFXApplyRange::PerMontage"))
+	TArray<FCollisionFXSetting> MontageFXSettings;
 #pragma endregion
 
 	//@Delegates
@@ -273,6 +432,11 @@ protected:
 public:
 	UFUNCTION(BlueprintCallable, Category = "Ability|Getter")
 	ACharacterBase* GetCharacterFromActorInfo() const;
+
+public:
+	//@소켓 위치와 회전값 가져오기
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| FX")
+	bool GetSocketTransform(FName SocketName, FTransform& OutTransform) const;
 #pragma endregion
 
 };
