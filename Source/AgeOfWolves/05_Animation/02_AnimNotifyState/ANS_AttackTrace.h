@@ -29,7 +29,8 @@ class UAttackGameplayAbility;
  * 
  *	공격 관련 충돌 트레이스를 수행합니다.
  */
-UCLASS()
+UCLASS(meta = (DisplayName = "충돌 허용 구간 설정"))
+
 class AGEOFWOLVES_API UANS_AttackTrace : public UAnimNotifyState
 {
 

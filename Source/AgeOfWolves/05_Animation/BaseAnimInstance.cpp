@@ -286,7 +286,7 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
 void UBaseAnimInstance::HandleStartRootMotion()
 {
     bIsPlayingRootMotionMontageWithFullBodySlot = true;
-    
+
     UE_LOGFMT(LogAnimInstance, Log, "Root Motion 시작");
 }
 
