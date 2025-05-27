@@ -52,7 +52,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 
-		GetCharacterMovement()->RotationRate = FRotator(0.0f, 360.f, 0.0f);
+		GetCharacterMovement()->RotationRate = FRotator(0.0f, 500.f, 0.0f);
 		GetCharacterMovement()->JumpZVelocity = 700.f;
 		GetCharacterMovement()->AirControl = 0.35f;
 

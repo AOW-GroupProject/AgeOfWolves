@@ -234,6 +234,7 @@ void UBaseAnimInstance::FindMovementDirectionAngle()
         LastMovementDirection = MovementDirection;
     }
 }
+
 void UBaseAnimInstance::UpdateMovementSettings()
 {
     if (!CharacterMovementCompRef.IsValid())
