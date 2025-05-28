@@ -677,7 +677,7 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
         TWeakObjectPtr<AActor> AIActorPtr(AIActor);
         if (AIsDetectingPawn.Contains(AIActorPtr))
         {
-            return;
+            UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 플레이어를 인지 중이어서 암살 불가", *AIActor->GetName());
         }
         else
         {
@@ -690,11 +690,15 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
                 AmbushTarget = AIActor;
                 UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 후면 노출됨, AmbushTarget으로 설정", *AIActor->GetName());
             }
+            else
+            {
+                UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 후면 노출되지 않음", *AIActor->GetName());
+            }
         }
     }
     else
     {
-        //@Bound Areas
+        //@현재 타겟이 없는 경우, 주변 AI 검색
         float ClosestDistance = MAX_FLT;
         AActor* ClosestActor = nullptr;
 
@@ -750,9 +754,14 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
             AmbushTarget = ClosestActor;
             UE_LOGFMT(LogObjectiveDetection, Log, "가장 가까운 후면 노출 AI({0})를 AmbushTarget으로 설정", *ClosestActor->GetName());
         }
+        else
+        {
+            //@조건을 만족하는 AI가 없는 경우
+            UE_LOGFMT(LogObjectiveDetection, Log, "후면 노출된 AI가 없어서 AmbushTarget 해제");
+        }
     }
 
-    //@AmbushTarget
+    //@AmbushTarget 변경 확인 및 이벤트 발생
     if (AmbushTarget.Get() != PreviousAmbushTarget)
     {
         UE_LOGFMT(LogObjectiveDetection, Log, "AmbushTarget 변경: {0} -> {1}",
@@ -853,6 +862,7 @@ void UObjectiveDetectionComponent::OnLockOnStateChanged(bool bIsLockOn, AActor* 
     UE_LOGFMT(LogObjectiveDetection, Log, "Lock On 상태 처리 완료");
 }
 
+
 void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* ObjectiveActor, const FGameplayTag& StateTag, AArea* SourceArea, const FGuid& AreaID)
 {
     //@인자 유효성 검사
@@ -926,6 +936,52 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
 
             // 빌보드 업데이트
             UpdateBillboardComponent(true, false);
+        }
+    }
+
+    //@현재 AmbushTarget이 상태 변경된 경우에만 처리 - 수정된 부분
+    if (AmbushTarget.IsValid() && AmbushTarget.Get() == ObjectiveActor)
+    {
+        bool bShouldClearAmbushTarget = false;
+
+        //@Dead 상태가 되면 암살 불가능
+        if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
+        {
+            bShouldClearAmbushTarget = true;
+            UE_LOGFMT(LogObjectiveDetection, Log, "현재 암살 대상 {0}이(가) 사망하여 즉시 AmbushTarget 해제", *ObjectiveActor->GetName());
+        }
+
+        if (bShouldClearAmbushTarget)
+        {
+            AmbushTarget.Reset();
+            //@암살 대상 변경 이벤트 발생
+            AmbushTargetChanged.Broadcast(nullptr);
+            UE_LOGFMT(LogObjectiveDetection, Log, "AmbushTarget 즉시 해제 및 이벤트 발생");
+        }
+    }
+
+    //@현재 ExecutionTarget이 상태 변경된 경우에만 처리 - 수정된 부분  
+    if (ExecutionTarget.IsValid() && ExecutionTarget.Get() == ObjectiveActor)
+    {
+        bool bShouldClearExecutionTarget = false;
+
+        if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
+        {
+            bShouldClearExecutionTarget = true;
+            UE_LOGFMT(LogObjectiveDetection, Log, "현재 처형 대상 {0}이(가) 사망하여 즉시 ExecutionTarget 해제", *ObjectiveActor->GetName());
+        }
+        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
+        {
+            bShouldClearExecutionTarget = true;
+            UE_LOGFMT(LogObjectiveDetection, Log, "현재 처형 대상 {0}이(가) Normal 상태로 변경되어 즉시 ExecutionTarget 해제", *ObjectiveActor->GetName());
+        }
+
+        if (bShouldClearExecutionTarget)
+        {
+            ExecutionTarget.Reset();
+            //@처형 대상 변경 이벤트 발생
+            ExecutionTargetChanged.Broadcast(nullptr);
+            UE_LOGFMT(LogObjectiveDetection, Log, "ExecutionTarget 즉시 해제 및 이벤트 발생");
         }
     }
 
