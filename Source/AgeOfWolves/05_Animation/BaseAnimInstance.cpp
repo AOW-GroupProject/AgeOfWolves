@@ -31,7 +31,7 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , bModifyBoneTransform(false)
     , BoneTransformLerpSpeed(10.0f)
     , CharacterMovementCompRef(nullptr)
-    , CombatType(ECombatType::NonCombat)
+    , CombatType(ECombatType::NormalCombat)
     , bIsPlayingRootMotionMontageWithFullBodySlot(false)
     , bIsRootMotionCooldown(false)
     , RootMotionCooldownTime(0.0f)

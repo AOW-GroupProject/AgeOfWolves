@@ -1118,6 +1118,13 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 {
 	const FGameplayTagContainer& AssetTags = SpecApplied.Def->InheritableGameplayEffectTags.Added;
 
+	// Asset Tags 모두 로그 출력
+	UE_LOGFMT(LogASC, Log, "GameplayEffect 적용 - 총 AssetTags 개수: {0}", AssetTags.Num());
+	for (const FGameplayTag& Tag : AssetTags)
+	{
+		UE_LOGFMT(LogASC, Log, "AssetTag: {0}", *Tag.ToString());
+	}
+
 	// 정적 태그 한 번만 생성 (성능 최적화)
 	static FGameplayTag StateTag = FGameplayTag::RequestGameplayTag("State");
 	static FGameplayTag DeadStateTag = FGameplayTag::RequestGameplayTag("State.Dead");

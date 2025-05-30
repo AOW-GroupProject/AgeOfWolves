@@ -287,6 +287,9 @@ protected:
     void CancelInteractionActivated(AActor* TargetActor, const FPotentialInteraction& Interaction);
 
 protected:
+    void UpdateCurrentPriorityInteraction();
+
+protected:
     //@등록된 모든 잠재적 상호작용
     UPROPERTY(EditDefaultsOnly, Category = "Interaction")
         TArray<FPotentialInteraction> PotentialInteractions;

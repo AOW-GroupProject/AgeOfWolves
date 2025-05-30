@@ -210,7 +210,7 @@ protected:
 protected:
 	//@전투/비전투 여부
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-	ECombatType CombatType;
+		ECombatType CombatType;
 
 protected:
 	//@루트 모션 재생 여부

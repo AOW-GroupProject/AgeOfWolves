@@ -862,7 +862,6 @@ void UObjectiveDetectionComponent::OnLockOnStateChanged(bool bIsLockOn, AActor* 
     UE_LOGFMT(LogObjectiveDetection, Log, "Lock On 상태 처리 완료");
 }
 
-
 void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* ObjectiveActor, const FGameplayTag& StateTag, AArea* SourceArea, const FGuid& AreaID)
 {
     //@인자 유효성 검사

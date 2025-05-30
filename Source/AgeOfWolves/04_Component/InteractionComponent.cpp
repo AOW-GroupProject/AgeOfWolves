@@ -350,14 +350,12 @@ void UInteractionComponent::RegisterPotentialInteraction(AActor* TargetActor, EI
 
 void UInteractionComponent::RemovePotentialInteraction(AActor* TargetActor)
 {
-    //@Target
     if (!TargetActor)
     {
         UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 제거 실패: 유효하지 않은 액터", __FUNCDNAME__);
         return;
     }
 
-    //@Remove
     if (MPotentialInteractions.Remove(TargetActor) <= 0)
     {
         UE_LOGFMT(LogInteraction, Warning, "{0}: 제거할 상호작용을 찾을 수 없음 - 액터: {1}",
@@ -368,31 +366,23 @@ void UInteractionComponent::RemovePotentialInteraction(AActor* TargetActor)
     UE_LOGFMT(LogInteraction, Log, "{0}: 모든 잠재적 상호작용 제거 - 액터: {1}",
         __FUNCDNAME__, *TargetActor->GetName());
 
-    //@IsFullyAvailable?
-    if (CurrentPriorityInteraction.IsFullyAvailable())
-    {
-        CurrentPriorityInteraction = FPotentialInteraction();
-        PotentialInteractionChanged.Broadcast(nullptr, CurrentPriorityInteraction);
-    }
+    UpdateCurrentPriorityInteraction();
 }
 
 void UInteractionComponent::RemovePotentialInteraction(AActor* TargetActor, EInteractionType InteractionType)
 {
-    //@Target
     if (!TargetActor)
     {
         UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 제거 실패: 유효하지 않은 액터", __FUNCDNAME__);
         return;
     }
 
-    //@Interaction Type
     if (InteractionType == EInteractionType::None || InteractionType >= EInteractionType::MAX)
     {
         UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 제거 실패: 유효하지 않은 상호작용 유형", __FUNCDNAME__);
         return;
     }
 
-    //@ActorInteractions
     TMap<EInteractionType, FPotentialInteraction>* ActorInteractions = MPotentialInteractions.Find(TargetActor);
     if (!ActorInteractions)
     {
@@ -401,7 +391,6 @@ void UInteractionComponent::RemovePotentialInteraction(AActor* TargetActor, EInt
         return;
     }
 
-    //@Remove
     if (ActorInteractions->Remove(InteractionType) <= 0)
     {
         UE_LOGFMT(LogInteraction, Warning, "{0}: 제거할 특정 상호작용 타입을 찾을 수 없음 - 액터: {1} | 타입: {2}",
@@ -412,19 +401,12 @@ void UInteractionComponent::RemovePotentialInteraction(AActor* TargetActor, EInt
     UE_LOGFMT(LogInteraction, Log, "{0}: 특정 잠재적 상호작용 제거 - 액터: {1} | 타입: {2}",
         __FUNCDNAME__, *TargetActor->GetName(), static_cast<uint8>(InteractionType));
 
-    //@Actor에 대한 잠재적 상호작용 더이상 없을 경우, 아예 삭제
     if (ActorInteractions->Num() == 0)
     {
         MPotentialInteractions.Remove(TargetActor);
     }
 
-    //@현재 우선순위 상호작용 업데이트
-    if (CurrentPriorityInteraction.IsFullyAvailable() &&
-        CurrentPriorityInteraction.InteractionType == InteractionType)
-    {
-        CurrentPriorityInteraction = FPotentialInteraction();
-        PotentialInteractionChanged.Broadcast(nullptr, CurrentPriorityInteraction);
-    }
+    UpdateCurrentPriorityInteraction();
 }
 
 void UInteractionComponent::CommitInteraction()
@@ -648,6 +630,63 @@ void UInteractionComponent::CancelInteractionActivated(AActor* TargetActor, cons
         *Interaction.ObjectTag.ToString(),
         static_cast<uint8>(Interaction.InteractionType));
 }
+
+void UInteractionComponent::UpdateCurrentPriorityInteraction()
+{
+    FPotentialInteraction PreviousInteraction = CurrentPriorityInteraction;
+    CurrentPriorityInteraction = FPotentialInteraction();
+    AActor* NewPriorityActor = nullptr;
+
+    UE_LOGFMT(LogInteraction, Log, "{0}: 우선순위 상호작용 업데이트 시작", __FUNCDNAME__);
+
+    // 모든 유효한 상호작용 중 가장 높은 우선순위 찾기
+    for (const auto& ActorPair : MPotentialInteractions)
+    {
+        if (!ActorPair.Key.IsValid()) continue;
+
+        for (const auto& InteractionPair : ActorPair.Value)
+        {
+            const FPotentialInteraction& Interaction = InteractionPair.Value;
+            if (Interaction.IsFullyAvailable() &&
+                Interaction.Priority > CurrentPriorityInteraction.Priority)
+            {
+                CurrentPriorityInteraction = Interaction;
+                NewPriorityActor = ActorPair.Key.Get();
+
+                UE_LOGFMT(LogInteraction, Log, "{0}: 새로운 최우선 상호작용 발견 - 액터: {1} | 타입: {2} | 우선순위: {3}",
+                    __FUNCDNAME__,
+                    *NewPriorityActor->GetName(),
+                    static_cast<uint8>(Interaction.InteractionType),
+                    Interaction.Priority);
+            }
+        }
+    }
+
+    // 우선순위 상호작용이 변경된 경우에만 브로드캐스트
+    if (CurrentPriorityInteraction.ObjectTag != PreviousInteraction.ObjectTag ||
+        CurrentPriorityInteraction.InteractionType != PreviousInteraction.InteractionType)
+    {
+        if (CurrentPriorityInteraction.ObjectTag.IsValid())
+        {
+            UE_LOGFMT(LogInteraction, Log, "{0}: 우선순위 상호작용 변경됨 - 새 액터: {1} | 새 타입: {2}",
+                __FUNCDNAME__,
+                NewPriorityActor ? *NewPriorityActor->GetName() : TEXT("없음"),
+                static_cast<uint8>(CurrentPriorityInteraction.InteractionType));
+        }
+        else
+        {
+            UE_LOGFMT(LogInteraction, Log, "{0}: 우선순위 상호작용 제거됨 - 이전 타입: {1}",
+                __FUNCDNAME__,
+                static_cast<uint8>(PreviousInteraction.InteractionType));
+        }
+
+        PotentialInteractionChanged.Broadcast(NewPriorityActor, CurrentPriorityInteraction);
+    }
+    else
+    {
+        UE_LOGFMT(LogInteraction, Log, "{0}: 우선순위 상호작용 변경사항 없음", __FUNCDNAME__);
+    }
+}
 #pragma endregion
 
 //@Callbacks
@@ -669,7 +708,7 @@ void UInteractionComponent::OnDetectedAIStateChanged(const FGameplayTag& StateTa
         __FUNCDNAME__, *ObjectiveActor->GetName(), *StateTag.ToString());
 
     // Fragile 상태 처리는 제거하고 Dead 상태만 처리
-    if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+    if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
     {
         RemovePotentialInteraction(ObjectiveActor);
     }
