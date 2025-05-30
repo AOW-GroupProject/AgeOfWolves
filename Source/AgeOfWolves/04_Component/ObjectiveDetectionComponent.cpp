@@ -92,6 +92,7 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
         LastExecutionCheckTime = CurrentTime;
     }
 }
+
 void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     //@타이머 정리
@@ -477,25 +478,58 @@ bool UObjectiveDetectionComponent::UpdateBillboardPosition(AActor* TargetActor)
         TargetActor->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
     if (!TargetMesh) return false;
 
-    FName SpineSocketName = FName("spine_03");
-    if (!TargetMesh->DoesSocketExist(SpineSocketName)) return false;
-
     // 위치 계산
-    FVector SocketLocation = TargetMesh->GetSocketLocation(SpineSocketName);
+    FVector SocketLocation = TargetActor->GetActorLocation() + FVector(0.f, 0.f, 40.f);
     FVector CameraLocation = CameraComp->GetComponentLocation();
     FVector DirectionToSocket = (SocketLocation - CameraLocation).GetSafeNormal();
     FVector UpVector = FVector(0.0f, 0.0f, 1.0f);
     FVector TargetBillboardLocation = SocketLocation - DirectionToSocket * BillboardForwardOffset + UpVector;
 
-    // 위치 및 회전 보간
+    // 현재 위치
     FVector CurrentLocation = IndicatorBillboardComponent->GetComponentLocation();
-    FVector InterpolatedLocation = UKismetMathLibrary::VInterpTo(
-        CurrentLocation,
-        TargetBillboardLocation,
-        GetWorld()->GetDeltaSeconds(),
-        BillboardInterpolationSpeed
-    );
 
+    // X, Y축만 보간 (Z축은 즉시 적용)
+    FVector InterpolatedLocation = CurrentLocation;
+    float DeltaX = TargetBillboardLocation.X - CurrentLocation.X;
+    float DeltaY = TargetBillboardLocation.Y - CurrentLocation.Y;
+
+    // Dead Zone 적용 - 변화량이 임계값보다 클 때만 이동
+    float DeadZoneThreshold = 0.05f;
+
+    if (FMath::Abs(DeltaX) > DeadZoneThreshold)
+    {
+        InterpolatedLocation.X = UKismetMathLibrary::FInterpTo(
+            CurrentLocation.X,
+            TargetBillboardLocation.X,
+            GetWorld()->GetDeltaSeconds(),
+            BillboardInterpolationSpeed
+        );
+    }
+    else
+    {
+        // Dead Zone 내에서는 현재 위치 유지
+        InterpolatedLocation.X = CurrentLocation.X;
+    }
+
+    if (FMath::Abs(DeltaY) > DeadZoneThreshold)
+    {
+        InterpolatedLocation.Y = UKismetMathLibrary::FInterpTo(
+            CurrentLocation.Y,
+            TargetBillboardLocation.Y,
+            GetWorld()->GetDeltaSeconds(),
+            BillboardInterpolationSpeed
+        );
+    }
+    else
+    {
+        // Dead Zone 내에서는 현재 위치 유지
+        InterpolatedLocation.Y = CurrentLocation.Y;
+    }
+
+    // Z축은 즉시 적용
+    InterpolatedLocation.Z = TargetBillboardLocation.Z;
+
+    // 회전 보간
     FRotator TargetRotation = (CameraLocation - SocketLocation).Rotation();
     FRotator CurrentRotation = IndicatorBillboardComponent->GetComponentRotation();
     FRotator InterpolatedRotation = UKismetMathLibrary::RInterpTo(
@@ -512,6 +546,7 @@ bool UObjectiveDetectionComponent::UpdateBillboardPosition(AActor* TargetActor)
 
     return true;
 }
+
 
 void UObjectiveDetectionComponent::UpdateBillboardTexture()
 {
