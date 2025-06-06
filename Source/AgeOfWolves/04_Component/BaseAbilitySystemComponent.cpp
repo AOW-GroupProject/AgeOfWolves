@@ -659,6 +659,7 @@ void UBaseAbilitySystemComponent::StartChainWindowWithTag(const FGameplayTag& Ab
 		return;
 	}
 
+	//@Base Gameplay Ability
 	auto BaseGA = Cast<UBaseGameplayAbility>(TargetSpec->Ability);
 	if (!BaseGA || !BaseGA->bUseChainSystem)
 	{
