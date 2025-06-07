@@ -12,6 +12,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInteractionGA, Log, All);
 #pragma region Forward Declaration
 class ACharacterBase;
 class UAnimMontage;
+class UAT_MoveToInteractionZone;
 #pragma endregion
 
 //@열거형
@@ -50,6 +51,20 @@ protected:
 		void SendInteractionEvent(const FHitResult& HitResult);
 
 protected:
+	//@상호작용 위치로 이동
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")
+		void MoveToInteractionTarget(FName SocketName = FName("ExecuterTarget"), float Duration = 1.0f);
+
+	//@이동 완료 콜백
+	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 상호작용")
+		void OnInteractionMoveCompleted();
+	virtual void OnInteractionMoveCompleted_Implementation();
+
+protected:
+	UPROPERTY(Transient)
+	UAT_MoveToInteractionZone* CurrentMoveTask;
+
+protected:
 	//@상호작용 데이터 객체
 	UPROPERTY(Transient)
 		UInteractionData* InteractionData;
@@ -63,7 +78,7 @@ protected:
 		bool bInteractionCompleted;
 #pragma endregion
 
-	//@Delegates
+//@Delegates
 #pragma region Delegates
 #pragma endregion
 
@@ -77,7 +92,7 @@ protected:
 	virtual void OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag) override;
 #pragma endregion
 
-	//@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
 	UFUNCTION(BlueprintCallable, Category = "Ability|Getter")
@@ -101,5 +116,9 @@ protected:
 	//@상호작용 가능 여부 검사
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")
 		bool CanInteractWith(AActor* Target) const;
+
+protected:
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")
+	UAT_MoveToInteractionZone* GetMoveToAbilityTask() { return CurrentMoveTask; }
 #pragma endregion
 };
