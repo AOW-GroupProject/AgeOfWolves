@@ -546,6 +546,21 @@ void ULockOnComponent::OnLockOnTargetChanged(const FGameplayTag& InputTag, const
 
 void ULockOnComponent::OnOwnerStateChanged(AActor* Owner, const FGameplayTag& StateTag)
 {
+    //@상호작용 상태 태그 체크
+    if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Interacting")))
+    {
+        //@Lock On 상태가 아니면 처리하지 않음
+        if (!bLockOn)
+        {
+            UE_LOGFMT(LogLockOn, Log, "Lock On 상태가 아니므로 처리를 종료합니다.");
+            return;
+        }
+
+        UE_LOGFMT(LogLockOn, Log, "Lock On 상태이므로 Lock On을 취소합니다.");
+        CancelLockOn();
+    }
+
+
     //@죽음 상태 태그 체크
     if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
     {

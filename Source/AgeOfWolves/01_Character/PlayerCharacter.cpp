@@ -52,7 +52,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		GetCharacterMovement()->bUseControllerDesiredRotation = false;
 		GetCharacterMovement()->bOrientRotationToMovement = true;
 
-		GetCharacterMovement()->RotationRate = FRotator(0.0f, 360.f, 0.0f);
+		GetCharacterMovement()->RotationRate = FRotator(0.0f, 640.f, 0.0f);
 		GetCharacterMovement()->JumpZVelocity = 700.f;
 		GetCharacterMovement()->AirControl = 0.35f;
 
@@ -89,15 +89,18 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
 		FollowCamera->bUsePawnControlRotation = false;
 	}
-	// @Anim Instance
+	//@무기
 	{
-		//static ConstructorHelpers::FClassFinder<UBaseAnimInstance> animInstance(TEXT("/Game/Blueprints/01_Character/01_AkaOni/AnimationBlueprints/00_UE4Mannequin/ABP_Temp_Base"));
-		//if (animInstance.Class != NULL)
-		//	GetMesh()->SetAnimInstanceClass(animInstance.Class);
+		//@Katana
+		KatanaMesh->SetVisibility(true);
 
-		//AnimInstanceRef = nullptr;
+		//@Saya
+		SayaMesh->AttachToComponent(GetMesh(), FAttachmentTransformRules::SnapToTargetNotIncludingScale, FName("FullWeapon"));
+		SayaMesh->SetVisibility(true);
+
+		//@Full
+		FullMesh->SetVisibility(false);
 	}
-
 	//@Team ID
 	{
 		TeamId = 1;

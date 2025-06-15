@@ -11,6 +11,8 @@
 
 #include "Kismet/KismetSystemLibrary.h"
 
+#include "02_AbilitySystem/06_AbilityTask/AT_MoveToInteractionZone.h"
+
 DEFINE_LOG_CATEGORY(LogInteractionGA)
 
 //@Default Setting
@@ -25,10 +27,51 @@ UInteractionGameplayAbility::UInteractionGameplayAbility(const FObjectInitialize
     //@Interaction 성공 여부
     bInteractionCompleted = false;
 }
+
+
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+//@구현부
+void UInteractionGameplayAbility::MoveToInteractionTarget(FName SocketName, float Duration)
+{
+    AActor* Target = GetTargetActor();
+    if (!Target)
+    {
+        UE_LOGFMT(LogInteractionGA, Warning, "상호작용 이동 실패 - Target Actor가 유효하지 않음");
+        return;
+    }
+
+    //@기존 Task 정리
+    if (CurrentMoveTask && CurrentMoveTask->IsActive())
+    {
+        CurrentMoveTask->EndTask();
+    }
+
+    //@새로운 Interaction Zone Task 생성
+    CurrentMoveTask = UAT_MoveToInteractionZone::MoveToInteractionZone(
+        this,
+        Target,
+        SocketName,
+        Duration
+    );
+
+    if (!CurrentMoveTask)
+    {
+        UE_LOGFMT(LogInteractionGA, Warning, "상호작용 이동 Task 생성 실패");
+        return;
+    }
+
+    //@콜백 바인딩 (델리게이트 이름 변경)
+    CurrentMoveTask->OnInteractionZoneReached.AddDynamic(this, &UInteractionGameplayAbility::OnInteractionMoveCompleted);
+
+    //@Task 활성화
+    CurrentMoveTask->ReadyForActivation();
+
+    UE_LOGFMT(LogInteractionGA, Log, "상호작용 영역으로 이동 시작 - 목표: {0}", *Target->GetName());
+}
+
 void UInteractionGameplayAbility::SendInteractionEvent(const FHitResult& HitResult)
 {
     //@Hit Actor
@@ -92,6 +135,7 @@ void UInteractionGameplayAbility::OnChainActionActivated_Implementation(FGamepla
     UE_LOGFMT(LogInteractionGA, Log, "체인 액션 활성화 이벤트 호출 - Ability: {0} | Event Tag: {1}",
         *GetName(),
         *ChainActionEventTag.ToString());
+
 }
 
 void UInteractionGameplayAbility::OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag)
@@ -101,6 +145,14 @@ void UInteractionGameplayAbility::OnChainActionFinished_Implementation(FGameplay
     UE_LOGFMT(LogInteractionGA, Log, "체인 액션 종료 이벤트 호출 - Ability: {0} | Event Tag: {1}",
         *GetName(),
         *ChainActionEventTag.ToString());
+}
+
+void UInteractionGameplayAbility::OnInteractionMoveCompleted_Implementation()
+{
+    UE_LOGFMT(LogInteractionGA, Log, "상호작용 위치 이동 완료");
+    CurrentMoveTask = nullptr;
+
+    //@애니메이션 재생 등 후속 작업 수행
 }
 #pragma endregion
 
