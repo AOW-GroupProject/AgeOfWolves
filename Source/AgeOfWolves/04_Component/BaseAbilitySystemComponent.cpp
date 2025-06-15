@@ -1141,10 +1141,10 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 			//@캐릭터 상태 이벤트
 			CharacterStateEventOnGameplay.Broadcast(GetAvatarActor(), TagFromEffect);
 
-			if (TagFromEffect.MatchesTag(DeadStateTag))
-			{
-				CharacterStateEventOnGameplay.Clear();
-			}
+			//if (TagFromEffect.MatchesTag(DeadStateTag))
+			//{
+			//	CharacterStateEventOnGameplay.Clear();
+			//}
 		}
 	}
 }

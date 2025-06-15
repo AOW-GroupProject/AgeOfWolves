@@ -41,7 +41,7 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FUIInputTagTriggeredWithValue, const FGamep
 /**
  * @목적 : Enhanced Input System 활용을 위한 사용자 정의 Input Component를 정의합니다.
  * @설명 : 일반적인 Input Component 대신, Enhanced Input System 활용이 가능한 사용자 정의 Input Component를 정의하고,
- *		   해당 컴포넌트를 ACharacterBase(사용자 캐릭터 클래스)의 Default Input Component로 설정합니다.	
+ *		   해당 컴포넌트를 ACharacterBase(사용자 캐릭터 클래스)의 Default Input Component로 설정합니다.
  * @참조 : APlayerCharacter() 생성자
  */
 UCLASS()
@@ -52,8 +52,8 @@ class AGEOFWOLVES_API UBaseInputComponent : public UEnhancedInputComponent
 #pragma endregion
 
 	GENERATED_BODY()
-		
-//@Defualt Setting
+
+	//@Defualt Setting
 #pragma region Default Setting
 public:
 	UBaseInputComponent(const FObjectInitializer& ObjectInitializer);
@@ -77,10 +77,10 @@ protected:
 
 public:
 	UFUNCTION()
-		void InitializeInputComponent();
+	void InitializeInputComponent();
 #pragma endregion 
 
-//@Property/Info...etc
+	//@Property/Info...etc
 #pragma region IMC(Input Mapping Context)
 protected:
 	//@Bind IA Template
@@ -165,15 +165,15 @@ public:
 	void RemoveInputMappings(const UInputConfig* InputConfig, UEnhancedInputLocalPlayerSubsystem* InputSubsystem) const;
 	//@Enhanced Input System에 등록된 사용자의 IMC의 우선순위를 변경해줍니다.
 	UFUNCTION()
-		void SwapMappings(const FGameplayTag& NewIMCTag);
+	void SwapMappings(const FGameplayTag& NewIMCTag);
 #pragma endregion
 
-//@Delegates
+	//@Delegates
 #pragma region Delegate
 public:
 	//@Input Component의 초기화 완료 이벤트
 	UPROPERTY(BlueprintAssignable, Category = "Input Component")
-		FNotifyInputComponentInitFinished NotifyInputComponentInitFinished;
+	FNotifyInputComponentInitFinished NotifyInputComponentInitFinished;
 public:
 	//@UI Input Tag의 활성화 이벤튼
 	FUIInputTagTriggered UIInputTagTriggered;
@@ -187,7 +187,7 @@ public:
 	FUIInputTagTriggeredWithValue UIInputTagTriggeredWithValue;
 #pragma endregion
 
-//@Callbacks
+	//@Callbacks
 #pragma region Callbacks
 protected:
 	// @목적 : 사용자의 Move IA에 대응되는 캐릭터 이동 조작을 정의하는 콜백 함수
@@ -218,13 +218,13 @@ protected:
 	void OnUIInputTagValueTriggered(const FInputActionValue& Value, FGameplayTag InputTag);
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+	//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 private:
 	FVector2D InputVector;
 
 public:
-	UFUNCTION(BlueprintCallable	)
+	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FVector2D GetInputVector() { return InputVector; }
 #pragma endregion
 

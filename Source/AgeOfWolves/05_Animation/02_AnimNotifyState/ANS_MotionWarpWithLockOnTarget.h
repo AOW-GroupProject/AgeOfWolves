@@ -39,6 +39,10 @@ class AGEOFWOLVES_API UANS_MotionWarpWithLockOnTarget : public UAnimNotifyState_
 
 //@Defualt Setting
 #pragma region Default Setting
+public:
+	UANS_MotionWarpWithLockOnTarget(const FObjectInitializer& ObjectInitializer);
+
+
 protected:
 	virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration) override;
 	void NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime) override;

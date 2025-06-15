@@ -142,7 +142,7 @@ void UBaseAnimInstance::FindMovementState()
     float MaxWalkSpeed = OwnerCharacterBaseRef->GetCharacterMovement()->MaxWalkSpeed;
     bool bIsSprinting = MaxWalkSpeed >= 650.f;
 
-    if(!bShouldMove)
+    if (!bShouldMove)
     {
         MovementState = EMovementState::Idle;
     }

@@ -33,8 +33,9 @@ class UAbilityManagerSubsystem;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAttributeSetInitialized);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGameplayAttribute, Attribute, float, OldValue, float, NewValue);
-#pragma endregion
 
+DECLARE_DELEGATE_OneParam(FNotifyPlayerDeathEvent, APlayerStateBase*);
+#pragma endregion
 
 /**
  * Player State contaions pawn's info interacting with others
@@ -104,9 +105,16 @@ protected:
 //@Delegates
 #pragma region Delegates
 public:
+	//@초기화 완료 이벤트
 	FAttributeSetInitialized OnAttributeSetInitialized;
 
+public:
+	//@Attribute 수치 변화 이벤트
 	FAnyAttributeValueChanged OnAnyAttributeValueChanged;
+
+public:
+	//@플레이어 죽음 알림 이벤트
+	FNotifyPlayerDeathEvent NotifyPlayerDeathEvent;
 #pragma endregion
 
 //@Callbacks

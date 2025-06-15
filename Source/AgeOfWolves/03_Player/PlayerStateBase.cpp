@@ -35,6 +35,8 @@ void APlayerStateBase::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
 
+    //@Game Mode
+    
     //@내부 바인딩
     InternalBindingToASC();
 
@@ -227,39 +229,23 @@ void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Dat
 
 void APlayerStateBase::OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag)
 {
-    //@Player State
-    if (!IsValid(this) || IsUnreachable())
+
+    // **죽음 상태 처리**
+    if (CharacterStateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
     {
-        return;
+        UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 죽음 감지 - 이벤트 브로드캐스트");
+
+        NotifyPlayerDeathEvent.ExecuteIfBound(this);
     }
-
-    //@PC
-    if (!GetOwner())
-    {
-        return;
-    }
-
-    // World 확인
-    UWorld* World = GetWorld();
-    if (!World)
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "월드를 찾을 수 없습니다.");
-        return;
-    }
-
-    //@"State.~"
-    if (!CharacterStateTag.GetTagName().ToString().StartsWith("State."))
-        return;
-
 
     //@Game Instance
-    UAOWGameInstance* GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(World));
+    UAOWGameInstance* GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
     if (!GameInstance)
     {
         UE_LOGFMT(LogPlayerStateBase, Warning, "GameInstance를 가져올 수 없습니다.");
         return;
     }
-    
+
     //@SaveGame
     if (!GameInstance->DoesSaveGameExist())
     {

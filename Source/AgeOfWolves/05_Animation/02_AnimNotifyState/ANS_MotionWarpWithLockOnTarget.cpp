@@ -10,6 +10,12 @@ DEFINE_LOG_CATEGORY(LogANS_MotionWarpWithLockOnTarget)
 
 //@Defualt Setting
 #pragma region Default Setting
+UANS_MotionWarpWithLockOnTarget::UANS_MotionWarpWithLockOnTarget(const FObjectInitializer& ObjectInitializer)
+    : Super(ObjectInitializer)
+{
+    bIsNativeBranchingPoint = true;
+}
+
 void UANS_MotionWarpWithLockOnTarget::NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration)
 {
     Super::NotifyBegin(MeshComp, Animation, TotalDuration);
@@ -38,7 +44,7 @@ void UANS_MotionWarpWithLockOnTarget::NotifyBegin(USkeletalMeshComponent* MeshCo
         UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Warning, "NotifyTick 실패 - LockOn 상태가 아님. WarpTarget 제거");
         return;
     }
-    
+
     auto MotionWarpingComp = Character->GetMotionWarpingComponent();
     if (!MotionWarpingComp)
     {
@@ -54,14 +60,13 @@ void UANS_MotionWarpWithLockOnTarget::NotifyBegin(USkeletalMeshComponent* MeshCo
     }
 
     FMotionWarpingTarget WarpTarget;
-    WarpTarget.Name = FName("LockOnTarget");
+    WarpTarget.Name = FName("LockOnTarget1");
     WarpTarget.Rotation = LockOnComp->GetFinalRotation();
-    WarpTarget.Location = Character->GetActorLocation();
+    WarpTarget.Location = TargetEnemy->GetActorLocation();
 
     MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
 
-    UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Log, "WarpTarget 업데이트 - 타겟: {0} | 위치: {1} | 회전: {2}",
-        *TargetEnemy->GetName(),
+    UE_LOGFMT(LogANS_MotionWarpWithLockOnTarget, Log, "WarpTarget 업데이트 - 위치: {0} | 회전: {2}",
         *WarpTarget.Location.ToString(),
         *WarpTarget.Rotation.ToString());
 }
@@ -109,9 +114,9 @@ void UANS_MotionWarpWithLockOnTarget::NotifyTick(USkeletalMeshComponent* MeshCom
     }
 
     FMotionWarpingTarget WarpTarget;
-    WarpTarget.Name = FName("LockOnTarget");
+    WarpTarget.Name = FName("LockOnTarget1");
     WarpTarget.Rotation = LockOnComp->GetFinalRotation();
-    WarpTarget.Location = Character->GetActorLocation();
+    WarpTarget.Location = TargetEnemy->GetActorLocation();
 
     MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);
 
