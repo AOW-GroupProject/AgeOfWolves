@@ -37,7 +37,7 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FLockOnStateChanged, bool, AActor*)
 UCLASS(ClassGroup = (Custom), meta = (BlueprintSpawnableComponent))
 class AGEOFWOLVES_API ULockOnComponent : public UActorComponent
 {
- //@친추 클래스
+    //@친추 클래스
 #pragma region Friend Class
     friend class UBaseInputComponent;
     friend class APlayerCharacter;
@@ -46,7 +46,7 @@ class AGEOFWOLVES_API ULockOnComponent : public UActorComponent
 
     GENERATED_BODY()
 
-//@Defualt Setting
+    //@Defualt Setting
 #pragma region Default Setting
 public:
     ULockOnComponent();
@@ -65,7 +65,7 @@ protected:
 protected:
     //@초기화
     UFUNCTION()
-        void InitializeLockOnComp(const AController* Controller);
+    void InitializeLockOnComp(const AController* Controller);
 #pragma endregion
 
     //@Property/Info...etc
@@ -84,21 +84,26 @@ protected:
     void UpdateControllerRotation(float DeltaTime);
     void UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& TargetRotation);
 
+private:
+    //@Motion Warping Target 관리 함수들 추가
+    void UpdateMotionWarpingTarget();
+    void RemoveMotionWarpingTarget();
+
 protected:
     UPROPERTY(BlueprintReadWrite, Category = "Lock On")
-        FRotator FinalRotation;
+    FRotator FinalRotation;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Lock On")
-        float MaxDetectRadius = 1000.f;
+    float MaxDetectRadius = 1000.f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Lock On")
-        float MaxLockOnDistance = 2000.f;
+    float MaxLockOnDistance = 2000.f;
 
     UPROPERTY(EditDefaultsOnly, BlueprintReadWrite, Category = "Lock On")
-        float HeightThreshold = 20.f;
+    float HeightThreshold = 20.f;
 
     UPROPERTY(EditDefaultsOnly, Category = "Lock On")
-        float InterpolationSpeed = 10.f;
+    float InterpolationSpeed = 10.f;
 
 protected:
     bool bLockOn;
@@ -106,65 +111,68 @@ protected:
 protected:
     //@주위에 있는 적들 목록
     UPROPERTY()
-        TArray<AActor*> NearByEnemies;
+    TArray<AActor*> NearByEnemies;
 
     //@거리, 적 정보 저장한 TMap
     UPROPERTY()
-        TMap<float, AActor*> EnemyMap;
+    TMap<float, AActor*> EnemyMap;
 
     //@Target으로 설정한 적의 약한 참조
     UPROPERTY()
-        //TWeakObjectPtr<AActor> TargetEnemyRef;
-        TWeakObjectPtr<AActor> TargetEnemyRef;
+    //TWeakObjectPtr<AActor> TargetEnemyRef;
+    TWeakObjectPtr<AActor> TargetEnemyRef;
 #pragma endregion
 
-//@Delegates
+    //@Delegates
 #pragma region Delegates
 public:
     //@Lock On 상태 이벤트
     FLockOnStateChanged LockOnStateChanged;
 #pragma endregion
 
-//@Callbacks
+    //@Callbacks
 #pragma region Callbacks
 public:
     UFUNCTION()
-        void OnLockOnTargetChanged(const FGameplayTag& InputTag, const float Value);
+    void OnLockOnTargetChanged(const FGameplayTag& InputTag, const float Value);
 
 protected:
     //@Owner 캐릭터의 상태 변화 콜백
     UFUNCTION()
-        void OnOwnerStateChanged(AActor* Owner, const FGameplayTag& StateTag);
+    void OnOwnerStateChanged(AActor* Owner, const FGameplayTag& StateTag);
 
 protected:
     //@주변 적들 목록에 추가된 적들의 상태 변화 이벤트를 구독하는 콜백
     UFUNCTION()
-        void OnDetectedAIStateChanged(const FGameplayTag& StateTag, AActor* Target);
+    void OnDetectedAIStateChanged(const FGameplayTag& StateTag, AActor* Target);
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+    //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
     UPROPERTY()
-        TWeakObjectPtr<APlayerCharacter> PlayerCharacterRef;
+    TWeakObjectPtr<APlayerCharacter> PlayerCharacterRef;
 
     UPROPERTY()
-        TWeakObjectPtr<UBaseAnimInstance> BaseAnimInstanceRef;
+    TWeakObjectPtr<UBaseAnimInstance> BaseAnimInstanceRef;
 
     UPROPERTY()
-        TWeakObjectPtr<USpringArmComponent> SpringArmComponentRef;
+    TWeakObjectPtr<USpringArmComponent> SpringArmComponentRef;
 
     UPROPERTY()
-        TWeakObjectPtr<UCameraComponent> FollowCameraComponentRef;
+    TWeakObjectPtr<UCameraComponent> FollowCameraComponentRef;
 
     UPROPERTY()
-        TWeakObjectPtr<UBaseInputComponent> BaseInputComponentRef;
+    TWeakObjectPtr<UBaseInputComponent> BaseInputComponentRef;
+
+    UPROPERTY()
+    TWeakObjectPtr<UMotionWarpingComponent> MotionWarpingComponentRef;
 
 public:
     UFUNCTION(BlueprintCallable)
-        FORCEINLINE bool GetbLockOn() const { return bLockOn; }
+    FORCEINLINE bool GetbLockOn() const { return bLockOn; }
     UFUNCTION(BlueprintCallable)
-        FORCEINLINE AActor* GetTargetEnemy() const { return TargetEnemyRef.Get(); }
+    FORCEINLINE AActor* GetTargetEnemy() const { return TargetEnemyRef.Get(); }
     FORCEINLINE FRotator GetFinalRotation() const
     {
         return FinalRotation;

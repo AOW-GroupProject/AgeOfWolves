@@ -135,6 +135,7 @@ void UBaseAnimInstance::FindMovementState()
     {
         LastMovementState = EMovementState::Idle;
         bShouldMove = false;
+        return;
     }
 
     LastMovementState = MovementState;

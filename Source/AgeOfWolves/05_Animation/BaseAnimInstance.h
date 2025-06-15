@@ -314,7 +314,6 @@ public:
 	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
 	FORCEINLINE bool GetIsPlayingRootMotionMontageWithFullBodySlot() const { return bIsPlayingRootMotionMontageWithFullBodySlot; }
 
-
 protected:
 	bool IsFullBodySlotMontage(const UAnimMontage* Montage) const;
 

@@ -1,4 +1,4 @@
-﻿// Fill out your copyright notice in the Description page of Project Settings.
+// Fill out your copyright notice in the Description page of Project Settings.
 
 
 #include "BaseInputComponent.h"
@@ -15,9 +15,10 @@
 
 #include "14_Subsystem/InputManagerSubsystem.h"
 
-
 #include "GameplayTagContainer.h"
 #include "EnhancedInputSubsystems.h"
+
+#include "05_Animation/BaseAnimInstance.h" // 헤더 추가
 
 DEFINE_LOG_CATEGORY(LogInputComponent)
 // UE_LOGFMT(LogInputComponent, Log, "");
@@ -308,6 +309,34 @@ void UBaseInputComponent::SwapMappings(const FGameplayTag& NewIMCTag)
 
 //@Callbacks
 #pragma region Callbacks
+//void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
+//{
+//	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
+//	{
+//		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
+//		{
+//			if (APawn* Pawn = PC->GetPawn())
+//			{
+//				FVector2D MovementVector = Value.Get<FVector2D>();
+//				InputVector = MovementVector;
+//
+//				const FRotator Rotation = PC->GetControlRotation();
+//				const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
+//
+//				// Forward, Backward
+//				const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
+//				Pawn->AddMovementInput(ForwardDirection, MovementVector.X);
+//
+//				// Right, Left
+//				const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
+//				Pawn->AddMovementInput(RightDirection, MovementVector.Y);
+//			}
+//		}
+//	}
+//}
+
+
+
 void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 {
 	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
@@ -316,6 +345,18 @@ void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 		{
 			if (APawn* Pawn = PC->GetPawn())
 			{
+				// BaseAnimInstance 체크 추가
+				if (USkeletalMeshComponent* MeshComp = Pawn->FindComponentByClass<USkeletalMeshComponent>())
+				{
+					if (UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(MeshComp->GetAnimInstance()))
+					{
+						if (BaseAnimInstance->GetIsPlayingRootMotionMontageWithFullBodySlot())
+						{
+							return; // 루트 모션 재생 중이면 움직임 입력 무시
+						}
+					}
+				}
+
 				FVector2D MovementVector = Value.Get<FVector2D>();
 				InputVector = MovementVector;
 
