@@ -11,7 +11,7 @@
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "14_Subsystem/AbilityManagerSubsystem.h"
 
-#include "15_SaveGame/AOWSaveGame.h"
+#include "17_GameMode/AgeOfWolvesGameMode.h"
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 
@@ -227,58 +227,42 @@ void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Dat
     OnAnyAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);
 }
 
-void APlayerStateBase::OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag)
+void APlayerStateBase::OnCharacterStateEventOnGameplay(AActor* Character, const FGameplayTag& CharacterStateTag)
 {
-
-    // **죽음 상태 처리**
-    if (CharacterStateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
-    {
-        UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 죽음 감지 - 이벤트 브로드캐스트");
-
-        NotifyPlayerDeathEvent.ExecuteIfBound(this);
-    }
-
-    //@Game Instance
-    UAOWGameInstance* GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
-    if (!GameInstance)
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "GameInstance를 가져올 수 없습니다.");
-        return;
-    }
-
-    //@SaveGame
-    if (!GameInstance->DoesSaveGameExist())
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "SaveGame이 존재하지 않습니다.");
-        return;
-    }
-
-    UAOWSaveGame* SaveGame = Cast<UAOWSaveGame>(GameInstance->GetSaveGameInstance());
-    if (!SaveGame)
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "세이브 게임 인스턴스를 찾을 수 없습니다.");
-        return;
-    }
-
-    //@Pawn
-    APawn* ControlledPawn = GetPawn();
-    if (!ControlledPawn)
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "폰이 유효하지 않습니다.");
-        return;
-    }
-
-    //@상태 이력 추가
-    SaveGame->AddCharacterStateToHistory(
-        CharacterStateTag,
-        ControlledPawn,
-        AttributeSet.IsValid() ? AttributeSet.Get() : nullptr
-    );
-
-    // 상태 이벤트 처리 로그
+    //@GetTagName()을 사용하여 깔끔한 태그 이름 출력
     UE_LOGFMT(LogPlayerStateBase, Log,
-        "캐릭터 상태 이벤트 처리 | 태그: {0}",
-        CharacterStateTag.GetTagName().ToString());
+        "캐릭터 상태 이벤트 처리 완료 | 태그: {0}",
+        CharacterStateTag.ToString());
+
+    //@태그 비교를 위한 정적 태그 생성 (한 번만 생성되어 성능도 좋음)
+    static const FGameplayTag DeadStateTag = FGameplayTag::RequestGameplayTag("State.Dead");
+
+    if (CharacterStateTag.MatchesTag(DeadStateTag))
+    {
+        UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 죽음 감지 - 처리 시작");
+
+        // 나머지 죽음 처리 로직...
+        Async(EAsyncExecution::TaskGraph, [this]()
+            {
+                AsyncTask(ENamedThreads::GameThread, [this]()
+                    {
+                        if (auto GameMode = Cast<AAgeOfWolvesGameMode>(GetWorld()->GetAuthGameMode()))
+                        {
+                            if (IsValid(GameMode) && IsValid(this))
+                            {
+                                GameMode->HandlePlayerDeath(this);
+                            }
+                        }
+                        else
+                        {
+                            UE_LOGFMT(LogPlayerStateBase, Warning, "Game Mode를 찾을 수 없습니다");
+                        }
+                    });
+            });
+
+        //@죽음 이벤트 호출
+        NotifyPlayerDeathEvent.Broadcast(this);
+    }
 }
 #pragma endregion
 

@@ -309,36 +309,11 @@ void UBaseInputComponent::SwapMappings(const FGameplayTag& NewIMCTag)
 
 //@Callbacks
 #pragma region Callbacks
-//void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
-//{
-//	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
-//	{
-//		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
-//		{
-//			if (APawn* Pawn = PC->GetPawn())
-//			{
-//				FVector2D MovementVector = Value.Get<FVector2D>();
-//				InputVector = MovementVector;
-//
-//				const FRotator Rotation = PC->GetControlRotation();
-//				const FRotator YawRotation(0.f, Rotation.Yaw, 0.f);
-//
-//				// Forward, Backward
-//				const FVector ForwardDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::X);
-//				Pawn->AddMovementInput(ForwardDirection, MovementVector.X);
-//
-//				// Right, Left
-//				const FVector RightDirection = FRotationMatrix(YawRotation).GetUnitAxis(EAxis::Y);
-//				Pawn->AddMovementInput(RightDirection, MovementVector.Y);
-//			}
-//		}
-//	}
-//}
-
-
-
 void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 {
+	//@입력 허용 상태 체크 - 한 줄 추가
+	if (!IsInputAllowed()) return;
+
 	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
@@ -377,6 +352,9 @@ void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 
 void UBaseInputComponent::Input_Look(const FInputActionValue& InputActionValue)
 {
+	//@입력 허용 상태 체크 - 한 줄 추가
+	if (!IsInputAllowed()) return;
+
 	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
@@ -403,6 +381,9 @@ void UBaseInputComponent::Input_Look(const FInputActionValue& InputActionValue)
 
 void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 {
+	//@입력 허용 상태 체크 - 한 줄 추가
+	if (!IsInputAllowed()) return;
+
 	if (CurrentIMCTag != FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 		return;
 
@@ -430,6 +411,9 @@ void UBaseInputComponent::Input_LockOn(const FInputActionValue& Value)
 
 void UBaseInputComponent::OnAbilityInputTagPressed(FGameplayTag InputTag)
 {
+	//@입력 허용 상태 체크 - 한 줄 추가
+	if (!IsInputAllowed()) return;
+
 	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
@@ -439,7 +423,6 @@ void UBaseInputComponent::OnAbilityInputTagPressed(FGameplayTag InputTag)
 				if (UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent()))
 				{
 					ASC->AbilityInputTagPressed(InputTag);
-
 				}
 			}
 		}
@@ -448,6 +431,9 @@ void UBaseInputComponent::OnAbilityInputTagPressed(FGameplayTag InputTag)
 
 void UBaseInputComponent::OnAbilityInputTagReleased(FGameplayTag InputTag)
 {
+	//@입력 허용 상태 체크 - 한 줄 추가
+	if (!IsInputAllowed()) return;
+
 	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
 		if (APlayerController* PC = Cast<APlayerController>(GetOwner()))
@@ -500,4 +486,21 @@ void UBaseInputComponent::OnUIInputTagValueTriggered(const FInputActionValue& Va
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+bool UBaseInputComponent::IsInputAllowed() const
+{
+	//@Owner가 PlayerController인지 확인
+	APlayerController* PC = Cast<APlayerController>(GetOwner());
+	if (!PC)
+	{
+		return false;
+	}
+
+	//@PlayerController의 입력 활성화 상태 체크
+	if (!PC->InputEnabled())
+	{
+		return false;
+	}
+
+	return true;
+}
 #pragma endregion

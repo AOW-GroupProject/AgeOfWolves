@@ -1119,32 +1119,26 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 {
 	const FGameplayTagContainer& AssetTags = SpecApplied.Def->InheritableGameplayEffectTags.Added;
 
-	// Asset Tags 모두 로그 출력
+	// 디버깅을 위한 로그 출력
 	UE_LOGFMT(LogASC, Log, "GameplayEffect 적용 - 총 AssetTags 개수: {0}", AssetTags.Num());
 	for (const FGameplayTag& Tag : AssetTags)
 	{
-		UE_LOGFMT(LogASC, Log, "AssetTag: {0}", *Tag.ToString());
+		UE_LOGFMT(LogASC, Log, "AssetTag: {0}", Tag.ToString());
 	}
 
 	// 정적 태그 한 번만 생성 (성능 최적화)
-	static FGameplayTag StateTag = FGameplayTag::RequestGameplayTag("State");
-	static FGameplayTag DeadStateTag = FGameplayTag::RequestGameplayTag("State.Dead");
+	FGameplayTag StateTag = FGameplayTag::RequestGameplayTag("State");
+	FGameplayTag DeadStateTag = FGameplayTag::RequestGameplayTag("State.Dead");
 
-	//@State 태그 확인 및 이벤트 발생
+	// State 태그 확인 및 이벤트 발생
 	for (const FGameplayTag& TagFromEffect : AssetTags)
 	{
-		//@State 계층 태그 확인 (State 또는 모든 자식 태그)
+		// State 계층 태그 확인 (State 또는 모든 자식 태그)
 		if (TagFromEffect.MatchesTag(StateTag))
 		{
-			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *TagFromEffect.ToString());
+			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", TagFromEffect.ToString());
 
-			//@캐릭터 상태 이벤트
 			CharacterStateEventOnGameplay.Broadcast(GetAvatarActor(), TagFromEffect);
-
-			//if (TagFromEffect.MatchesTag(DeadStateTag))
-			//{
-			//	CharacterStateEventOnGameplay.Clear();
-			//}
 		}
 	}
 }

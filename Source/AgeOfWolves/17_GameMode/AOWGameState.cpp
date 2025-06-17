@@ -12,23 +12,7 @@ AAOWGameState::AAOWGameState()
 
 void AAOWGameState::BeginPlay()
 {
-	//@내부 바인딩...
-	InternalBindToPlayerState();
 
-}
-
-void AAOWGameState::InternalBindToPlayerState()
-{
-    //@Player State 목록
-    for (auto PlayerState : PlayerArray)
-    {
-        if (auto PlayerStateBase = Cast<APlayerStateBase>(PlayerState))
-        {
-            PlayerStateBase->NotifyPlayerDeathEvent.BindUFunction(this, "OnPlayerCharacterDeathEvent");
-
-            UE_LOGFMT(LogAOWGameState, Log, "PlayerState 죽음 이벤트 바인딩 완료");
-        }
-    }
 }
 #pragma endregion
 
@@ -36,6 +20,7 @@ void AAOWGameState::InternalBindToPlayerState()
 #pragma region Property or Subwidgets or Infos...etc
 void AAOWGameState::ProcessPlayerRespawn(APlayerStateBase* DeadPlayerState)
 {
+
 }
 #pragma endregion
 
@@ -44,6 +29,19 @@ void AAOWGameState::ProcessPlayerRespawn(APlayerStateBase* DeadPlayerState)
 void AAOWGameState::OnPlayerCharacterDeathEvent(APlayerStateBase* DeadPlayerState)
 {
     UE_LOGFMT(LogAOWGameState, Log, "플레이어 캐릭터 죽음 이벤트 처리 시작");
+
+    //@비동기 리스폰 처리 시작
+    AsyncTask(ENamedThreads::GameThread, [this, DeadPlayerState]()
+        {
+            //@지연 시간 후 리스폰 처리
+            FTimerHandle RespawnTimer;
+            GetWorldTimerManager().SetTimer(RespawnTimer, [this, DeadPlayerState]()
+                {
+                    ProcessPlayerRespawn(DeadPlayerState);
+                }, RespawnDelay, false);
+
+            UE_LOGFMT(LogAOWGameState, Log, "비동기 리스폰 타이머 시작: {0}초", RespawnDelay);
+        });
 }
 #pragma endregion
 

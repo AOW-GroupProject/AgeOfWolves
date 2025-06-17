@@ -72,6 +72,10 @@ protected:
     //~End of APlayerController
 
 protected:
+    //@내부 바인딩...
+    void InternalBindToPlayerState();
+
+protected:
     //@초기화
     void InitializePlayerController();
 #pragma endregion
@@ -81,6 +85,13 @@ protected:
 protected:
     void SetupInputModeOnBeginPlay();
     void SetupViewportClientOnBeginPlay();
+
+private:
+    //@캐릭터 죽음/부활 처리
+    UFUNCTION()
+    void HandleCharacterDeath();
+    UFUNCTION()
+    void HandleCharacterRevive();
 
 private:
     //@UI 컴포넌트
@@ -109,6 +120,9 @@ public:
 
 //@Callbacks
 #pragma region Callbacks
+protected:
+    UFUNCTION()
+    void OnPlayerDeath(APlayerStateBase* DeadPlayerState);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

@@ -45,7 +45,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionActivated, FGameplayTag, ChainActi
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionFinished, FGameplayTag, ChainActionAbilityTag);
 
 //@상태 변화 이벤트
-DECLARE_MULTICAST_DELEGATE_TwoParams(FCharacterStateEventOnGameplay, AActor*, const FGameplayTag&)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FCharacterStateEventOnGameplay, AActor*, const FGameplayTag&);
 
 //@상호작용 활성화 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionActivated, AActor*, InteractableActor, const FPotentialInteraction&, PotentialInteraction);
@@ -278,6 +278,9 @@ public:
 	FORCEINLINE bool IsInteractionAvailable() const { return bInteractionAvailable; }
 	FORCEINLINE const FPotentialInteraction& GetCurrentPotentialInteraction() const { return CurrentPotentialInteraction; }
 	FORCEINLINE AActor* GetInteractionTargetActor() const { return InteractionTargetActor.Get(); }
+
+private:
+	FString CleanStateTagName(const FString& OriginalTagName);
 #pragma endregion
 
 };

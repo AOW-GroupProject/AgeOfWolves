@@ -34,7 +34,7 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAttributeSetInitialized);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGameplayAttribute, Attribute, float, OldValue, float, NewValue);
 
-DECLARE_DELEGATE_OneParam(FNotifyPlayerDeathEvent, APlayerStateBase*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyPlayerDeathEvent, APlayerStateBase*);
 #pragma endregion
 
 /**
@@ -124,7 +124,7 @@ protected:
 
 protected:
 	UFUNCTION()
-		void OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag);
+		void OnCharacterStateEventOnGameplay(AActor* Actor, const FGameplayTag& CharacterStateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

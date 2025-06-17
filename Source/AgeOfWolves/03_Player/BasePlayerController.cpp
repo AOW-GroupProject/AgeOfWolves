@@ -108,9 +108,19 @@ void ABasePlayerController::PostProcessInput(const float DeltaTime, const bool b
 	Super::PostProcessInput(DeltaTime, bGamePaused);
 }
 
+void ABasePlayerController::InternalBindToPlayerState()
+{
+    if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
+    {
+        PS->NotifyPlayerDeathEvent.AddUFunction(this, "OnPlayerDeath");
+        UE_LOGFMT(LogBasePC, Log, "Player State Death 이벤트 바인딩 완료");
+    }
+}
+
 void ABasePlayerController::InitializePlayerController()
 {
-    //@TODO: 초기 입력 모드 설정은 테스트입니다. 이후 수정 작업 진행 아래에서...
+    //@내부 바인딩...
+    InternalBindToPlayerState();
 
     //@Input Mode 설정
     SetupInputModeOnBeginPlay();
@@ -173,6 +183,36 @@ void ABasePlayerController::SetupViewportClientOnBeginPlay()
     ViewportClient->SetMouseLockMode(EMouseLockMode::LockAlways);
     ViewportClient->SetMouseCaptureMode(EMouseCaptureMode::CapturePermanently);
 }
+
+void ABasePlayerController::HandleCharacterDeath()
+{
+    UE_LOGFMT(LogBasePC, Warning, "캐릭터 사망 - 입력 시스템 비활성화 및 Loading UI 표시");
+
+    DisableInput(this);
+
+    if (UIComponent)
+    {
+        //UIComponent->ShowUI(EUICategory::InGameLoading, FGameplayTag::RequestGameplayTag("UI.InGameLoading"));
+        //UIComponent->HideAllUI(EUICategory::HUD);
+        //UIComponent->HideAllUI(EUICategory::Interaction);
+        UE_LOGFMT(LogBasePC, Log, "InGameLoading UI 표시 및 다른 UI 숨김 완료");
+    }
+}
+
+void ABasePlayerController::HandleCharacterRevive()
+{
+    UE_LOGFMT(LogBasePC, Warning, "캐릭터 부활 - 입력 시스템 재활성화 및 UI 복원");
+
+    EnableInput(this);
+
+    if (UIComponent)
+    {
+        //UIComponent->HideUI(EUICategory::InGameLoading, FGameplayTag::RequestGameplayTag("UI.InGameLoading"));
+        //UIComponent->ShowAllUI(EUICategory::HUD);
+        //UIComponent->ShowAllUI(EUICategory::Interaction);
+        UE_LOGFMT(LogBasePC, Log, "InGameLoading UI 숨김 및 다른 UI 복원 완료");
+    }
+}
 #pragma endregion
 
 //@Callbacks
@@ -181,6 +221,18 @@ void ABasePlayerController::SetupViewportClientOnBeginPlay()
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+void ABasePlayerController::OnPlayerDeath(APlayerStateBase* DeadPlayerState)
+{
+    if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
+    {
+        if (PS == DeadPlayerState)
+        {
+            HandleCharacterDeath();
+            return;
+        }
+    }
+}
+
 UUIComponent* ABasePlayerController::GetUIComponent() const
 {
     if (!UIComponent)

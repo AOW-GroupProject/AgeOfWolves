@@ -226,6 +226,10 @@ private:
 public:
 	UFUNCTION(BlueprintCallable)
 	FORCEINLINE FVector2D GetInputVector() { return InputVector; }
+
+private:
+	//@PlayerController의 입력 활성화 상태를 체크하는 헬퍼 함수
+	bool IsInputAllowed() const;
 #pragma endregion
 
 };
