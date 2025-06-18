@@ -474,7 +474,6 @@ void UBaseInputComponent::OnNativeInputTagValueTriggered(const FInputActionValue
 	NativeInputTagTriggeredWithValue.Broadcast(InputTag, AxisValue);
 }
 
-
 void UBaseInputComponent::OnUIInputTagValueTriggered(const FInputActionValue& Value, FGameplayTag InputTag)
 {
 	const float AxisValue = Value.Get<float>();

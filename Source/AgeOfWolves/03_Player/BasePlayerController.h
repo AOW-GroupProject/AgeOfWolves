@@ -76,6 +76,10 @@ protected:
     void InternalBindToPlayerState();
 
 protected:
+    //@외부 바인딩...
+    void ExternalBindToGameState();
+
+protected:
     //@초기화
     void InitializePlayerController();
 #pragma endregion
@@ -123,6 +127,11 @@ public:
 protected:
     UFUNCTION()
     void OnPlayerDeath(APlayerStateBase* DeadPlayerState);
+
+private:
+    //@Player Respawn 완료 콜백 함수
+    UFUNCTION()
+    void OnPlayerRespawnCompletedCallback(APlayerController* RespawnedPlayerController);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

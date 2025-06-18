@@ -23,6 +23,7 @@ class ABasePlayerController;
 
 //@이벤트/델리게이트
 #pragma region Delegates
+DECLARE_MULTICAST_DELEGATE_OneParam(FPlayerRespawnCompleted, APlayerController*)
 #pragma endregion
 
 /**
@@ -36,6 +37,7 @@ class AGEOFWOLVES_API AAOWGameState : public AGameStateBase
 
 //@친추 클래스
 #pragma region Friend Class
+	friend class AAgeOfWolvesGameMode;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -44,37 +46,26 @@ class AGEOFWOLVES_API AAOWGameState : public AGameStateBase
 #pragma region Default Setting
 public:
 	AAOWGameState();
-
-protected:
-	virtual void BeginPlay() override;
-
-protected:
-	void InternalBindToPlayerState();
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
-	//@호출되는 리스폰 요청
+	//@Game Mode에서 호출할 함수 - 리스폰 완료 알림 처리
 	UFUNCTION()
-	void ProcessPlayerRespawn(APlayerStateBase* DeadPlayerState);
-
-protected:
-	// 리스폰 지연 시간
-	UPROPERTY(EditDefaultsOnly, Category = "리스폰")
-	float RespawnDelay = 2.0f;
+	void NotifyPlayerRespawnCompleted(APlayerController* RespawnedPlayerController);
 #pragma endregion
 
 //@Delegates
 #pragma region Delegates
+public:
+	//@플레이어 리스폰 완료 이벤트
+	FPlayerRespawnCompleted PlayerRespawnCompleted;
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
-public:
-	// Player State에서 호출되는 죽음 이벤트 콜백
-	UFUNCTION()
-	void OnPlayerCharacterDeathEvent(APlayerStateBase* DeadPlayerState);
+
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

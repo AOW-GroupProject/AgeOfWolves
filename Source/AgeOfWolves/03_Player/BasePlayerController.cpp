@@ -3,6 +3,7 @@
 
 #include "01_Character/CharacterBase.h"
 
+#include "17_GameMode/AOWGameState.h"
 #include "03_Player/PlayerStateBase.h"
 
 #include "04_Component/BaseAbilitySystemComponent.h"
@@ -77,6 +78,9 @@ void ABasePlayerController::AcknowledgePossession(APawn* P)
 {
     Super::AcknowledgePossession(P);
 
+    //@외부 바인딩...
+    ExternalBindToGameState();
+
     //@초기화 함수
     InitializePlayerController();
 
@@ -115,6 +119,40 @@ void ABasePlayerController::InternalBindToPlayerState()
         PS->NotifyPlayerDeathEvent.AddUFunction(this, "OnPlayerDeath");
         UE_LOGFMT(LogBasePC, Log, "Player State Death 이벤트 바인딩 완료");
     }
+}
+
+void ABasePlayerController::ExternalBindToGameState()
+{
+    UE_LOGFMT(LogBasePC, Log, "Game State 이벤트 바인딩 시작");
+
+    //@World 가져오기
+    UWorld* World = GetWorld();
+    if (!IsValid(World))
+    {
+        UE_LOGFMT(LogBasePC, Error, "Game State 바인딩 실패: World를 찾을 수 없음");
+        return;
+    }
+
+    //@Game State 가져오기
+    AGameStateBase* GameStateBase = World->GetGameState();
+    if (!IsValid(GameStateBase))
+    {
+        UE_LOGFMT(LogBasePC, Error, "Game State 바인딩 실패: GameState를 찾을 수 없음");
+        return;
+    }
+
+    //@AOWGameState로 캐스팅
+    AAOWGameState* AOWGameState = Cast<AAOWGameState>(GameStateBase);
+    if (!IsValid(AOWGameState))
+    {
+        UE_LOGFMT(LogBasePC, Error, "Game State 바인딩 실패: AOWGameState 캐스팅 실패");
+        return;
+    }
+
+    //@PlayerRespawnCompleted 이벤트에 콜백 등록
+    AOWGameState->PlayerRespawnCompleted.AddUFunction(this, "OnPlayerRespawnCompletedCallback");
+
+    UE_LOGFMT(LogBasePC, Log, "Game State 이벤트 바인딩 성공: {0}", GetNameSafe(AOWGameState));
 }
 
 void ABasePlayerController::InitializePlayerController()
@@ -217,10 +255,6 @@ void ABasePlayerController::HandleCharacterRevive()
 
 //@Callbacks
 #pragma region Callbacks
-#pragma endregion
-
-//@Utility(Setter, Getter,...etc)
-#pragma region Utility
 void ABasePlayerController::OnPlayerDeath(APlayerStateBase* DeadPlayerState)
 {
     if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
@@ -232,6 +266,33 @@ void ABasePlayerController::OnPlayerDeath(APlayerStateBase* DeadPlayerState)
         }
     }
 }
+
+void ABasePlayerController::OnPlayerRespawnCompletedCallback(APlayerController* RespawnedPlayerController)
+{
+    //@기본 유효성 검증
+    if (!IsValid(RespawnedPlayerController))
+    {
+        UE_LOGFMT(LogBasePC, Warning, "리스폰 콜백 실패: 유효하지 않은 PlayerController");
+        return;
+    }
+
+    //@자신의 리스폰인지 확인
+    if (RespawnedPlayerController != this)
+    {
+        UE_LOGFMT(LogBasePC, Log, "다른 플레이어 리스폰 완료 확인: {0}", GetNameSafe(RespawnedPlayerController));
+        return;
+    }
+
+    UE_LOGFMT(LogBasePC, Log, "자신의 리스폰 완료 확인: {0}", GetNameSafe(this));
+
+    //@부활 작업
+    HandleCharacterRevive();
+
+}
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 
 UUIComponent* ABasePlayerController::GetUIComponent() const
 {
