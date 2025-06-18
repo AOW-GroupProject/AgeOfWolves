@@ -22,6 +22,7 @@ APlayerStateBase::APlayerStateBase()
 
     //@Character Tag
     CharacterTag = FGameplayTag::RequestGameplayTag("Character.AkaOni");
+    StateTagCache = FGameplayTag::RequestGameplayTag("State.Normal");
 
     //@Ability Manger Subsystem
     AbilityManagerSubsystemRef.Reset();
@@ -109,6 +110,7 @@ void APlayerStateBase::InitializePlayerState()
 
     //@ASC의 외부 바인딩...
     AbilitySystemComponent->ExternalBindToInteractionComp(Controller);
+    AbilitySystemComponent->ExternalBindToGameState();
 
     // AbilityManagerSubsystem으로부터 AbilitySet 가져오기
     UBaseAbilitySet* SetToGrant = AbilityManagerSubsystemRef->GetAbilitySet(CharacterTag);
@@ -236,33 +238,32 @@ void APlayerStateBase::OnCharacterStateEventOnGameplay(AActor* Character, const 
 
     //@태그 비교를 위한 정적 태그 생성 (한 번만 생성되어 성능도 좋음)
     static const FGameplayTag DeadStateTag = FGameplayTag::RequestGameplayTag("State.Dead");
+    static const FGameplayTag NormalStateTag = FGameplayTag::RequestGameplayTag("State.Normal");
 
-    if (CharacterStateTag.MatchesTag(DeadStateTag))
+    if (StateTagCache.MatchesTagExact(CharacterStateTag)) return;
+
+    //@부활 감지
+    if (StateTagCache.MatchesTagExact(DeadStateTag)
+        && CharacterStateTag.MatchesTagExact(NormalStateTag))
+    {
+        UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 부활 감지 - 처리 시작");
+
+        //@죽음 이벤트 호출
+        NotifyPlayerRevivalEvent.Broadcast(this);
+    }
+
+    //@죽음 상태
+    if (CharacterStateTag.MatchesTagExact(DeadStateTag))
     {
         UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 죽음 감지 - 처리 시작");
-
-        // 나머지 죽음 처리 로직...
-        Async(EAsyncExecution::TaskGraph, [this]()
-            {
-                AsyncTask(ENamedThreads::GameThread, [this]()
-                    {
-                        if (auto GameMode = Cast<AAgeOfWolvesGameMode>(GetWorld()->GetAuthGameMode()))
-                        {
-                            if (IsValid(GameMode) && IsValid(this))
-                            {
-                                GameMode->HandlePlayerDeath(this);
-                            }
-                        }
-                        else
-                        {
-                            UE_LOGFMT(LogPlayerStateBase, Warning, "Game Mode를 찾을 수 없습니다");
-                        }
-                    });
-            });
 
         //@죽음 이벤트 호출
         NotifyPlayerDeathEvent.Broadcast(this);
     }
+
+    //@상태 태그 캐싱
+    StateTagCache = CharacterStateTag;
+
 }
 #pragma endregion
 

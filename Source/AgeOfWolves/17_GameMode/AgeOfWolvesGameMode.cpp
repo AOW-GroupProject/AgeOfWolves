@@ -17,21 +17,31 @@ AAgeOfWolvesGameMode::AAgeOfWolvesGameMode()
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-void AAgeOfWolvesGameMode::HandlePlayerDeath(APlayerStateBase* DeadPlayerState)
+void AAgeOfWolvesGameMode::HandlePlayerDeath(APlayerController* PlayerController)
 {
-    //@PS
-    if (!IsValid(DeadPlayerState))
+    //@PC
+    if (!IsValid(PlayerController))
     {
-        UE_LOGFMT(LogAOWGameMode, Warning, "플레이어 죽음 처리 - 유효하지 않은 PlayerState입니다");
+        UE_LOGFMT(LogAOWGameMode, Warning, "플레이어 죽음 처리 - 유효하지 않은 PlayerController입니다");
         return;
     }
 
-    UE_LOGFMT(LogAOWGameMode, Log, "플레이어 죽음 처리 시작: {0}", GetNameSafe(DeadPlayerState));
+    //@PlayerState 가져오기
+    APlayerStateBase* PlayerState = PlayerController->GetPlayerState<APlayerStateBase>();
+    if (!IsValid(PlayerState))
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "플레이어 죽음 처리 - PlayerController에서 PlayerState를 찾을 수 없습니다: {0}",
+            GetNameSafe(PlayerController));
+        return;
+    }
 
-    if (DetermineDeathRules(DeadPlayerState))
+    UE_LOGFMT(LogAOWGameMode, Log, "플레이어 죽음 처리 시작: PC={0}, PS={1}",
+        GetNameSafe(PlayerController), GetNameSafe(PlayerState));
+
+    if (DetermineDeathRules(PlayerController))
     {
         //@리스폰 진행
-        if (TestRespawnToPlayerStart(DeadPlayerState))
+        if (TestRespawnToPlayerStart(PlayerController))
         {
             UE_LOGFMT(LogAOWGameMode, Log, "리스폰 위치로 재설정 완료!");
         }
@@ -39,30 +49,20 @@ void AAgeOfWolvesGameMode::HandlePlayerDeath(APlayerStateBase* DeadPlayerState)
     }
 
     //@Game State의 죽음 알림 요청
-    NotifyRespawnCompleteViaGameState(DeadPlayerState);
+    NotifyRespawnCompleteViaGameState(PlayerController);
 }
 
-
-void AAgeOfWolvesGameMode::NotifyRespawnCompleteViaGameState(APlayerStateBase* DeadPlayerState)
+void AAgeOfWolvesGameMode::NotifyRespawnCompleteViaGameState(APlayerController* PlayerController)
 {
     UE_LOGFMT(LogAOWGameMode, Log, "Game State를 통한 리스폰 완료 알림 시작");
 
-    if (!IsValid(DeadPlayerState))
+    if (!IsValid(PlayerController))
     {
-        UE_LOGFMT(LogAOWGameMode, Error, "리스폰 알림 실패: 유효하지 않은 PlayerState입니다");
+        UE_LOGFMT(LogAOWGameMode, Error, "리스폰 알림 실패: 유효하지 않은 PlayerController입니다");
         return;
     }
 
-    APlayerController* TargetPlayerController = Cast<APlayerController>(DeadPlayerState->GetOwner());
-    if (!IsValid(TargetPlayerController))
-    {
-        UE_LOGFMT(LogAOWGameMode, Error, "리스폰 알림 실패: PlayerState에서 PlayerController를 찾을 수 없습니다. PlayerState: {0}",
-            GetNameSafe(DeadPlayerState));
-        return;
-    }
-
-    UE_LOGFMT(LogAOWGameMode, Log, "PlayerController 찾기 성공: {0} (PlayerState: {1})",
-        GetNameSafe(TargetPlayerController), GetNameSafe(DeadPlayerState));
+    UE_LOGFMT(LogAOWGameMode, Log, "PlayerController 확인 성공: {0}", GetNameSafe(PlayerController));
 
     AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>();
     if (!IsValid(CurrentGameState))
@@ -73,31 +73,30 @@ void AAgeOfWolvesGameMode::NotifyRespawnCompleteViaGameState(APlayerStateBase* D
 
     UE_LOGFMT(LogAOWGameMode, Log, "AOWGameState 가져오기 성공: {0}", GetNameSafe(CurrentGameState));
 
-    CurrentGameState->NotifyPlayerRespawnCompleted(TargetPlayerController);
+    CurrentGameState->NotifyPlayerRespawnCompleted(PlayerController);
 
     UE_LOGFMT(LogAOWGameMode, Log, "Game State 리스폰 알림 호출 완료: PlayerController {0}에 대한 알림을 전송했습니다",
-        GetNameSafe(TargetPlayerController));
+        GetNameSafe(PlayerController));
 }
 
-bool AAgeOfWolvesGameMode::TestRespawnToPlayerStart(APlayerStateBase* DeadPlayerState)
+bool AAgeOfWolvesGameMode::TestRespawnToPlayerStart(APlayerController* PlayerController)
 {
     //@기본 유효성 검증
-    if (!IsValid(DeadPlayerState))
+    if (!IsValid(PlayerController))
     {
-        UE_LOGFMT(LogAOWGameMode, Error, "테스트 리스폰 실패: 유효하지 않은 PlayerState");
+        UE_LOGFMT(LogAOWGameMode, Error, "테스트 리스폰 실패: 유효하지 않은 PlayerController");
         return false;
     }
 
-    //@PlayerController 가져오기
-    APlayerController* PlayerController = Cast<APlayerController>(DeadPlayerState->GetOwner());
-    if (!IsValid(PlayerController))
+    //@PlayerState 가져오기 (로깅용)
+    APlayerStateBase* PlayerState = PlayerController->GetPlayerState<APlayerStateBase>();
+    if (!IsValid(PlayerState))
     {
-        UE_LOGFMT(LogAOWGameMode, Error, "테스트 리스폰 실패: PlayerController를 찾을 수 없음");
-        return false;
+        UE_LOGFMT(LogAOWGameMode, Warning, "PlayerState를 찾을 수 없음, 리스폰 계속 진행: {0}",
+            GetNameSafe(PlayerController));
     }
 
     //@GameMode의 내장 함수로 최적의 Player Start 찾기
-    //@이 함수는 Unreal Engine이 제공하는 정교한 스폰 포인트 선택 알고리즘을 사용합니다
     AActor* ChosenPlayerStart = ChoosePlayerStart(PlayerController);
     if (!IsValid(ChosenPlayerStart))
     {
@@ -114,10 +113,10 @@ bool AAgeOfWolvesGameMode::TestRespawnToPlayerStart(APlayerStateBase* DeadPlayer
         RestartPlayer(PlayerController);
 
         //@Game State를 통한 리스폰 완료 알림
-        NotifyRespawnCompleteViaGameState(DeadPlayerState);
+        NotifyRespawnCompleteViaGameState(PlayerController);
 
         UE_LOGFMT(LogAOWGameMode, Log, "테스트 리스폰 완료: 표준 메커니즘 사용");
-        return false;
+        return true; // 성공으로 변경
     }
 
     //@기존 Pawn이 있는 경우: 선택된 Player Start 위치로 이동
@@ -127,8 +126,16 @@ bool AAgeOfWolvesGameMode::TestRespawnToPlayerStart(APlayerStateBase* DeadPlayer
     SpawnTransform.SetLocation(SafeLocation);
 
     //@물리 기반 텔레포트로 안전하게 이동
-    //@ETeleportType::TeleportPhysics는 물리 시뮬레이션과 충돌 감지를 고려한 안전한 이동을 보장합니다
     bool bTeleportSuccess = CurrentPawn->SetActorTransform(SpawnTransform, false, nullptr, ETeleportType::TeleportPhysics);
+
+    if (bTeleportSuccess)
+    {
+        UE_LOGFMT(LogAOWGameMode, Log, "테스트 리스폰 완료: Pawn 이동 성공");
+    }
+    else
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "테스트 리스폰 부분 실패: Pawn 이동 실패");
+    }
 
     return bTeleportSuccess;
 }
@@ -136,14 +143,22 @@ bool AAgeOfWolvesGameMode::TestRespawnToPlayerStart(APlayerStateBase* DeadPlayer
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
-bool AAgeOfWolvesGameMode::DetermineDeathRules(APlayerStateBase* DeadPlayerState)
+bool AAgeOfWolvesGameMode::DetermineDeathRules(APlayerController* PlayerController)
 {
-    UE_LOGFMT(LogAOWGameMode, Log, "죽음 규칙 결정 중: {0}",
-        GetNameSafe(DeadPlayerState));
+    if (!IsValid(PlayerController))
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "죽음 규칙 결정 실패: 유효하지 않은 PlayerController");
+        return false;
+    }
+
+    //@PlayerState 가져오기
+    APlayerStateBase* PlayerState = PlayerController->GetPlayerState<APlayerStateBase>();
+
+    UE_LOGFMT(LogAOWGameMode, Log, "죽음 규칙 결정 중: PC={0}, PS={1}",
+        GetNameSafe(PlayerController), GetNameSafe(PlayerState));
 
     //@죽음 규칙 확인 작업...
 
     return true;
 }
-
 #pragma endregion

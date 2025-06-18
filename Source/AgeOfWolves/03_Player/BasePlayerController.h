@@ -18,6 +18,14 @@ class UInteractionComponent;
 
 //@열거형
 #pragma region Enums
+enum class ERespawnState : uint8
+{
+    None,
+    DeathScreen,
+    LoadingScreen,
+    Respawning,
+    Complete
+};
 #pragma endregion
 
 //@구조체
@@ -77,7 +85,6 @@ protected:
 
 protected:
     //@외부 바인딩...
-    void ExternalBindToGameState();
 
 protected:
     //@초기화
@@ -96,6 +103,19 @@ private:
     void HandleCharacterDeath();
     UFUNCTION()
     void HandleCharacterRevive();
+
+protected:
+    //@리스폰 처리
+    void ProcessRespawnSequence();
+
+private:
+    ERespawnState CurrentRespawnState = ERespawnState::None;
+
+    UPROPERTY()
+    FTimerHandle RespawnSequenceTimer;
+
+    UPROPERTY()
+    bool bRespawnCompleted = false;
 
 private:
     //@UI 컴포넌트
@@ -131,7 +151,7 @@ protected:
 private:
     //@Player Respawn 완료 콜백 함수
     UFUNCTION()
-    void OnPlayerRespawnCompletedCallback(APlayerController* RespawnedPlayerController);
+    void OnPlayerRevival(APlayerController* RespawnedPlayerController);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

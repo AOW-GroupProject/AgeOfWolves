@@ -9,6 +9,8 @@
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 
+#include "17_GameMode/AOWGameState.h"
+
 DEFINE_LOG_CATEGORY(LogASC)
 
 //@Defualt Setting
@@ -91,6 +93,40 @@ void UBaseAbilitySystemComponent::ExternalBindToInteractionComp(AController* Con
 
 	UE_LOGFMT(LogASC, Log, "{0}: InteractionComponent와 바인딩 성공 - PC: {1}",
 		__FUNCDNAME__, *PC->GetName());
+}
+
+void UBaseAbilitySystemComponent::ExternalBindToGameState()
+{
+	UE_LOGFMT(LogASC, Log, "Game State 이벤트 바인딩 시작");
+
+	//@World 가져오기
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		UE_LOGFMT(LogASC, Error, "Game State 바인딩 실패: World를 찾을 수 없음");
+		return;
+	}
+
+	//@Game State 가져오기
+	AGameStateBase* GameStateBase = World->GetGameState();
+	if (!IsValid(GameStateBase))
+	{
+		UE_LOGFMT(LogASC, Error, "Game State 바인딩 실패: GameState를 찾을 수 없음");
+		return;
+	}
+
+	//@AOWGameState로 캐스팅
+	AAOWGameState* AOWGameState = Cast<AAOWGameState>(GameStateBase);
+	if (!IsValid(AOWGameState))
+	{
+		UE_LOGFMT(LogASC, Error, "Game State 바인딩 실패: AOWGameState 캐스팅 실패");
+		return;
+	}
+
+	//@PlayerRespawnCompleted 이벤트에 바인딩
+	AOWGameState->PlayerRespawnCompleted.AddUFunction(this, "OnPlayerRespawnCompleted");
+
+	UE_LOGFMT(LogASC, Log, "Game State 이벤트 바인딩 성공: {0}", GetNameSafe(AOWGameState));
 }
 
 void UBaseAbilitySystemComponent::InitializeComponent()
@@ -1261,6 +1297,26 @@ void UBaseAbilitySystemComponent::OnCrowdControlEventTriggered(const FGameplayTa
 	}
 
 	UE_LOGFMT(LogASC, Log, "군중 제어 이벤트 처리 완료: {0}", *CrowdControlTag.ToString());
+}
+
+void UBaseAbilitySystemComponent::OnPlayerRespawnCompleted(APlayerController* RespawnedPlayerController)
+{
+	//@기본 유효성 검증
+	if (!IsValid(RespawnedPlayerController))
+	{
+		UE_LOGFMT(LogASC, Warning, "리스폰 완료 콜백 실패: 유효하지 않은 PlayerController");
+		return;
+	}
+
+	//@소유자 확인 (이 ASC의 소유자와 리스폰된 PlayerController가 같은지)
+	if (GetAvatarActor() == RespawnedPlayerController->GetPawn())
+	{
+		UE_LOGFMT(LogASC, Log, "자신의 리스폰 완료 감지: {0}", GetNameSafe(RespawnedPlayerController));
+
+		FGameplayEventData EmptyPayload;
+		HandleGameplayEvent(FGameplayTag::RequestGameplayTag("EventTag.OnRevivalActivated"), &EmptyPayload);
+	}
+
 }
 #pragma endregion
 

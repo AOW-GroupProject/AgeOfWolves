@@ -87,6 +87,7 @@ protected:
 	void ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC);
 	void ExternalBindToAIController(ABaseAIController* BaseAIC);
 	void ExternalBindToInteractionComp(AController* Controller);
+	void ExternalBindToGameState();
 
 protected:
 	//@초기화
@@ -255,6 +256,11 @@ protected:
 protected:
 	UFUNCTION()
 		void OnCrowdControlEventTriggered(const FGameplayTag& CrowControlTag);
+
+private:
+	//@Game State 리스폰 완료 콜백 함수
+	UFUNCTION()
+	void OnPlayerRespawnCompleted(APlayerController* RespawnedPlayerController);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

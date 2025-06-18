@@ -3,6 +3,7 @@
 
 #include "01_Character/CharacterBase.h"
 
+#include "17_GameMode/AgeOfWolvesGameMode.h"
 #include "17_GameMode/AOWGameState.h"
 #include "03_Player/PlayerStateBase.h"
 
@@ -49,7 +50,6 @@ void ABasePlayerController::PostInitializeComponents()
 void ABasePlayerController::BeginPlay()
 {
 	Super::BeginPlay();
-
 }
 
 void ABasePlayerController::Tick(float DeltaTime)
@@ -77,9 +77,6 @@ void ABasePlayerController::OnUnPossess()
 void ABasePlayerController::AcknowledgePossession(APawn* P)
 {
     Super::AcknowledgePossession(P);
-
-    //@외부 바인딩...
-    ExternalBindToGameState();
 
     //@초기화 함수
     InitializePlayerController();
@@ -117,43 +114,12 @@ void ABasePlayerController::InternalBindToPlayerState()
     if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
     {
         PS->NotifyPlayerDeathEvent.AddUFunction(this, "OnPlayerDeath");
-        UE_LOGFMT(LogBasePC, Log, "Player State Death 이벤트 바인딩 완료");
+        PS->NotifyPlayerRevivalEvent.AddUFunction(this, "OnPlayerRevival");
     }
+    
+    UE_LOGFMT(LogBasePC, Log, "Player State Death 이벤트 바인딩 완료");
 }
 
-void ABasePlayerController::ExternalBindToGameState()
-{
-    UE_LOGFMT(LogBasePC, Log, "Game State 이벤트 바인딩 시작");
-
-    //@World 가져오기
-    UWorld* World = GetWorld();
-    if (!IsValid(World))
-    {
-        UE_LOGFMT(LogBasePC, Error, "Game State 바인딩 실패: World를 찾을 수 없음");
-        return;
-    }
-
-    //@Game State 가져오기
-    AGameStateBase* GameStateBase = World->GetGameState();
-    if (!IsValid(GameStateBase))
-    {
-        UE_LOGFMT(LogBasePC, Error, "Game State 바인딩 실패: GameState를 찾을 수 없음");
-        return;
-    }
-
-    //@AOWGameState로 캐스팅
-    AAOWGameState* AOWGameState = Cast<AAOWGameState>(GameStateBase);
-    if (!IsValid(AOWGameState))
-    {
-        UE_LOGFMT(LogBasePC, Error, "Game State 바인딩 실패: AOWGameState 캐스팅 실패");
-        return;
-    }
-
-    //@PlayerRespawnCompleted 이벤트에 콜백 등록
-    AOWGameState->PlayerRespawnCompleted.AddUFunction(this, "OnPlayerRespawnCompletedCallback");
-
-    UE_LOGFMT(LogBasePC, Log, "Game State 이벤트 바인딩 성공: {0}", GetNameSafe(AOWGameState));
-}
 
 void ABasePlayerController::InitializePlayerController()
 {
@@ -224,33 +190,113 @@ void ABasePlayerController::SetupViewportClientOnBeginPlay()
 
 void ABasePlayerController::HandleCharacterDeath()
 {
-    UE_LOGFMT(LogBasePC, Warning, "캐릭터 사망 - 입력 시스템 비활성화 및 Loading UI 표시");
+    UE_LOGFMT(LogBasePC, Warning, "캐릭터 사망 - 리스폰 시퀀스 시작");
 
     DisableInput(this);
+    bRespawnCompleted = false; // 플래그 초기화
 
+    //@죽음 화면 표시 및 시퀀스 시작
     if (UIComponent)
     {
-        //UIComponent->ShowUI(EUICategory::InGameLoading, FGameplayTag::RequestGameplayTag("UI.InGameLoading"));
-        //UIComponent->HideAllUI(EUICategory::HUD);
-        //UIComponent->HideAllUI(EUICategory::Interaction);
-        UE_LOGFMT(LogBasePC, Log, "InGameLoading UI 표시 및 다른 UI 숨김 완료");
+        // UIComponent->ShowDeathScreen();
+        UE_LOGFMT(LogBasePC, Log, "죽음 화면 UI 표시");
+    }
+
+    //@시퀀스 시작
+    CurrentRespawnState = ERespawnState::DeathScreen;
+    GetWorldTimerManager().SetTimer(RespawnSequenceTimer, this, &ABasePlayerController::ProcessRespawnSequence, 3.0f, false);
+}
+
+
+void ABasePlayerController::ProcessRespawnSequence()
+{
+    switch (CurrentRespawnState)
+    {
+        case ERespawnState::DeathScreen:
+        {
+            //@로딩 화면으로 전환
+            if (UIComponent)
+            {
+                // UIComponent->HideDeathScreen();
+                // UIComponent->ShowLoadingScreen();
+                UE_LOGFMT(LogBasePC, Log, "로딩 화면 표시");
+            }
+
+            CurrentRespawnState = ERespawnState::LoadingScreen;
+            GetWorldTimerManager().SetTimer(RespawnSequenceTimer, this, &ABasePlayerController::ProcessRespawnSequence, 0.5f, false);
+            break;
+        }
+
+        case ERespawnState::LoadingScreen:
+        {
+            //@리스폰 실행
+            UE_LOGFMT(LogBasePC, Log, "리스폰 작업 실행");
+
+            if (auto GameMode = Cast<AAgeOfWolvesGameMode>(GetWorld()->GetAuthGameMode()))
+            {
+                if (IsValid(GameMode))
+                {
+                    GameMode->HandlePlayerDeath(this);
+                }
+            }
+
+            CurrentRespawnState = ERespawnState::Respawning;
+
+            //@만약 이미 리스폰이 완료되었다면 바로 게임 재개
+            if (bRespawnCompleted)
+            {
+                GetWorldTimerManager().SetTimer(RespawnSequenceTimer, this, &ABasePlayerController::ProcessRespawnSequence, 1.0f, false);
+            }
+            //@아니면 GameState 이벤트 대기
+            break;
+        }
+
+        case ERespawnState::Respawning:
+        {
+            //@게임 재개
+            if (UIComponent)
+            {
+                // UIComponent->HideLoadingScreen();
+                UE_LOGFMT(LogBasePC, Log, "로딩 화면 제거");
+            }
+
+            EnableInput(this);
+            CurrentRespawnState = ERespawnState::Complete;
+
+            UE_LOGFMT(LogBasePC, Log, "리스폰 시퀀스 완료");
+            break;
+        }
     }
 }
 
 void ABasePlayerController::HandleCharacterRevive()
 {
-    UE_LOGFMT(LogBasePC, Warning, "캐릭터 부활 - 입력 시스템 재활성화 및 UI 복원");
+    //@이 함수는 더 이상 GameState에서 직접 호출되지 않음
+    //@ASC의 부활 어빌리티 완료 후 호출됨
+    UE_LOGFMT(LogBasePC, Warning, "ASC 부활 어빌리티 완료 - UI 정리 시작");
 
-    EnableInput(this);
-
+    //@로딩 화면 제거
     if (UIComponent)
     {
-        //UIComponent->HideUI(EUICategory::InGameLoading, FGameplayTag::RequestGameplayTag("UI.InGameLoading"));
-        //UIComponent->ShowAllUI(EUICategory::HUD);
-        //UIComponent->ShowAllUI(EUICategory::Interaction);
-        UE_LOGFMT(LogBasePC, Log, "InGameLoading UI 숨김 및 다른 UI 복원 완료");
+        // UIComponent->HideLoadingScreen();
+        UE_LOGFMT(LogBasePC, Log, "로딩 화면 제거");
     }
+
+    //@몇 초 후 입력 활성화
+    FTimerHandle InputEnableTimer;
+    GetWorldTimerManager().SetTimer(
+        InputEnableTimer,
+        [this]()
+        {
+            EnableInput(this);
+            CurrentRespawnState = ERespawnState::Complete;
+            UE_LOGFMT(LogBasePC, Log, "입력 활성화 - 리스폰 시퀀스 완료");
+        },
+        2.0f, // 2초 후 입력 활성화
+        false
+    );
 }
+
 #pragma endregion
 
 //@Callbacks
@@ -267,7 +313,7 @@ void ABasePlayerController::OnPlayerDeath(APlayerStateBase* DeadPlayerState)
     }
 }
 
-void ABasePlayerController::OnPlayerRespawnCompletedCallback(APlayerController* RespawnedPlayerController)
+void ABasePlayerController::OnPlayerRevival(APlayerController* RespawnedPlayerController)
 {
     //@기본 유효성 검증
     if (!IsValid(RespawnedPlayerController))
