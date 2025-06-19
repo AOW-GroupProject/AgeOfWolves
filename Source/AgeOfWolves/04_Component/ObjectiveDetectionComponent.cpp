@@ -92,6 +92,7 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
         LastExecutionCheckTime = CurrentTime;
     }
 }
+
 void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     //@타이머 정리
@@ -477,25 +478,58 @@ bool UObjectiveDetectionComponent::UpdateBillboardPosition(AActor* TargetActor)
         TargetActor->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
     if (!TargetMesh) return false;
 
-    FName SpineSocketName = FName("spine_03");
-    if (!TargetMesh->DoesSocketExist(SpineSocketName)) return false;
-
     // 위치 계산
-    FVector SocketLocation = TargetMesh->GetSocketLocation(SpineSocketName);
+    FVector SocketLocation = TargetActor->GetActorLocation() + FVector(0.f, 0.f, 40.f);
     FVector CameraLocation = CameraComp->GetComponentLocation();
     FVector DirectionToSocket = (SocketLocation - CameraLocation).GetSafeNormal();
     FVector UpVector = FVector(0.0f, 0.0f, 1.0f);
     FVector TargetBillboardLocation = SocketLocation - DirectionToSocket * BillboardForwardOffset + UpVector;
 
-    // 위치 및 회전 보간
+    // 현재 위치
     FVector CurrentLocation = IndicatorBillboardComponent->GetComponentLocation();
-    FVector InterpolatedLocation = UKismetMathLibrary::VInterpTo(
-        CurrentLocation,
-        TargetBillboardLocation,
-        GetWorld()->GetDeltaSeconds(),
-        BillboardInterpolationSpeed
-    );
 
+    // X, Y축만 보간 (Z축은 즉시 적용)
+    FVector InterpolatedLocation = CurrentLocation;
+    float DeltaX = TargetBillboardLocation.X - CurrentLocation.X;
+    float DeltaY = TargetBillboardLocation.Y - CurrentLocation.Y;
+
+    // Dead Zone 적용 - 변화량이 임계값보다 클 때만 이동
+    float DeadZoneThreshold = 0.05f;
+
+    if (FMath::Abs(DeltaX) > DeadZoneThreshold)
+    {
+        InterpolatedLocation.X = UKismetMathLibrary::FInterpTo(
+            CurrentLocation.X,
+            TargetBillboardLocation.X,
+            GetWorld()->GetDeltaSeconds(),
+            BillboardInterpolationSpeed
+        );
+    }
+    else
+    {
+        // Dead Zone 내에서는 현재 위치 유지
+        InterpolatedLocation.X = CurrentLocation.X;
+    }
+
+    if (FMath::Abs(DeltaY) > DeadZoneThreshold)
+    {
+        InterpolatedLocation.Y = UKismetMathLibrary::FInterpTo(
+            CurrentLocation.Y,
+            TargetBillboardLocation.Y,
+            GetWorld()->GetDeltaSeconds(),
+            BillboardInterpolationSpeed
+        );
+    }
+    else
+    {
+        // Dead Zone 내에서는 현재 위치 유지
+        InterpolatedLocation.Y = CurrentLocation.Y;
+    }
+
+    // Z축은 즉시 적용
+    InterpolatedLocation.Z = TargetBillboardLocation.Z;
+
+    // 회전 보간
     FRotator TargetRotation = (CameraLocation - SocketLocation).Rotation();
     FRotator CurrentRotation = IndicatorBillboardComponent->GetComponentRotation();
     FRotator InterpolatedRotation = UKismetMathLibrary::RInterpTo(
@@ -512,6 +546,7 @@ bool UObjectiveDetectionComponent::UpdateBillboardPosition(AActor* TargetActor)
 
     return true;
 }
+
 
 void UObjectiveDetectionComponent::UpdateBillboardTexture()
 {
@@ -677,7 +712,7 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
         TWeakObjectPtr<AActor> AIActorPtr(AIActor);
         if (AIsDetectingPawn.Contains(AIActorPtr))
         {
-            return;
+            UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 플레이어를 인지 중이어서 암살 불가", *AIActor->GetName());
         }
         else
         {
@@ -690,11 +725,15 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
                 AmbushTarget = AIActor;
                 UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 후면 노출됨, AmbushTarget으로 설정", *AIActor->GetName());
             }
+            else
+            {
+                UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 후면 노출되지 않음", *AIActor->GetName());
+            }
         }
     }
     else
     {
-        //@Bound Areas
+        //@현재 타겟이 없는 경우, 주변 AI 검색
         float ClosestDistance = MAX_FLT;
         AActor* ClosestActor = nullptr;
 
@@ -750,9 +789,14 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
             AmbushTarget = ClosestActor;
             UE_LOGFMT(LogObjectiveDetection, Log, "가장 가까운 후면 노출 AI({0})를 AmbushTarget으로 설정", *ClosestActor->GetName());
         }
+        else
+        {
+            //@조건을 만족하는 AI가 없는 경우
+            UE_LOGFMT(LogObjectiveDetection, Log, "후면 노출된 AI가 없어서 AmbushTarget 해제");
+        }
     }
 
-    //@AmbushTarget
+    //@AmbushTarget 변경 확인 및 이벤트 발생
     if (AmbushTarget.Get() != PreviousAmbushTarget)
     {
         UE_LOGFMT(LogObjectiveDetection, Log, "AmbushTarget 변경: {0} -> {1}",
@@ -926,6 +970,52 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
 
             // 빌보드 업데이트
             UpdateBillboardComponent(true, false);
+        }
+    }
+
+    //@현재 AmbushTarget이 상태 변경된 경우에만 처리 - 수정된 부분
+    if (AmbushTarget.IsValid() && AmbushTarget.Get() == ObjectiveActor)
+    {
+        bool bShouldClearAmbushTarget = false;
+
+        //@Dead 상태가 되면 암살 불가능
+        if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
+        {
+            bShouldClearAmbushTarget = true;
+            UE_LOGFMT(LogObjectiveDetection, Log, "현재 암살 대상 {0}이(가) 사망하여 즉시 AmbushTarget 해제", *ObjectiveActor->GetName());
+        }
+
+        if (bShouldClearAmbushTarget)
+        {
+            AmbushTarget.Reset();
+            //@암살 대상 변경 이벤트 발생
+            AmbushTargetChanged.Broadcast(nullptr);
+            UE_LOGFMT(LogObjectiveDetection, Log, "AmbushTarget 즉시 해제 및 이벤트 발생");
+        }
+    }
+
+    //@현재 ExecutionTarget이 상태 변경된 경우에만 처리 - 수정된 부분  
+    if (ExecutionTarget.IsValid() && ExecutionTarget.Get() == ObjectiveActor)
+    {
+        bool bShouldClearExecutionTarget = false;
+
+        if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
+        {
+            bShouldClearExecutionTarget = true;
+            UE_LOGFMT(LogObjectiveDetection, Log, "현재 처형 대상 {0}이(가) 사망하여 즉시 ExecutionTarget 해제", *ObjectiveActor->GetName());
+        }
+        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
+        {
+            bShouldClearExecutionTarget = true;
+            UE_LOGFMT(LogObjectiveDetection, Log, "현재 처형 대상 {0}이(가) Normal 상태로 변경되어 즉시 ExecutionTarget 해제", *ObjectiveActor->GetName());
+        }
+
+        if (bShouldClearExecutionTarget)
+        {
+            ExecutionTarget.Reset();
+            //@처형 대상 변경 이벤트 발생
+            ExecutionTargetChanged.Broadcast(nullptr);
+            UE_LOGFMT(LogObjectiveDetection, Log, "ExecutionTarget 즉시 해제 및 이벤트 발생");
         }
     }
 

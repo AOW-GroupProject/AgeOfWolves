@@ -216,8 +216,11 @@ protected:
 
     //@빌보드 보간 속도, 기본 30
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
-        float BillboardInterpolationSpeed = 30.0f;
+        float BillboardInterpolationSpeed = 10.f;
 
+    //@데드존 거리 (유닛)
+    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
+        float BillboardDeadZone = 5.0f;
 protected:
     //@바인딩된 Area 배열
     UPROPERTY()

@@ -31,7 +31,7 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , bModifyBoneTransform(false)
     , BoneTransformLerpSpeed(10.0f)
     , CharacterMovementCompRef(nullptr)
-    , CombatType(ECombatType::NonCombat)
+    , CombatType(ECombatType::NormalCombat)
     , bIsPlayingRootMotionMontageWithFullBodySlot(false)
     , bIsRootMotionCooldown(false)
     , RootMotionCooldownTime(0.0f)
@@ -118,7 +118,7 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     //@캐릭터으 현재 속도를 정의합니다.
     Speed = OwnerCharacterBaseRef->GetVelocity().Length();
     //@캐릭터의 이동/비이동 상태를 확인합니다.
-    bShouldMove = Speed > 3.f && OwnerCharacterBaseRef->GetCharacterMovement()->GetCurrentAcceleration() != FVector::ZeroVector;
+    bShouldMove = Speed > 25.f && OwnerCharacterBaseRef->GetCharacterMovement()->GetCurrentAcceleration() != FVector::ZeroVector;
     //@캐릭터의 이동 상태를 정의합니다. EMovementState(열거형) 유형의 변수로 나타냅니다.
     FindMovementState();
     //@캐릭터의 이동 방향 각도를 정의합니다.
@@ -133,17 +133,17 @@ void UBaseAnimInstance::FindMovementState()
 {
     if (bIsPlayingRootMotionMontageWithFullBodySlot)
     {
-        MovementState = EMovementState::Idle;
+        LastMovementState = EMovementState::Idle;
+        bShouldMove = false;
         return;
     }
 
     LastMovementState = MovementState;
 
-    float CurrentSpeed = Speed;
     float MaxWalkSpeed = OwnerCharacterBaseRef->GetCharacterMovement()->MaxWalkSpeed;
     bool bIsSprinting = MaxWalkSpeed >= 650.f;
 
-    if (CurrentSpeed < 0.05f)
+    if (!bShouldMove)
     {
         MovementState = EMovementState::Idle;
     }
@@ -234,6 +234,7 @@ void UBaseAnimInstance::FindMovementDirectionAngle()
         LastMovementDirection = MovementDirection;
     }
 }
+
 void UBaseAnimInstance::UpdateMovementSettings()
 {
     if (!CharacterMovementCompRef.IsValid())
@@ -286,7 +287,7 @@ void UBaseAnimInstance::UpdateStopMotionType(EStopMotionType Type)
 void UBaseAnimInstance::HandleStartRootMotion()
 {
     bIsPlayingRootMotionMontageWithFullBodySlot = true;
-    
+
     UE_LOGFMT(LogAnimInstance, Log, "Root Motion 시작");
 }
 

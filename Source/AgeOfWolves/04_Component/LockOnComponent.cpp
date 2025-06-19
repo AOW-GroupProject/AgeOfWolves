@@ -16,6 +16,7 @@
 
 #include "Camera/CameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
+#include "MotionWarpingComponent.h"
 
 DEFINE_LOG_CATEGORY(LogLockOn)
 
@@ -37,6 +38,7 @@ ULockOnComponent::ULockOnComponent()
     SpringArmComponentRef.Reset();
     FollowCameraComponentRef.Reset();
     BaseInputComponentRef.Reset();
+    MotionWarpingComponentRef.Reset();
 }
 
 void ULockOnComponent::BeginPlay()
@@ -170,6 +172,14 @@ void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
         return;
     }
 
+    //@Motion Warping Component 초기화 추가
+    MotionWarpingComponentRef = PlayerCharacterRef->GetComponentByClass<UMotionWarpingComponent>();
+    if (!MotionWarpingComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "컴포넌트 초기화 실패: Motion Warping Component가 유효하지 않음");
+        return;
+    }
+
     ABasePlayerController* PlayerController = Cast<ABasePlayerController>(PlayerCharacterRef->GetController());
     if (!PlayerController)
     {
@@ -186,6 +196,7 @@ void ULockOnComponent::InitializeLockOnComp(const AController* Controller)
 
     UE_LOGFMT(LogLockOn, Log, "락온 컴포넌트 초기화 완료");
 }
+
 #pragma endregion
 
 //@Property/Info...etc
@@ -225,6 +236,9 @@ void ULockOnComponent::StartLockOn()
     //@Lock On 상태
     bLockOn = true;
 
+    //@Motion Warping Target 초기 설정
+    UpdateMotionWarpingTarget();
+
     //@Lock On 상태 이벤트
     LockOnStateChanged.Broadcast(bLockOn, TargetEnemyRef.Get());
 
@@ -243,6 +257,9 @@ void ULockOnComponent::CancelLockOn()
     //@Spring Arm 설정 업데이트
     UpdateSpringArmSettings(false);
 
+    //@Motion Warping Target 제거
+    RemoveMotionWarpingTarget();
+
     //@Lock On 상태
     bLockOn = false;
 
@@ -253,6 +270,8 @@ void ULockOnComponent::CancelLockOn()
     NearByEnemies.Empty();
     EnemyMap.Empty();
     TargetEnemyRef.Reset();
+
+    UE_LOGFMT(LogLockOn, Log, "Lock On 해제 완료");
 }
 
 bool ULockOnComponent::FindTargetEnemy()
@@ -434,6 +453,9 @@ void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
     //@Final Rotation
     FinalRotation = UKismetMathLibrary::RInterpTo(StartRotation, TargetRotation, DeltaTime, InterpolationSpeed);
 
+    //@Motion Warping Target 업데이트
+    UpdateMotionWarpingTarget();
+
     //@Set Controller Rotation
     if (bApplyPitch)
     {
@@ -451,7 +473,6 @@ void ULockOnComponent::UpdateControllerRotation(float DeltaTime)
 
         UE_LOGFMT(LogLockOn, Log, "높이 차이: {0}, 임계값({1}) 미만, Pitch 적용 안함", HeightDifference, HeightThreshold);
     }
-
 }
 
 void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& Target, const FRotator& TargetRotation)
@@ -480,6 +501,76 @@ void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& 
     // 스프링암 최종 변환 적용
     SpringArmComponentRef->SocketOffset.X = FMath::Lerp(0, -200, DistanceFromTargetEnemy / 70);
     SpringArmComponentRef->SetWorldRotation(CameraFinalRotation);
+}
+
+//void ULockOnComponent::UpdateMotionWarpingTarget()
+//{
+//    if (!MotionWarpingComponentRef.IsValid() || !PlayerCharacterRef.IsValid() || !TargetEnemyRef.IsValid())
+//    {
+//        UE_LOGFMT(LogLockOn, Warning, "Motion Warping Target 업데이트 실패: 필요한 컴포넌트가 유효하지 않음");
+//        return;
+//    }
+//
+//    //@현재 캐릭터 위치
+//    FVector CurrentLocation = PlayerCharacterRef->GetActorLocation();
+//
+//    //@WarpTarget 업데이트 (회전만 적용, 위치는 현재 위치 유지)
+//    FMotionWarpingTarget WarpTarget;
+//    WarpTarget.Name = FName("LockOnTarget");
+//    WarpTarget.Location = CurrentLocation;
+//    WarpTarget.Rotation = FRotator(0.f, FinalRotation.Yaw, 0.f); //@Yaw만 적용
+//
+//    MotionWarpingComponentRef->AddOrUpdateWarpTarget(WarpTarget);
+//
+//    UE_LOGFMT(LogLockOn, Log,
+//        "Lock On Motion Warp Target 업데이트 - 타겟: {0} | 회전: {1}",
+//        *TargetEnemyRef->GetName(),
+//        *WarpTarget.Rotation.ToString());
+//}
+
+void ULockOnComponent::UpdateMotionWarpingTarget()
+{
+    if (!MotionWarpingComponentRef.IsValid() || !PlayerCharacterRef.IsValid() || !TargetEnemyRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "Motion Warping Target 업데이트 실패: 필요한 컴포넌트가 유효하지 않음");
+        return;
+    }
+
+    //@현재 캐릭터 위치
+    FVector CurrentLocation = PlayerCharacterRef->GetActorLocation();
+
+    //@타겟 방향의 Forward Vector 계산 (FinalRotation 기준)
+    FVector ForwardDirection = FinalRotation.Vector();
+
+    //@Forward Vector 기준으로 조금 앞으로 이동한 위치 계산
+    float ForwardOffset = 1000.0f; // 100cm(1m) 앞으로 설정
+    FVector WarpLocation = CurrentLocation + (ForwardDirection * ForwardOffset);
+
+    //@WarpTarget 업데이트
+    FMotionWarpingTarget WarpTarget;
+    WarpTarget.Name = FName("LockOnTarget");
+    WarpTarget.Location = WarpLocation;
+    WarpTarget.Rotation = FRotator(0.f, FinalRotation.Yaw, 0.f); //@Yaw만 적용
+
+    MotionWarpingComponentRef->AddOrUpdateWarpTarget(WarpTarget);
+
+    UE_LOGFMT(LogLockOn, Log,
+        "Lock On Motion Warp Target 업데이트 - 타겟: {0} | 위치: {1} | 회전: {2}",
+        *TargetEnemyRef->GetName(),
+        *WarpTarget.Location.ToString(),
+        *WarpTarget.Rotation.ToString());
+}
+
+void ULockOnComponent::RemoveMotionWarpingTarget()
+{
+    if (!MotionWarpingComponentRef.IsValid())
+    {
+        UE_LOGFMT(LogLockOn, Warning, "Motion Warping Target 제거 실패: Motion Warping Component가 유효하지 않음");
+        return;
+    }
+
+    //MotionWarpingComponentRef->RemoveWarpTarget(FName("LockOnTarget"));
+    UE_LOGFMT(LogLockOn, Log, "Lock On Motion Warp Target 제거 완료");
 }
 #pragma endregion
 
@@ -546,6 +637,21 @@ void ULockOnComponent::OnLockOnTargetChanged(const FGameplayTag& InputTag, const
 
 void ULockOnComponent::OnOwnerStateChanged(AActor* Owner, const FGameplayTag& StateTag)
 {
+    //@상호작용 상태 태그 체크
+    if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Interacting")))
+    {
+        //@Lock On 상태가 아니면 처리하지 않음
+        if (!bLockOn)
+        {
+            UE_LOGFMT(LogLockOn, Log, "Lock On 상태가 아니므로 처리를 종료합니다.");
+            return;
+        }
+
+        UE_LOGFMT(LogLockOn, Log, "Lock On 상태이므로 Lock On을 취소합니다.");
+        CancelLockOn();
+    }
+
+
     //@죽음 상태 태그 체크
     if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
     {

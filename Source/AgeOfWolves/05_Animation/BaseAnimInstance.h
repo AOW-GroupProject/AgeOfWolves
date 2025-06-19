@@ -98,7 +98,7 @@ enum class ECombatType : uint8
 UCLASS()
 class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 {
-//@친추 클래스
+	//@친추 클래스
 #pragma region Friend Class
 	friend class UAN_UpdateStopMotionType;
 	friend class UANS_NotifyPlayingRootMotion;
@@ -107,7 +107,7 @@ class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 
 	GENERATED_BODY()
 
-//@Defualt Setting
+	//@Defualt Setting
 #pragma region Default Setting
 public:
 	UBaseAnimInstance(const FObjectInitializer& ObjectInitializer);
@@ -131,27 +131,27 @@ protected:
 #pragma region Property or Subwidgets or Infos...etc
 protected:
 	UFUNCTION(BlueprintCallable)
-		void FindMovementState();
+	void FindMovementState();
 
 	UFUNCTION(BlueprintCallable)
-		void FindMovementDirectionAngle();
+	void FindMovementDirectionAngle();
 
 protected:
 	UFUNCTION(BlueprintNativeEvent)
-		void ChangeBoneTransform(float DeltaTime);
-	virtual void ChangeBoneTransform_Implementation(float DeltaTime) { }
+	void ChangeBoneTransform(float DeltaTime);
+	virtual void ChangeBoneTransform_Implementation(float DeltaTime) {}
 
 	UFUNCTION(BlueprintNativeEvent)
-		void ClearBoneTransform(float DeltaTime);
-	virtual void ClearBoneTransform_Implementation(float DeltaTime) { }
+	void ClearBoneTransform(float DeltaTime);
+	virtual void ClearBoneTransform_Implementation(float DeltaTime) {}
 
 protected:
 	//@Movement Setting 업데이트
 	UFUNCTION()
-		void UpdateMovementSettings();
+	void UpdateMovementSettings();
 
 	UFUNCTION(BlueprintCallable, Category = "Animation", meta = (BlueprintThreadSafe))
-		void UpdateStopMotionType(EStopMotionType Type);
+	void UpdateStopMotionType(EStopMotionType Type);
 
 protected:
 	void HandleStartRootMotion();
@@ -164,37 +164,37 @@ protected:
 protected:
 	//@직전 이동 상태에 따른 스탑 모션
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "이동 | 이동 상태", meta = (AlloPrivateAccess = "true"))
-		EStopMotionType StopMotionType;
+	EStopMotionType StopMotionType;
 
 	//@직전 이동 상태
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "이동 | 이동 상태", meta = (AlloPrivateAccess = "true"))
-		EMovementState LastMovementState;
+	EMovementState LastMovementState;
 
 	//@이동 상태
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "이동 | 이동 상태", meta = (AlloPrivateAccess = "true"))
-		EMovementState MovementState;
+	EMovementState MovementState;
 
 	//@이동 방향
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "이동 | 이동 방향", meta = (AlloPrivateAccess = "true"))
-		EMovementDirection MovementDirection;
+	EMovementDirection MovementDirection;
 
 	//@직전 이동 방향
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "이동 | 이동 방향", meta = (AlloPrivateAccess = "true"))
-		EMovementDirection LastMovementDirection;
+	EMovementDirection LastMovementDirection;
 
 protected:
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		bool bFalling;
+	bool bFalling;
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		bool bShouldMove;
+	bool bShouldMove;
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		FVector Velocity;
+	FVector Velocity;
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		float Speed;
+	float Speed;
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		float DirectionAngle;
+	float DirectionAngle;
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		bool bEnableDirectionalMovement;
+	bool bEnableDirectionalMovement;
 
 protected:
 	const float WalkingSpeed = 200.f;
@@ -202,39 +202,39 @@ protected:
 
 protected:
 	UPROPERTY(Transient, BlueprintReadOnly)
-		bool bModifyBoneTransform;
+	bool bModifyBoneTransform;
 
 	UPROPERTY(EditAnywhere, BlueprintReadOnly)
-		float BoneTransformLerpSpeed;
+	float BoneTransformLerpSpeed;
 
 protected:
 	//@전투/비전투 여부
 	UPROPERTY(Transient, EditAnywhere, BlueprintReadWrite, meta = (AllowPrivateAccess = "true"))
-		ECombatType CombatType;
+	ECombatType CombatType;
 
 protected:
 	//@루트 모션 재생 여부
 	UPROPERTY(VisibleAnywhere, BlueprintReadWrite, Category = "Animation", meta = (AllowPrivateAccess = "true"))
-		bool bIsPlayingRootMotionMontageWithFullBodySlot;
+	bool bIsPlayingRootMotionMontageWithFullBodySlot;
 
 	UPROPERTY()
-		bool bIsRootMotionCooldown;
+	bool bIsRootMotionCooldown;
 
 	UPROPERTY()
-		float RootMotionCooldownTime;
+	float RootMotionCooldownTime;
 
 	UPROPERTY(EditAnywhere, Category = "Movement|RootMotion", meta = (AllowPrivateAccess = "true"))
-		float RootMotionCooldownDuration;
+	float RootMotionCooldownDuration;
 
 	float CurrentRootMotionCooldownTime;
 
-//@TODO: 임시
+	//@TODO: 임시
 protected:
 	UPROPERTY()
-		UStaticMesh* OriginalFullWeaponMesh;
+	UStaticMesh* OriginalFullWeaponMesh;
 #pragma endregion
 
-//@Delegates
+	//@Delegates
 #pragma region Delegates
 #pragma endregion
 
@@ -243,34 +243,34 @@ protected:
 protected:
 	//@Lock On 상태 변화 이벤트 구독
 	UFUNCTION()
-		void OnLockOnStateChanged(bool bIsLockOn, AActor* LockOnTargetActor);
+	void OnLockOnStateChanged(bool bIsLockOn, AActor* LockOnTargetActor);
 
 protected:
 	//@Attribute 변화 이벤트 구독
 	UFUNCTION()
-		void OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue);
+	void OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue);
 
 protected:
 	UFUNCTION()
-		void MontageStarted(UAnimMontage* Montage);
+	void MontageStarted(UAnimMontage* Montage);
 	UFUNCTION()
-		void MontageEnded(UAnimMontage* Montage, bool bInterrupted);
+	void MontageEnded(UAnimMontage* Montage, bool bInterrupted);
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+	//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
 	//@Owner Character 캐싱
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TWeakObjectPtr<ACharacterBase> OwnerCharacterBaseRef;
+	TWeakObjectPtr<ACharacterBase> OwnerCharacterBaseRef;
 
 	//@Character Movement 캐싱
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, meta = (AllowPrivateAccess = "true"))
-		TWeakObjectPtr<UCharacterMovementComponent> CharacterMovementCompRef;
+	TWeakObjectPtr<UCharacterMovementComponent> CharacterMovementCompRef;
 
 	//@Combat State 속성 수치 변화 이벤트 관찰자
 	UPROPERTY()
-		TObjectPtr<UAsyncTaskAttributeChanged> CombatStateAttributeListenerRef;
+	TObjectPtr<UAsyncTaskAttributeChanged> CombatStateAttributeListenerRef;
 
 protected:
 	float CombatTypeToFloat(ECombatType Type)
@@ -287,40 +287,39 @@ protected:
 
 public:
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
-		FORCEINLINE float GetSpeed() const { return Speed; }
+	FORCEINLINE float GetSpeed() const { return Speed; }
 
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
-		FORCEINLINE EMovementState GetMovementState() const { return MovementState; }
+	FORCEINLINE EMovementState GetMovementState() const { return MovementState; }
 
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
-		FORCEINLINE EMovementState GetLastMovementState() const { return LastMovementState; }
+	FORCEINLINE EMovementState GetLastMovementState() const { return LastMovementState; }
 
 	UFUNCTION(BlueprintCallable)
-		FORCEINLINE EMovementDirection GetMovementDirection() const { return MovementDirection; }
+	FORCEINLINE EMovementDirection GetMovementDirection() const { return MovementDirection; }
 
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
-		FORCEINLINE EStopMotionType GetStopMotionType() const { return StopMotionType; }
+	FORCEINLINE EStopMotionType GetStopMotionType() const { return StopMotionType; }
 
 	//@마지막 이동 방향 조회
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
-		FORCEINLINE EMovementDirection GetLastMovementDirection() const { return LastMovementDirection; }
+	FORCEINLINE EMovementDirection GetLastMovementDirection() const { return LastMovementDirection; }
 
 	UFUNCTION(BlueprintPure, Category = "Animation", meta = (BlueprintThreadSafe))
-		FORCEINLINE float GetDirectionAngle() const { return DirectionAngle; }
+	FORCEINLINE float GetDirectionAngle() const { return DirectionAngle; }
 
 	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
-		ECombatType GetCombatType() const { return CombatType; }
+	ECombatType GetCombatType() const { return CombatType; }
 
 	UFUNCTION(BlueprintCallable, Category = "Animation | Combat")
-		FORCEINLINE bool GetIsPlayingRootMotionMontageWithFullBodySlot() const { return bIsPlayingRootMotionMontageWithFullBodySlot; }
-
+	FORCEINLINE bool GetIsPlayingRootMotionMontageWithFullBodySlot() const { return bIsPlayingRootMotionMontageWithFullBodySlot; }
 
 protected:
 	bool IsFullBodySlotMontage(const UAnimMontage* Montage) const;
 
 public:
 	UFUNCTION(BlueprintCallable, Category = "Animation")
-		FORCEINLINE void SetIsPlayingRootMotionMontageWithFullBodySlot(bool InBool) { bIsPlayingRootMotionMontageWithFullBodySlot = InBool; }
+	FORCEINLINE void SetIsPlayingRootMotionMontageWithFullBodySlot(bool InBool) { bIsPlayingRootMotionMontageWithFullBodySlot = InBool; }
 #pragma endregion
 
 };
