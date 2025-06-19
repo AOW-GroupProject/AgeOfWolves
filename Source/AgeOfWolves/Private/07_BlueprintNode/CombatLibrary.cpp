@@ -510,6 +510,87 @@ FSurfacePointResult UCombatLibrary::GetClosestSurfacePointAndNormalFromSocket(
     return Result;
 }
 
+FVector UCombatLibrary::CalculatePositionFromCharacter(const ACharacter* Character, EMovementDirection Direction, float Distance)
+{
+    // 유효성 검사
+    if (!IsValid(Character))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "위치 계산 실패 - 사유: Character가 유효하지 않음");
+        return FVector::ZeroVector;
+    }
+
+    if (Distance <= 0.0f)
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "위치 계산 실패 - 사유: Distance가 0보다 작거나 같음 ({0})", Distance);
+        return Character->GetActorLocation();
+    }
+
+    // 시작 위치
+    FVector StartLocation = Character->GetActorLocation();
+
+    // 방향 벡터 계산
+    FVector DirectionVector = CalculateDirectionVectorFromCharacter(Character, Direction);
+
+    // 목표 위치 계산
+    FVector TargetLocation = StartLocation + (DirectionVector * Distance);
+
+    UE_LOGFMT(LogCombatLibrary, Log, "위치 계산 완료 - Character: {0}, 방향: {1}, 거리: {2}, 결과: {3}",
+        *Character->GetName(),
+        *UEnum::GetValueAsString(Direction),
+        Distance,
+        *TargetLocation.ToString());
+
+    return TargetLocation;
+}
+
+FVector UCombatLibrary::CalculateDirectionVectorFromCharacter(const ACharacter* Character, EMovementDirection Direction)
+{
+    if (!IsValid(Character))
+    {
+        return FVector::ForwardVector;
+    }
+
+    FVector DirectionVec;
+
+    // 방향에 따른 벡터 계산 - 캐릭터 기준
+    switch (Direction)
+    {
+    case EMovementDirection::Fwd:
+        DirectionVec = Character->GetActorForwardVector();
+        break;
+    case EMovementDirection::Bwd:
+        DirectionVec = -Character->GetActorForwardVector();
+        break;
+    case EMovementDirection::Left:
+        DirectionVec = -Character->GetActorRightVector();
+        break;
+    case EMovementDirection::Right:
+        DirectionVec = Character->GetActorRightVector();
+        break;
+    case EMovementDirection::FL:
+        DirectionVec = (Character->GetActorForwardVector() - Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    case EMovementDirection::FR:
+        DirectionVec = (Character->GetActorForwardVector() + Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    case EMovementDirection::BL:
+        DirectionVec = (-Character->GetActorForwardVector() - Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    case EMovementDirection::BR:
+        DirectionVec = (-Character->GetActorForwardVector() + Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    default:
+        DirectionVec = Character->GetActorForwardVector();
+        break;
+    }
+
+    // Z 방향 제거 (평면 이동)
+    DirectionVec.Z = 0.0f;
+    DirectionVec = DirectionVec.GetSafeNormal();
+
+    return DirectionVec;
+}
+
 bool UCombatLibrary::IsActorBackExposed(const AActor* ObserverActor, const AActor* TargetActor, float ExposureAngleThreshold)
 {
     // 유효성 검사

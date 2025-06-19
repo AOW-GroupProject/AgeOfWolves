@@ -5,6 +5,7 @@
 #include "Engine/DataTable.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "05_Animation/BaseAnimInstance.h"
 
 #include "CombatLibrary.generated.h"
 
@@ -205,6 +206,24 @@ public:
             EHitImpactLocation DesiredDirection = EHitImpactLocation::Front,
             EHitImpactLocation DesiredNormalDirection = EHitImpactLocation::Front
         );
+
+public:
+    static FVector CalculateDirectionVectorFromCharacter(const ACharacter* Character, EMovementDirection Direction);
+
+public:
+    /**
+     * 캐릭터가 지정한 방향에서 거리 값만큼 떨어진 위치를 계산합니다.
+     * @param Character - 기준이 되는 캐릭터
+     * @param Direction - 이동할 방향
+     * @param Distance - 이동할 거리
+     * @return 계산된 목표 위치
+     */
+    UFUNCTION(BlueprintCallable, Category = "Combat | Position Calculation")
+    static FVector CalculatePositionFromCharacter(
+        const ACharacter* Character,
+        EMovementDirection Direction,
+        float Distance
+    );
 
 public:
     UFUNCTION(BlueprintCallable, Category = "Combat | Detection", meta = (DisplayName = "Is Actor Back Exposed"))
