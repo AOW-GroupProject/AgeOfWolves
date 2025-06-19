@@ -9,6 +9,8 @@
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 
+#include "17_GameMode/AOWGameState.h"
+
 DEFINE_LOG_CATEGORY(LogASC)
 
 //@Defualt Setting
@@ -91,6 +93,40 @@ void UBaseAbilitySystemComponent::ExternalBindToInteractionComp(AController* Con
 
 	UE_LOGFMT(LogASC, Log, "{0}: InteractionComponent와 바인딩 성공 - PC: {1}",
 		__FUNCDNAME__, *PC->GetName());
+}
+
+void UBaseAbilitySystemComponent::ExternalBindToGameState()
+{
+	UE_LOGFMT(LogASC, Log, "Game State 이벤트 바인딩 시작");
+
+	//@World 가져오기
+	UWorld* World = GetWorld();
+	if (!IsValid(World))
+	{
+		UE_LOGFMT(LogASC, Error, "Game State 바인딩 실패: World를 찾을 수 없음");
+		return;
+	}
+
+	//@Game State 가져오기
+	AGameStateBase* GameStateBase = World->GetGameState();
+	if (!IsValid(GameStateBase))
+	{
+		UE_LOGFMT(LogASC, Error, "Game State 바인딩 실패: GameState를 찾을 수 없음");
+		return;
+	}
+
+	//@AOWGameState로 캐스팅
+	AAOWGameState* AOWGameState = Cast<AAOWGameState>(GameStateBase);
+	if (!IsValid(AOWGameState))
+	{
+		UE_LOGFMT(LogASC, Error, "Game State 바인딩 실패: AOWGameState 캐스팅 실패");
+		return;
+	}
+
+	//@PlayerRespawnCompleted 이벤트에 바인딩
+	AOWGameState->PlayerRespawnCompleted.AddUFunction(this, "OnPlayerRespawnCompleted");
+
+	UE_LOGFMT(LogASC, Log, "Game State 이벤트 바인딩 성공: {0}", GetNameSafe(AOWGameState));
 }
 
 void UBaseAbilitySystemComponent::InitializeComponent()
@@ -1119,32 +1155,26 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 {
 	const FGameplayTagContainer& AssetTags = SpecApplied.Def->InheritableGameplayEffectTags.Added;
 
-	// Asset Tags 모두 로그 출력
+	// 디버깅을 위한 로그 출력
 	UE_LOGFMT(LogASC, Log, "GameplayEffect 적용 - 총 AssetTags 개수: {0}", AssetTags.Num());
 	for (const FGameplayTag& Tag : AssetTags)
 	{
-		UE_LOGFMT(LogASC, Log, "AssetTag: {0}", *Tag.ToString());
+		UE_LOGFMT(LogASC, Log, "AssetTag: {0}", Tag.ToString());
 	}
 
 	// 정적 태그 한 번만 생성 (성능 최적화)
-	static FGameplayTag StateTag = FGameplayTag::RequestGameplayTag("State");
-	static FGameplayTag DeadStateTag = FGameplayTag::RequestGameplayTag("State.Dead");
+	FGameplayTag StateTag = FGameplayTag::RequestGameplayTag("State");
+	FGameplayTag DeadStateTag = FGameplayTag::RequestGameplayTag("State.Dead");
 
-	//@State 태그 확인 및 이벤트 발생
+	// State 태그 확인 및 이벤트 발생
 	for (const FGameplayTag& TagFromEffect : AssetTags)
 	{
-		//@State 계층 태그 확인 (State 또는 모든 자식 태그)
+		// State 계층 태그 확인 (State 또는 모든 자식 태그)
 		if (TagFromEffect.MatchesTag(StateTag))
 		{
-			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", *TagFromEffect.ToString());
+			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", TagFromEffect.ToString());
 
-			//@캐릭터 상태 이벤트
 			CharacterStateEventOnGameplay.Broadcast(GetAvatarActor(), TagFromEffect);
-
-			if (TagFromEffect.MatchesTag(DeadStateTag))
-			{
-				CharacterStateEventOnGameplay.Clear();
-			}
 		}
 	}
 }
@@ -1267,6 +1297,26 @@ void UBaseAbilitySystemComponent::OnCrowdControlEventTriggered(const FGameplayTa
 	}
 
 	UE_LOGFMT(LogASC, Log, "군중 제어 이벤트 처리 완료: {0}", *CrowdControlTag.ToString());
+}
+
+void UBaseAbilitySystemComponent::OnPlayerRespawnCompleted(APlayerController* RespawnedPlayerController)
+{
+	//@기본 유효성 검증
+	if (!IsValid(RespawnedPlayerController))
+	{
+		UE_LOGFMT(LogASC, Warning, "리스폰 완료 콜백 실패: 유효하지 않은 PlayerController");
+		return;
+	}
+
+	//@소유자 확인 (이 ASC의 소유자와 리스폰된 PlayerController가 같은지)
+	if (GetAvatarActor() == RespawnedPlayerController->GetPawn())
+	{
+		UE_LOGFMT(LogASC, Log, "자신의 리스폰 완료 감지: {0}", GetNameSafe(RespawnedPlayerController));
+
+		FGameplayEventData EmptyPayload;
+		HandleGameplayEvent(FGameplayTag::RequestGameplayTag("EventTag.OnRevivalActivated"), &EmptyPayload);
+	}
+
 }
 #pragma endregion
 

@@ -33,8 +33,11 @@ class UAbilityManagerSubsystem;
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAttributeSetInitialized);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGameplayAttribute, Attribute, float, OldValue, float, NewValue);
-#pragma endregion
 
+DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyPlayerDeathEvent, APlayerStateBase*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyPlayerRevivalEvent, APlayerStateBase*);
+
+#pragma endregion
 
 /**
  * Player State contaions pawn's info interacting with others
@@ -98,15 +101,26 @@ protected:
 	//@캐릭터 태그
 	FGameplayTag CharacterTag;
 
-
+private:
+	//@상태 태그 캐싱
+	FGameplayTag StateTagCache;
 #pragma endregion
 
 //@Delegates
 #pragma region Delegates
 public:
+	//@초기화 완료 이벤트
 	FAttributeSetInitialized OnAttributeSetInitialized;
 
+public:
+	//@Attribute 수치 변화 이벤트
 	FAnyAttributeValueChanged OnAnyAttributeValueChanged;
+
+public:
+	//@플레이어 죽음 알림 이벤트
+	FNotifyPlayerDeathEvent NotifyPlayerDeathEvent;
+	//@부활 어빌리티 종료 이벤트
+	FNotifyPlayerRevivalEvent NotifyPlayerRevivalEvent;
 #pragma endregion
 
 //@Callbacks
@@ -116,7 +130,7 @@ protected:
 
 protected:
 	UFUNCTION()
-		void OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag);
+		void OnCharacterStateEventOnGameplay(AActor* Actor, const FGameplayTag& CharacterStateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

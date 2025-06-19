@@ -60,7 +60,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 		GetCharacterMovement()->MaxAcceleration = 1024.f;
 		GetCharacterMovement()->MinAnalogWalkSpeed = 20.f;
 		GetCharacterMovement()->BrakingDecelerationWalking = 2048.f;
-		GetCharacterMovement()->GroundFriction = 8.0f;
+		GetCharacterMovement()->GroundFriction = 10.0f;
 	}
 	// @Camera
 	{

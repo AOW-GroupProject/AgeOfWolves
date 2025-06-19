@@ -11,7 +11,7 @@
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "14_Subsystem/AbilityManagerSubsystem.h"
 
-#include "15_SaveGame/AOWSaveGame.h"
+#include "17_GameMode/AgeOfWolvesGameMode.h"
 
 DEFINE_LOG_CATEGORY(LogPlayerStateBase)
 
@@ -22,6 +22,7 @@ APlayerStateBase::APlayerStateBase()
 
     //@Character Tag
     CharacterTag = FGameplayTag::RequestGameplayTag("Character.AkaOni");
+    StateTagCache = FGameplayTag::RequestGameplayTag("State.Normal");
 
     //@Ability Manger Subsystem
     AbilityManagerSubsystemRef.Reset();
@@ -35,6 +36,8 @@ void APlayerStateBase::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
 
+    //@Game Mode
+    
     //@내부 바인딩
     InternalBindingToASC();
 
@@ -107,6 +110,7 @@ void APlayerStateBase::InitializePlayerState()
 
     //@ASC의 외부 바인딩...
     AbilitySystemComponent->ExternalBindToInteractionComp(Controller);
+    AbilitySystemComponent->ExternalBindToGameState();
 
     // AbilityManagerSubsystem으로부터 AbilitySet 가져오기
     UBaseAbilitySet* SetToGrant = AbilityManagerSubsystemRef->GetAbilitySet(CharacterTag);
@@ -225,74 +229,41 @@ void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Dat
     OnAnyAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);
 }
 
-void APlayerStateBase::OnCharacterStateEventOnGameplay(const FGameplayTag& CharacterStateTag)
+void APlayerStateBase::OnCharacterStateEventOnGameplay(AActor* Character, const FGameplayTag& CharacterStateTag)
 {
-    //@Player State
-    if (!IsValid(this) || IsUnreachable())
-    {
-        return;
-    }
-
-    //@PC
-    if (!GetOwner())
-    {
-        return;
-    }
-
-    // World 확인
-    UWorld* World = GetWorld();
-    if (!World)
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "월드를 찾을 수 없습니다.");
-        return;
-    }
-
-    //@"State.~"
-    if (!CharacterStateTag.GetTagName().ToString().StartsWith("State."))
-        return;
-
-
-    //@Game Instance
-    UAOWGameInstance* GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(World));
-    if (!GameInstance)
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "GameInstance를 가져올 수 없습니다.");
-        return;
-    }
-    
-    //@SaveGame
-    if (!GameInstance->DoesSaveGameExist())
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "SaveGame이 존재하지 않습니다.");
-        return;
-    }
-
-    UAOWSaveGame* SaveGame = Cast<UAOWSaveGame>(GameInstance->GetSaveGameInstance());
-    if (!SaveGame)
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "세이브 게임 인스턴스를 찾을 수 없습니다.");
-        return;
-    }
-
-    //@Pawn
-    APawn* ControlledPawn = GetPawn();
-    if (!ControlledPawn)
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "폰이 유효하지 않습니다.");
-        return;
-    }
-
-    //@상태 이력 추가
-    SaveGame->AddCharacterStateToHistory(
-        CharacterStateTag,
-        ControlledPawn,
-        AttributeSet.IsValid() ? AttributeSet.Get() : nullptr
-    );
-
-    // 상태 이벤트 처리 로그
+    //@GetTagName()을 사용하여 깔끔한 태그 이름 출력
     UE_LOGFMT(LogPlayerStateBase, Log,
-        "캐릭터 상태 이벤트 처리 | 태그: {0}",
-        CharacterStateTag.GetTagName().ToString());
+        "캐릭터 상태 이벤트 처리 완료 | 태그: {0}",
+        CharacterStateTag.ToString());
+
+    //@태그 비교를 위한 정적 태그 생성 (한 번만 생성되어 성능도 좋음)
+    static const FGameplayTag DeadStateTag = FGameplayTag::RequestGameplayTag("State.Dead");
+    static const FGameplayTag NormalStateTag = FGameplayTag::RequestGameplayTag("State.Normal");
+
+    if (StateTagCache.MatchesTagExact(CharacterStateTag)) return;
+
+    //@부활 감지
+    if (StateTagCache.MatchesTagExact(DeadStateTag)
+        && CharacterStateTag.MatchesTagExact(NormalStateTag))
+    {
+        UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 부활 감지 - 처리 시작");
+
+        //@죽음 이벤트 호출
+        NotifyPlayerRevivalEvent.Broadcast(this);
+    }
+
+    //@죽음 상태
+    if (CharacterStateTag.MatchesTagExact(DeadStateTag))
+    {
+        UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 죽음 감지 - 처리 시작");
+
+        //@죽음 이벤트 호출
+        NotifyPlayerDeathEvent.Broadcast(this);
+    }
+
+    //@상태 태그 캐싱
+    StateTagCache = CharacterStateTag;
+
 }
 #pragma endregion
 
