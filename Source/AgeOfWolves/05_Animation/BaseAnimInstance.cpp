@@ -428,7 +428,7 @@ void UBaseAnimInstance::MontageEnded(UAnimMontage* Montage, bool bInterrupted)
         bIsFullBody = true;
 
     // 전체 바디 몽타주일 경우만 종료 처리
-    if (bIsFullBody && bIsPlayingRootMotionMontageWithFullBodySlot)
+    if (bIsPlayingRootMotionMontageWithFullBodySlot)
     {
         UE_LOGFMT(LogAnimInstance, Log, "전체 바디 몽타주 종료: {0}", *Montage->GetName());
         HandleEndRootMotion();
