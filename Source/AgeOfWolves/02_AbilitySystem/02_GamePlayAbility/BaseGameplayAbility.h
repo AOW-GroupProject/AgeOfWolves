@@ -33,6 +33,12 @@ enum class EAbilityActivationPolicy : uint8
 	OnInputTriggered,
 
 	/*
+	* @목적: Active GA 전용 활성화 정책
+	* @설명: Active GA는 사용자 입력이 Trigger 매개이며, 사용자 입력이 Released 상태일 때 활성화 됩니다.
+	*/
+	OnInputReleased,
+
+	/*
 	* @목적: Acitve GA 전용 활성화 정책
 	* @설명: Active GA는 사용자 입력이 Trigger 매개이며, 사용자 입력이 Hold 상태일 때 활성화 됩니다.
 	*/
