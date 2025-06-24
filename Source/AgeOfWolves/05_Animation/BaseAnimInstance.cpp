@@ -224,13 +224,13 @@ void UBaseAnimInstance::HandleIdleStateTransitions()
      * 여기서는 이동을 시작하거나 특수한 정지 애니메이션을 실행할 수 있습니다.
      */
 
-     // 우선순위 1: Combat State 2일 때는 바로 Cycle로 전이 가능
-     // 이는 전투 상황에서 빠른 반응을 위한 특수 경로입니다
+     // 우선순위 1: Guard Combat 상태일 때는 바로 Cycle로 전이 가능
+     // 이는 방어 상황에서 빠른 반응을 위한 특수 경로입니다
     if (CanTransitionFromIdleToCycle())
     {
         EMovementState TargetCycle = DetermineTargetCycleState();
         MovementState = TargetCycle;
-        UE_LOGFMT(LogAnimInstance, Log, "Idle -> {0} (Combat State 우회)",
+        UE_LOGFMT(LogAnimInstance, Log, "Idle -> {0} (Guard Combat 우회)",
             *UEnum::GetValueAsString(TargetCycle));
         return;
     }
@@ -298,7 +298,7 @@ void UBaseAnimInstance::HandleCycleStateTransitions()
     {
         // Combat State 2이고 우회 가능하다면 Stop을 건너뛰고 바로 Idle로
         // 전투 상황에서는 빠른 반응을 위해 감속 애니메이션을 생략할 수 있습니다
-        if (IsInCombatState2() && bCanSkipStopState)
+        if (IsInGuardCombatState() && bCanSkipStopState)
         {
             MovementState = EMovementState::Idle;
             UE_LOGFMT(LogAnimInstance, Log, "{0} -> Idle (Stop 우회)",
@@ -352,21 +352,25 @@ void UBaseAnimInstance::UpdateCombatStateFlags()
     /*
      * Combat State에 따른 우회 플래그들을 업데이트하는 함수
      *
-     * 전투 상황에서는 일반적인 상태 전이 규칙을 우회하여
-     * 더 빠른 반응이 가능하도록 합니다.
+     * BattoujutsuCombat(2)와 GuardCombat(3) 상태에서는 일반적인 상태 전이 규칙을 우회하여
+     * 더 빠른 반응이 가능하도록 합니다. 이는 전투 상황에서 즉각적인 반응이 필요하기 때문입니다.
      */
 
-    bool bWasInCombatState2 = bCanSkipStartState;
+    bool bWasCanSkipStates = bCanSkipStartState;
 
-    // Combat State가 2 (BattoujutsuCombat)일 때는 Start/Stop 단계를 건너뛸 수 있습니다
-    bCanSkipStartState = IsInCombatState2();
-    bCanSkipStopState = IsInCombatState2();
+    //@BattoujutsuCombat(2) 또는 GuardCombat(3)에서 Start/Stop 단계를 건너뛸 수 있습니다
+    bool bNewCanSkipStates = IsInGuardCombatState();
+    bCanSkipStartState = bNewCanSkipStates;
+    bCanSkipStopState = bNewCanSkipStates;
 
-    // Combat State 변경을 로그로 기록합니다
-    if (bWasInCombatState2 != bCanSkipStartState)
+    //@Combat State 변경을 로그로 기록합니다
+    if (bWasCanSkipStates != bCanSkipStartState)
     {
-        UE_LOGFMT(LogAnimInstance, Log, "Combat State 우회 모드 변경: {0} -> {1}",
-            bWasInCombatState2, bCanSkipStartState);
+        UE_LOGFMT(LogAnimInstance, Log, "Combat State 우회 모드 변경: {0} -> {1} (CombatType: {2} - {3})",
+            bWasCanSkipStates,
+            bCanSkipStartState,
+            static_cast<int32>(CombatType),
+            *UEnum::GetValueAsString(CombatType));
     }
 }
 
@@ -468,8 +472,8 @@ bool UBaseAnimInstance::CanTransitionFromIdleToStart()
     }
 
     // 조건 4: Combat State가 2가 아닐 때만 Start를 거쳐야 함
-    bool bIsCombatState2 = IsInCombatState2();
-    UE_LOGFMT(LogAnimInstance, Warning, "조건 4 - IsInCombatState2(): {0} (CombatType: {1})",
+    bool bIsCombatState2 = IsInGuardCombatState();
+    UE_LOGFMT(LogAnimInstance, Warning, "조건 4 - IsInGuardCombatState(): {0} (CombatType: {1})",
         bIsCombatState2, static_cast<int32>(CombatType));
 
     if (bIsCombatState2)
@@ -494,8 +498,8 @@ bool UBaseAnimInstance::CanTransitionFromIdleToCycle()
      * 전투 상황에서는 빠른 반응을 위해 Start 단계를 건너뛸 수 있습니다.
      */
 
-     // 조건 1: Combat State가 2여야 함 (우회 조건)
-    if (!IsInCombatState2())
+     // 조건 1: Combat State가 3여야 함 (우회 조건)
+    if (!IsInGuardCombatState())
     {
         return false;
     }
@@ -577,13 +581,13 @@ bool UBaseAnimInstance::CanTransitionBetweenCycles()
     return true;
 }
 
-bool UBaseAnimInstance::CanTransitionToStop() 
+bool UBaseAnimInstance::CanTransitionToStop()
 {
     /*
-     * 모든 활성 상태에서 Stop으로 전이하는 조건을 체크하는 함수
+     * 모든 활성 상태에서 Stop으로 전이하는 조건을 체크하는 함수 (개선됨)
      *
-     * 이 함수는 정지 조건을 종합적으로 판단합니다.
-     * 여러 가지 상황에서 정지가 필요할 수 있으므로 유연하게 처리합니다.
+     * 핵심 개선사항: 방향 전환 시 불필요한 Stop을 방지하기 위해
+     * 더 엄격한 정지 조건을 적용합니다.
      */
 
      // 조건 1: 정지 가능한 상태여야 함 (Start, Cycle_Walk, Cycle_Sprint)
@@ -593,39 +597,73 @@ bool UBaseAnimInstance::CanTransitionToStop()
     {
         return false;
     }
-    if (CombatType != ECombatType::NormalCombat)
+
+    // 조건 2: Combat State 제한 체크
+    bool bCanStopInThisCombatState = (CombatType == ECombatType::NormalCombat
+        || CombatType == ECombatType::GuardCombat);
+
+    if (!bCanStopInThisCombatState)
     {
-        UE_LOGFMT(LogAnimInstance, Warning, "정지 조건 만족: Combat State = 1");
+        UE_LOGFMT(LogAnimInstance, VeryVerbose, "정지 조건 차단: Combat State = {0} ({1})",
+            static_cast<int32>(CombatType),
+            *UEnum::GetValueAsString(CombatType));
         return false;
     }
 
-    // 조건 2: 다음 중 하나의 정지 조건이 만족되어야 함
+    // 조건 3: 실제 정지 조건 체크 (개선된 로직)
     bool bShouldStop = false;
 
-    // 이동 입력이 없을 때
-    if (!bShouldMove)
-    {
-        UE_LOGFMT(LogAnimInstance, Warning, "정지 조건 만족: bShouldMove = false");
-        bShouldStop = true;
-    }
-
-    // Root Motion 재생이 시작될 때
+    // 3-1: Root Motion 재생이 시작될 때 (기존 유지)
     if (bIsPlayingRootMotionMontageWithFullBodySlot)
     {
         UE_LOGFMT(LogAnimInstance, Warning, "정지 조건 만족: Root Motion 재생 중");
         bShouldStop = true;
     }
+    // 3-2: 이동 입력 체크 (개선된 로직)
+    else
+    {
+        // 기존: !bShouldMove (너무 즉각적)
+        // 개선: 더 엄격한 조건으로 불필요한 Stop 방지
+
+        bool bHasStrongMovementInput = false;
+
+        if (CharacterMovementCompRef.IsValid())
+        {
+            FVector CurrentAcceleration = CharacterMovementCompRef->GetCurrentAcceleration();
+
+            // 더 엄격한 임계값 적용 - 정말로 멈추려는 의도일 때만 Stop
+            bHasStrongMovementInput = CurrentAcceleration.SizeSquared() > (StopConditionThreshold * StopConditionThreshold);
+
+            UE_LOGFMT(LogAnimInstance, VeryVerbose, "Stop 조건 체크 - Acceleration: {0}, SizeSquared: {1}, Threshold: {2}, HasStrongInput: {3}, bShouldMove: {4}",
+                CurrentAcceleration.ToString(),
+                CurrentAcceleration.SizeSquared(),
+                StopConditionThreshold * StopConditionThreshold,
+                bHasStrongMovementInput,
+                bShouldMove);
+        }
+
+        // 추가 조건: 속도도 충분히 낮아야 Stop 허용
+        // 빠르게 움직이는 중에는 순간적인 입력 부재로 인한 Stop을 방지
+        bool bIsSlowEnoughToStop = Speed < 100.0f;
+
+        // 최종 정지 조건: 입력이 없고 + 속도가 충분히 낮을 때
+        if (!bHasStrongMovementInput && !bShouldMove && bIsSlowEnoughToStop)
+        {
+            UE_LOGFMT(LogAnimInstance, Warning, "정지 조건 만족: 입력 없음 + 저속 (Speed: {0})", Speed);
+            bShouldStop = true;
+        }
+    }
 
     return bShouldStop;
 }
 
-bool UBaseAnimInstance::CanTransitionFromStopToIdle() 
+bool UBaseAnimInstance::CanTransitionFromStopToIdle()
 {
     /*
-     * Stop에서 Idle로 전이하는 조건을 체크하는 함수
+     * Stop에서 Idle로 전이하는 조건을 체크하는 함수 (개선됨)
      *
-     * 실제 타이밍(GetRelevantAnimTimeRemaining < 0.2)은 Animation Blueprint에서 체크합니다.
-     * 여기서는 기본적인 물리 조건만 확인합니다.
+     * 이 함수는 완전히 멈췄을 때만 Idle로 전환하도록
+     * 가장 엄격한 임계값을 사용합니다.
      */
 
      // 조건 1: 현재 상태가 Stop이어야 함
@@ -640,16 +678,21 @@ bool UBaseAnimInstance::CanTransitionFromStopToIdle()
         return false;
     }
 
-    // 조건 3: 가속도가 거의 0에 가까워야 함
+    // 조건 3: 가속도가 거의 0에 가까워야 함 (가장 엄격한 조건)
     FVector CurrentAcceleration = CharacterMovementCompRef->GetCurrentAcceleration();
-    if (!CurrentAcceleration.IsNearlyZero()) // 25는 기존 bShouldMove 임계값
-    {
-        return false;
-    }
 
-    return true;
+    // Stop -> Idle은 정말로 완전히 멈췄을 때만 허용
+    // 여기서는 가장 엄격한 임계값 사용
+    bool bIsReallyIdle = CurrentAcceleration.SizeSquared() < (IdleTransitionThreshold * IdleTransitionThreshold);
+
+    UE_LOGFMT(LogAnimInstance, VeryVerbose, "Stop->Idle 체크 - Acceleration: {0}, SizeSquared: {1}, Threshold: {2}, IsReallyIdle: {3}",
+        CurrentAcceleration.ToString(),
+        CurrentAcceleration.SizeSquared(),
+        IdleTransitionThreshold * IdleTransitionThreshold,
+        bIsReallyIdle);
+
+    return bIsReallyIdle;
 }
-
 #pragma endregion
 
 // =====================================================
@@ -657,7 +700,7 @@ bool UBaseAnimInstance::CanTransitionFromStopToIdle()
 // =====================================================
 #pragma region Helper Functions
 
-bool UBaseAnimInstance::IsInCombatState2() const
+bool UBaseAnimInstance::IsInGuardCombatState() const
 {
     /*
      * Combat State가 2인지 확인하는 헬퍼 함수
@@ -665,25 +708,36 @@ bool UBaseAnimInstance::IsInCombatState2() const
      * BattoujutsuCombat 상태에서는 특수한 전이 규칙이 적용됩니다.
      * 빠른 반응을 위해 Start/Stop 단계를 건너뛸 수 있습니다.
      */
-    return CombatType == ECombatType::BattoujutsuCombat;
+    return CombatType == ECombatType::GuardCombat;
 }
 
 bool UBaseAnimInstance::HasMovementInput() const
 {
     /*
-     * 현재 이동 입력이 있는지 확인하는 헬퍼 함수
+     * 현재 이동 입력이 있는지 확인하는 헬퍼 함수 (개선됨)
      *
-     * 가속도와 bShouldMove 값을 종합적으로 판단하여
-     * 실제로 캐릭터가 움직이려고 하는지 확인합니다.
+     * 기존: Acceleration.IsNearlyZero() - 너무 엄격 (거의 완벽한 0)
+     * 개선: 더 관대한 임계값 사용 - 방향 전환 시에도 자연스럽게 반응
      */
     if (!CharacterMovementCompRef.IsValid())
     {
         return false;
     }
 
-    // 가속도가 0이 아니고, 실제로 움직여야 하는 상태
     FVector Acceleration = CharacterMovementCompRef->GetCurrentAcceleration();
-    return !Acceleration.IsNearlyZero() && bShouldMove;
+
+    // 기존: !Acceleration.IsNearlyZero() && bShouldMove
+    // 개선: 더 관대한 임계값 사용
+    bool bHasAcceleration = Acceleration.SizeSquared() > (MovementInputThreshold * MovementInputThreshold);
+
+    UE_LOGFMT(LogAnimInstance, VeryVerbose, "HasMovementInput - Acceleration: {0}, SizeSquared: {1}, Threshold: {2}, HasAccel: {3}, ShouldMove: {4}",
+        Acceleration.ToString(),
+        Acceleration.SizeSquared(),
+        MovementInputThreshold * MovementInputThreshold,
+        bHasAcceleration,
+        bShouldMove);
+
+    return bHasAcceleration && bShouldMove;
 }
 
 EMovementState UBaseAnimInstance::DetermineTargetCycleState() const
@@ -936,16 +990,61 @@ void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn, AActor* LockOnTarge
 void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
 {
     /*
-     * Combat State 속성 변화 콜백 함수 (기존 로직 유지)
+     * Combat State 속성 변화 콜백 함수
+     *
+     * 이 함수는 게임의 상태 전환에서 핵심적인 역할을 합니다.
+     * Combat State가 변경될 때 애니메이션 시스템이 어떻게 반응해야 하는지를 정의합니다.
+     *
+     * 교육적 관점에서 보면, 이는 "이벤트 기반 프로그래밍"의 좋은 예시입니다.
+     * 상태 변경이라는 이벤트가 발생하면, 그에 맞는 애니메이션 로직이 자동으로 실행됩니다.
      */
+
+     // 이전 Combat Type 저장 - 변경 사항을 추적하기 위함
     const ECombatType OldCombatType = CombatType;
+
+    // 새로운 Combat Type 계산 및 설정
+    // Clamp를 사용하여 유효하지 않은 값으로부터 시스템을 보호합니다
     CombatType = static_cast<ECombatType>(FMath::RoundToInt(FMath::Clamp(NewValue, 0.f,
         static_cast<float>(ECombatType::MAX) - 1)));
 
-    UE_LOGFMT(LogAnimInstance, Log, "전투 상태 변경: {0} -> {1} (값: {2})",
-        static_cast<uint8>(OldCombatType),
-        static_cast<uint8>(CombatType),
+    UE_LOGFMT(LogAnimInstance, Log, "전투 상태 변경: {0}({1}) -> {2}({3}) (값: {4})",
+        *UEnum::GetValueAsString(OldCombatType), static_cast<uint8>(OldCombatType),
+        *UEnum::GetValueAsString(CombatType), static_cast<uint8>(CombatType),
         NewValue);
+
+    // NormalCombat(1)에서 GuardCombat(3)으로 변경 시 강제 Idle 전환 처리
+    // 이는 전투 모드 변경 시 안정적인 상태 전환을 보장하기 위함입니다
+    if (OldCombatType == ECombatType::NormalCombat && CombatType == ECombatType::GuardCombat)
+    {
+        // Start, Stop 상태에서만 강제 Idle 전환
+        // 이는 이 두 상태가 "전환 상태"이기 때문에 새로운 Combat State에서는
+        // 안정적인 기본 상태(Idle)로 리셋하는 것이 안전합니다
+        if (MovementState == EMovementState::Start || MovementState == EMovementState::Stop)
+        {
+            UE_LOGFMT(LogAnimInstance, Warning, "Combat State Normal->Guard 변경으로 인한 강제 Idle 전환: {0} -> Idle",
+                *UEnum::GetValueAsString(MovementState));
+
+            LastMovementState = MovementState;
+            MovementState = EMovementState::Idle;
+            OnMovementStateChanged();
+            return;
+        }
+
+        // Cycle 상태는 그대로 유지 - 안정적인 이동 상태이므로 중단할 필요 없음
+        if (MovementState == EMovementState::Cycle_Walk || MovementState == EMovementState::Cycle_Sprint)
+        {
+            UE_LOGFMT(LogAnimInstance, Log, "Combat State Normal->Guard 변경 - Cycle 상태 유지: {0}",
+                *UEnum::GetValueAsString(MovementState));
+        }
+    }
+
+    // GuardCombat(3)에서 NormalCombat(1)으로 돌아가는 경우도 로깅
+    // 이는 시스템의 투명성을 위해 모든 상태 변경을 추적합니다
+    if (OldCombatType == ECombatType::GuardCombat && CombatType == ECombatType::NormalCombat)
+    {
+        UE_LOGFMT(LogAnimInstance, Log, "Combat State Guard->Normal 변경, 현재 Movement State: {0}",
+            *UEnum::GetValueAsString(MovementState));
+    }
 }
 
 void UBaseAnimInstance::MontageStarted(UAnimMontage* Montage)
@@ -975,7 +1074,7 @@ void UBaseAnimInstance::MontageStarted(UAnimMontage* Montage)
 void UBaseAnimInstance::MontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
     /*
-     * 몽타주 종료 콜백 함수 (기존 로직 유지)
+     * 몽타주 종료 콜백 함수 (스마트 Root Motion 정리)
      */
     if (!Montage)
     {
@@ -983,20 +1082,76 @@ void UBaseAnimInstance::MontageEnded(UAnimMontage* Montage, bool bInterrupted)
         return;
     }
 
-    if (bInterrupted)
-    {
-        return;
-    }
-
     bool bIsFullBody = IsFullBodySlotMontage(Montage);
 
-    if (bIsPlayingRootMotionMontageWithFullBodySlot && bIsFullBody)
+    // === bInterrupted 상황 처리 (개선됨) ===
+    if (bInterrupted)
     {
-        UE_LOGFMT(LogAnimInstance, Log, "전체 바디 몽타주 종료: {0}", *Montage->GetName());
-        HandleEndRootMotion();
+        if (bIsFullBody)
+        {
+            UE_LOGFMT(LogAnimInstance, Warning, "⚠️ 전체 바디 몽타주 중단됨: {0}", *Montage->GetName());
+            UE_LOGFMT(LogAnimInstance, Warning, "   └─ 중단 시점 상태: Movement={0}, RootMotion플래그={1}",
+                *UEnum::GetValueAsString(MovementState),
+                bIsPlayingRootMotionMontageWithFullBodySlot);
+
+            // === 스마트 Root Motion 정리 로직 ===
+            // 현재 활성화된 몽타주 중에 다른 FullBody가 있는지 확인
+            bool bHasOtherActiveFullBody = false;
+
+            if (FAnimMontageInstance* ActiveMontage = GetActiveMontageInstance())
+            {
+                // 현재 활성 몽타주가 있고, 종료되는 몽타주와 다르며, FullBody인지 확인
+                if (ActiveMontage->Montage &&
+                    ActiveMontage->Montage != Montage &&
+                    IsFullBodySlotMontage(ActiveMontage->Montage))
+                {
+                    bHasOtherActiveFullBody = true;
+                    UE_LOGFMT(LogAnimInstance, Log, "   └─ 다른 활성 FullBody 몽타주 발견: {0}",
+                        *ActiveMontage->Montage->GetName());
+                }
+            }
+
+            if (bHasOtherActiveFullBody)
+            {
+                UE_LOGFMT(LogAnimInstance, Log, "   └─ 다른 FullBody 몽타주가 활성화되어 있어 Root Motion 정리 생략");
+            }
+            else
+            {
+                UE_LOGFMT(LogAnimInstance, Warning, "   └─ 활성 FullBody 몽타주가 없음 - Root Motion 정리 실행");
+                if (bIsPlayingRootMotionMontageWithFullBodySlot)
+                {
+                    HandleEndRootMotion();
+                }
+                else
+                {
+                    UE_LOGFMT(LogAnimInstance, Log, "   └─ Root Motion 플래그가 이미 비활성화됨");
+                }
+            }
+        }
+        else
+        {
+            UE_LOGFMT(LogAnimInstance, Log, "상체 몽타주 중단됨: {0} (Movement State 영향 없음)", *Montage->GetName());
+        }
+
+        return; // 중단된 경우 추가 처리 없이 종료
     }
 
-    UE_LOGFMT(LogAnimInstance, Log, "몽타주 종료: {0}, 중단됨: {1}", *Montage->GetName(), bInterrupted);
+    // === 정상 종료 처리 (기존 로직 유지) ===
+    if (bIsPlayingRootMotionMontageWithFullBodySlot && bIsFullBody)
+    {
+        UE_LOGFMT(LogAnimInstance, Log, "✅ 전체 바디 몽타주 정상 종료: {0}", *Montage->GetName());
+        HandleEndRootMotion();
+    }
+    else if (bIsFullBody && !bIsPlayingRootMotionMontageWithFullBodySlot)
+    {
+        // FullBody 몽타주인데 Root Motion 플래그가 이미 false인 경우
+        UE_LOGFMT(LogAnimInstance, Warning, "⚠️ 전체 바디 몽타주 종료되었으나 Root Motion 플래그가 이미 비활성화 상태: {0}", *Montage->GetName());
+        UE_LOGFMT(LogAnimInstance, Warning, "   └─ 이미 다른 곳에서 정리되었거나 상태 불일치 발생");
+    }
+
+    UE_LOGFMT(LogAnimInstance, Log, "몽타주 정상 종료: {0}, 타입: {1}",
+        *Montage->GetName(),
+        bIsFullBody ? TEXT("FullBody") : TEXT("UpperBody"));
 }
 
 #pragma endregion
@@ -1005,6 +1160,7 @@ void UBaseAnimInstance::MontageEnded(UAnimMontage* Montage, bool bInterrupted)
 // 유틸리티 함수들 영역
 // =====================================================
 #pragma region Utility Functions
+
 
 bool UBaseAnimInstance::IsFullBodySlotMontage(const UAnimMontage* Montage) const
 {

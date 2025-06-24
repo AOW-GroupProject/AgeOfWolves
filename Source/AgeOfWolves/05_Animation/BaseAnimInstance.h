@@ -111,7 +111,7 @@ class AGEOFWOLVES_API UBaseAnimInstance : public UAnimInstance
 
 	GENERATED_BODY()
 
-	//@기본 설정
+//@기본 설정
 #pragma region Default Setting
 public:
 	UBaseAnimInstance(const FObjectInitializer& ObjectInitializer);
@@ -302,6 +302,19 @@ protected:
 	const float SprintingSpeed = 500.f;
 
 protected:
+	// === 가속도 임계값 상수들 ===
+	// 기존 IsNearlyZero() 대신 사용할 더 관대한 임계값들
+
+	// 일반적인 이동 입력 감지용 (기존보다 관대)
+	static constexpr float MovementInputThreshold = 50.0f;
+
+	// 정지 조건 체크용 (더욱 관대 - 방향 전환 시 Stop 방지)
+	static constexpr float StopConditionThreshold = 25.0f;
+
+	// Idle 전환용 (가장 엄격 - 완전히 멈췄을 때만)
+	static constexpr float IdleTransitionThreshold = 10.0f;
+
+protected:
 	// === 본 변형 관련 ===
 	UPROPERTY(Transient, BlueprintReadOnly)
 	bool bModifyBoneTransform;
@@ -338,11 +351,10 @@ protected:
 private:
 	// === 내부 헬퍼 함수들 ===
 
-	/*
-	 * Combat State가 2인지 확인하는 헬퍼 함수
-	 * BattoujutsuCombat 상태에서는 특수한 전이 규칙이 적용됩니다.
-	 */
-	bool IsInCombatState2() const;
+public:
+	// 새로 추가 또는 이동
+	UFUNCTION(BlueprintPure, Category = "Movement State Machine")
+	bool IsInGuardCombatState() const;
 
 	/*
 	 * 현재 이동 입력이 있는지 확인하는 헬퍼 함수
@@ -357,7 +369,7 @@ private:
 	EMovementState DetermineTargetCycleState() const;
 #pragma endregion
 
-	//@델리게이트
+//@델리게이트
 #pragma region Delegates
 #pragma endregion
 
@@ -380,7 +392,7 @@ protected:
 	void MontageEnded(UAnimMontage* Montage, bool bInterrupted);
 #pragma endregion
 
-	//@유틸리티 (Setter, Getter 등)
+//@유틸리티 (Setter, Getter 등)
 #pragma region Utility
 protected:
 	// === 참조 오브젝트들 ===
