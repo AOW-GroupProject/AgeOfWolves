@@ -16,7 +16,7 @@ class ACharacterBase;
 *   방향, 거리, 속도를 사용하여 캐릭터를 VInterpTo로 부드럽게 이동시키는 ANS
 *   충돌 감지 시 이동 중단
 */
-UCLASS(meta = (DisplayName = "방향 설정 부드러운 이동"))
+UCLASS(meta = (DisplayName = "Inplace - 방향 설정 부드러운 이동"))
 class AGEOFWOLVES_API UANS_DirectionalMovement : public UAnimNotifyState
 {
     GENERATED_BODY()
