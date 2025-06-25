@@ -23,6 +23,9 @@ UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitialize
 	InputReleasedSpecHandles.Reset();
 	InputHeldSpecHandles.Reset();
 
+	//@Pending Abilities
+	PendingReleaseAbilities.Reset();
+
 	//@Chain Window 활성화
 	bChainWindowActive = false;
 	//@Chain Mapping 목록
@@ -217,7 +220,7 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 		}
 	}
 
-	// @Press입력 처리
+	//@Press 입력 처리
 	for (const FGameplayAbilitySpecHandle& SpecHandle : InputPressedSpecHandles)
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
@@ -225,7 +228,6 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 			if (AbilitySpec->Ability)
 			{
 				AbilitySpec->InputPressed = true;
-				// @InputPressed + 다중 키 입력
 				if (!AbilitySpec->IsActive())
 				{
 					const UBaseGameplayAbility* BaseAbilityCDO = Cast<UBaseGameplayAbility>(AbilitySpec->Ability);
@@ -238,22 +240,39 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 		}
 	}
 
+	//@활성화 대상 어빌리티들 실행
 	for (const FGameplayAbilitySpecHandle& AbilitySpecHandle : AbilitiesToActivate)
 	{
 		TryActivateAbility(AbilitySpecHandle);
 	}
 
-	// @InputReleased
+	//@InputReleased 처리
 	for (const FGameplayAbilitySpecHandle& SpecHandle : InputReleasedSpecHandles)
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
 			if (AbilitySpec->Ability)
 			{
-				// @InputRelased 활성화
-				if (AbilitySpec->IsActive())
+				const UBaseGameplayAbility* BaseAbilityCDO = Cast<UBaseGameplayAbility>(AbilitySpec->Ability);
+				if (BaseAbilityCDO)
 				{
-					AbilitySpecInputReleased(*AbilitySpec);
+					//@OnInputReleased 정책 어빌리티 활성화
+					if (BaseAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::OnInputReleased)
+					{
+						if (!AbilitySpec->IsActive())
+						{
+							if (TryActivateAbility(AbilitySpec->Handle))
+							{
+								UE_LOGFMT(LogASC, Log, "입력 해제로 어빌리티 활성화: {0}", *BaseAbilityCDO->GetName());
+							}
+							else
+							{
+								// 활성화 실패 시 예약 목록에 추가
+								PendingReleaseAbilities.AddUnique(AbilitySpec->Handle);
+								UE_LOGFMT(LogASC, Log, "입력 해제 어빌리티 예약됨: {0}", *BaseAbilityCDO->GetName());
+							}
+						}
+					}
 				}
 			}
 		}
@@ -268,6 +287,7 @@ void UBaseAbilitySystemComponent::ClearAbilityInput()
 	InputPressedSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
 	InputHeldSpecHandles.Reset();
+	PendingReleaseAbilities.Reset(); // 추가
 }
 
 void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
@@ -1123,10 +1143,38 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 		InteractionCompleted.Broadcast(InteractionTargetActor.Get(), CurrentPotentialInteraction);
 	}
 
+	// 마지막에 추가: 예약된 Release 어빌리티들 활성화 시도
+	TArray<FGameplayAbilitySpecHandle> AbilitiesToRemove;
+
+	for (const FGameplayAbilitySpecHandle& Handle : PendingReleaseAbilities)
+	{
+		if (const FGameplayAbilitySpec* Spec = FindAbilitySpecFromHandle(Handle))
+		{
+			if (TryActivateAbility(Handle))
+			{
+				UE_LOGFMT(LogASC, Log, "예약된 Release 어빌리티 활성화: {0}", *Spec->Ability->GetName());
+				AbilitiesToRemove.Add(Handle);
+				break; // 하나만 활성화하고 종료
+			}
+		}
+		else
+		{
+			// 유효하지 않은 핸들은 제거 대상에 추가
+			AbilitiesToRemove.Add(Handle);
+		}
+	}
+
+	// 처리된 어빌리티들을 예약 목록에서 제거
+	for (const FGameplayAbilitySpecHandle& Handle : AbilitiesToRemove)
+	{
+		PendingReleaseAbilities.Remove(Handle);
+	}
+
 	UE_LOGFMT(LogASC, Warning, "{0}가 종료되었습니다.", Ability->GetName());
 
 	// @TODO: Ability 활성화 종료 시점에 ASC에서 할 일들...
 	AbilityEnded.Broadcast(Ability);
+
 }
 
 void UBaseAbilitySystemComponent::OnAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& ReasonTags)

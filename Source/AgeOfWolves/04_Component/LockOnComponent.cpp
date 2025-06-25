@@ -485,7 +485,7 @@ void ULockOnComponent::UpdateSpringArmTransform(float DeltaTime, const FVector& 
     }
 
     //@Offset Coefficient
-    float SocketOffsetCoefficient = (BaseAnimInstanceRef->GetMovementState() != EMovementState::Sprinting) ? 1.5f : 1.0f;
+    float SocketOffsetCoefficient = (BaseAnimInstanceRef->GetMovementState() != EMovementState::Cycle_Sprint) ? 1.5f : 1.0f;
 
     //@Distance to Rotation
     float DistanceFromTargetEnemy = (PlayerCharacterRef->GetActorLocation() - Target).Length();

@@ -151,7 +151,7 @@ protected:
 private:
     //@Player Respawn 완료 콜백 함수
     UFUNCTION()
-    void OnPlayerRevival(APlayerController* RespawnedPlayerController);
+    void OnPlayerRevival(APlayerStateBase* RespawnPlayerState);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

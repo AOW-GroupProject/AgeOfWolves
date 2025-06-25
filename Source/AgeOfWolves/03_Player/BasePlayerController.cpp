@@ -313,19 +313,19 @@ void ABasePlayerController::OnPlayerDeath(APlayerStateBase* DeadPlayerState)
     }
 }
 
-void ABasePlayerController::OnPlayerRevival(APlayerController* RespawnedPlayerController)
+void ABasePlayerController::OnPlayerRevival(APlayerStateBase* RespawnPlayerState)
 {
     //@기본 유효성 검증
-    if (!IsValid(RespawnedPlayerController))
+    if (!IsValid(RespawnPlayerState))
     {
-        UE_LOGFMT(LogBasePC, Warning, "리스폰 콜백 실패: 유효하지 않은 PlayerController");
+        UE_LOGFMT(LogBasePC, Warning, "리스폰 콜백 실패: 유효하지 않은 Player State");
         return;
     }
 
     //@자신의 리스폰인지 확인
-    if (RespawnedPlayerController != this)
+    if (RespawnPlayerState->GetOwner() != this)
     {
-        UE_LOGFMT(LogBasePC, Log, "다른 플레이어 리스폰 완료 확인: {0}", GetNameSafe(RespawnedPlayerController));
+        UE_LOGFMT(LogBasePC, Log, "다른 플레이어 리스폰 완료 확인: {0}", GetNameSafe(RespawnPlayerState->GetOwner()));
         return;
     }
 

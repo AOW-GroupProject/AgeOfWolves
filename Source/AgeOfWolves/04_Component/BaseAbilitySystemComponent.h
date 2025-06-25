@@ -165,6 +165,10 @@ protected:
 	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
 
 protected:
+	//@입력 해제로 활성화되어야 하지만 블록된 어빌리티들의 예약 목록
+	TArray<FGameplayAbilitySpecHandle> PendingReleaseAbilities;
+
+protected:
 	//@체인 시스템 활성화 여부
 	bool bChainWindowActive;
 

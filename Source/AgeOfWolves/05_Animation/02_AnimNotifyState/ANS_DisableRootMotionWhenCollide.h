@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Animation/AnimNotifies/AnimNotifyState.h"
+#include "05_Animation/BaseAnimInstance.h"
 
 #include "ANS_DisableRootMotionWhenCollide.generated.h"
 
@@ -14,83 +15,96 @@ class UAnimInstance;
 #pragma endregion
 
 /**
- *	@UANS_DisableRootMotionOnCollision
+ *	@UANS_DisableRootMotionWhenCollide
  *
  *	전방 충돌 감지 시 몽타주의 루트 모션을 비활성화합니다.
  *  충돌이 해제되면 루트 모션을 자동으로 복원합니다.
  *  표면을 따라 미끄러지는 루트 모션 동작을 방지합니다.
  */
-UCLASS(meta = (DisplayName = "충돌 시 루트 모션 비활성화"))
+UCLASS(meta = (DisplayName = "RootMotion - 충돌 시 루트 모션 비활성화"))
 class AGEOFWOLVES_API UANS_DisableRootMotionWhenCollide : public UAnimNotifyState
 {
-    //@친추 클래스
+	//@친추 클래스
 #pragma region Friend Class
 #pragma endregion
 
-    GENERATED_BODY()
+	GENERATED_BODY()
 
-    //@Defualt Setting
+	//@Defualt Setting
 #pragma region Default Setting
 public:
-    UANS_DisableRootMotionWhenCollide(const FObjectInitializer& ObjectInitializer);
+	UANS_DisableRootMotionWhenCollide(const FObjectInitializer& ObjectInitializer);
 
-    virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration) override;
-    virtual void NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime) override;
-    virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
+	virtual void NotifyBegin(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float TotalDuration) override;
+	virtual void NotifyTick(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation, float FrameDeltaTime) override;
+	virtual void NotifyEnd(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
 
 #if WITH_EDITOR
-    virtual bool CanBePlaced(UAnimSequenceBase* Animation) const override;
+	virtual bool CanBePlaced(UAnimSequenceBase* Animation) const override;
 #endif
 
-    virtual FString GetNotifyName_Implementation() const override;
+	virtual FString GetNotifyName_Implementation() const override;
 #pragma endregion
 
-    //@Property/Info...etc
+	//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
-    // 충돌 감지 거리 설정
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
-    float ForwardCheckDistance = 100.0f;
+	// 충돌 감지 거리 설정
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
+	float ForwardCheckDistance = 100.0f;
 
-    // 충돌 시 위치 고정 여부
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
-    bool bFixPositionOnCollision = false;
+	// 방향성 충돌 감지 사용 여부
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
+	bool bUseDirectionalCollision = false;
 
-    // 안전 위치 뒤로 이동 오프셋
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision", meta = (EditCondition = "bFixPositionOnCollision"))
-    float SafePositionBackOffset = 5.0f;
+	// 충돌 감지 방향 (방향성 충돌 감지 활성화 시)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision", meta = (EditCondition = "bUseDirectionalCollision"))
+	EMovementDirection CollisionDirection = EMovementDirection::Fwd;
 
-    // 디버그 시각화 
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
-    bool bEnableDebugDraw = false;
+	// 충돌 시 위치 고정 여부
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision")
+	bool bFixPositionOnCollision = false;
+
+	// 안전 위치 뒤로 이동 오프셋
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Collision", meta = (EditCondition = "bFixPositionOnCollision"))
+	float SafePositionBackOffset = 5.0f;
+
+	// 디버그 시각화 
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Debug")
+	bool bEnableDebugDraw = false;
 
 protected:
-    // 캐싱된 참조
-    UPROPERTY(Transient)
-    TWeakObjectPtr<ACharacterBase> OwnerCharacter;
+	// 캐싱된 참조
+	UPROPERTY(Transient)
+	TWeakObjectPtr<ACharacterBase> OwnerCharacter;
 
-    // 애님 인스턴스 참조
-    UPROPERTY(Transient)
-    TWeakObjectPtr<UAnimInstance> AnimInstance;
+	// 애님 인스턴스 참조
+	UPROPERTY(Transient)
+	TWeakObjectPtr<UAnimInstance> AnimInstance;
 
-    // 마지막 안전 위치
-    UPROPERTY(Transient)
-    FVector LastSafePosition;
+	// 마지막 안전 위치
+	UPROPERTY(Transient)
+	FVector LastSafePosition;
 
-    // 충돌 상태
-    UPROPERTY(Transient)
-    bool bIsBlocked;
+	// 충돌 상태
+	UPROPERTY(Transient)
+	bool bIsBlocked;
 
-    // 루트 모션 비활성화 여부
-    UPROPERTY(Transient)
-    bool bHasDisabledRootMotion;
+	// 루트 모션 비활성화 여부
+	UPROPERTY(Transient)
+	bool bHasDisabledRootMotion;
 #pragma endregion
 
-    //@Utility(Setter, Getter,...etc)
+	//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 protected:
-    // 전방 충돌 감지 함수
-    bool DetectForwardCollision(USkeletalMeshComponent* MeshComp);
-#pragma endregion
+	// 전방 충돌 감지 함수 (기존 호환성 유지)
+	bool DetectForwardCollision(USkeletalMeshComponent* MeshComp);
 
+	// 방향별 충돌 감지 함수
+	bool DetectCollisionInDirection(USkeletalMeshComponent* MeshComp);
+
+	// 방향에 따른 벡터 계산
+	FVector CalculateDirectionVector(ACharacterBase* Character);
+#pragma endregion
 };
