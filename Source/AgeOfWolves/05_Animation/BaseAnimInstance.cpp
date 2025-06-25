@@ -149,21 +149,28 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 void UBaseAnimInstance::UpdateMovementStateMachine()
 {
     /*
-     * 상태 기계의 메인 업데이트 함수
-     *
-     * 이 함수는 매 프레임마다 호출되어 현재 상태를 분석하고,
-     * 가능한 상태 전이를 체크합니다. 마치 교통 신호등처럼
-     * 현재 상황을 보고 다음에 어떤 상태로 가야 할지 결정합니다.
+     * 상태 기계의 메인 업데이트 함수 (FullBody 시작 시 Idle 전환 추가)
      */
 
-     // Root Motion 재생 중일 때는 특별한 처리가 필요합니다
-     // 이는 공격이나 특수 동작 중에는 일반적인 이동 상태 변경을 막기 위함입니다
+     // === Root Motion 재생 중일 때 특별 처리 (수정됨) ===
     if (bIsPlayingRootMotionMontageWithFullBodySlot)
     {
-        // 하지만 정지 조건이 만족되면 Stop 상태로의 전이는 허용합니다
-        // 예를 들어, 공격 중에 갑자기 멈춰야 하는 상황을 처리하기 위함입니다
+        // FullBody 몽타주가 시작되면 즉시 Idle 상태로 전환
+        // 이는 공격이나 특수 동작 중에는 이동 상태를 명확히 정리하기 위함
+        if (MovementState != EMovementState::Idle)
+        {
+            UE_LOGFMT(LogAnimInstance, Log, "FullBody 몽타주 재생 중 - 강제 Idle 전환: {0} -> Idle",
+                *UEnum::GetValueAsString(MovementState));
+
+            LastMovementState = MovementState;
+            MovementState = EMovementState::Idle;
+            OnMovementStateChanged();
+        }
+
+        // 이후 정지 조건이 만족되면 그대로 Idle 유지
         if (CanTransitionToStop())
         {
+            // 이미 Idle 상태이므로 상태 변경은 없지만 로직 일관성을 위해 유지
             LastMovementState = MovementState;
             MovementState = EMovementState::Idle;
             OnMovementStateChanged();
@@ -175,11 +182,10 @@ void UBaseAnimInstance::UpdateMovementStateMachine()
     EMovementState PreviousState = MovementState;
 
     // Combat State에 따른 우회 조건들을 업데이트합니다
-    // 전투 상황에서는 빠른 반응을 위해 일부 상태를 건너뛸 수 있습니다
+    // 이제 Root Motion 상태도 함께 고려됩니다
     UpdateCombatStateFlags();
 
     // 현재 상태에 따라 적절한 전이 처리 함수를 호출합니다
-    // 각 상태마다 가능한 전이들이 다르기 때문에 분리해서 처리합니다
     switch (MovementState)
     {
     case EMovementState::Idle:
@@ -287,34 +293,44 @@ void UBaseAnimInstance::HandleStartStateTransitions()
 void UBaseAnimInstance::HandleCycleStateTransitions()
 {
     /*
-     * Cycle 상태들에서 가능한 전이들을 처리하는 함수
-     *
-     * Cycle 상태는 지속적인 이동을 나타냅니다 (걷기 또는 달리기).
-     * 여기서는 정지하거나 다른 종류의 이동으로 전환할 수 있습니다.
+     * Cycle 상태들에서 가능한 전이들을 처리하는 함수 (Skip 로직 개선)
      */
 
      // 우선순위 1: 정지 조건 체크 (가장 중요)
     if (CanTransitionToStop())
     {
-        // Combat State 2이고 우회 가능하다면 Stop을 건너뛰고 바로 Idle로
-        // 전투 상황에서는 빠른 반응을 위해 감속 애니메이션을 생략할 수 있습니다
-        if (IsInGuardCombatState() && bCanSkipStopState)
+        // === Skip Stop 조건 체크 (통합 로직) ===
+        // GuardCombat 상태이거나 Root Motion 시작으로 인한 Skip이 활성화된 경우
+        if (bCanSkipStopState)
         {
             MovementState = EMovementState::Idle;
-            UE_LOGFMT(LogAnimInstance, Log, "{0} -> Idle (Stop 우회)",
-                *UEnum::GetValueAsString(LastMovementState));
+
+            // Skip 원인을 명확히 로깅
+            FString SkipReason = "";
+            if (IsInGuardCombatState())
+            {
+                SkipReason += "GuardCombat";
+            }
+            if (bIsPlayingRootMotionMontageWithFullBodySlot)
+            {
+                if (!SkipReason.IsEmpty()) SkipReason += " + ";
+                SkipReason += "RootMotion";
+            }
+
+            UE_LOGFMT(LogAnimInstance, Log, "{0} -> Idle (Stop 우회: {1})",
+                *UEnum::GetValueAsString(LastMovementState),
+                *SkipReason);
         }
         else
         {
             MovementState = EMovementState::Stop;
-            UE_LOGFMT(LogAnimInstance, Log, "{0} -> Stop",
+            UE_LOGFMT(LogAnimInstance, Log, "{0} -> Stop (정상 전이)",
                 *UEnum::GetValueAsString(MovementState));
         }
         return;
     }
 
     // 우선순위 2: Cycle 간 전환 (Walk <-> Sprint)
-    // 속도 변화에 따른 즉시 전환이 가능합니다
     if (CanTransitionBetweenCycles())
     {
         EMovementState TargetCycle = DetermineTargetCycleState();
@@ -325,7 +341,6 @@ void UBaseAnimInstance::HandleCycleStateTransitions()
         return;
     }
 }
-
 void UBaseAnimInstance::HandleStopStateTransitions()
 {
     /*
@@ -350,25 +365,38 @@ void UBaseAnimInstance::HandleStopStateTransitions()
 void UBaseAnimInstance::UpdateCombatStateFlags()
 {
     /*
-     * Combat State에 따른 우회 플래그들을 업데이트하는 함수
+     * Combat State와 Root Motion에 따른 우회 플래그들을 업데이트하는 함수 (수정됨)
      *
-     * BattoujutsuCombat(2)와 GuardCombat(3) 상태에서는 일반적인 상태 전이 규칙을 우회하여
-     * 더 빠른 반응이 가능하도록 합니다. 이는 전투 상황에서 즉각적인 반응이 필요하기 때문입니다.
+     * 이제 Combat State뿐만 아니라 Root Motion 상태도 고려하여
+     * Skip 플래그들을 종합적으로 관리합니다.
      */
 
     bool bWasCanSkipStates = bCanSkipStartState;
 
-    //@BattoujutsuCombat(2) 또는 GuardCombat(3)에서 Start/Stop 단계를 건너뛸 수 있습니다
-    bool bNewCanSkipStates = IsInGuardCombatState();
-    bCanSkipStartState = bNewCanSkipStates;
-    bCanSkipStopState = bNewCanSkipStates;
+    // === Skip Start 플래그 업데이트 ===
+    // GuardCombat(3) 상태에서 Start 단계를 건너뛸 수 있음
+    bool bCanSkipBasedOnCombat = IsInGuardCombatState();
+    bCanSkipStartState = bCanSkipBasedOnCombat;
 
-    //@Combat State 변경을 로그로 기록합니다
-    if (bWasCanSkipStates != bCanSkipStartState)
+    // === Skip Stop 플래그 업데이트 (통합 로직) ===
+    // 1. GuardCombat(3) 상태이거나
+    // 2. Root Motion 재생 중일 때 Skip 가능
+    bool bCanSkipStopBasedOnCombat = bCanSkipBasedOnCombat;
+    bool bCanSkipStopBasedOnRootMotion = bIsPlayingRootMotionMontageWithFullBodySlot;
+
+    bCanSkipStopState = bCanSkipStopBasedOnCombat || bCanSkipStopBasedOnRootMotion;
+
+    // === 변경 사항 로깅 ===
+    if (bWasCanSkipStates != bCanSkipStartState || bWasCanSkipStates != bCanSkipStopState)
     {
-        UE_LOGFMT(LogAnimInstance, Log, "Combat State 우회 모드 변경: {0} -> {1} (CombatType: {2} - {3})",
+        UE_LOGFMT(LogAnimInstance, Log, "Skip 플래그 업데이트: Start({0}->({1}), Stop({2}) | 원인: Combat({3}), RootMotion({4})",
             bWasCanSkipStates,
             bCanSkipStartState,
+            bCanSkipStopState,
+            bCanSkipBasedOnCombat,
+            bCanSkipStopBasedOnRootMotion);
+
+        UE_LOGFMT(LogAnimInstance, Log, "   └─ CombatType: {0} ({1})",
             static_cast<int32>(CombatType),
             *UEnum::GetValueAsString(CombatType));
     }
@@ -897,6 +925,8 @@ void UBaseAnimInstance::HandleStartRootMotion()
      * Root Motion 시작 처리 함수 (기존 로직 유지)
      */
     bIsPlayingRootMotionMontageWithFullBodySlot = true;
+    bCanSkipStopState = true;
+
     UE_LOGFMT(LogAnimInstance, Log, "Root Motion 시작");
 }
 
@@ -908,6 +938,9 @@ void UBaseAnimInstance::HandleEndRootMotion()
     bIsPlayingRootMotionMontageWithFullBodySlot = false;
     bIsRootMotionCooldown = true;
     CurrentRootMotionCooldownTime = 0.0f;
+
+    bool bShouldSkipBasedOnCombat = IsInGuardCombatState();
+    bCanSkipStopState = bShouldSkipBasedOnCombat;
 
     UE_LOGFMT(LogAnimInstance, Log, "Root Motion 종료");
 }

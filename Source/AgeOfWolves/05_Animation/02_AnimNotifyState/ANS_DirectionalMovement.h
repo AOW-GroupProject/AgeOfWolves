@@ -39,11 +39,11 @@ protected:
 
     //@이동 거리
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "방향 이동", meta = (AllowPrivateAccess = "true", ClampMin = "0.0"))
-    float MovementDistance = 200.0f;
+    float MovementDistance = 350.0f;
 
     //@이동 속도 (VInterpTo Speed)
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "방향 이동", meta = (AllowPrivateAccess = "true", ClampMin = "0.1"))
-    float MovementSpeed = 5.0f;
+    float MovementSpeed = 3.5f;
 
     //@충돌 감지 거리
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "충돌 감지", meta = (AllowPrivateAccess = "true", ClampMin = "10.0"))
