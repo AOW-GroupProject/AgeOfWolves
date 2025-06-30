@@ -65,6 +65,20 @@ enum class EHitImpactLocation : uint8
     Right     UMETA(DisplayName = "Right"),
     Max       UMETA(Hidden)
 };
+
+/*
+*   @EKnockBackIntensity
+*
+*   넉백 강도 정의
+*/
+UENUM(BlueprintType)
+enum class EKnockBackIntensity : uint8
+{
+    Low      UMETA(DisplayName = "Low"),
+    Med      UMETA(DisplayName = "Med"),
+    High     UMETA(DisplayName = "High"),
+    Max      UMETA(Hidden)
+};
 #pragma endregion
 
 //@구조체
@@ -229,6 +243,17 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Combat | Detection", meta = (DisplayName = "Is Actor Back Exposed"))
         static bool IsActorBackExposed(const AActor* ObserverActor, const AActor* TargetActor, float ExposureAngleThreshold = 160.0f);
 
+public:
+    /**
+     * 캐릭터에게 넉백을 적용합니다.
+     * @param TargetCharacter - 넉백을 받을 대상 캐릭터
+     * @param Intensity - 넉백 강도
+     * @return bool - 넉백 적용 성공 여부
+     * 
+     * @참고: Motion Warping 과 함께 활용해야 합니다.
+     */
+    UFUNCTION(BlueprintCallable, Category = "Combat | Knock Back")
+    static bool ApplyKnockBack(ACharacter* TargetCharacter, EKnockBackIntensity Intensity);
 #pragma endregion
 
 //@이벤트 전달 관련...
@@ -267,6 +292,13 @@ public:
      */
     UFUNCTION(BlueprintCallable, Category = "Combat | GameplayCue")
         static FSlashGameplayCueParams PrepareSlashGameplayCueParameters(AActor* InActor, const FHitResult& HitResult);
+#pragma endregion
+
+//@Utility
+#pragma region Utility
+private:
+    //@넉백 강도에 따른 거리 값 반환
+    static float GetKnockBackDistance(EKnockBackIntensity Intensity);
 #pragma endregion
 
 };
