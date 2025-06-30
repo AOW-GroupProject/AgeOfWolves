@@ -1370,6 +1370,30 @@ void UBaseAbilitySystemComponent::OnPlayerRespawnCompleted(APlayerController* Re
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+FGameplayTag UBaseAbilitySystemComponent::GetGameplayTagFromString(const FString& TagString)
+{
+	//@TagString 유효성 검사
+	if (TagString.IsEmpty())
+	{
+		UE_LOGFMT(LogASC, Warning, "GetGameplayTagFromString: 빈 문자열입니다");
+		return FGameplayTag::EmptyTag;
+	}
+
+	//@FString을 FName으로 변환 후 FGameplayTag 요청
+	FName TagName = FName(*TagString);
+	FGameplayTag ResultTag = FGameplayTag::RequestGameplayTag(TagName);
+
+	if (!ResultTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "GetGameplayTagFromString: 유효한 GameplayTag를 찾을 수 없음 - {0}",
+			*TagString);
+		return FGameplayTag::EmptyTag;
+	}
+
+	UE_LOGFMT(LogASC, Log, "GetGameplayTagFromString: 성공 - {0}", *ResultTag.ToString());
+	return ResultTag;
+}
+
 void UBaseAbilitySystemComponent::GetAbilityBlockAndCancelTagsForAbilityTag(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutAbilityTagsToBlock, OUT FGameplayTagContainer& OutAbilityTagsToCancel)
 {
 	if (AbilityTagRelationshipMapping.Get())

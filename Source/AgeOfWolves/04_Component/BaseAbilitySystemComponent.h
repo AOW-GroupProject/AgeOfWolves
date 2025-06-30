@@ -270,6 +270,11 @@ private:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
+	//@FString으로 FGameplayTag 생성
+	UFUNCTION(BlueprintPure, Category = "Gameplay Tags")
+	static FGameplayTag GetGameplayTagFromString(const FString& TagString);
+
+public:
 	//@Cancel, Block Tag
 	void GetAbilityBlockAndCancelTagsForAbilityTag(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutAbilityTagsToBlock, OUT FGameplayTagContainer& OutAbilityTagsToCancel);
 	//@AR, AB Tag
