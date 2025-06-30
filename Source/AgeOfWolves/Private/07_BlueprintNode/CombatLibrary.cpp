@@ -4,6 +4,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "MotionWarpingComponent.h"
 
 DEFINE_LOG_CATEGORY(LogCombatLibrary)
 
@@ -653,6 +654,58 @@ bool UCombatLibrary::IsActorBackExposed(const AActor* ObserverActor, const AActo
 
     return bIsBackExposed;
 }
+
+bool UCombatLibrary::ApplyKnockBack(ACharacter* TargetCharacter, EKnockBackIntensity Intensity)
+{
+    //@대상 캐릭터 유효성 검사
+    if (!IsValid(TargetCharacter))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "ApplyKnockBack 실패 - 사유: 대상 캐릭터가 유효하지 않음");
+        return false;
+    }
+
+    //@강도 유효성 검사
+    if (Intensity == EKnockBackIntensity::Max)
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "ApplyKnockBack 실패 - 사유: 유효하지 않은 넉백 강도");
+        return false;
+    }
+
+    //@World 유효성 검사
+    UWorld* World = TargetCharacter->GetWorld();
+    if (!IsValid(World))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "ApplyKnockBack 실패 - 사유: World가 유효하지 않음");
+        return false;
+    }
+
+    //@넉백 거리 계산
+    float KnockBackDistance = GetKnockBackDistance(Intensity);
+
+    //@넉백 방향 계산 (캐릭터 ForwardVector의 -1.f 방향)
+    FVector KnockBackDirection = -TargetCharacter->GetActorForwardVector();
+
+    //@넉백 목표 위치 계산
+    FVector KnockBackTargetLocation = TargetCharacter->GetActorLocation() + (KnockBackDirection * KnockBackDistance);
+
+    //@Motion Warping Component 가져오기
+    UMotionWarpingComponent* MotionWarpingComp = TargetCharacter->FindComponentByClass<UMotionWarpingComponent>();
+    if (!IsValid(MotionWarpingComp))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "ApplyKnockBack 실패 - 사유: MotionWarpingComponent를 찾을 수 없음");
+        return false;
+    }
+
+    //@Warp Target 업데이트
+    MotionWarpingComp->AddOrUpdateWarpTargetFromLocation(FName("KnockBackTarget"), KnockBackTargetLocation);
+
+    UE_LOGFMT(LogCombatLibrary, Log, "넉백 적용 성공 - 대상: {0}, 강도: {1}, 거리: {2}cm",
+        *TargetCharacter->GetName(),
+        static_cast<uint8>(Intensity),
+        KnockBackDistance);
+
+    return true;
+}
 #pragma endregion
 
 //@이벤트 전달 관련...
@@ -832,5 +885,23 @@ FSlashGameplayCueParams UCombatLibrary::PrepareSlashGameplayCueParameters(AActor
     );
 
     return Params;
+}
+#pragma endregion
+
+#pragma region Utility
+float UCombatLibrary::GetKnockBackDistance(EKnockBackIntensity Intensity)
+{
+    switch (Intensity)
+    {
+    case EKnockBackIntensity::Low:
+        return 100.0f;
+    case EKnockBackIntensity::Med:
+        return 150.0f;
+    case EKnockBackIntensity::High:
+        return 200.0f;
+    default:
+        UE_LOGFMT(LogCombatLibrary, Warning, "GetKnockBackDistance - 알 수 없는 넉백 강도, 기본값 사용");
+        return 100.0f;
+    }
 }
 #pragma endregion
