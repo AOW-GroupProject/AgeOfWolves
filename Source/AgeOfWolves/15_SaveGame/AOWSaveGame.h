@@ -98,6 +98,7 @@ public:
 	{
 		return UniqueItemId == Other.UniqueItemId;
 	}
+
 public:
 	//@FGuid
 	UPROPERTY(BlueprintReadOnly, Category = "Item Save Info | Item")

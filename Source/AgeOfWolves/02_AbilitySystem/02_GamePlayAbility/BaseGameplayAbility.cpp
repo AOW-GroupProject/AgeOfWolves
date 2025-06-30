@@ -296,6 +296,13 @@ void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
 
 void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
+    // 어빌리티가 활성화되어 있지 않으면 처리하지 않음
+    if (!IsActive())
+    {
+        UE_LOGFMT(LogGA, Log, "어빌리티가 비활성화 상태 - InputReleased 무시: {0}", *GetName());
+        return;
+    }
+
     // 부모 클래스 호출
     Super::InputReleased(Handle, ActorInfo, ActivationInfo);
 
@@ -303,6 +310,7 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
     K2_InputReleased();
 
     UE_LOGFMT(LogGA, Log, "Ability Input Released - Ability: {0}", *GetName());
+
 }
 
 UAbilityTask_PlayMontageAndWait* UBaseGameplayAbility::PlayMontageWithCallback(
@@ -423,26 +431,38 @@ void UBaseGameplayAbility::OnMontageBlendOut_Implementation()
 {
     UE_LOGFMT(LogGA, Log, "{0} 몽타주 블렌드 아웃", *GetName());
 
-    //@OnInputTriggered, MAX(Passive) 정책 경우에만 어빌리티 종료
-    if (ActivationPolicy != EAbilityActivationPolicy::WhileInputActive)
+    //@WhileInputActive 정책인 경우 얼리 리턴
+    if (ActivationPolicy == EAbilityActivationPolicy::WhileInputActive)
     {
-        UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
+        UE_LOGFMT(LogGA, Log, "WhileInputActive 정책으로 인한 어빌리티 유지 - 어빌리티: {0}", *GetName());
+        return;
     }
+
+    //@Ability.Passive.Die 태그인 경우 얼리 리턴
+    FGameplayTag CurrentAbilityTag = GetAbilityTag();
+    if (CurrentAbilityTag.MatchesTagExact(FGameplayTag::RequestGameplayTag(TEXT("Ability.Passive.Die"))))
+    {
+        UE_LOGFMT(LogGA, Log, "Die 어빌리티로 인한 어빌리티 유지 - 어빌리티: {0}", *GetName());
+        return;
+    }
+
+    //@조건을 만족하는 경우 어빌리티 종료
+    UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, false);
 }
 
 void UBaseGameplayAbility::OnMontageInterrupted_Implementation()
 {
     UE_LOGFMT(LogGA, Log, "{0} 몽타주 인터럽트 발생!", *GetName());
 
-    // 이미 종료된 어빌리티 체크
+    //@이미 종료된 어빌리티 체크
     if (!IsActive())
     {
         UE_LOGFMT(LogGA, Log, "이미 종료된 어빌리티 - 추가 EndAbility 호출 방지: {0}", *GetName());
         return;
     }
 
-    // 체인 액션에 의한 중단 처리
+    //@체인 액션에 의한 중단 처리
     if (bIsCanceledByChainAction)
     {
         UE_LOGFMT(LogGA, Log, "체인 액션으로 인한 중단 - 어빌리티 유지: {0}", *GetName());
@@ -450,20 +470,48 @@ void UBaseGameplayAbility::OnMontageInterrupted_Implementation()
         return;
     }
 
-    //@OnInputTriggered, MAX(Passive) 정책 경우에만 어빌리티 종료
-    if (ActivationPolicy != EAbilityActivationPolicy::WhileInputActive)
+    //@WhileInputActive 정책인 경우 얼리 리턴
+    if (ActivationPolicy == EAbilityActivationPolicy::WhileInputActive)
     {
-        UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
-        EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
+        UE_LOGFMT(LogGA, Log, "WhileInputActive 정책으로 인한 어빌리티 유지 - 어빌리티: {0}", *GetName());
+        return;
     }
+
+    //@Ability.Passive.Die 태그인 경우 얼리 리턴
+    FGameplayTag CurrentAbilityTag = GetAbilityTag();
+    if (CurrentAbilityTag.MatchesTagExact(FGameplayTag::RequestGameplayTag(TEXT("Ability.Passive.Die"))))
+    {
+        UE_LOGFMT(LogGA, Log, "Die 어빌리티로 인한 어빌리티 유지 - 어빌리티: {0}", *GetName());
+        return;
+    }
+
+    //@조건을 만족하는 경우 어빌리티 종료
+    UE_LOGFMT(LogGA, Log, "OnInputTriggered 정책으로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
 }
 
 void UBaseGameplayAbility::OnMontageCancelled_Implementation()
 {
     UE_LOGFMT(LogGA, Log, "{0} 몽타주 취소됨", *GetName());
 
-    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
+    //@WhileInputActive 정책인 경우 얼리 리턴
+    if (ActivationPolicy == EAbilityActivationPolicy::WhileInputActive)
+    {
+        UE_LOGFMT(LogGA, Log, "WhileInputActive 정책으로 인한 어빌리티 유지 - 어빌리티: {0}", *GetName());
+        return;
+    }
 
+    //@Ability.Passive.Die 태그인 경우 얼리 리턴
+    FGameplayTag CurrentAbilityTag = GetAbilityTag();
+    if (CurrentAbilityTag.MatchesTagExact(FGameplayTag::RequestGameplayTag(TEXT("Ability.Passive.Die"))))
+    {
+        UE_LOGFMT(LogGA, Log, "Die 어빌리티로 인한 어빌리티 유지 - 어빌리티: {0}", *GetName());
+        return;
+    }
+
+    //@조건을 만족하는 경우 어빌리티 종료
+    UE_LOGFMT(LogGA, Log, "몽타주 취소로 인한 어빌리티 종료 - 어빌리티: {0}", *GetName());
+    EndAbility(CurrentSpecHandle, CurrentActorInfo, CurrentActivationInfo, false, true);
 }
 
 void UBaseGameplayAbility::OnTimingNotified_Implementation()

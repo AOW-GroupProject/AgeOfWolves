@@ -5,6 +5,7 @@
 #include "Engine/DataTable.h"
 #include "AbilitySystemComponent.h"
 #include "AbilitySystemBlueprintLibrary.h"
+#include "05_Animation/BaseAnimInstance.h"
 
 #include "CombatLibrary.generated.h"
 
@@ -63,6 +64,20 @@ enum class EHitImpactLocation : uint8
     Left      UMETA(DisplayName = "Left"),
     Right     UMETA(DisplayName = "Right"),
     Max       UMETA(Hidden)
+};
+
+/*
+*   @EKnockBackIntensity
+*
+*   넉백 강도 정의
+*/
+UENUM(BlueprintType)
+enum class EKnockBackIntensity : uint8
+{
+    Low      UMETA(DisplayName = "Low"),
+    Med      UMETA(DisplayName = "Med"),
+    High     UMETA(DisplayName = "High"),
+    Max      UMETA(Hidden)
 };
 #pragma endregion
 
@@ -207,9 +222,38 @@ public:
         );
 
 public:
+    static FVector CalculateDirectionVectorFromCharacter(const ACharacter* Character, EMovementDirection Direction);
+
+public:
+    /**
+     * 캐릭터가 지정한 방향에서 거리 값만큼 떨어진 위치를 계산합니다.
+     * @param Character - 기준이 되는 캐릭터
+     * @param Direction - 이동할 방향
+     * @param Distance - 이동할 거리
+     * @return 계산된 목표 위치
+     */
+    UFUNCTION(BlueprintCallable, Category = "Combat | Position Calculation")
+    static FVector CalculatePositionFromCharacter(
+        const ACharacter* Character,
+        EMovementDirection Direction,
+        float Distance
+    );
+
+public:
     UFUNCTION(BlueprintCallable, Category = "Combat | Detection", meta = (DisplayName = "Is Actor Back Exposed"))
         static bool IsActorBackExposed(const AActor* ObserverActor, const AActor* TargetActor, float ExposureAngleThreshold = 160.0f);
 
+public:
+    /**
+     * 캐릭터에게 넉백을 적용합니다.
+     * @param TargetCharacter - 넉백을 받을 대상 캐릭터
+     * @param Intensity - 넉백 강도
+     * @return bool - 넉백 적용 성공 여부
+     * 
+     * @참고: Motion Warping 과 함께 활용해야 합니다.
+     */
+    UFUNCTION(BlueprintCallable, Category = "Combat | Knock Back")
+    static bool ApplyKnockBack(ACharacter* TargetCharacter, EKnockBackIntensity Intensity);
 #pragma endregion
 
 //@이벤트 전달 관련...
@@ -248,6 +292,13 @@ public:
      */
     UFUNCTION(BlueprintCallable, Category = "Combat | GameplayCue")
         static FSlashGameplayCueParams PrepareSlashGameplayCueParameters(AActor* InActor, const FHitResult& HitResult);
+#pragma endregion
+
+//@Utility
+#pragma region Utility
+private:
+    //@넉백 강도에 따른 거리 값 반환
+    static float GetKnockBackDistance(EKnockBackIntensity Intensity);
 #pragma endregion
 
 };

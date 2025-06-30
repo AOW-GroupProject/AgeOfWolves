@@ -45,7 +45,7 @@ DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionActivated, FGameplayTag, ChainActi
 DECLARE_DYNAMIC_DELEGATE_OneParam(FChainActionFinished, FGameplayTag, ChainActionAbilityTag);
 
 //@상태 변화 이벤트
-DECLARE_MULTICAST_DELEGATE_TwoParams(FCharacterStateEventOnGameplay, AActor*, const FGameplayTag&)
+DECLARE_MULTICAST_DELEGATE_TwoParams(FCharacterStateEventOnGameplay, AActor*, const FGameplayTag&);
 
 //@상호작용 활성화 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionActivated, AActor*, InteractableActor, const FPotentialInteraction&, PotentialInteraction);
@@ -87,6 +87,7 @@ protected:
 	void ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC);
 	void ExternalBindToAIController(ABaseAIController* BaseAIC);
 	void ExternalBindToInteractionComp(AController* Controller);
+	void ExternalBindToGameState();
 
 protected:
 	//@초기화
@@ -162,6 +163,10 @@ protected:
 	TArray<FGameplayAbilitySpecHandle> InputPressedSpecHandles;
 	TArray<FGameplayAbilitySpecHandle> InputHeldSpecHandles;
 	TArray<FGameplayAbilitySpecHandle> InputReleasedSpecHandles;
+
+protected:
+	//@입력 해제로 활성화되어야 하지만 블록된 어빌리티들의 예약 목록
+	TArray<FGameplayAbilitySpecHandle> PendingReleaseAbilities;
 
 protected:
 	//@체인 시스템 활성화 여부
@@ -255,10 +260,20 @@ protected:
 protected:
 	UFUNCTION()
 		void OnCrowdControlEventTriggered(const FGameplayTag& CrowControlTag);
+
+private:
+	//@Game State 리스폰 완료 콜백 함수
+	UFUNCTION()
+	void OnPlayerRespawnCompleted(APlayerController* RespawnedPlayerController);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+public:
+	//@FString으로 FGameplayTag 생성
+	UFUNCTION(BlueprintPure, Category = "Gameplay Tags")
+	static FGameplayTag GetGameplayTagFromString(const FString& TagString);
+
 public:
 	//@Cancel, Block Tag
 	void GetAbilityBlockAndCancelTagsForAbilityTag(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutAbilityTagsToBlock, OUT FGameplayTagContainer& OutAbilityTagsToCancel);
@@ -278,6 +293,9 @@ public:
 	FORCEINLINE bool IsInteractionAvailable() const { return bInteractionAvailable; }
 	FORCEINLINE const FPotentialInteraction& GetCurrentPotentialInteraction() const { return CurrentPotentialInteraction; }
 	FORCEINLINE AActor* GetInteractionTargetActor() const { return InteractionTargetActor.Get(); }
+
+private:
+	FString CleanStateTagName(const FString& OriginalTagName);
 #pragma endregion
 
 };
