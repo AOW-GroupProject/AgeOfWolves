@@ -12,7 +12,7 @@ DEFINE_LOG_CATEGORY(LogBTTask_CheckAttackRange)
 UBTTask_CheckAttackRange::UBTTask_CheckAttackRange(const FObjectInitializer& ObjectInitializer)
 {
     bCreateNodeInstance = true;
-    NodeName = "Check Attack Range";
+    NodeName = TEXT("공격 사정거리 체크");
 }
 
 EBTNodeResult::Type UBTTask_CheckAttackRange::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

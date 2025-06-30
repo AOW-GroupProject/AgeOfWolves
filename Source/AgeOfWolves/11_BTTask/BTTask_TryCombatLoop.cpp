@@ -11,7 +11,7 @@ DEFINE_LOG_CATEGORY(LogBTTask_TryCombatLoop)
 UBTTask_TryCombatLoop::UBTTask_TryCombatLoop(const FObjectInitializer& ObjectInitializer)
 {
 	bCreateNodeInstance = true;
-	NodeName = "Running Combat Loop";
+	NodeName = TEXT("전투 시퀀스 시작");
 }
 
 EBTNodeResult::Type UBTTask_TryCombatLoop::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

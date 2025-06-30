@@ -16,7 +16,8 @@ DEFINE_LOG_CATEGORY_STATIC(LogBTTask_Patrol, Log, All);
 #pragma region Default Setting
 UBTTask_MoveAlongPatrolPath::UBTTask_MoveAlongPatrolPath()
 {
-    NodeName = TEXT("Patrol Path");
+    NodeName = TEXT("경로를 따라 Patrol 진행");
+
 
     //@BlackboardKey 자동 설정
     BlackboardKey.AddVectorFilter(this, GET_MEMBER_NAME_CHECKED(UBTTask_MoveAlongPatrolPath, BlackboardKey));
