@@ -145,7 +145,6 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 // 상태 기계 핵심 로직 영역
 // =====================================================
 #pragma region State Machine Core Logic
-
 void UBaseAnimInstance::UpdateMovementStateMachine()
 {
     /*
@@ -341,6 +340,7 @@ void UBaseAnimInstance::HandleCycleStateTransitions()
         return;
     }
 }
+
 void UBaseAnimInstance::HandleStopStateTransitions()
 {
     /*
@@ -433,7 +433,6 @@ void UBaseAnimInstance::OnMovementStateChanged()
         *UEnum::GetValueAsString(LastMovementState),
         *UEnum::GetValueAsString(MovementState));
 }
-
 #pragma endregion
 
 // =====================================================
