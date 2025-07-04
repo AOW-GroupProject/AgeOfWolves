@@ -721,12 +721,13 @@ void ABaseAIController::ProcessCrowdControlInfo(AActor* SenderAI, const FSharing
 #pragma region Callbacks
 void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
 {
-    //@Perception 주체
+    // ========== 1단계: 기본 유효성 검사 ==========
+    // AI 컨트롤러가 소유한 캐릭터를 가져옵니다
     ACharacterBase* OwningCharacter = Cast<ACharacterBase>(GetPawn());
-    //@Perception 대상
+    // 감지된 액터를 캐릭터로 캐스팅합니다
     ACharacterBase* SensedCharacter = Cast<ACharacterBase>(Actor);
 
-    //@Owning Character, Sensed Character
+    // 둘 중 하나라도 유효하지 않으면 처리하지 않습니다
     if (!OwningCharacter || !SensedCharacter)
     {
         UE_LOGFMT(LogBaseAIC, Warning, "AI 퍼셉션 실패: 소유 캐릭터({0}), 감지된 캐릭터({1})",
@@ -735,7 +736,8 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
         return;
     }
 
-    //@팀 체크
+    // ========== 2단계: 팀 관계 확인 ==========
+    // 감지된 캐릭터가 적대적인지 확인합니다 (아군이나 중립은 무시)
     ETeamAttitude::Type Attitude = GetTeamAttitudeTowards(*SensedCharacter);
     if (Attitude != ETeamAttitude::Hostile)
     {
@@ -745,31 +747,117 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
         return;
     }
 
-    UE_LOGFMT(LogBaseAIC, Log, "{0} 캐릭터 감지!", SensedCharacter->GetName());
+    // ========== 3단계: 현재 블랙보드 상태 확인 ==========
+    // 블랙보드 컴포넌트 유효성 체크
+    if (!BBComponent)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "블랙보드 컴포넌트가 유효하지 않습니다");
+        return;
+    }
 
-    //@FAIStimulus
+    // 현재 설정된 타겟 액터를 가져옵니다
+    AActor* CurrentTarget = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+    bool bCurrentlyHasContact = BBComponent->GetValueAsBool("Contact");
+
+    // ========== 4단계: 감지 상태에 따른 분기 처리 ==========
     if (Stimulus.WasSuccessfullySensed())
     {
-        BBComponent->SetValueAsBool("Contact", Stimulus.WasSuccessfullySensed());
-        BBComponent->SetValueAsObject("TargetActor", Actor);
-        BBComponent->SetValueAsVector("MoveToLocation", Stimulus.StimulusLocation);
+        // ===== 4-1: 감지 성공 케이스 처리 =====
+        UE_LOGFMT(LogBaseAIC, Log, "{0} 캐릭터 감지 성공!", SensedCharacter->GetName());
 
-        //@Target Actor의 상태 변화 이벤트에 바인딩 수행
-        BindTargetActorStateEvents(Actor);
-
-        //@타겟 인지 성공 이벤트
-        if (!!AgentPawnRef.IsValid())
+        // 현재 타겟이 없거나, 감지된 액터가 현재 타겟과 동일한 경우에만 업데이트
+        if (!CurrentTarget || CurrentTarget == Actor)
         {
-            AIDetectsTarget.Broadcast(true, AgentPawnRef.Get(), Actor);
+            // 블랙보드 값들을 업데이트합니다
+            BBComponent->SetValueAsBool("Contact", true);
+            BBComponent->SetValueAsObject("TargetActor", Actor);
+            BBComponent->SetValueAsVector("MoveToLocation", Stimulus.StimulusLocation);
+
+            // 새로운 타겟인 경우에만 이벤트 바인딩을 수행합니다
+            if (CurrentTarget != Actor)
+            {
+                // 기존 타겟이 있었다면 이벤트 바인딩을 해제합니다
+                if (CurrentTarget)
+                {
+                    UnbindTargetActorStateEvents(CurrentTarget);
+                    UE_LOGFMT(LogBaseAIC, Log, "기존 타겟 {0}의 이벤트 바인딩 해제", *CurrentTarget->GetName());
+                }
+
+                // 새로운 타겟에 대한 이벤트 바인딩을 설정합니다
+                BindTargetActorStateEvents(Actor);
+                UE_LOGFMT(LogBaseAIC, Log, "새로운 타겟 {0}에 이벤트 바인딩 완료", *Actor->GetName());
+            }
+
+            // 타겟 감지 성공 이벤트를 브로드캐스트합니다
+            if (AgentPawnRef.IsValid())
+            {
+                AIDetectsTarget.Broadcast(true, AgentPawnRef.Get(), Actor);
+            }
+
+            // Lock On 상태 변경 이벤트를 호출합니다
+            AILockOnStateChanged.Broadcast(true, Actor);
+
+            UE_LOGFMT(LogBaseAIC, Log, "타겟 설정 완료: Contact=true, TargetActor={0}", *Actor->GetName());
         }
         else
         {
-            UE_LOGFMT(LogBaseAIC, Warning, "유효하지 않음!");
+            // 다른 타겟이 이미 설정되어 있는 경우
+            UE_LOGFMT(LogBaseAIC, Log, "다른 타겟({0})이 이미 설정되어 있어 새로운 타겟({1}) 무시",
+                *CurrentTarget->GetName(), *Actor->GetName());
         }
-
-        //@Lock On 이벤트 호출
-        AILockOnStateChanged.Broadcast(true, Actor);
     }
+    else
+    {
+        // ===== 4-2: 감지 실패 케이스 처리 (타겟 소실) =====
+        UE_LOGFMT(LogBaseAIC, Log, "{0} 캐릭터 감지 소실!", SensedCharacter->GetName());
+
+        // 감지를 잃은 액터가 현재 타겟과 동일한 경우에만 처리합니다
+        // 이는 다른 액터의 감지 변화가 현재 타겟에 영향을 주지 않도록 보호합니다
+        if (CurrentTarget == Actor)
+        {
+            UE_LOGFMT(LogBaseAIC, Log, "현재 타겟 {0}에 대한 감지 소실 - 타겟 해제 처리 시작", *Actor->GetName());
+
+            // 블랙보드 상태를 초기화합니다
+            BBComponent->SetValueAsBool("Contact", false);
+            BBComponent->SetValueAsObject("TargetActor", nullptr);
+            //BBComponent->ClearValue("MoveToLocation");
+
+            // 타겟 액터의 상태 변화 이벤트 바인딩을 해제합니다
+            UnbindTargetActorStateEvents(Actor);
+
+            // 타겟 감지 소실 이벤트를 브로드캐스트합니다
+            if (AgentPawnRef.IsValid())
+            {
+                AIDetectsTarget.Broadcast(false, AgentPawnRef.Get(), Actor);
+            }
+
+            // Lock On 상태를 해제합니다
+            AILockOnStateChanged.Broadcast(false, nullptr);
+
+            UE_LOGFMT(LogBaseAIC, Log, "타겟 소실 처리 완료: Contact=false, TargetActor=nullptr");
+        }
+        else if (CurrentTarget)
+        {
+            // 현재 타겟이 아닌 다른 액터의 감지 소실
+            UE_LOGFMT(LogBaseAIC, Log, "감지 소실된 액터({0})가 현재 타겟({1})과 다름 - 블랙보드 상태 유지",
+                *Actor->GetName(), *CurrentTarget->GetName());
+        }
+        else
+        {
+            // 타겟이 설정되지 않은 상태에서의 감지 소실
+            UE_LOGFMT(LogBaseAIC, Log, "타겟이 설정되지 않은 상태에서 {0}의 감지 소실 - 처리 불필요", *Actor->GetName());
+        }
+    }
+
+    // ========== 5단계: 최종 상태 로그 출력 ==========
+    // 디버깅을 위해 현재 상태를 로그로 출력합니다
+    AActor* FinalTarget = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+    bool bFinalContact = BBComponent->GetValueAsBool("Contact");
+
+    UE_LOGFMT(LogBaseAIC, Log, "OnPerception 처리 완료 | Contact: {0}, TargetActor: {1}, StimulusType: {2}",
+        bFinalContact ? TEXT("true") : TEXT("false"),
+        FinalTarget ? FinalTarget->GetName() : TEXT("None"),
+        Stimulus.WasSuccessfullySensed() ? TEXT("Detected") : TEXT("Lost"));
 }
 
 void ABaseAIController::OnTargetPerceptionLost(AActor* Actor)
@@ -778,17 +866,46 @@ void ABaseAIController::OnTargetPerceptionLost(AActor* Actor)
 
     UE_LOGFMT(LogBaseAIC, Log, "타겟 {0}에 대한 인지가 소실되었습니다.", *Actor->GetName());
 
-    //@타겟 인지 성공 이벤트
-    if (!!AgentPawnRef.IsValid())
+    // 현재 블랙보드의 TargetActor와 인지를 잃은 Actor가 동일한지 확인
+    if (BBComponent)
+    {
+        AActor* CurrentTarget = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+
+        // 인지를 잃은 Actor가 현재 타겟과 동일한 경우에만 블랙보드 초기화
+        if (CurrentTarget == Actor)
+        {
+            // Contact 상태를 false로 설정
+            BBComponent->SetValueAsBool("Contact", false);
+
+            // TargetActor를 nullptr로 설정
+            BBComponent->SetValueAsObject("TargetActor", nullptr);
+
+            // 이동 목표 위치도 초기화
+            BBComponent->ClearValue("MoveToLocation");
+
+            // 타겟 액터의 상태 이벤트 바인딩 해제
+            UnbindTargetActorStateEvents(Actor);
+
+            UE_LOGFMT(LogBaseAIC, Log, "블랙보드 값 초기화 완료: Contact=false, TargetActor=nullptr");
+        }
+        else
+        {
+            UE_LOGFMT(LogBaseAIC, Log, "인지 소실된 액터({0})가 현재 타겟({1})과 다름 - 블랙보드 유지",
+                *Actor->GetName(),
+                CurrentTarget ? *CurrentTarget->GetName() : TEXT("None"));
+        }
+    }
+
+    // 타겟 인지 소실 이벤트 브로드캐스트
+    if (AgentPawnRef.IsValid())
     {
         AIDetectsTarget.Broadcast(false, AgentPawnRef.Get(), Actor);
     }
-     
-    //@Lock On 상태 변경 이벤트 호출
+
+    // Lock On 상태 변경 이벤트 호출
     AILockOnStateChanged.Broadcast(false, nullptr);
 
     UE_LOGFMT(LogBaseAIC, Log, "AI가 {0}을(를) 놓쳐 Lock On 상태 해제", *Actor->GetName());
-
 }
 
 void ABaseAIController::OnAttributeValueChanged(const FOnAttributeChangeData& Data)

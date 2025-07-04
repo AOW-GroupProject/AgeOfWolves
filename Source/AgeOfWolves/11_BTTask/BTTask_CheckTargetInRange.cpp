@@ -10,8 +10,8 @@ DEFINE_LOG_CATEGORY(LogBTTask_CheckTargetInRange)
 
 UBTTask_CheckTargetInRange::UBTTask_CheckTargetInRange(const FObjectInitializer& ObjectInitializer)
 {
-    bCreateNodeInstance = true;
-    NodeName = "Check In Range";
+	bCreateNodeInstance = true;
+	NodeName = TEXT("사정 거리 체크"); 
 }
 
 EBTNodeResult::Type UBTTask_CheckTargetInRange::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
