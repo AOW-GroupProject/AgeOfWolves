@@ -10,8 +10,13 @@ DEFINE_LOG_CATEGORY(LogBTTask_TryChangeAIState)
 
 UBTTask_TryChangeAIState::UBTTask_TryChangeAIState(const FObjectInitializer& ObjectInitializer)
 {
+<<<<<<< HEAD
 	bCreateNodeInstance = true;
 	NodeName = TEXT("AI 상태 변경");
+=======
+    bCreateNodeInstance = true;
+    NodeName = TEXT("AI 상태 변경 시도");
+>>>>>>> develop
 }
 
 EBTNodeResult::Type UBTTask_TryChangeAIState::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

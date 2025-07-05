@@ -12,7 +12,11 @@ DEFINE_LOG_CATEGORY(LogBTTask_SelectNearestLocation)
 UBTTask_SelectNearestLocation::UBTTask_SelectNearestLocation()
 {
     bCreateNodeInstance = true;
+<<<<<<< HEAD
     NodeName = TEXT("최단 거리 선택");
+=======
+    NodeName = TEXT("최단 거리 위치 찾기");
+>>>>>>> develop
 }
 
 EBTNodeResult::Type UBTTask_SelectNearestLocation::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)
