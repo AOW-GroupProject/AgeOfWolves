@@ -12,6 +12,7 @@ DEFINE_LOG_CATEGORY(LogBTTask_CheckAttackRange)
 UBTTask_CheckAttackRange::UBTTask_CheckAttackRange(const FObjectInitializer& ObjectInitializer)
 {
     bCreateNodeInstance = true;
+
     NodeName = TEXT("사정 거리 체크");
 }
 
