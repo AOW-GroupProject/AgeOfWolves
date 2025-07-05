@@ -14,14 +14,10 @@
 
 DEFINE_LOG_CATEGORY(LogAnimInstance)
 
-// =====================================================
-// 기본 설정 및 초기화 영역
-// =====================================================
+//@Default Setting
 #pragma region Default Setting
-
 UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
-    // === 기존 변수들 초기화 ===
     , LastMovementState(EMovementState::Idle)
     , MovementState(EMovementState::Idle)  // 새로운 enum 값으로 시작
     , MovementDirection(EMovementDirection::Fwd)
@@ -39,14 +35,12 @@ UBaseAnimInstance::UBaseAnimInstance(const FObjectInitializer& ObjectInitializer
     , bIsPlayingRootMotionMontageWithFullBodySlot(false)
     , bIsRootMotionCooldown(false)
     , RootMotionCooldownTime(0.0f)
-    , RootMotionCooldownDuration(1.5f)
+    , RootMotionCooldownDuration(3.f)
     , CurrentRootMotionCooldownTime(0.0f)
     , LastMovementDirection(EMovementDirection::Fwd)
-    // === 새로운 상태 기계 변수들 초기화 ===
-    , bCanSkipStartState(false)   // 기본적으로는 Start 상태를 거쳐야 함
-    , bCanSkipStopState(false)    // 기본적으로는 Stop 상태를 거쳐야 함
+    , bCanSkipStartState(false) 
+    , bCanSkipStopState(false)    
 {
-    // 참조 객체들 초기화
     OwnerCharacterBaseRef.Reset();
     CharacterMovementCompRef.Reset();
     CombatStateAttributeListenerRef = nullptr;
@@ -138,9 +132,10 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
     // === 이동 방향 각도 계산 (기존 로직 유지) ===
     FindMovementDirectionAngle();
 }
-
 #pragma endregion
 
+//@속성/정보...등
+#pragma region Property or Subwidgets or Infos...etc
 // =====================================================
 // 상태 기계 핵심 로직 영역
 // =====================================================
@@ -440,7 +435,7 @@ void UBaseAnimInstance::OnMovementStateChanged()
 // =====================================================
 #pragma region State Transition Conditions
 
-bool UBaseAnimInstance::CanTransitionFromIdleToStart() 
+bool UBaseAnimInstance::CanTransitionFromIdleToStart()
 {
     /*
      * Idle에서 Start로 전이하는 기본 조건들을 체크하는 함수
@@ -723,72 +718,6 @@ bool UBaseAnimInstance::CanTransitionFromStopToIdle()
 #pragma endregion
 
 // =====================================================
-// 헬퍼 함수들 영역
-// =====================================================
-#pragma region Helper Functions
-
-bool UBaseAnimInstance::IsInGuardCombatState() const
-{
-    /*
-     * Combat State가 2인지 확인하는 헬퍼 함수
-     *
-     * BattoujutsuCombat 상태에서는 특수한 전이 규칙이 적용됩니다.
-     * 빠른 반응을 위해 Start/Stop 단계를 건너뛸 수 있습니다.
-     */
-    return CombatType == ECombatType::GuardCombat;
-}
-
-bool UBaseAnimInstance::HasMovementInput() const
-{
-    /*
-     * 현재 이동 입력이 있는지 확인하는 헬퍼 함수 (개선됨)
-     *
-     * 기존: Acceleration.IsNearlyZero() - 너무 엄격 (거의 완벽한 0)
-     * 개선: 더 관대한 임계값 사용 - 방향 전환 시에도 자연스럽게 반응
-     */
-    if (!CharacterMovementCompRef.IsValid())
-    {
-        return false;
-    }
-
-    FVector Acceleration = CharacterMovementCompRef->GetCurrentAcceleration();
-
-    // 기존: !Acceleration.IsNearlyZero() && bShouldMove
-    // 개선: 더 관대한 임계값 사용
-    bool bHasAcceleration = Acceleration.SizeSquared() > (MovementInputThreshold * MovementInputThreshold);
-
-    UE_LOGFMT(LogAnimInstance, VeryVerbose, "HasMovementInput - Acceleration: {0}, SizeSquared: {1}, Threshold: {2}, HasAccel: {3}, ShouldMove: {4}",
-        Acceleration.ToString(),
-        Acceleration.SizeSquared(),
-        MovementInputThreshold * MovementInputThreshold,
-        bHasAcceleration,
-        bShouldMove);
-
-    return bHasAcceleration && bShouldMove;
-}
-
-EMovementState UBaseAnimInstance::DetermineTargetCycleState() const
-{
-    /*
-     * 현재 속도에 따라 목표 Cycle 상태를 결정하는 함수
-     *
-     * 캐릭터의 최대 속도 설정을 기반으로
-     * Walk 또는 Sprint 중 어느 상태로 가야 하는지 판단합니다.
-     */
-    if (!CharacterMovementCompRef.IsValid())
-    {
-        return EMovementState::Cycle_Walk;
-    }
-
-    float MaxWalkSpeed = CharacterMovementCompRef->MaxWalkSpeed;
-    bool bIsSprinting = MaxWalkSpeed >= 650.f; // 기존 로직과 동일
-
-    return bIsSprinting ? EMovementState::Cycle_Sprint : EMovementState::Cycle_Walk;
-}
-
-#pragma endregion
-
-// =====================================================
 // 기존 기능 유지 영역 (레거시 호환성)
 // =====================================================
 #pragma region Legacy Functions
@@ -801,7 +730,9 @@ void UBaseAnimInstance::FindMovementDirectionAngle()
      * 방향성 이동 시스템을 위해 캐릭터의 이동 방향을 계산합니다.
      * 상태 기계와는 독립적으로 작동합니다.
      */
-    if (!bEnableDirectionalMovement || MovementState == EMovementState::Cycle_Sprint)
+    if (!bEnableDirectionalMovement 
+        || MovementState == EMovementState::Cycle_Sprint
+        || bIsRootMotionCooldown)
     {
         DirectionAngle = 0.f;
         MovementDirection = EMovementDirection::Fwd;
@@ -864,14 +795,24 @@ void UBaseAnimInstance::FindMovementDirectionAngle()
 void UBaseAnimInstance::UpdateMovementSettings()
 {
     /*
-     * 이동 설정을 업데이트하는 함수 (기존 로직 유지)
+     * 이동 설정을 업데이트하는 함수 (Root Motion Cooldown 고려)
      *
      * 상태에 따라 캐릭터의 회전 방식을 조정합니다.
-     * 방향성 이동과 일반 이동 간의 전환을 처리합니다.
+     * Root Motion Cooldown 중에는 Controller 회전을 사용하지 않습니다.
      */
     if (!CharacterMovementCompRef.IsValid())
     {
         UE_LOGFMT(LogAnimInstance, Error, "Movement Component가 유효하지 않습니다.");
+        return;
+    }
+
+    //@Root Motion Cooldown 중일 때 특별 처리
+    if (bIsRootMotionCooldown)
+    {
+        CharacterMovementCompRef->bUseControllerDesiredRotation = false;
+        CharacterMovementCompRef->bOrientRotationToMovement = true;
+
+        UE_LOGFMT(LogAnimInstance, Log, "Root Motion Cooldown 중 - 강제 OrientRotationToMovement 설정");
         return;
     }
 
@@ -935,9 +876,6 @@ void UBaseAnimInstance::HandleEndRootMotion()
      * Root Motion 종료 처리 함수 (기존 로직 유지)
      */
     bIsPlayingRootMotionMontageWithFullBodySlot = false;
-    bIsRootMotionCooldown = true;
-    CurrentRootMotionCooldownTime = 0.0f;
-
     bool bShouldSkipBasedOnCombat = IsInGuardCombatState();
     bCanSkipStopState = bShouldSkipBasedOnCombat;
 
@@ -990,7 +928,7 @@ void UBaseAnimInstance::ListenToCombatStateAttributeChange()
         }
     }
 }
-
+#pragma endregion
 #pragma endregion
 
 // =====================================================
@@ -1095,6 +1033,20 @@ void UBaseAnimInstance::MontageStarted(UAnimMontage* Montage)
     if (bIsFullBody)
     {
         UE_LOGFMT(LogAnimInstance, Log, "전체 바디 몽타주 시작: {0}", *Montage->GetName());
+
+        //@Sprint Stop 몽타주 감지 및 처리
+        FString MontageName = Montage->GetName();
+        if (MontageName.Contains("SprintStop"))
+        {
+            bIsRootMotionCooldown = true;
+            CurrentRootMotionCooldownTime = 0.0f;
+
+            UE_LOGFMT(LogAnimInstance, Log, "Sprint Stop 몽타주 감지: {0} - Root Motion Cooldown 활성화", *MontageName);
+
+            //@이동 설정 즉시 업데이트
+            UpdateMovementSettings();
+        }
+
         HandleStartRootMotion();
     }
     else
@@ -1106,7 +1058,7 @@ void UBaseAnimInstance::MontageStarted(UAnimMontage* Montage)
 void UBaseAnimInstance::MontageEnded(UAnimMontage* Montage, bool bInterrupted)
 {
     /*
-     * 몽타주 종료 콜백 함수 (스마트 Root Motion 정리)
+     * 몽타주 종료 콜백 함수 (스마트 Root Motion 정리 + Sprint Stop 감지)
      */
     if (!Montage)
     {
@@ -1115,6 +1067,8 @@ void UBaseAnimInstance::MontageEnded(UAnimMontage* Montage, bool bInterrupted)
     }
 
     bool bIsFullBody = IsFullBodySlotMontage(Montage);
+
+
 
     // === bInterrupted 상황 처리 (개선됨) ===
     if (bInterrupted)
@@ -1192,7 +1146,64 @@ void UBaseAnimInstance::MontageEnded(UAnimMontage* Montage, bool bInterrupted)
 // 유틸리티 함수들 영역
 // =====================================================
 #pragma region Utility Functions
+bool UBaseAnimInstance::IsInGuardCombatState() const
+{
+    /*
+     * Combat State가 2인지 확인하는 헬퍼 함수
+     *
+     * BattoujutsuCombat 상태에서는 특수한 전이 규칙이 적용됩니다.
+     * 빠른 반응을 위해 Start/Stop 단계를 건너뛸 수 있습니다.
+     */
+    return CombatType == ECombatType::GuardCombat;
+}
 
+bool UBaseAnimInstance::HasMovementInput() const
+{
+    /*
+     * 현재 이동 입력이 있는지 확인하는 헬퍼 함수 (개선됨)
+     *
+     * 기존: Acceleration.IsNearlyZero() - 너무 엄격 (거의 완벽한 0)
+     * 개선: 더 관대한 임계값 사용 - 방향 전환 시에도 자연스럽게 반응
+     */
+    if (!CharacterMovementCompRef.IsValid())
+    {
+        return false;
+    }
+
+    FVector Acceleration = CharacterMovementCompRef->GetCurrentAcceleration();
+
+    // 기존: !Acceleration.IsNearlyZero() && bShouldMove
+    // 개선: 더 관대한 임계값 사용
+    bool bHasAcceleration = Acceleration.SizeSquared() > (MovementInputThreshold * MovementInputThreshold);
+
+    UE_LOGFMT(LogAnimInstance, VeryVerbose, "HasMovementInput - Acceleration: {0}, SizeSquared: {1}, Threshold: {2}, HasAccel: {3}, ShouldMove: {4}",
+        Acceleration.ToString(),
+        Acceleration.SizeSquared(),
+        MovementInputThreshold * MovementInputThreshold,
+        bHasAcceleration,
+        bShouldMove);
+
+    return bHasAcceleration && bShouldMove;
+}
+
+EMovementState UBaseAnimInstance::DetermineTargetCycleState() const
+{
+    /*
+     * 현재 속도에 따라 목표 Cycle 상태를 결정하는 함수
+     *
+     * 캐릭터의 최대 속도 설정을 기반으로
+     * Walk 또는 Sprint 중 어느 상태로 가야 하는지 판단합니다.
+     */
+    if (!CharacterMovementCompRef.IsValid())
+    {
+        return EMovementState::Cycle_Walk;
+    }
+
+    float MaxWalkSpeed = CharacterMovementCompRef->MaxWalkSpeed;
+    bool bIsSprinting = MaxWalkSpeed >= 650.f; // 기존 로직과 동일
+
+    return bIsSprinting ? EMovementState::Cycle_Sprint : EMovementState::Cycle_Walk;
+}
 
 bool UBaseAnimInstance::IsFullBodySlotMontage(const UAnimMontage* Montage) const
 {
