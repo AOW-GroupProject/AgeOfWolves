@@ -23,6 +23,7 @@
 
 #include "15_SaveGame/AOWSaveGame.h"
 #include "00_GameInstance/AOWGameInstance.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogBaseAIC)
@@ -87,6 +88,8 @@ void ABaseAIController::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 
     UpdateControlRotation(DeltaTime);
+
+    UpdateControlRotationByTargetLocation(DeltaTime);
 }
 
 void ABaseAIController::PostInitializeComponents()
@@ -151,6 +154,9 @@ void ABaseAIController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn)
 {
     Super::UpdateControlRotation(DeltaTime, false);
 
+    if (CurrentUpdateControlRotationType == EAIUpdateControlRotationType::TargetLocation)
+        return;
+    
     APawn* const AgentPawn = GetPawn();
     if (!AgentPawn) return;
 
@@ -161,9 +167,13 @@ void ABaseAIController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn)
         TargetActor = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
     }
 
-    //@타겟이 없으면 회전 업데이트 하지 않음
-    if (!TargetActor) return;
-
+    if (TargetActor)
+        CurrentUpdateControlRotationType = EAIUpdateControlRotationType::TargetActor;
+    else  //@타겟이 없으면 회전 업데이트 하지 않음
+    {
+        CurrentUpdateControlRotationType = EAIUpdateControlRotationType::None;
+        return;
+    }
     //@현재 위치와 회전
     FVector Start = AgentPawn->GetActorLocation();
     FRotator CurrentRotation = GetControlRotation();
@@ -185,6 +195,58 @@ void ABaseAIController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn)
 
     //@컨트롤러 회전 설정
     SetControlRotation(FinalRotation);
+}
+
+void ABaseAIController::UpdateControlRotationByTargetLocation(float DeltaTime)
+{
+    //@TargetActor로  ControlRotation 중일때나 none일때는 처리 안함
+    if (CurrentUpdateControlRotationType == EAIUpdateControlRotationType::None
+        || CurrentUpdateControlRotationType == EAIUpdateControlRotationType::TargetActor)
+        return;
+
+    APawn* const AgentPawn = GetPawn();
+    if (!AgentPawn) return;
+    
+    //@현재 위치와 회전
+    FVector Start = AgentPawn->GetActorLocation();
+    FRotator CurrentRotation = GetControlRotation();
+    FRotator AgentCurrentRotation = AgentPawn->GetActorRotation();
+
+    //@타겟을 향한 회전 계산 (GetFocalPoint 대신 직접 타겟 위치 사용)
+    TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, TargetLocationForUpdateRotation);
+
+    //@Yaw만 사용
+    TargetRotation.Pitch = 0.0f;
+    TargetRotation.Roll = 0.0f;
+
+    //@보간된 최종 회전 계산
+    FRotator FinalRotation = UKismetMathLibrary::RInterpTo(
+        CurrentRotation,
+        TargetRotation,
+        DeltaTime,
+        10.f
+    );
+
+    // AgentPawn->SetActorRotation(FinalRotation);
+    SetControlRotation(FinalRotation);
+
+    // 회전 완료 조건 (Yaw 기준, 약간의 오차 허용)
+    float YawDiff = FMath::Abs(FMath::FindDeltaAngleDegrees(CurrentRotation.Yaw, TargetRotation.Yaw));
+    if (YawDiff < 10.f)
+    {
+        CurrentUpdateControlRotationType = EAIUpdateControlRotationType::None;
+        
+        UE_LOG(LogBaseAIC, Log, TEXT("Completed UpdateControlRotation: %.2f, TargetLocation : %s"), YawDiff, *TargetLocationForUpdateRotation.ToString());
+        
+    }
+
+        UE_LOG(LogBaseAIC, Log, TEXT("Roatating UpdateControlRotation: %.2f, TargetLocation : %s , CurrentRotation : %s, AgentCurrentRotation : %s , FinalRotation : %s, Start : %s"),
+            YawDiff, *TargetLocationForUpdateRotation.ToString()
+            , *CurrentRotation.ToString()
+            ,*AgentCurrentRotation.ToString()
+            ,*FinalRotation.ToString()
+            ,*Start.ToString());
+    
 }
 
 void ABaseAIController::ExternalBindToAnimInstance(APawn* InPawn)
@@ -258,6 +320,10 @@ void ABaseAIController::InternalBindingToASC()
 
     //@내부 바인딩
     AbilitySystemComponent->CharacterStateEventOnGameplay.AddUFunction(this, "OnCharacterStateEventOnGameplay");
+
+    AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(FGameplayTag::RequestGameplayTag("EventTag.OnDamaged"))
+    .AddUObject(this, &ABaseAIController::OnDamagedEventOnGamePlay);
+    
 
     UE_LOGFMT(LogBaseAIC, Log, "캐릭터 상태 이벤트 콜백이 성공적으로 바인딩되었습니다");
 }
@@ -485,6 +551,7 @@ void ABaseAIController::LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame)
 
 void ABaseAIController::ChangeAgentAIState(EAIState InStateType)
 {
+    AIState = InStateType;
 }
 
 void ABaseAIController::HandleCharacterStateEvent(const FGameplayTag& CharacterStateTag)
@@ -964,6 +1031,42 @@ void ABaseAIController::OnCharacterStateEventOnGameplay(AActor* Actor, const FGa
     UE_LOGFMT(LogBaseAIC, Log,
         "AI 캐릭터 상태 이벤트 처리 | 태그: {0}",
         CharacterStateTag.GetTagName().ToString());
+}
+
+void ABaseAIController::OnDamagedEventOnGamePlay(const FGameplayEventData* Payload)
+{
+    if (!Payload) return;
+
+    //@AI State가 Idle 이면
+    if (AIState == EAIState::Idle)
+    {
+        APawn* const AgentPawn = GetPawn();
+        if (!AgentPawn) return; 
+
+        ACharacter* MyCharacter = Cast<ACharacter>(AgentPawn);
+        if (!MyCharacter) return;
+
+
+        //@ 히트 지점으로 돌아볼수 있게 위치 캐싱
+        TargetLocationForUpdateRotation = Payload->ContextHandle.GetHitResult()->ImpactPoint;
+        //@ Tick에서 회전할수 있게 타입 설정
+        CurrentUpdateControlRotationType = EAIUpdateControlRotationType::TargetLocation;
+
+        //@ControllRotation 할것이기에 제어 플레그 true
+        UCharacterMovementComponent* CharacterMovementComp = MyCharacter->GetCharacterMovement();
+        if (CharacterMovementComp)
+        {
+            CharacterMovementComp->bUseControllerDesiredRotation = true;
+            CharacterMovementComp->bOrientRotationToMovement = false;
+        }
+        
+        UE_LOG(LogBaseAIC, Log, TEXT("OnDamagedEventOnGamePlay [AI] OnDamaged 이벤트 수신 => impactPoint : %s")
+            , *TargetLocationForUpdateRotation.ToString());
+    }
+    else
+    {
+        UE_LOG(LogBaseAIC, Log, TEXT("OnDamagedEventOnGamePlay [AI] OnDamaged 이벤트 수신 하였지만 AIState가 Idle 아님"));
+    }
 }
 
 bool ABaseAIController::OnCombatPatternExitComplete()

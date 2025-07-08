@@ -7,6 +7,7 @@
 #include "GameplayTagContainer.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "AbilitySystemInterface.h"
+#include "Abilities/GameplayAbilityTypes.h"
 
 #include "BaseAIController.generated.h"
 
@@ -74,6 +75,19 @@ enum class EAISharingInfoType : uint8
 	Leader          UMETA(DisplayName = "리더에게만"),
 	Exclude         UMETA(DisplayName = "제외 대상 제외"),
 	Custom          UMETA(DisplayName = "커스텀 대상")
+};
+
+/*
+*   @EAIUpdateControlRotationType
+*
+*   AI가 Update(매 틱) 회전할 타입을 정의합니다
+*/
+UENUM(BlueprintType)
+enum class EAIUpdateControlRotationType : uint8
+{
+	None             UMETA(DisplayName = "UpdateControlRotation 안함"),
+	TargetActor        UMETA(DisplayName = "TargetActor로 회전"),
+	TargetLocation      UMETA(DisplayName = "Target 위치로 회전"),
 };
 #pragma endregion
 
@@ -226,6 +240,7 @@ protected:
 	virtual void PostInitializeComponents() override;
 	virtual void OnPossess(class APawn* InPawn) override;
 	virtual void UpdateControlRotation(float DeltaTime, bool bUpdatePawn = true);
+	virtual void UpdateControlRotationByTargetLocation(float DeltaTime);
 	//~End Of AAIController Interface
 
 protected:
@@ -337,6 +352,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "AI | AI 유형")
 		EAIType AIType;
 
+	//@AI 유형
+	UPROPERTY(VisibleAnywhere, Category = "AI | AI 상태")
+	EAIState AIState;
+	
+
 	//@AI가 속한 그룹 ID
 	UPROPERTY()
 		FGuid AIGroupID;
@@ -360,6 +380,12 @@ protected:
 		float MinAttackRange;
 	UPROPERTY(EditDefaultsOnly)
 		float MaxAttackRange;
+
+protected:
+	//현재  UpdateControlRotation 타입
+	EAIUpdateControlRotationType CurrentUpdateControlRotationType;
+	FVector TargetLocationForUpdateRotation;
+	
 #pragma endregion
 
 //@Delegates
@@ -418,6 +444,10 @@ protected:
 		void OnCharacterStateEventOnGameplay(AActor* Actor, const FGameplayTag& CharacterStateTag);
 
 protected:
+	//@캐릭터 피격 ASC 이벤트 발생시 호출되는 콜백 
+	void OnDamagedEventOnGamePlay(const FGameplayEventData* Payload);
+	
+protected:
 	//@전투 패턴 Exit Block 완료 콜백
 	UFUNCTION()
 		bool OnCombatPatternExitComplete();
@@ -451,6 +481,9 @@ public:
 
 public:
 	FORCEINLINE EAIType GetAIType() const { return AIType; }
+
+public:
+	FORCEINLINE EAIState GetAIState() const { return AIState; }
 
 public:
 	FORCEINLINE FGuid GetAIGroupID() const { return AIGroupID.IsValid() ? AIGroupID : FGuid(); }
