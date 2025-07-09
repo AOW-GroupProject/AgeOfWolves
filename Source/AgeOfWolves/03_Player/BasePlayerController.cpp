@@ -120,7 +120,6 @@ void ABasePlayerController::InternalBindToPlayerState()
     UE_LOGFMT(LogBasePC, Log, "Player State Death 이벤트 바인딩 완료");
 }
 
-
 void ABasePlayerController::InitializePlayerController()
 {
     //@내부 바인딩...
@@ -206,7 +205,6 @@ void ABasePlayerController::HandleCharacterDeath()
     CurrentRespawnState = ERespawnState::DeathScreen;
     GetWorldTimerManager().SetTimer(RespawnSequenceTimer, this, &ABasePlayerController::ProcessRespawnSequence, 3.0f, false);
 }
-
 
 void ABasePlayerController::ProcessRespawnSequence()
 {
@@ -296,7 +294,6 @@ void ABasePlayerController::HandleCharacterRevive()
         false
     );
 }
-
 #pragma endregion
 
 //@Callbacks
