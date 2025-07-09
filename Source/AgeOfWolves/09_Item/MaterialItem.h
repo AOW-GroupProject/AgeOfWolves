@@ -24,7 +24,7 @@ public:
 
 #pragma region Activation
 protected:
-	virtual bool TryActivateItem_Implementation() override;
+	virtual bool TryActivateItem_Implementation(UGameInstance* GameInstance = nullptr) override;
 #pragma endregion
 
 #pragma region Property

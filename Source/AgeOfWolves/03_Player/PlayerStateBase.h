@@ -37,6 +37,9 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGamep
 DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyPlayerDeathEvent, APlayerStateBase*);
 DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyPlayerRevivalEvent, APlayerStateBase*);
 
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FRequestGrantAbilities, const TArray<TSubclassOf<UBaseGameplayAbility>>&, const FGameplayTag&, bool);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FRequestActivateAbilities, const TArray<TSubclassOf<UBaseGameplayAbility>>&, const FGameplayTag&, bool);
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FRequestApplyEffects, const TArray<TSubclassOf<UGameplayEffect>>&, const FGameplayTag&, bool);
 #pragma endregion
 
 /**
@@ -49,6 +52,7 @@ class AGEOFWOLVES_API APlayerStateBase : public APlayerState, public IAbilitySys
 //@친추 클래스
 #pragma region Friend Class
 	friend class ABasePlayerController;
+	friend class ASpecUpItem;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -67,10 +71,11 @@ protected:
 
 protected:
 	//@내부 바인딩
+	void InternalBindingToASC();
+	
 
 protected:
 	//@외부 바인딩
-	void InternalBindingToASC();
 
 public:
 	UFUNCTION()
@@ -87,6 +92,15 @@ public:
 	void LoadDefaultAbilitySystemFromAbilityManager();
 	//@캐릭터의 Ability System 정보를 Save File로부터 Load합니다.
 	void LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame);
+
+protected:
+	//@아이템 어빌리티 부여 처리 - 유효성 검사 후 이벤트 발생
+	UFUNCTION(BlueprintCallable, Category = "Player State | Item Processing")
+		bool ProcessItemAbilities(const TArray<TSubclassOf<UBaseGameplayAbility>>& Abilities, const FGameplayTag& ItemTag, bool bAllowDuplicate = false);
+
+	//@아이템 어빌리티 활성화 처리 - 유효성 검사 후 이벤트 발생
+	UFUNCTION(BlueprintCallable, Category = "Player State | Item Processing")
+		bool ProcessItemAbilityActivation(const TArray<TSubclassOf<UBaseGameplayAbility>>& Abilities, const FGameplayTag& ItemTag, bool bForceActivate = false);
 
 protected:
 	FBaseAbilitySet_GrantedHandles* SetGrantedHandles;
@@ -121,6 +135,14 @@ public:
 	FNotifyPlayerDeathEvent NotifyPlayerDeathEvent;
 	//@부활 어빌리티 종료 이벤트
 	FNotifyPlayerRevivalEvent NotifyPlayerRevivalEvent;
+
+public:
+	//@어빌리티 등록 요청
+	FRequestGrantAbilities RequestGrantAbilities;
+	//@어빌리티 활성화 요청
+	FRequestActivateAbilities RequestActivateAbilities;
+	//@이팩트 적용 요청
+	FRequestApplyEffects RequestApplyEffects;
 #pragma endregion
 
 //@Callbacks

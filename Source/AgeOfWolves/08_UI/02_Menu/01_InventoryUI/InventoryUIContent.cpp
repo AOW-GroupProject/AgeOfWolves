@@ -521,10 +521,27 @@ void UInventoryUIContent::OnInventoryToolBarButtonClicked(EItemType ItemType)
 #pragma region Utility
 UUserWidget* UInventoryUIContent::GetItemSlotsUI(EItemType ItemType) const
 {
+    // 기존 맵에서 찾기 시도
     if (auto FoundWidget = MItemSlots.Find(ItemType))
     {
         return *FoundWidget;
     }
+
+    // SpecUp 타입에 대한 특별한 처리
+    if (ItemType == EItemType::SpecUp)
+    {
+        UE_LOGFMT(LogInventoryUIContent, Warning,
+            "SpecUp 타입의 ItemSlots가 설정되지 않았습니다. 이는 ItemSlotInformations 배열에 SpecUp 설정이 누락되었기 때문일 수 있습니다.");
+
+        // TODO: 향후 SpecUp 전용 UI가 필요하다면 여기서 동적 생성 고려
+        return nullptr;
+    }
+
+    // 다른 타입들에 대한 일반적인 경고
+    UE_LOGFMT(LogInventoryUIContent, Warning,
+        "{0} 타입의 ItemSlots를 찾을 수 없습니다. ItemSlotInformations에서 해당 타입이 설정되었는지 확인하세요.",
+        *UEnum::GetValueAsString(ItemType));
+
     return nullptr;
 }
 
