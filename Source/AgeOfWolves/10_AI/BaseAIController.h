@@ -131,6 +131,10 @@ struct FSharingInfoWithGroup
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float ValidTime = 5.0f;
 
+	//@ 공유 오브젝트 (ex. 공유될 타겟 오브젝트 등)
+	UPROPERTY()
+	AActor* OptionalObject;
+	
 	//@제외할 대상 (SharingType이 Exclude일 때 사용)
 	UPROPERTY()
 		TArray<TWeakObjectPtr<AActor>> ExcludedTargets;
@@ -157,12 +161,14 @@ struct FSharingInfoWithGroup
 		int32 InPriority = 0,
 		float InValidTime = 5.0f,
 		const FVector& InLastKnownLocation = FVector::ZeroVector,
-		AActor* InDetectedTarget = nullptr)
+		AActor* InDetectedTarget = nullptr,
+		AActor* InOptionalObject = nullptr)
 		: InfoID(FGuid::NewGuid())
 		, SharingType(InSharingType)
 		, StateTag(InStateTag)
 		, Priority(InPriority)
 		, ValidTime(InValidTime)
+		, OptionalObject(InOptionalObject)
 	{
 		CreationTime = GWorld ? GWorld->GetTimeSeconds() : 0.0f;
 	}
@@ -300,7 +306,8 @@ protected:
 		const FGameplayTag& StateTag,
 		EAISharingInfoType SharingType = EAISharingInfoType::All,
 		int32 Priority = 1,
-		float ValidTime = 5.0f);
+		float ValidTime = 5.0f,
+		AActor* OptionalObject = nullptr);
 
 protected:
 	//@AI Group으로부터 전달 받은 공유 정보 처리
@@ -478,7 +485,9 @@ public:
 	//~IAbilitySystemInterface Interface
 	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	//~End Of IAbilitySystemInterface Interface
-
+public:
+	FORCEINLINE UBlackboardComponent* GetBlackboardComponent() const {return BBComponent;}
+	
 public:
 	FORCEINLINE EAIType GetAIType() const { return AIType; }
 
@@ -496,6 +505,9 @@ public:
 public:
 	virtual FGenericTeamId GetGenericTeamId() const override;
 	virtual ETeamAttitude::Type GetTeamAttitudeTowards(const AActor& Other) const override;
+
+public:
+	FGameplayTag GetCurrentCharacterStateTag() const;
 #pragma endregion
 
 };

@@ -680,7 +680,8 @@ bool ABaseAIController::ShareInfoToGroup(
     const FGameplayTag& StateTag,
     EAISharingInfoType SharingType,
     int32 Priority,
-    float ValidTime)
+    float ValidTime,
+    AActor* OptionalObject)
 {
     // 소유한 Pawn이 있는지 확인
     AActor* ControlledActor = GetPawn();
@@ -697,6 +698,7 @@ bool ABaseAIController::ShareInfoToGroup(
     SharingInfo.StateTag = StateTag;
     SharingInfo.Priority = Priority;
     SharingInfo.ValidTime = ValidTime;
+    SharingInfo.OptionalObject = OptionalObject;
 
     //@그룹과 공유할 정보 전달 이벤트
     SendInfoToBelongingGroup.Broadcast(ControlledActor, SharingInfo);
@@ -725,7 +727,7 @@ void ABaseAIController::ReceiveInfoFromGroup(AActor* SenderAI, const FSharingInf
     //@전달 받은 공유 정보 처리
     ProcessReceivedGroupInfo(SenderAI, SharingInfo);
 
-    UE_LOGFMT(LogBaseAIC, Log, "그룹원 사망 정보 수신: 발신자={0}, 요청={1}",
+    UE_LOGFMT(LogBaseAIC, Log, "그룹원  정보 수신: 발신자={0}, 요청={1}",
         *SenderAI->GetName(), *SharingInfo.ResultTag.ToString());
 
 }
@@ -756,28 +758,43 @@ void ABaseAIController::ProcessCrowdControlInfo(AActor* SenderAI, const FSharing
         return;
     }
 
-    //@CrowdControl.Threatened : 대상에 대한 '공포' 반응
-    if (SharingInfo.ResultTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("CrowdControl.Threatened")))
+    const FGameplayTag ThreatenedTag     = FGameplayTag::RequestGameplayTag("CrowdControl.Threatened");    //@ 대상에 대한 '공포' 반응
+    const FGameplayTag CoverFireReqTag   = FGameplayTag::RequestGameplayTag("CrowdControl.CoverFireRequested");  //@  CoverFire요청 반응
+
+    const FGameplayTag& ResultTag = SharingInfo.ResultTag;
+
+    //@ CrowdControl.Threatened : 전투 중 상태만 이벤트 발생
+    if (ResultTag.MatchesTagExact(ThreatenedTag))
     {
-        //@현재 전투 중인지 확인
         AActor* CurrentTarget = nullptr;
         if (BBComponent)
         {
             CurrentTarget = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
         }
 
-        //@타겟이 있는 경우만 이벤트 발생
         if (!IsValid(CurrentTarget))
         {
             return;
         }
 
-        //@군중 제어 발생 이벤트 호출
-        CrowdControlEventTriggered.ExecuteIfBound(SharingInfo.ResultTag);
+        CrowdControlEventTriggered.ExecuteIfBound(ResultTag);
 
         UE_LOGFMT(LogBaseAIC, Log, "위협 상태에서 전투 중 - 군중 제어 이벤트 발생 | 타겟: {0}, 우선순위: {1}",
             *CurrentTarget->GetName(), SharingInfo.Priority);
     }
+    //@ CrowdControl.CoverFireRequested : CoverFire요청 반응
+    else if (ResultTag.MatchesTagExact(CoverFireReqTag))
+    {
+        // 블랙보드 값들을 업데이트합니다
+        BBComponent->SetValueAsBool("Contact", true);
+        BBComponent->SetValueAsObject("TargetActor", SharingInfo.OptionalObject);
+        
+        CrowdControlEventTriggered.ExecuteIfBound(ResultTag);
+
+        UE_LOGFMT(LogBaseAIC, Log, "CoverFire요청 반응 - 군중 제어 이벤트 발생 | 타겟: {0}",
+    *SharingInfo.OptionalObject->GetName());
+    }
+
 
     UE_LOGFMT(LogBaseAIC, Log, "군중 제어 이벤트 발생 | 발신자: {0}, 군중 제어 요청: {1}, 우선순위: {2}",
         *SenderAI->GetName(), *SharingInfo.ResultTag.ToString(), SharingInfo.Priority);
@@ -861,6 +878,13 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
                 AIDetectsTarget.Broadcast(true, AgentPawnRef.Get(), Actor);
             }
 
+            // 상태 태그 추출
+            FGameplayTag StateTag = GetCurrentCharacterStateTag();
+            if (StateTag.IsValid())
+            {
+                //@타겟 감지를 다른 AI에게 공유하도록 정보 공유
+                ShareInfoToGroup(StateTag, EAISharingInfoType::All, 1,5.f, Actor);
+            }
             // Lock On 상태 변경 이벤트를 호출합니다
             AILockOnStateChanged.Broadcast(true, Actor);
 
@@ -1149,4 +1173,38 @@ ETeamAttitude::Type ABaseAIController::GetTeamAttitudeTowards(const AActor& Othe
         ? ETeamAttitude::Friendly
         : ETeamAttitude::Hostile;
 }
+
+FGameplayTag ABaseAIController::GetCurrentCharacterStateTag() const
+{
+    if (!AbilitySystemComponent)
+    {
+        return FGameplayTag(); // Invalid
+    }
+
+    FGameplayEffectQuery Query; // 전체 매칭용 Query
+    TArray<FActiveGameplayEffectHandle> Handles = AbilitySystemComponent->GetActiveEffects(Query);
+
+    for (const FActiveGameplayEffectHandle& Handle : Handles)
+    {
+        const FActiveGameplayEffect* ActiveEffect = AbilitySystemComponent->GetActiveGameplayEffect(Handle);
+        if (!ActiveEffect || !ActiveEffect->Spec.Def)
+        {
+            continue;
+        }
+
+        const FGameplayTagContainer& AssetTags = ActiveEffect->Spec.Def->InheritableGameplayEffectTags.Added;
+
+        for (const FGameplayTag& Tag : AssetTags)
+        {
+            if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag("State")))
+            {
+                UE_LOGFMT(LogASC, Log, "현재 적용된 상태 태그: {0}", Tag.ToString());
+                return Tag;
+            }
+        }
+    }
+    
+    return FGameplayTag(); // 상태가 없을 경우
+}
+
 #pragma endregion
