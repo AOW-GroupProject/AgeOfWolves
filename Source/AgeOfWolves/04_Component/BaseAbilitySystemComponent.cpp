@@ -23,6 +23,9 @@ UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitialize
 	InputReleasedSpecHandles.Reset();
 	InputHeldSpecHandles.Reset();
 
+	//@Pending Abilities
+	PendingReleaseAbilities.Reset();
+
 	//@Chain Window 활성화
 	bChainWindowActive = false;
 	//@Chain Mapping 목록
@@ -32,6 +35,23 @@ UBaseAbilitySystemComponent::UBaseAbilitySystemComponent(const FObjectInitialize
 	//@상호작용 시스템 초기화
 	bInteractionAvailable = false;
 	InteractionTargetActor = nullptr;
+}
+
+void UBaseAbilitySystemComponent::ExternalBindToPlayerState(APlayerStateBase* PlayerState)
+{
+	//@PS
+	if (!PlayerState)
+	{
+		UE_LOGFMT(LogASC, Warning, "ExternalBindToPlayerState: PlayerState가 유효하지 않습니다");
+		return;
+	}
+
+	//외부 바인딩...
+	PlayerState->RequestGrantAbilities.AddUFunction(this, "OnRequestGrantAbilities");
+	PlayerState->RequestActivateAbilities.AddUFunction(this, "OnRequestActivateAbilities");
+	PlayerState->RequestApplyEffects.AddUFunction(this, "OnRequestApplyEffects");
+
+	UE_LOGFMT(LogASC, Log, "PlayerState 이벤트 바인딩 완료");
 }
 
 void UBaseAbilitySystemComponent::ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC)
@@ -217,7 +237,7 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 		}
 	}
 
-	// @Press입력 처리
+	//@Press 입력 처리
 	for (const FGameplayAbilitySpecHandle& SpecHandle : InputPressedSpecHandles)
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
@@ -225,7 +245,6 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 			if (AbilitySpec->Ability)
 			{
 				AbilitySpec->InputPressed = true;
-				// @InputPressed + 다중 키 입력
 				if (!AbilitySpec->IsActive())
 				{
 					const UBaseGameplayAbility* BaseAbilityCDO = Cast<UBaseGameplayAbility>(AbilitySpec->Ability);
@@ -238,22 +257,39 @@ void UBaseAbilitySystemComponent::ProcessAbilityInput(float DeltaTime, bool bGam
 		}
 	}
 
+	//@활성화 대상 어빌리티들 실행
 	for (const FGameplayAbilitySpecHandle& AbilitySpecHandle : AbilitiesToActivate)
 	{
 		TryActivateAbility(AbilitySpecHandle);
 	}
 
-	// @InputReleased
+	//@InputReleased 처리
 	for (const FGameplayAbilitySpecHandle& SpecHandle : InputReleasedSpecHandles)
 	{
 		if (FGameplayAbilitySpec* AbilitySpec = FindAbilitySpecFromHandle(SpecHandle))
 		{
 			if (AbilitySpec->Ability)
 			{
-				// @InputRelased 활성화
-				if (AbilitySpec->IsActive())
+				const UBaseGameplayAbility* BaseAbilityCDO = Cast<UBaseGameplayAbility>(AbilitySpec->Ability);
+				if (BaseAbilityCDO)
 				{
-					AbilitySpecInputReleased(*AbilitySpec);
+					//@OnInputReleased 정책 어빌리티 활성화
+					if (BaseAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::OnInputReleased)
+					{
+						if (!AbilitySpec->IsActive())
+						{
+							if (TryActivateAbility(AbilitySpec->Handle))
+							{
+								UE_LOGFMT(LogASC, Log, "입력 해제로 어빌리티 활성화: {0}", *BaseAbilityCDO->GetName());
+							}
+							else
+							{
+								// 활성화 실패 시 예약 목록에 추가
+								PendingReleaseAbilities.AddUnique(AbilitySpec->Handle);
+								UE_LOGFMT(LogASC, Log, "입력 해제 어빌리티 예약됨: {0}", *BaseAbilityCDO->GetName());
+							}
+						}
+					}
 				}
 			}
 		}
@@ -268,6 +304,7 @@ void UBaseAbilitySystemComponent::ClearAbilityInput()
 	InputPressedSpecHandles.Reset();
 	InputReleasedSpecHandles.Reset();
 	InputHeldSpecHandles.Reset();
+	PendingReleaseAbilities.Reset(); // 추가
 }
 
 void UBaseAbilitySystemComponent::AbilityInputTagPressed(const FGameplayTag& InputTag)
@@ -1123,10 +1160,38 @@ void UBaseAbilitySystemComponent::OnAbilityEnded(UGameplayAbility* Ability)
 		InteractionCompleted.Broadcast(InteractionTargetActor.Get(), CurrentPotentialInteraction);
 	}
 
+	// 마지막에 추가: 예약된 Release 어빌리티들 활성화 시도
+	TArray<FGameplayAbilitySpecHandle> AbilitiesToRemove;
+
+	for (const FGameplayAbilitySpecHandle& Handle : PendingReleaseAbilities)
+	{
+		if (const FGameplayAbilitySpec* Spec = FindAbilitySpecFromHandle(Handle))
+		{
+			if (TryActivateAbility(Handle))
+			{
+				UE_LOGFMT(LogASC, Log, "예약된 Release 어빌리티 활성화: {0}", *Spec->Ability->GetName());
+				AbilitiesToRemove.Add(Handle);
+				break; // 하나만 활성화하고 종료
+			}
+		}
+		else
+		{
+			// 유효하지 않은 핸들은 제거 대상에 추가
+			AbilitiesToRemove.Add(Handle);
+		}
+	}
+
+	// 처리된 어빌리티들을 예약 목록에서 제거
+	for (const FGameplayAbilitySpecHandle& Handle : AbilitiesToRemove)
+	{
+		PendingReleaseAbilities.Remove(Handle);
+	}
+
 	UE_LOGFMT(LogASC, Warning, "{0}가 종료되었습니다.", Ability->GetName());
 
 	// @TODO: Ability 활성화 종료 시점에 ASC에서 할 일들...
 	AbilityEnded.Broadcast(Ability);
+
 }
 
 void UBaseAbilitySystemComponent::OnAbilityFailed(const UGameplayAbility* Ability, const FGameplayTagContainer& ReasonTags)
@@ -1318,10 +1383,192 @@ void UBaseAbilitySystemComponent::OnPlayerRespawnCompleted(APlayerController* Re
 	}
 
 }
+
+void UBaseAbilitySystemComponent::OnRequestGrantAbilities(const TArray<TSubclassOf<UBaseGameplayAbility>>& Abilities, const FGameplayTag& ItemTag, bool bAllowDuplicate)
+{
+	if (Abilities.IsEmpty())
+	{
+		UE_LOGFMT(LogASC, Warning, "OnRequestGrantAbilities: 빈 어빌리티 배열 - {0}", ItemTag.ToString());
+		return;
+	}
+
+	UE_LOGFMT(LogASC, Log, "어빌리티 부여 시작: {0} ({1}개)", ItemTag.ToString(), Abilities.Num());
+
+	int32 SuccessCount = 0;
+	for (const auto& AbilityClass : Abilities)
+	{
+		if (!AbilityClass)
+		{
+			UE_LOGFMT(LogASC, Warning, "유효하지 않은 어빌리티 클래스");
+			continue;
+		}
+
+		//@중복 검사
+		if (!bAllowDuplicate)
+		{
+			bool bAlreadyExists = false;
+			const TArray<FGameplayAbilitySpec>& Abilities = GetActivatableAbilities();
+			for (const FGameplayAbilitySpec& AbilitySpec : Abilities)
+			{
+				if (AbilitySpec.Ability && AbilitySpec.Ability->GetClass() == AbilityClass)
+				{
+					bAlreadyExists = true;
+					break;
+				}
+			}
+
+			if (bAlreadyExists)
+			{
+				UE_LOGFMT(LogASC, Warning, "어빌리티 {0} 이미 존재", *AbilityClass->GetName());
+				continue;
+			}
+		}
+
+		//@어빌리티 등록
+		FGameplayAbilitySpec AbilitySpec(AbilityClass, 1, INDEX_NONE);
+		FGameplayAbilitySpecHandle Handle = GiveAbility(AbilitySpec);
+
+		if (Handle.IsValid())
+		{
+			SuccessCount++;
+			UE_LOGFMT(LogASC, Log, "어빌리티 {0} 부여 성공", *AbilityClass->GetName());
+		}
+	}
+
+	UE_LOGFMT(LogASC, Log, "어빌리티 부여 완료: {0}/{1}", SuccessCount, Abilities.Num());
+}
+
+void UBaseAbilitySystemComponent::OnRequestActivateAbilities(const TArray<TSubclassOf<UBaseGameplayAbility>>& Abilities, const FGameplayTag& ItemTag, bool bForceActivate)
+{
+	if (Abilities.IsEmpty())
+	{
+		UE_LOGFMT(LogASC, Warning, "OnRequestActivateAbilities: 빈 어빌리티 배열 - {0}", ItemTag.ToString());
+		return;
+	}
+
+	UE_LOGFMT(LogASC, Log, "어빌리티 활성화 시작: {0} ({1}개)", ItemTag.ToString(), Abilities.Num());
+
+	int32 SuccessCount = 0;
+	for (const auto& AbilityClass : Abilities)
+	{
+		if (!AbilityClass)
+		{
+			UE_LOGFMT(LogASC, Warning, "유효하지 않은 어빌리티 클래스");
+			continue;
+		}
+
+		FGameplayAbilitySpec* FoundSpec = FindAbilitySpecFromClass(AbilityClass);
+		if (!FoundSpec)
+		{
+			UE_LOGFMT(LogASC, Warning, "어빌리티 {0} 스펙을 찾을 수 없음", *AbilityClass->GetName());
+			continue;
+		}
+
+		FGameplayAbilitySpecHandle SpecHandle = FoundSpec->Handle;
+		if (!SpecHandle.IsValid())
+		{
+			UE_LOGFMT(LogASC, Warning, "어빌리티 {0} 핸들이 유효하지 않음", *AbilityClass->GetName());
+			continue;
+		}
+
+		if (!TryActivateAbility(SpecHandle))
+		{
+			UE_LOGFMT(LogASC, Warning, "어빌리티 {0} 활성화 실패", *AbilityClass->GetName());
+			continue;
+		}
+
+		SuccessCount++;
+		UE_LOGFMT(LogASC, Log, "어빌리티 {0} 활성화 성공", *AbilityClass->GetName());
+	}
+
+	UE_LOGFMT(LogASC, Log, "어빌리티 활성화 완료: {0}/{1}", SuccessCount, Abilities.Num());
+}
+
+void UBaseAbilitySystemComponent::OnRequestApplyEffects(const TArray<TSubclassOf<UGameplayEffect>>& Effects, const FGameplayTag& ItemTag, bool bAllowDuplicate)
+{
+	if (Effects.IsEmpty())
+	{
+		UE_LOGFMT(LogASC, Warning, "OnRequestApplyEffects: 빈 이펙트 배열 - {0}", ItemTag.ToString());
+		return;
+	}
+
+	UE_LOGFMT(LogASC, Log, "이펙트 적용 시작: {0} ({1}개)", ItemTag.ToString(), Effects.Num());
+
+	int32 SuccessCount = 0;
+	for (const auto& EffectClass : Effects)
+	{
+		if (!EffectClass)
+		{
+			UE_LOGFMT(LogASC, Warning, "유효하지 않은 이펙트 클래스");
+			continue;
+		}
+
+		// 중복 검사
+		if (!bAllowDuplicate)
+		{
+			bool bAlreadyActive = false;
+			const FActiveGameplayEffectsContainer& ActiveEffects = GetActiveGameplayEffects();
+			for (FActiveGameplayEffectsContainer::ConstIterator It = ActiveEffects.CreateConstIterator(); It; ++It)
+			{
+				if (It->Spec.Def && It->Spec.Def->GetClass() == EffectClass)
+				{
+					bAlreadyActive = true;
+					break;
+				}
+			}
+
+			if (bAlreadyActive)
+			{
+				UE_LOGFMT(LogASC, Warning, "이펙트 {0} 이미 활성화됨", *EffectClass->GetName());
+				continue;
+			}
+		}
+
+		// 이펙트 적용
+		FGameplayEffectContextHandle ContextHandle = MakeEffectContext();
+		FGameplayEffectSpecHandle SpecHandle = MakeOutgoingSpec(EffectClass, 1.0f, ContextHandle);
+
+		if (SpecHandle.IsValid())
+		{
+			FActiveGameplayEffectHandle ActiveHandle = ApplyGameplayEffectSpecToSelf(*SpecHandle.Data.Get());
+			if (ActiveHandle.IsValid())
+			{
+				SuccessCount++;
+				UE_LOGFMT(LogASC, Log, "이펙트 {0} 적용 성공", *EffectClass->GetName());
+			}
+		}
+	}
+
+	UE_LOGFMT(LogASC, Log, "이펙트 적용 완료: {0}/{1}", SuccessCount, Effects.Num());
+}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+FGameplayTag UBaseAbilitySystemComponent::GetGameplayTagFromString(const FString& TagString)
+{
+	//@TagString 유효성 검사
+	if (TagString.IsEmpty())
+	{
+		UE_LOGFMT(LogASC, Warning, "GetGameplayTagFromString: 빈 문자열입니다");
+		return FGameplayTag::EmptyTag;
+	}
+
+	//@FString을 FName으로 변환 후 FGameplayTag 요청
+	FName TagName = FName(*TagString);
+	FGameplayTag ResultTag = FGameplayTag::RequestGameplayTag(TagName);
+
+	if (!ResultTag.IsValid())
+	{
+		UE_LOGFMT(LogASC, Warning, "GetGameplayTagFromString: 유효한 GameplayTag를 찾을 수 없음 - {0}",
+			*TagString);
+		return FGameplayTag::EmptyTag;
+	}
+
+	UE_LOGFMT(LogASC, Log, "GetGameplayTagFromString: 성공 - {0}", *ResultTag.ToString());
+	return ResultTag;
+}
+
 void UBaseAbilitySystemComponent::GetAbilityBlockAndCancelTagsForAbilityTag(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutAbilityTagsToBlock, OUT FGameplayTagContainer& OutAbilityTagsToCancel)
 {
 	if (AbilityTagRelationshipMapping.Get())

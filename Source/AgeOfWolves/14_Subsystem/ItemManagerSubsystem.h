@@ -74,6 +74,9 @@ private:
     //@Material Item 정보를 담은 Data Table
     UPROPERTY()
         TObjectPtr<UDataTable> MaterialItemTable = nullptr;
+    //@Spec Up Item 정보를 담은 Data Table
+    UPROPERTY()
+        TObjectPtr<UDataTable> SpecUpItemTable = nullptr;
 
 public:
     //@Default Item 들을 반환합니다.(아이템 갯수, 아이템 클래스)
@@ -94,6 +97,9 @@ public:
             break;
         case EItemType::Material:
             TargetTable = MaterialItemTable;
+            break;
+        case EItemType::SpecUp:
+            TargetTable = SpecUpItemTable;
             break;
         default:
             UE_LOG(LogItemManager, Warning, TEXT("불분명한 ItemType입니다."));

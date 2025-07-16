@@ -5,6 +5,7 @@
 #include "Animation/AnimInstance.h"
 #include "Components/SkeletalMeshComponent.h"
 #include "01_Character/CharacterBase.h"
+#include "DrawDebugHelpers.h"
 
 DEFINE_LOG_CATEGORY(LogANS_DisableRootMotion)
 
@@ -38,8 +39,12 @@ void UANS_DisableRootMotionWhenCollide::NotifyBegin(USkeletalMeshComponent* Mesh
 
     if (bEnableDebugDraw)
     {
-        UE_LOGFMT(LogANS_DisableRootMotion, Log, "충돌 시 루트 모션 비활성화 감지 시작: {0}",
-            *Animation->GetName());
+        FString DirectionInfo = bUseDirectionalCollision ?
+            FString::Printf(TEXT(" - 방향: %s"), *UEnum::GetValueAsString(CollisionDirection)) :
+            TEXT(" - 전방향");
+
+        UE_LOGFMT(LogANS_DisableRootMotion, Log, "충돌 시 루트 모션 비활성화 감지 시작: {0}{1}",
+            *Animation->GetName(), *DirectionInfo);
     }
 }
 
@@ -51,8 +56,10 @@ void UANS_DisableRootMotionWhenCollide::NotifyTick(USkeletalMeshComponent* MeshC
     if (!OwnerCharacter.IsValid() || !AnimInstance.IsValid())
         return;
 
-    //@현재 프레임의 충돌 상태 확인
-    bool bCurrentlyBlocked = DetectForwardCollision(MeshComp);
+    //@현재 프레임의 충돌 상태 확인 (방향성 충돌 감지 또는 기존 전방 충돌 감지)
+    bool bCurrentlyBlocked = bUseDirectionalCollision ?
+        DetectCollisionInDirection(MeshComp) :
+        DetectForwardCollision(MeshComp);
 
     //@충돌 상태 변화 감지 및 루트 모션 제어
     if (bCurrentlyBlocked != bIsBlocked)
@@ -78,14 +85,30 @@ void UANS_DisableRootMotionWhenCollide::NotifyTick(USkeletalMeshComponent* MeshC
 
                         if (bEnableDebugDraw)
                         {
-                            UE_LOGFMT(LogANS_DisableRootMotion, Log, "전방 충돌 감지: 루트 모션 비활성화");
+                            FString DirectionInfo = bUseDirectionalCollision ?
+                                FString::Printf(TEXT(" (%s 방향)"), *UEnum::GetValueAsString(CollisionDirection)) :
+                                TEXT(" (전방)");
+
+                            UE_LOGFMT(LogANS_DisableRootMotion, Log, "충돌 감지{0}: 루트 모션 비활성화", *DirectionInfo);
                         }
 
                         //@충돌 시 위치 고정 (선택적)
                         if (bFixPositionOnCollision)
                         {
-                            FVector Forward = OwnerCharacter->GetActorForwardVector();
-                            FVector SafePosition = LastSafePosition - (Forward * SafePositionBackOffset);
+                            FVector BackDirection;
+                            if (bUseDirectionalCollision)
+                            {
+                                // 방향성 충돌 감지의 경우 해당 방향의 반대로 이동
+                                FVector CollisionVector = CalculateDirectionVector(OwnerCharacter.Get());
+                                BackDirection = -CollisionVector;
+                            }
+                            else
+                            {
+                                // 기존 전방 충돌 감지의 경우 뒤쪽으로 이동
+                                BackDirection = -OwnerCharacter->GetActorForwardVector();
+                            }
+
+                            FVector SafePosition = LastSafePosition + (BackDirection * SafePositionBackOffset);
                             OwnerCharacter->SetActorLocation(SafePosition, false);
 
                             if (bEnableDebugDraw)
@@ -159,7 +182,15 @@ bool UANS_DisableRootMotionWhenCollide::CanBePlaced(UAnimSequenceBase* Animation
 
 FString UANS_DisableRootMotionWhenCollide::GetNotifyName_Implementation() const
 {
-    return FString::Printf(TEXT("충돌 시 루트 모션 비활성화"));
+    if (bUseDirectionalCollision)
+    {
+        return FString::Printf(TEXT("충돌 시 루트 모션 비활성화 (%s)"),
+            *UEnum::GetValueAsString(CollisionDirection));
+    }
+    else
+    {
+        return FString::Printf(TEXT("충돌 시 루트 모션 비활성화 (전방)"));
+    }
 }
 
 bool UANS_DisableRootMotionWhenCollide::DetectForwardCollision(USkeletalMeshComponent* MeshComp)
@@ -201,4 +232,97 @@ bool UANS_DisableRootMotionWhenCollide::DetectForwardCollision(USkeletalMeshComp
     }
 
     return bHit;
+}
+
+bool UANS_DisableRootMotionWhenCollide::DetectCollisionInDirection(USkeletalMeshComponent* MeshComp)
+{
+    //@캐릭터 유효성 검사
+    if (!OwnerCharacter.IsValid() || !MeshComp->GetWorld())
+        return false;
+
+    //@캐릭터 위치 및 설정된 방향
+    FVector Start = OwnerCharacter->GetActorLocation();
+
+    //@캐릭터 눈높이 정도에서 시작
+    float HalfHeight = OwnerCharacter->GetDefaultHalfHeight();
+    Start.Z += HalfHeight * 0.5f;
+
+    //@CollisionDirection에 따른 충돌 감지 방향 계산
+    FVector DirectionVector = CalculateDirectionVector(OwnerCharacter.Get());
+    FVector End = Start + DirectionVector * ForwardCheckDistance;
+
+    //@충돌 설정
+    FHitResult Hit;
+    FCollisionQueryParams Params;
+    Params.AddIgnoredActor(OwnerCharacter.Get());
+
+    //@충돌 체크 수행
+    bool bHit = MeshComp->GetWorld()->LineTraceSingleByChannel(Hit, Start, End, ECC_Pawn, Params);
+
+    //@디버그 시각화
+    if (bEnableDebugDraw)
+    {
+        FColor LineColor = bHit ? FColor::Red : FColor::Green;
+        DrawDebugLine(MeshComp->GetWorld(), Start, End, LineColor, false, 0.1f, 0, 2.0f);
+
+        if (bHit)
+        {
+            DrawDebugSphere(MeshComp->GetWorld(), Hit.Location, 10.0f, 8, FColor::Orange, false, 0.1f);
+            UE_LOGFMT(LogANS_DisableRootMotion, Log, "방향({0}) 충돌 감지: {1}",
+                *UEnum::GetValueAsString(CollisionDirection),
+                Hit.GetActor() ? *Hit.GetActor()->GetName() : TEXT("Unknown"));
+        }
+    }
+
+    return bHit;
+}
+
+FVector UANS_DisableRootMotionWhenCollide::CalculateDirectionVector(ACharacterBase* Character)
+{
+    if (!Character)
+    {
+        UE_LOGFMT(LogANS_DisableRootMotion, Warning, "방향 벡터 계산 실패 - Character가 유효하지 않음");
+        return FVector::ForwardVector;
+    }
+
+    FVector Direction;
+
+    //@방향에 따른 벡터 계산 - 캐릭터 기준
+    switch (CollisionDirection)
+    {
+    case EMovementDirection::Fwd:
+        Direction = Character->GetActorForwardVector();
+        break;
+    case EMovementDirection::Bwd:
+        Direction = -Character->GetActorForwardVector();
+        break;
+    case EMovementDirection::Left:
+        Direction = -Character->GetActorRightVector();
+        break;
+    case EMovementDirection::Right:
+        Direction = Character->GetActorRightVector();
+        break;
+    case EMovementDirection::FL:
+        Direction = (Character->GetActorForwardVector() - Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    case EMovementDirection::FR:
+        Direction = (Character->GetActorForwardVector() + Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    case EMovementDirection::BL:
+        Direction = (-Character->GetActorForwardVector() - Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    case EMovementDirection::BR:
+        Direction = (-Character->GetActorForwardVector() + Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    default:
+        Direction = Character->GetActorForwardVector();
+        UE_LOGFMT(LogANS_DisableRootMotion, Warning, "알 수 없는 충돌 감지 방향, 전방으로 설정");
+        break;
+    }
+
+    //@Z 방향 제거 (평면 충돌 감지)
+    Direction.Z = 0.0f;
+    Direction = Direction.GetSafeNormal();
+
+    return Direction;
 }

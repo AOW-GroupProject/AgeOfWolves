@@ -16,11 +16,11 @@ AEquipmentItem::AEquipmentItem(const FObjectInitializer& ObjectInitializer)
     ItemType = EItemType::Equipment;
 }
 
-bool AEquipmentItem::TryActivateItem_Implementation()
+bool AEquipmentItem::TryActivateItem_Implementation(UGameInstance* GameInstance)
 {
-	if (Super::TryActivateItem_Implementation())
+	if (Super::TryActivateItem_Implementation(GameInstance))
 	{
-		//@È°¼ºÈ­ ·ÎÁ÷ ÀÛ¼º
+		//@í™œì„±í™” ë¡œì§ ì‘ì„±
 		return true;
 	}
 
@@ -34,27 +34,27 @@ const FEquipmentItemInformation* AEquipmentItem::GetItemInformation()
     UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(this);
     if (!GameInstance)
     {
-        UE_LOGFMT(LogEquipmentItem, Error, "GameInstance¸¦ °¡Á®¿Ã ¼ö ¾ø½À´Ï´Ù: {0} {1}", __FUNCTION__, __LINE__);
+        UE_LOGFMT(LogEquipmentItem, Error, "GameInstanceë¥¼ ê°€ì ¸ì˜¬ ìˆ˜ ì—†ìŠµë‹ˆë‹¤: {0} {1}", __FUNCTION__, __LINE__);
         return nullptr;
     }
     //@Item Manager Subsystem
     UItemManagerSubsystem* ItemManager = GameInstance->GetSubsystem<UItemManagerSubsystem>();
     if (!ItemManager)
     {
-        UE_LOGFMT(LogEquipmentItem, Error, "ItemManagerSubsystemÀ» °¡Á®¿Ã ¼ö ¾ø½À´Ï´Ù: {0} {1}", __FUNCTION__, __LINE__);
+        UE_LOGFMT(LogEquipmentItem, Error, "ItemManagerSubsystemì„ ê°€ì ¸ì˜¬ ìˆ˜ ì—†ìŠµë‹ˆë‹¤: {0} {1}", __FUNCTION__, __LINE__);
         return nullptr;
     }
     //@Item Tag
     if (!ItemTag.IsValid())
     {
-        UE_LOGFMT(LogEquipmentItem, Error, "ItemTag°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù: {0} {1}", __FUNCTION__, __LINE__);
+        UE_LOGFMT(LogEquipmentItem, Error, "ItemTagê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤: {0} {1}", __FUNCTION__, __LINE__);
         return nullptr;
     }
     //@Item Info
     const FEquipmentItemInformation* ItemInfo = ItemManager->GetItemInformation<FEquipmentItemInformation>(EItemType::Equipment, ItemTag);
     if (!ItemInfo)
     {
-        UE_LOGFMT(LogEquipmentItem, Error, "ItemInformationÀ» °¡Á®¿Ã ¼ö ¾ø½À´Ï´Ù: {0} {1}", __FUNCTION__, __LINE__);
+        UE_LOGFMT(LogEquipmentItem, Error, "ItemInformationì„ ê°€ì ¸ì˜¬ ìˆ˜ ì—†ìŠµë‹ˆë‹¤: {0} {1}", __FUNCTION__, __LINE__);
         return nullptr;
     }
 

@@ -4,6 +4,7 @@
 #include "Components/CapsuleComponent.h"
 #include "GameFramework/Character.h"
 #include "Components/SkeletalMeshComponent.h"
+#include "MotionWarpingComponent.h"
 
 DEFINE_LOG_CATEGORY(LogCombatLibrary)
 
@@ -510,6 +511,87 @@ FSurfacePointResult UCombatLibrary::GetClosestSurfacePointAndNormalFromSocket(
     return Result;
 }
 
+FVector UCombatLibrary::CalculatePositionFromCharacter(const ACharacter* Character, EMovementDirection Direction, float Distance)
+{
+    // 유효성 검사
+    if (!IsValid(Character))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "위치 계산 실패 - 사유: Character가 유효하지 않음");
+        return FVector::ZeroVector;
+    }
+
+    if (Distance <= 0.0f)
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "위치 계산 실패 - 사유: Distance가 0보다 작거나 같음 ({0})", Distance);
+        return Character->GetActorLocation();
+    }
+
+    // 시작 위치
+    FVector StartLocation = Character->GetActorLocation();
+
+    // 방향 벡터 계산
+    FVector DirectionVector = CalculateDirectionVectorFromCharacter(Character, Direction);
+
+    // 목표 위치 계산
+    FVector TargetLocation = StartLocation + (DirectionVector * Distance);
+
+    UE_LOGFMT(LogCombatLibrary, Log, "위치 계산 완료 - Character: {0}, 방향: {1}, 거리: {2}, 결과: {3}",
+        *Character->GetName(),
+        *UEnum::GetValueAsString(Direction),
+        Distance,
+        *TargetLocation.ToString());
+
+    return TargetLocation;
+}
+
+FVector UCombatLibrary::CalculateDirectionVectorFromCharacter(const ACharacter* Character, EMovementDirection Direction)
+{
+    if (!IsValid(Character))
+    {
+        return FVector::ForwardVector;
+    }
+
+    FVector DirectionVec;
+
+    // 방향에 따른 벡터 계산 - 캐릭터 기준
+    switch (Direction)
+    {
+    case EMovementDirection::Fwd:
+        DirectionVec = Character->GetActorForwardVector();
+        break;
+    case EMovementDirection::Bwd:
+        DirectionVec = -Character->GetActorForwardVector();
+        break;
+    case EMovementDirection::Left:
+        DirectionVec = -Character->GetActorRightVector();
+        break;
+    case EMovementDirection::Right:
+        DirectionVec = Character->GetActorRightVector();
+        break;
+    case EMovementDirection::FL:
+        DirectionVec = (Character->GetActorForwardVector() - Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    case EMovementDirection::FR:
+        DirectionVec = (Character->GetActorForwardVector() + Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    case EMovementDirection::BL:
+        DirectionVec = (-Character->GetActorForwardVector() - Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    case EMovementDirection::BR:
+        DirectionVec = (-Character->GetActorForwardVector() + Character->GetActorRightVector()).GetSafeNormal();
+        break;
+    default:
+        DirectionVec = Character->GetActorForwardVector();
+        break;
+    }
+
+    // Z 방향 제거 (평면 이동)
+    DirectionVec.Z = 0.0f;
+    DirectionVec = DirectionVec.GetSafeNormal();
+
+    return DirectionVec;
+}
+
 bool UCombatLibrary::IsActorBackExposed(const AActor* ObserverActor, const AActor* TargetActor, float ExposureAngleThreshold)
 {
     // 유효성 검사
@@ -571,6 +653,58 @@ bool UCombatLibrary::IsActorBackExposed(const AActor* ObserverActor, const AActo
         bIsBackExposed ? TEXT("노출됨") : TEXT("노출되지 않음"));
 
     return bIsBackExposed;
+}
+
+bool UCombatLibrary::ApplyKnockBack(ACharacter* TargetCharacter, EKnockBackIntensity Intensity)
+{
+    //@대상 캐릭터 유효성 검사
+    if (!IsValid(TargetCharacter))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "ApplyKnockBack 실패 - 사유: 대상 캐릭터가 유효하지 않음");
+        return false;
+    }
+
+    //@강도 유효성 검사
+    if (Intensity == EKnockBackIntensity::Max)
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "ApplyKnockBack 실패 - 사유: 유효하지 않은 넉백 강도");
+        return false;
+    }
+
+    //@World 유효성 검사
+    UWorld* World = TargetCharacter->GetWorld();
+    if (!IsValid(World))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "ApplyKnockBack 실패 - 사유: World가 유효하지 않음");
+        return false;
+    }
+
+    //@넉백 거리 계산
+    float KnockBackDistance = GetKnockBackDistance(Intensity);
+
+    //@넉백 방향 계산 (캐릭터 ForwardVector의 -1.f 방향)
+    FVector KnockBackDirection = -TargetCharacter->GetActorForwardVector();
+
+    //@넉백 목표 위치 계산
+    FVector KnockBackTargetLocation = TargetCharacter->GetActorLocation() + (KnockBackDirection * KnockBackDistance);
+
+    //@Motion Warping Component 가져오기
+    UMotionWarpingComponent* MotionWarpingComp = TargetCharacter->FindComponentByClass<UMotionWarpingComponent>();
+    if (!IsValid(MotionWarpingComp))
+    {
+        UE_LOGFMT(LogCombatLibrary, Warning, "ApplyKnockBack 실패 - 사유: MotionWarpingComponent를 찾을 수 없음");
+        return false;
+    }
+
+    //@Warp Target 업데이트
+    MotionWarpingComp->AddOrUpdateWarpTargetFromLocation(FName("KnockBackTarget"), KnockBackTargetLocation);
+
+    UE_LOGFMT(LogCombatLibrary, Log, "넉백 적용 성공 - 대상: {0}, 강도: {1}, 거리: {2}cm",
+        *TargetCharacter->GetName(),
+        static_cast<uint8>(Intensity),
+        KnockBackDistance);
+
+    return true;
 }
 #pragma endregion
 
@@ -751,5 +885,23 @@ FSlashGameplayCueParams UCombatLibrary::PrepareSlashGameplayCueParameters(AActor
     );
 
     return Params;
+}
+#pragma endregion
+
+#pragma region Utility
+float UCombatLibrary::GetKnockBackDistance(EKnockBackIntensity Intensity)
+{
+    switch (Intensity)
+    {
+    case EKnockBackIntensity::Low:
+        return 100.0f;
+    case EKnockBackIntensity::Med:
+        return 150.0f;
+    case EKnockBackIntensity::High:
+        return 200.0f;
+    default:
+        UE_LOGFMT(LogCombatLibrary, Warning, "GetKnockBackDistance - 알 수 없는 넉백 강도, 기본값 사용");
+        return 100.0f;
+    }
 }
 #pragma endregion

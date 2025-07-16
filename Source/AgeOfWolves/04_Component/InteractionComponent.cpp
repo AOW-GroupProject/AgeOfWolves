@@ -633,58 +633,96 @@ void UInteractionComponent::CancelInteractionActivated(AActor* TargetActor, cons
 
 void UInteractionComponent::UpdateCurrentPriorityInteraction()
 {
+    //@이전 상호작용 정보 백업
     FPotentialInteraction PreviousInteraction = CurrentPriorityInteraction;
+    AActor* PreviousActor = nullptr;
+
+    //@이전 우선순위 액터 찾기
+    if (PreviousInteraction.ObjectTag.IsValid())
+    {
+        for (const auto& ActorPair : MPotentialInteractions)
+        {
+            if (!ActorPair.Key.IsValid()) continue;
+
+            for (const auto& InteractionPair : ActorPair.Value)
+            {
+                if (InteractionPair.Value.ObjectTag == PreviousInteraction.ObjectTag &&
+                    InteractionPair.Value.InteractionType == PreviousInteraction.InteractionType)
+                {
+                    PreviousActor = ActorPair.Key.Get();
+                    break;
+                }
+            }
+            if (PreviousActor) break;
+        }
+    }
+
+    //@현재 우선순위 상호작용 초기화
     CurrentPriorityInteraction = FPotentialInteraction();
     AActor* NewPriorityActor = nullptr;
 
     UE_LOGFMT(LogInteraction, Log, "{0}: 우선순위 상호작용 업데이트 시작", __FUNCDNAME__);
 
-    // 모든 유효한 상호작용 중 가장 높은 우선순위 찾기
+    //@모든 유효한 상호작용 중 가장 높은 우선순위 찾기
     for (const auto& ActorPair : MPotentialInteractions)
     {
+        //@액터 유효성 확인
         if (!ActorPair.Key.IsValid()) continue;
 
         for (const auto& InteractionPair : ActorPair.Value)
         {
             const FPotentialInteraction& Interaction = InteractionPair.Value;
-            if (Interaction.IsFullyAvailable() &&
-                Interaction.Priority > CurrentPriorityInteraction.Priority)
-            {
-                CurrentPriorityInteraction = Interaction;
-                NewPriorityActor = ActorPair.Key.Get();
 
-                UE_LOGFMT(LogInteraction, Log, "{0}: 새로운 최우선 상호작용 발견 - 액터: {1} | 타입: {2} | 우선순위: {3}",
-                    __FUNCDNAME__,
-                    *NewPriorityActor->GetName(),
-                    static_cast<uint8>(Interaction.InteractionType),
-                    Interaction.Priority);
-            }
+            //@상호작용 가용성 및 우선순위 확인
+            if (!Interaction.IsFullyAvailable()) continue;
+            if (Interaction.Priority <= CurrentPriorityInteraction.Priority) continue;
+
+            CurrentPriorityInteraction = Interaction;
+            NewPriorityActor = ActorPair.Key.Get();
+
+            UE_LOGFMT(LogInteraction, Log, "{0}: 새로운 최우선 상호작용 발견 - 액터: {1} | 타입: {2} | 우선순위: {3}",
+                __FUNCDNAME__,
+                *NewPriorityActor->GetName(),
+                static_cast<uint8>(Interaction.InteractionType),
+                Interaction.Priority);
         }
     }
 
-    // 우선순위 상호작용이 변경된 경우에만 브로드캐스트
-    if (CurrentPriorityInteraction.ObjectTag != PreviousInteraction.ObjectTag ||
-        CurrentPriorityInteraction.InteractionType != PreviousInteraction.InteractionType)
-    {
-        if (CurrentPriorityInteraction.ObjectTag.IsValid())
-        {
-            UE_LOGFMT(LogInteraction, Log, "{0}: 우선순위 상호작용 변경됨 - 새 액터: {1} | 새 타입: {2}",
-                __FUNCDNAME__,
-                NewPriorityActor ? *NewPriorityActor->GetName() : TEXT("없음"),
-                static_cast<uint8>(CurrentPriorityInteraction.InteractionType));
-        }
-        else
-        {
-            UE_LOGFMT(LogInteraction, Log, "{0}: 우선순위 상호작용 제거됨 - 이전 타입: {1}",
-                __FUNCDNAME__,
-                static_cast<uint8>(PreviousInteraction.InteractionType));
-        }
+    //@우선순위 상호작용 변경 감지
+    bool bPriorityChanged = (CurrentPriorityInteraction.ObjectTag != PreviousInteraction.ObjectTag ||
+        CurrentPriorityInteraction.InteractionType != PreviousInteraction.InteractionType);
 
-        PotentialInteractionChanged.Broadcast(NewPriorityActor, CurrentPriorityInteraction);
+    //@변경사항 없음 - 얼리 리턴
+    if (!bPriorityChanged)
+    {
+        UE_LOGFMT(LogInteraction, Log, "{0}: 우선순위 상호작용 변경사항 없음", __FUNCDNAME__);
+        return;
+    }
+
+    //@이전 상호작용 취소 처리
+    if (PreviousInteraction.ObjectTag.IsValid())
+    {
+        UE_LOGFMT(LogInteraction, Log, "{0}: 이전 우선순위 상호작용 취소 - 액터: {1} | 타입: {2}",
+            __FUNCDNAME__,
+            PreviousActor ? *PreviousActor->GetName() : TEXT("없음"),
+            static_cast<uint8>(PreviousInteraction.InteractionType));
+
+        CancelInteractionActivated(PreviousActor, PreviousInteraction);
+    }
+
+    //@새로운 우선순위 상호작용 활성화
+    if (CurrentPriorityInteraction.ObjectTag.IsValid())
+    {
+        UE_LOGFMT(LogInteraction, Log, "{0}: 새로운 우선순위 상호작용 활성화 - 액터: {1} | 타입: {2}",
+            __FUNCDNAME__,
+            NewPriorityActor ? *NewPriorityActor->GetName() : TEXT("없음"),
+            static_cast<uint8>(CurrentPriorityInteraction.InteractionType));
+
+        TryActivateInteraction(NewPriorityActor, CurrentPriorityInteraction);
     }
     else
     {
-        UE_LOGFMT(LogInteraction, Log, "{0}: 우선순위 상호작용 변경사항 없음", __FUNCDNAME__);
+        UE_LOGFMT(LogInteraction, Log, "{0}: 모든 우선순위 상호작용 제거됨", __FUNCDNAME__);
     }
 }
 #pragma endregion

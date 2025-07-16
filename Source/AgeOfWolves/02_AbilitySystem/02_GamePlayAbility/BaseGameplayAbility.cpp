@@ -296,6 +296,13 @@ void UBaseGameplayAbility::InputPressed(const FGameplayAbilitySpecHandle Handle,
 
 void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo)
 {
+    // 어빌리티가 활성화되어 있지 않으면 처리하지 않음
+    if (!IsActive())
+    {
+        UE_LOGFMT(LogGA, Log, "어빌리티가 비활성화 상태 - InputReleased 무시: {0}", *GetName());
+        return;
+    }
+
     // 부모 클래스 호출
     Super::InputReleased(Handle, ActorInfo, ActivationInfo);
 
@@ -303,6 +310,7 @@ void UBaseGameplayAbility::InputReleased(const FGameplayAbilitySpecHandle Handle
     K2_InputReleased();
 
     UE_LOGFMT(LogGA, Log, "Ability Input Released - Ability: {0}", *GetName());
+
 }
 
 UAbilityTask_PlayMontageAndWait* UBaseGameplayAbility::PlayMontageWithCallback(

@@ -211,19 +211,30 @@ void UInventoryComponent::ExternalBindToInventoryUI()
     for (uint8 i = 0; i < static_cast<uint8>(EItemType::MAX); ++i)
     {
         EItemType ItemType = static_cast<EItemType>(i);
-        UItemSlots* ItemSlots = InventoryUI->GetItemSlotsByType(ItemType);
 
+        if (ItemType == EItemType::SpecUp)
+        {
+            UE_LOGFMT(LogInventory, Log,
+                "SpecUp 타입은 즉시 소모되는 아이템이므로 UI 바인딩을 건너뜁니다.");
+            continue;
+        }
+
+        UItemSlots* ItemSlots = InventoryUI->GetItemSlotsByType(ItemType);
         if (ItemSlots)
         {
             ItemSlots->ItemUsed.AddUObject(this, &UInventoryComponent::StartUseItem);
             ItemSlots->ItemLeft.AddUObject(this, &UInventoryComponent::LeaveItem);
             ItemSlots->ItemDiscarded.AddUObject(this, &UInventoryComponent::DiscardItem);
 
-            UE_LOGFMT(LogInventory, Log, "{0}: {1} 타입의 ItemSlots에 이벤트가 성공적으로 바인딩되었습니다.", __FUNCTION__, *UEnum::GetValueAsString(ItemType));
+            UE_LOGFMT(LogInventory, Log,
+                "{0} 타입의 ItemSlots에 이벤트가 성공적으로 바인딩되었습니다.",
+                *UEnum::GetValueAsString(ItemType));
         }
         else
         {
-            UE_LOGFMT(LogInventory, Warning, "{0}: {1} 타입의 ItemSlots를 찾을 수 없습니다.", __FUNCTION__, *UEnum::GetValueAsString(ItemType));
+            UE_LOGFMT(LogInventory, Warning,
+                "{0} 타입의 ItemSlots를 찾을 수 없어 이벤트 바인딩을 건너뜁니다.",
+                *UEnum::GetValueAsString(ItemType));
         }
     }
 
@@ -255,7 +266,7 @@ void UInventoryComponent::InitializeInventory(const AController* Controller)
 #pragma endregion
 
 //@Property/Info...etc
-#pragma region Inventory
+#pragma region Property/Info...etc
 void UInventoryComponent::LoadInventory()
 {
     UE_LOGFMT(LogInventory, Warning, "Inventory의 Load 작업을 시작합니다 : {0}", __FUNCTION__);
@@ -511,6 +522,24 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
         DisableItem(AlreadySpawnedItem);
     }
 
+    //@SpecUp 아이템 즉시 활성화 처리 - 새로 추가된 부분
+    if (ItemInfo->ItemType == EItemType::SpecUp)
+    {
+        UE_LOGFMT(LogInventory, Log, "{0}: SpecUp 아이템이 감지되어 즉시 활성화를 시작합니다.",
+            ItemInfo->ItemTag.ToString());
+
+        //@Start Use Item
+        for (int32 i = 0; i < Num; ++i)
+        {
+            StartUseItem(NewID, 1);
+        }
+
+        UE_LOGFMT(LogInventory, Log, "{0}: SpecUp 아이템 {1}개가 즉시 활성화되어 소모되었습니다.",
+            ItemInfo->ItemTag.ToString(), Num);
+
+        return NewID;
+    }
+
     //@Quick Slots
     if (ItemInfo->bObssessedToQuickSlots
         && ItemInfo->bConsumable
@@ -533,6 +562,20 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
 
 void UInventoryComponent::AddExistingItem(const FGuid& ItemId, const FItemInformation& ItemInfo, int32 Num)
 {
+    //@SpecUp 아이템은 기존 아이템과 합치지 않고 개별 활성화
+    if (ItemInfo.ItemType == EItemType::SpecUp)
+    {
+        UE_LOGFMT(LogInventory, Log, "{0}: SpecUp 아이템은 누적되지 않으므로 개별 활성화를 처리합니다.",
+            ItemInfo.ItemTag.ToString());
+
+        //@Start Use Item
+        for (int32 i = 0; i < Num; ++i)
+        {
+            StartUseItem(ItemId, 1);
+        }
+        return;
+    }
+
     //@Existing FInventory Item
     if (!Inventory.Contains(ItemId))
     {
@@ -680,7 +723,7 @@ void UInventoryComponent::StartUseItem(const FGuid& UniqueItemID, int32 ItemCoun
     }
 
     //@Try Activate
-    if (!Item->TryActivateItem())
+    if (!Item->TryActivateItem(GetWorld()->GetGameInstance()))
     {
         UE_LOGFMT(LogInventory, Warning, "아이템 {0} 사용 실패.", InventoryItem->GetItemTag().ToString());
         return;

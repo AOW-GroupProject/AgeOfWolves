@@ -13,7 +13,7 @@ UBTTask_StopCombatLoop::UBTTask_StopCombatLoop(const FObjectInitializer& ObjectI
     , bIsWaitingForExitBlock(false)
 {
     bCreateNodeInstance = true;
-    NodeName = "Stop Combat Loop";
+    NodeName = TEXT("전투 시퀀스 종료");
     bNotifyTick = true;
 }
 
