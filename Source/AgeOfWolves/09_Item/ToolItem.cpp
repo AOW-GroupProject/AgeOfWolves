@@ -16,9 +16,9 @@ AToolItem::AToolItem(const FObjectInitializer& ObjectInitializer)
     ItemType = EItemType::Tool;
 }
 
-bool AToolItem::TryActivateItem_Implementation()
+bool AToolItem::TryActivateItem_Implementation(UGameInstance* GameInstance)
 {
-    if (Super::TryActivateItem_Implementation())
+    if (Super::TryActivateItem_Implementation(GameInstance))
     {
         UE_LOGFMT(LogToolItem, Log, "{0}: Tool Item 활성화 시작!", ItemTag.ToString());
 

@@ -5,7 +5,7 @@
 #include "Kismet/GameplayStatics.h"
 #include "00_GameInstance/AOWGameInstance.h"
 
-#include "01_Character/CharacterBase.h"
+#include "01_Character/PlayerCharacter.h"
 #include "04_Component/BaseCharacterMovementComponent.h"
 
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
@@ -109,6 +109,7 @@ void APlayerStateBase::InitializePlayerState()
     }
 
     //@ASC의 외부 바인딩...
+    AbilitySystemComponent->ExternalBindToPlayerState(this);
     AbilitySystemComponent->ExternalBindToInteractionComp(Controller);
     AbilitySystemComponent->ExternalBindToGameState();
 
@@ -219,6 +220,64 @@ void APlayerStateBase::LoadDefaultAbilitySystemFromAbilityManager()
 void APlayerStateBase::LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame)
 {
 
+}
+
+bool APlayerStateBase::ProcessItemAbilities(const TArray<TSubclassOf<UBaseGameplayAbility>>& Abilities, const FGameplayTag& ItemTag, bool bAllowDuplicate)
+{
+    // 기본 유효성 검사
+    if (Abilities.IsEmpty())
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "ProcessItemAbilities: 부여할 어빌리티가 없습니다 - {0}", ItemTag.ToString());
+        return false;
+    }
+
+    if (!ItemTag.IsValid())
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "ProcessItemAbilities: ItemTag가 유효하지 않습니다");
+        return false;
+    }
+
+    if (!AbilitySystemComponent)
+    {
+        UE_LOGFMT(LogPlayerStateBase, Error, "ProcessItemAbilities: ASC가 유효하지 않습니다");
+        return false;
+    }
+
+    UE_LOGFMT(LogPlayerStateBase, Log, "어빌리티 부여 요청: {0} ({1}개)", ItemTag.ToString(), Abilities.Num());
+
+    //@어빌리티 등록 요청 이벤트 호출
+    RequestGrantAbilities.Broadcast(Abilities, ItemTag, bAllowDuplicate);
+
+    return true;
+}
+
+bool APlayerStateBase::ProcessItemAbilityActivation(const TArray<TSubclassOf<UBaseGameplayAbility>>& Abilities, const FGameplayTag& ItemTag, bool bForceActivate)
+{
+    // 기본 유효성 검사
+    if (Abilities.IsEmpty())
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "ProcessItemAbilityActivation: 활성화할 어빌리티가 없습니다 - {0}", ItemTag.ToString());
+        return false;
+    }
+
+    if (!ItemTag.IsValid())
+    {
+        UE_LOGFMT(LogPlayerStateBase, Warning, "ProcessItemAbilityActivation: ItemTag가 유효하지 않습니다");
+        return false;
+    }
+
+    if (!AbilitySystemComponent)
+    {
+        UE_LOGFMT(LogPlayerStateBase, Error, "ProcessItemAbilityActivation: ASC가 유효하지 않습니다");
+        return false;
+    }
+
+    UE_LOGFMT(LogPlayerStateBase, Log, "어빌리티 활성화 요청: {0} ({1}개)", ItemTag.ToString(), Abilities.Num());
+
+    //@어빌리티 활성화 요청 이벤트 호출
+    RequestActivateAbilities.Broadcast(Abilities, ItemTag, bForceActivate);
+
+    return true;
 }
 #pragma endregion
 

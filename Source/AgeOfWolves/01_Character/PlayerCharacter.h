@@ -107,6 +107,8 @@ public:
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }
 	UFUNCTION(BlueprintCallable)
+		FORCEINLINE UInventoryComponent* GetInventoryComponent() { return InventoryComponent; }
+	UFUNCTION(BlueprintCallable)
 		FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockComponent; }
 #pragma endregion
 

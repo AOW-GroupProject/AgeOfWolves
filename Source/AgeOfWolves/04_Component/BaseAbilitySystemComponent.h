@@ -15,6 +15,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 class UANS_AllowChainAction;
 class UBaseAttributeSet;
 class ABaseAIController;
+class APlayerStateBase;
 
 struct FDeathInformation;
 #pragma endregion
@@ -84,6 +85,7 @@ protected:
 
 protected:
 	//@외부 바인딩
+	void ExternalBindToPlayerState(APlayerStateBase* PlayerState);
 	void ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC);
 	void ExternalBindToAIController(ABaseAIController* BaseAIC);
 	void ExternalBindToInteractionComp(AController* Controller);
@@ -265,10 +267,25 @@ private:
 	//@Game State 리스폰 완료 콜백 함수
 	UFUNCTION()
 	void OnPlayerRespawnCompleted(APlayerController* RespawnedPlayerController);
+
+private:
+	//@어빌리티 등록 요청 이벤트
+	UFUNCTION()
+		void OnRequestGrantAbilities(const TArray<TSubclassOf<UBaseGameplayAbility>>& Abilities, const FGameplayTag& ItemTag, bool bAllowDuplicate);
+	UFUNCTION()
+		void OnRequestActivateAbilities(const TArray<TSubclassOf<UBaseGameplayAbility>>& Abilities, const FGameplayTag& ItemTag, bool bForceActivate);
+	//@이팩트 적용 요청 이벤트
+	UFUNCTION()
+		void OnRequestApplyEffects(const TArray<TSubclassOf<UGameplayEffect>>& Effects, const FGameplayTag& ItemTag, bool bAllowDuplicate);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+public:
+	//@FString으로 FGameplayTag 생성
+	UFUNCTION(BlueprintPure, Category = "Gameplay Tags")
+	static FGameplayTag GetGameplayTagFromString(const FString& TagString);
+
 public:
 	//@Cancel, Block Tag
 	void GetAbilityBlockAndCancelTagsForAbilityTag(const FGameplayTagContainer& AbilityTags, OUT FGameplayTagContainer& OutAbilityTagsToBlock, OUT FGameplayTagContainer& OutAbilityTagsToCancel);

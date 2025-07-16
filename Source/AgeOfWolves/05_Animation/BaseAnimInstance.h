@@ -360,6 +360,7 @@ public:
 	 * 현재 이동 입력이 있는지 확인하는 헬퍼 함수
 	 * 가속도와 bShouldMove 값을 종합적으로 판단합니다.
 	 */
+	UFUNCTION(BlueprintPure, Category = "Movement State Machine", meta = (BlueprintThreadSafe))
 	bool HasMovementInput() const;
 
 	/*

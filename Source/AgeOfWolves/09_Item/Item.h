@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -7,6 +5,7 @@
 #include "GameplayTagContainer.h"
 #include "Engine/DataTable.h"
 #include "AttributeSet.h"
+#include "02_AbilitySystem/02_GameplayAbility/BaseGameplayAbility.h"
 
 #include "Item.generated.h"
 
@@ -16,6 +15,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogItem, Log, All);
 #pragma region Forward Declaration
 class UBaseGameplayAbility;
 class UItemManagerSubsystem;
+class UGameplayEffect;
 #pragma endregion
 
 //@열거형
@@ -46,6 +46,7 @@ enum class EItemType : uint8
 	Equipment		UMETA(DisplayName = "Equipment"),
 	Material		UMETA(DisplayName = "Material"),
 	Memory			UMETA(DisplayName = "Memory"),
+	SpecUp			UMETA(DisplayName = "SpecUp"),
 	MAX,
 };
 
@@ -73,6 +74,20 @@ enum class EEquipmentItemType : uint8
 {
 	Weapon = 0		UMETA(DisplayName = "Weapon"),
 	Talisman 		UMETA(DisplayName = "Talisman"),
+	MAX,
+};
+
+/*
+* ESpecUpItemType
+*
+* @목적: SpecUp 아이템의 세부 유형을 정의합니다.
+* @설명: 어빌리티 부여형과 스탯 증가형으로 구분하여 각기 다른 처리 로직을 적용합니다.
+*/
+UENUM(BlueprintType)
+enum class ESpecUpItemType : uint8
+{
+	AbilityGrant = 0	UMETA(DisplayName = "Ability Grant"),	
+	AttributeBoost		UMETA(DisplayName = "Attribute Boost"),	
 	MAX,
 };
 #pragma endregion
@@ -210,8 +225,8 @@ public:
 	UPROPERTY(EditAnywhere, meta = (EditCondition = "bStackable == bRemovable"))
 		bool bRemoveWhenCountZero = false;
 	//@아이템 사용 시 활성화되는 GA
-	UPROPERTY(EditAnywhere, meta = (EditCondtion = "ItemType != EItemType::Material"))
-		TArray<UBaseGameplayAbility*> Abilities;
+	UPROPERTY(EditAnywhere, meta = (EditCondition = "ItemType != EItemType::Material"))
+		TArray<TSubclassOf<UBaseGameplayAbility>> Abilities;
 	//@강화 정보
 	UPROPERTY(EditAnywhere)
 		FEnhancementInformation EnhancementInfo;
@@ -289,6 +304,88 @@ public:
 		ItemType = EItemType::Material;
 	}
 };
+
+/*
+* FSpecUpItemInformation : FItemInformation
+*
+* @목적: 캐릭터의 능력치나 어빌리티를 영구적으로 향상시키는 아이템 정보를 저장합니다.
+* @설명: 인벤토리에 추가되는 즉시 효과가 발동되며, 사용 후 아이템은 소모됩니다.
+*        FItemInformation의 Abilities 필드를 활용하여 처리합니다.
+* @특징: bInstantActivation=true로 설정되어 AddItem 시점에 즉시 활성화됩니다.
+*/
+USTRUCT(BlueprintType)
+struct FSpecUpItemInformation : public FItemInformation
+{
+	GENERATED_BODY()
+
+public:
+	FSpecUpItemInformation()
+	{
+		ItemType = EItemType::SpecUp;
+		bConsumable = true;
+		bRemovable = true;
+		bSellable = false;
+		bStackable = false;
+		bDefault = false;
+		MaxStack = 1;
+
+		SpecUpType = ESpecUpItemType::AbilityGrant;
+		bInstantActivation = true;
+		bAllowDuplicate = false;
+	}
+
+	// 특정 SpecUp 타입으로 생성하는 생성자
+	FSpecUpItemInformation(ESpecUpItemType InSpecUpType) : FSpecUpItemInformation()
+	{
+		SpecUpType = InSpecUpType;
+
+		// 타입별로 다른 기본 설정 적용
+		if (InSpecUpType == ESpecUpItemType::AttributeBoost)
+		{
+			bAllowDuplicate = true;
+		}
+	}
+
+public:
+	//@SpecUp 아이템의 세부 유형 (어빌리티 부여 vs 스탯 증가)
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "스펙 업 | 유형")
+	ESpecUpItemType SpecUpType = ESpecUpItemType::AbilityGrant;
+
+	//@인벤토리 추가 즉시 활성화 여부
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "스펙 업 | 활성화",
+		meta = (ToolTip = "true면 인벤토리에 추가되는 순간 즉시 효과가 발동됩니다"))
+	bool bInstantActivation = true;
+
+	//@동일한 효과의 중복 적용 허용 여부
+	UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "스펙업 | 활성화",
+		meta = (ToolTip = "false면 이미 적용된 효과는 다시 적용되지 않습니다"))
+	bool bAllowDuplicate = false;
+
+public:
+	//@어빌리티 부여 타입인지 확인
+	FORCEINLINE bool IsAbilityGrantType() const
+	{
+		return SpecUpType == ESpecUpItemType::AbilityGrant;
+	}
+
+	//@스탯 증가 타입인지 확인
+	FORCEINLINE bool IsAttributeBoostType() const
+	{
+		return SpecUpType == ESpecUpItemType::AttributeBoost;
+	}
+
+	//@디버그용 정보 문자열 생성
+	FString GetDebugString() const
+	{
+		FString TypeString = UEnum::GetValueAsString(SpecUpType);
+		FString DataInfo = FString::Printf(TEXT("어빌리티 %d개"), Abilities.Num());
+		FString ActivationInfo = bInstantActivation ? TEXT("즉시활성화") : TEXT("수동활성화");
+		FString DuplicateInfo = bAllowDuplicate ? TEXT("중복허용") : TEXT("중복금지");
+
+		return FString::Printf(TEXT("%s | %s | %s | %s"),
+			*TypeString, *DataInfo, *ActivationInfo, *DuplicateInfo);
+	}
+};
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -332,8 +429,8 @@ public:
 public:
 	//@아이템 활성화
 	UFUNCTION(BlueprintNativeEvent)
-		bool TryActivateItem();
-	virtual bool TryActivateItem_Implementation();
+	bool TryActivateItem(UGameInstance* GameInstance = nullptr);
+	virtual bool TryActivateItem_Implementation(UGameInstance* GameInstance = nullptr);
 
 protected:
 	//@Item Tag
