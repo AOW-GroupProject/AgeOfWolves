@@ -114,7 +114,7 @@ void ABasePlayerController::InternalBindToPlayerState()
     if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
     {
         PS->NotifyPlayerDeathEvent.AddUFunction(this, "OnPlayerDeath");
-        PS->NotifyPlayerRevivalEvent.AddUFunction(this, "OnPlayerRevival");
+        PS->NotifyPlayerRevivalEvent.AddUFunction(this, "OnPlayerRespawn");
     }
     
     UE_LOGFMT(LogBasePC, Log, "Player State Death 이벤트 바인딩 완료");
@@ -267,7 +267,7 @@ void ABasePlayerController::ProcessRespawnSequence()
     }
 }
 
-void ABasePlayerController::HandleCharacterRevive()
+void ABasePlayerController::HandleCharacterRespawn()
 {
     //@이 함수는 더 이상 GameState에서 직접 호출되지 않음
     //@ASC의 부활 어빌리티 완료 후 호출됨
@@ -310,7 +310,7 @@ void ABasePlayerController::OnPlayerDeath(APlayerStateBase* DeadPlayerState)
     }
 }
 
-void ABasePlayerController::OnPlayerRevival(APlayerStateBase* RespawnPlayerState)
+void ABasePlayerController::OnPlayerRespawn(APlayerStateBase* RespawnPlayerState)
 {
     //@기본 유효성 검증
     if (!IsValid(RespawnPlayerState))
@@ -329,7 +329,7 @@ void ABasePlayerController::OnPlayerRevival(APlayerStateBase* RespawnPlayerState
     UE_LOGFMT(LogBasePC, Log, "자신의 리스폰 완료 확인: {0}", GetNameSafe(this));
 
     //@부활 작업
-    HandleCharacterRevive();
+    HandleCharacterRespawn();
 
 }
 #pragma endregion

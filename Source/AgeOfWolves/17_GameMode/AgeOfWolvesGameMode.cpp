@@ -116,7 +116,7 @@ bool AAgeOfWolvesGameMode::TestRespawnToPlayerStart(APlayerController* PlayerCon
         NotifyRespawnCompleteViaGameState(PlayerController);
 
         UE_LOGFMT(LogAOWGameMode, Log, "테스트 리스폰 완료: 표준 메커니즘 사용");
-        return true; // 성공으로 변경
+        return true;
     }
 
     //@기존 Pawn이 있는 경우: 선택된 Player Start 위치로 이동
