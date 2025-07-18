@@ -102,7 +102,7 @@ private:
     UFUNCTION()
     void HandleCharacterDeath();
     UFUNCTION()
-    void HandleCharacterRevive();
+    void HandleCharacterRespawn();
 
 protected:
     //@리스폰 처리
@@ -151,7 +151,7 @@ protected:
 private:
     //@Player Respawn 완료 콜백 함수
     UFUNCTION()
-    void OnPlayerRevival(APlayerStateBase* RespawnPlayerState);
+    void OnPlayerRespawn(APlayerStateBase* RespawnPlayerState);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
