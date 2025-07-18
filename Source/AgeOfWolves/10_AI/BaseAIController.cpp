@@ -88,8 +88,6 @@ void ABaseAIController::Tick(float DeltaTime)
     Super::Tick(DeltaTime);
 
     UpdateControlRotation(DeltaTime);
-
-    UpdateControlRotationByTargetLocation(DeltaTime);
 }
 
 void ABaseAIController::PostInitializeComponents()
@@ -152,101 +150,115 @@ void ABaseAIController::OnPossess(APawn* InPawn)
 
 void ABaseAIController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn)
 {
+    // 부모 클래스의 기본 업데이트를 먼저 호출 (bUpdatePawn은 false로 설정)
     Super::UpdateControlRotation(DeltaTime, false);
 
-    if (CurrentUpdateControlRotationType == EAIUpdateControlRotationType::TargetLocation)
-        return;
-    
+    // 소유한 폰이 유효한지 확인
     APawn* const AgentPawn = GetPawn();
-    if (!AgentPawn) return;
-
-    //@BB의 타겟 액터 확인
-    AActor* TargetActor = nullptr;
-    if (BBComponent)
+    if (!AgentPawn)
     {
-        TargetActor = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+        return;
     }
 
-    if (TargetActor)
-        CurrentUpdateControlRotationType = EAIUpdateControlRotationType::TargetActor;
-    else  //@타겟이 없으면 회전 업데이트 하지 않음
+    // 회전 업데이트가 필요하지 않은 경우 조기 반환
+    if (CurrentUpdateControlRotationType == EAIUpdateControlRotationType::None)
     {
+        return;
+    }
+
+    // === 공통 변수 선언 ===
+    FVector Start = AgentPawn->GetActorLocation();
+    FRotator CurrentRotation = GetControlRotation();
+    FVector TargetLocation = FVector::ZeroVector;
+    float RotationSpeed = SmootRotationSpeed; // 기본값은 멤버 변수 사용
+    bool bShouldCheckCompletion = false; // 회전 완료 체크가 필요한지 여부
+
+    // === 회전 타입에 따른 타겟 위치 및 설정 결정 ===
+    switch (CurrentUpdateControlRotationType)
+    {
+    case EAIUpdateControlRotationType::TargetActor:
+    {
+        // 블랙보드에서 타겟 액터 가져오기
+        AActor* TargetActor = nullptr;
+        if (BBComponent)
+        {
+            TargetActor = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+        }
+
+        // 타겟 액터가 유효하지 않으면 회전 중단
+        if (!TargetActor)
+        {
+            CurrentUpdateControlRotationType = EAIUpdateControlRotationType::None;
+            return;
+        }
+
+        TargetLocation = TargetActor->GetActorLocation();
+        // TargetActor 회전은 기본 SmootRotationSpeed 사용
+        // bShouldCheckCompletion은 false (연속적인 추적)
+        break;
+    }
+
+    case EAIUpdateControlRotationType::TargetLocation:
+    {
+        TargetLocation = TargetLocationForUpdateRotation;
+        RotationSpeed = 10.f; // 위치 기반 회전은 더 빠른 속도 사용
+        bShouldCheckCompletion = true; // 완료 체크 필요
+        break;
+    }
+
+    default:
+    {
+        // 예상치 못한 타입이면 None으로 설정하고 반환
         CurrentUpdateControlRotationType = EAIUpdateControlRotationType::None;
         return;
     }
-    //@현재 위치와 회전
-    FVector Start = AgentPawn->GetActorLocation();
-    FRotator CurrentRotation = GetControlRotation();
+    }
 
-    //@타겟을 향한 회전 계산 (GetFocalPoint 대신 직접 타겟 위치 사용)
-    TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, TargetActor->GetActorLocation());
+    // 타겟을 향한 회전 계산 (LookAt 회전 계산)
+    TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, TargetLocation);
 
-    //@Yaw만 사용
+    // Pitch와 Roll은 0으로 설정 (Yaw만 사용하여 수평 회전만)
     TargetRotation.Pitch = 0.0f;
     TargetRotation.Roll = 0.0f;
 
-    //@보간된 최종 회전 계산
+    // 현재 회전에서 목표 회전으로 부드럽게 보간
     FRotator FinalRotation = UKismetMathLibrary::RInterpTo(
         CurrentRotation,
         TargetRotation,
         DeltaTime,
-        SmootRotationSpeed
+        RotationSpeed
     );
 
-    //@컨트롤러 회전 설정
-    SetControlRotation(FinalRotation);
-}
-
-void ABaseAIController::UpdateControlRotationByTargetLocation(float DeltaTime)
-{
-    //@TargetActor로  ControlRotation 중일때나 none일때는 처리 안함
-    if (CurrentUpdateControlRotationType == EAIUpdateControlRotationType::None
-        || CurrentUpdateControlRotationType == EAIUpdateControlRotationType::TargetActor)
-        return;
-
-    APawn* const AgentPawn = GetPawn();
-    if (!AgentPawn) return;
-    
-    //@현재 위치와 회전
-    FVector Start = AgentPawn->GetActorLocation();
-    FRotator CurrentRotation = GetControlRotation();
-    FRotator AgentCurrentRotation = AgentPawn->GetActorRotation();
-
-    //@타겟을 향한 회전 계산 (GetFocalPoint 대신 직접 타겟 위치 사용)
-    TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, TargetLocationForUpdateRotation);
-
-    //@Yaw만 사용
-    TargetRotation.Pitch = 0.0f;
-    TargetRotation.Roll = 0.0f;
-
-    //@보간된 최종 회전 계산
-    FRotator FinalRotation = UKismetMathLibrary::RInterpTo(
-        CurrentRotation,
-        TargetRotation,
-        DeltaTime,
-        10.f
-    );
-
-    // AgentPawn->SetActorRotation(FinalRotation);
+    // 계산된 회전을 컨트롤러에 적용
     SetControlRotation(FinalRotation);
 
-    // 회전 완료 조건 (Yaw 기준, 약간의 오차 허용)
-    float YawDiff = FMath::Abs(FMath::FindDeltaAngleDegrees(CurrentRotation.Yaw, TargetRotation.Yaw));
-    if (YawDiff < 10.f)
+    // === 회전 완료 체크 (TargetLocation 타입에서만) ===
+    if (bShouldCheckCompletion)
     {
-        CurrentUpdateControlRotationType = EAIUpdateControlRotationType::None;
-        
-        UE_LOG(LogBaseAIC, Log, TEXT("Completed UpdateControlRotation: %.2f, TargetLocation : %s"), YawDiff, *TargetLocationForUpdateRotation.ToString());
-        
-    }
+        // Yaw 각도 차이를 계산 (절댓값으로)
+        float YawDiff = FMath::Abs(FMath::FindDeltaAngleDegrees(CurrentRotation.Yaw, TargetRotation.Yaw));
 
-        UE_LOG(LogBaseAIC, Log, TEXT("Roatating UpdateControlRotation: %.2f, TargetLocation : %s , CurrentRotation : %s, AgentCurrentRotation : %s , FinalRotation : %s, Start : %s"),
-            YawDiff, *TargetLocationForUpdateRotation.ToString()
-            , *CurrentRotation.ToString()
-            ,*AgentCurrentRotation.ToString()
-            ,*FinalRotation.ToString()
-            ,*Start.ToString());
-    
+        // 10도 이내로 가까워지면 회전 완료로 간주
+        if (YawDiff < 10.f)
+        {
+            // 회전 완료, 타입을 None으로 변경
+            CurrentUpdateControlRotationType = EAIUpdateControlRotationType::None;
+
+            UE_LOGFMT(LogBaseAIC, Log,
+                "위치 기반 회전 완료 | 각도 차이: {0}도, 목표 위치: {1}",
+                YawDiff, *TargetLocationForUpdateRotation.ToString());
+        }
+        else
+        {
+            // 디버깅용 로그 (개발 중에만 활성화)
+            UE_LOGFMT(LogBaseAIC, VeryVerbose,
+                "위치 기반 회전 진행 중 | 각도 차이: {0}도, 목표: {1}, 현재: {2}, 최종: {3}",
+                YawDiff,
+                *TargetLocationForUpdateRotation.ToString(),
+                *CurrentRotation.ToString(),
+                *FinalRotation.ToString());
+        }
+    }
 }
 
 void ABaseAIController::ExternalBindToAnimInstance(APawn* InPawn)
