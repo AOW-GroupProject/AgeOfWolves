@@ -246,7 +246,6 @@ protected:
 	virtual void PostInitializeComponents() override;
 	virtual void OnPossess(class APawn* InPawn) override;
 	virtual void UpdateControlRotation(float DeltaTime, bool bUpdatePawn = true);
-	virtual void UpdateControlRotationByTargetLocation(float DeltaTime);
 	//~End Of AAIController Interface
 
 protected:
