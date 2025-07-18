@@ -14,7 +14,6 @@ class UInputAction;
 class UInputMappingContext;
 
 
-
 USTRUCT(BlueprintType)
 struct FInputActionInfo
 {
@@ -32,7 +31,7 @@ public:
 /**
  * @UInputConfig
  * 
- * Enhanced Input È°¿ëÀ» À§ÇØ ÇÊ¿äÇÑ Á¤º¸µéÀ» Á¤ÀÇÇÕ´Ï´Ù.
+ * Enhanced Input í™œìš©ì„ ìœ„í•´ í•„ìš”í•œ ì •ë³´ë“¤ì„ ì •ì˜í•©ë‹ˆë‹¤.
  */
 UCLASS()
 class AGEOFWOLVES_API UInputConfig : public UDataAsset
