@@ -7,6 +7,7 @@
 #include "GameplayTagContainer.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "AbilitySystemInterface.h"
+#include "Abilities/GameplayAbilityTypes.h"
 
 #include "BaseAIController.generated.h"
 
@@ -75,6 +76,19 @@ enum class EAISharingInfoType : uint8
 	Exclude         UMETA(DisplayName = "제외 대상 제외"),
 	Custom          UMETA(DisplayName = "커스텀 대상")
 };
+
+/*
+*   @EAIUpdateControlRotationType
+*
+*   AI가 Update(매 틱) 회전할 타입을 정의합니다
+*/
+UENUM(BlueprintType)
+enum class EAIUpdateControlRotationType : uint8
+{
+	None             UMETA(DisplayName = "UpdateControlRotation 안함"),
+	TargetActor        UMETA(DisplayName = "TargetActor로 회전"),
+	TargetLocation      UMETA(DisplayName = "Target 위치로 회전"),
+};
 #pragma endregion
 
 //@구조체
@@ -117,6 +131,10 @@ struct FSharingInfoWithGroup
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		float ValidTime = 5.0f;
 
+	//@ 공유 오브젝트 (ex. 공유될 타겟 오브젝트 등)
+	UPROPERTY()
+	AActor* OptionalObject;
+	
 	//@제외할 대상 (SharingType이 Exclude일 때 사용)
 	UPROPERTY()
 		TArray<TWeakObjectPtr<AActor>> ExcludedTargets;
@@ -143,12 +161,14 @@ struct FSharingInfoWithGroup
 		int32 InPriority = 0,
 		float InValidTime = 5.0f,
 		const FVector& InLastKnownLocation = FVector::ZeroVector,
-		AActor* InDetectedTarget = nullptr)
+		AActor* InDetectedTarget = nullptr,
+		AActor* InOptionalObject = nullptr)
 		: InfoID(FGuid::NewGuid())
 		, SharingType(InSharingType)
 		, StateTag(InStateTag)
 		, Priority(InPriority)
 		, ValidTime(InValidTime)
+		, OptionalObject(InOptionalObject)
 	{
 		CreationTime = GWorld ? GWorld->GetTimeSeconds() : 0.0f;
 	}
@@ -285,7 +305,8 @@ protected:
 		const FGameplayTag& StateTag,
 		EAISharingInfoType SharingType = EAISharingInfoType::All,
 		int32 Priority = 1,
-		float ValidTime = 5.0f);
+		float ValidTime = 5.0f,
+		AActor* OptionalObject = nullptr);
 
 protected:
 	//@AI Group으로부터 전달 받은 공유 정보 처리
@@ -337,6 +358,11 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "AI | AI 유형")
 		EAIType AIType;
 
+	//@AI 유형
+	UPROPERTY(VisibleAnywhere, Category = "AI | AI 상태")
+	EAIState AIState;
+	
+
 	//@AI가 속한 그룹 ID
 	UPROPERTY()
 		FGuid AIGroupID;
@@ -360,6 +386,12 @@ protected:
 		float MinAttackRange;
 	UPROPERTY(EditDefaultsOnly)
 		float MaxAttackRange;
+
+protected:
+	//현재  UpdateControlRotation 타입
+	EAIUpdateControlRotationType CurrentUpdateControlRotationType;
+	FVector TargetLocationForUpdateRotation;
+	
 #pragma endregion
 
 //@Delegates
@@ -418,6 +450,10 @@ protected:
 		void OnCharacterStateEventOnGameplay(AActor* Actor, const FGameplayTag& CharacterStateTag);
 
 protected:
+	//@캐릭터 피격 ASC 이벤트 발생시 호출되는 콜백 
+	void OnDamagedEventOnGamePlay(const FGameplayEventData* Payload);
+	
+protected:
 	//@전투 패턴 Exit Block 완료 콜백
 	UFUNCTION()
 		bool OnCombatPatternExitComplete();
@@ -448,9 +484,14 @@ public:
 	//~IAbilitySystemInterface Interface
 	UAbilitySystemComponent* GetAbilitySystemComponent() const override;
 	//~End Of IAbilitySystemInterface Interface
-
+public:
+	FORCEINLINE UBlackboardComponent* GetBlackboardComponent() const {return BBComponent;}
+	
 public:
 	FORCEINLINE EAIType GetAIType() const { return AIType; }
+
+public:
+	FORCEINLINE EAIState GetAIState() const { return AIState; }
 
 public:
 	FORCEINLINE FGuid GetAIGroupID() const { return AIGroupID.IsValid() ? AIGroupID : FGuid(); }
@@ -463,6 +504,9 @@ public:
 public:
 	virtual FGenericTeamId GetGenericTeamId() const override;
 	virtual ETeamAttitude::Type GetTeamAttitudeTowards(const AActor& Other) const override;
+
+public:
+	FGameplayTag GetCurrentCharacterStateTag() const;
 #pragma endregion
 
 };

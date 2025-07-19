@@ -1,11 +1,31 @@
 #include "UIManagerSubsystem.h"
 #include "Logging/StructuredLog.h"
 
+#include "17_GameMode/AOWGameState.h"
+
+#include "Kismet/GameplayStatics.h"
+
 DEFINE_LOG_CATEGORY(LogUIManager)
 // UE_LOGFMT(LogUIManager, Log, "");
 
 UUIManagerSubsystem::UUIManagerSubsystem()
 {}
+
+void UUIManagerSubsystem::ExternalBindinToGameState()
+{
+    //@AOW Game State
+    auto GameState = UGameplayStatics::GetGameState(GetGameInstance());
+    if (!GameState)
+    {
+        return;
+    }
+
+    auto AOWGameState = CastChecked<AAOWGameState>(GameState);
+    
+    //@외부 바인딩...
+    AOWGameState->RequestLoadingUIRender.BindUFunction(this, "OnRequestLoadingUIRender");
+
+}
 
 void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
@@ -22,6 +42,28 @@ void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         UE_LOGFMT(LogUIManager, Error, "UI Collection 로드 실패");
     }
 
+    //@Begin Play
+    if (UWorld* World = GetWorld())
+    {
+        WorldBeginPlayHandle = World->OnWorldBeginPlay.AddUObject(this, &UUIManagerSubsystem::OnWorldBeginPlay);
+        UE_LOGFMT(LogUIManager, Log, "World BeginPlay 델리게이트에 바인딩 완료");
+    }
+}
+
+void UUIManagerSubsystem::OnWorldBeginPlay()
+{
+    //@외부 바인딩...
+    ExternalBindinToGameState();
+}
+
+void UUIManagerSubsystem::OnRequestLoadingUIRender()
+{
+    //@로딩 UI 렌더링 시작
+    UE_LOGFMT(LogUIManager, Log, "로딩 UI 렌더링 요청 받음");
+
+    //@Fade-In 완료 이벤트 호출 (임시로 즉시 호출)
+    OnLoadingUIFadeInComplete.Broadcast();
+    UE_LOGFMT(LogUIManager, Log, "로딩 UI Fade-In 완료 이벤트 호출");
 }
 
 const TArray<FUIInformation>* UUIManagerSubsystem::GetUICategoryInformations(const EUICategory& UICategory) const

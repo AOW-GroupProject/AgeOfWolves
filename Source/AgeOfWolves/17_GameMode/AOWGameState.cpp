@@ -38,6 +38,10 @@ void AAOWGameState::NotifyPlayerRespawnCompleted(APlayerController* RespawnedPla
 
 //@Callbacks
 #pragma region Callbacks
+void AAOWGameState::OnLoadingUIFadeInCompleted()
+{
+    UE_LOGFMT(LogAOWGameState, Log, "로딩 UI Fade-In 완료 콜백 호출됨");
+}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

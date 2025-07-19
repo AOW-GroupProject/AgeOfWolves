@@ -23,6 +23,11 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUIManager, Log, All)
 
 //@이벤트/델리게이트
 #pragma region Delegates
+//@로딩 UI Fade-In 완료 이벤트
+DECLARE_MULTICAST_DELEGATE(FOnLoadingUIFadeInComplete);
+
+//@로딩 UI Fade-Out 완료 이벤트  
+DECLARE_MULTICAST_DELEGATE(FOnLoadingUIFadeOutStart);
 #pragma endregion
 
 
@@ -47,6 +52,9 @@ public:
 	UUIManagerSubsystem();
 
 protected:
+	void ExternalBindinToGameState();
+
+protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 #pragma endregion
 
@@ -59,10 +67,27 @@ protected:
 
 //@Delegates
 #pragma region Delegates
+protected:
+	//@델리게이트 핸들을 저장해서 나중에 해제할 수 있도록 함
+	FDelegateHandle WorldBeginPlayHandle;
+
+public:
+	//@Fade-In 완료 이벤트
+	FOnLoadingUIFadeInComplete OnLoadingUIFadeInComplete;
+	//@Fade-Out 시작 이벤트
+	FOnLoadingUIFadeOutStart OnLoadingUIFadeOutStart;
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
+public:
+	//@World BeginPlay 시점에 호출될 함수
+	void OnWorldBeginPlay();
+
+protected:
+	//@로딩 UI 그리기 요청 이벤트를 구독
+	UFUNCTION()
+	void OnRequestLoadingUIRender();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

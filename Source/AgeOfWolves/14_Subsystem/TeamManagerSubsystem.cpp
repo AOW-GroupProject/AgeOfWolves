@@ -14,13 +14,13 @@ void UTeamManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
     Super::Initialize(Collection);
 
-    // Team Setting Info ·Îµå
+    // Team Setting Info ë¡œë“œ
     const FString AssetPath = TEXT("/Game/Blueprints/01_Character/DA_BaseTeamSettings");
     TeamSettingInfos = LoadObject<UTeamSettingInfos>(nullptr, *AssetPath);
 
     if (!TeamSettingInfos)
     {
-        UE_LOGFMT(LogTeamManager, Warning, "ÆÀ ¼³Á¤ Á¤º¸¸¦ Ã£À» ¼ö ¾ø½À´Ï´Ù. °æ·Î: {0}", AssetPath);
+        UE_LOGFMT(LogTeamManager, Warning, "íŒ€ ì„¤ì • ì •ë³´ë¥¼ ì°¾ì„ ìˆ˜ ì—†ìŠµë‹ˆë‹¤. ê²½ë¡œ: {0}", AssetPath);
         return;
     }
 
@@ -36,7 +36,7 @@ void UTeamManagerSubsystem::InitializeTeamAttitudeCache()
 
     TeamAttitudeCache.Empty();
 
-    //@ÆÀ ¼³Á¤ Á¤º¸·ÎºÎÅÍ Ä³½Ã ±¸Ãà
+    //@íŒ€ ì„¤ì • ì •ë³´ë¡œë¶€í„° ìºì‹œ êµ¬ì¶•
     for (const FTeamSettings& TeamSetting : TeamSettingInfos->TeamSettings)
     {
         TMap<uint8, TEnumAsByte<ETeamAttitude::Type>>& AttitudeMap = TeamAttitudeCache.Add(TeamSetting.TeamId);
@@ -50,7 +50,7 @@ void UTeamManagerSubsystem::InitializeTeamAttitudeCache()
 
 ETeamAttitude::Type UTeamManagerSubsystem::GetAttitude(uint8 SourceTeamId, uint8 TargetTeamId) const
 {
-    // Ä³½Ã¿¡¼­ ÅÂµµ Á¶È¸
+    // ìºì‹œì—ì„œ íƒœë„ ì¡°íšŒ
     const TMap<uint8, TEnumAsByte<ETeamAttitude::Type>>* AttitudeMap = TeamAttitudeCache.Find(SourceTeamId);
     if (!AttitudeMap)
     {

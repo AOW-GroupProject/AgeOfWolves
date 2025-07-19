@@ -96,6 +96,9 @@ protected:
     //@전달 받은 상태 정보 별 처리
     void ProcessDeadStateInfo(AActor* SenderAI, const TArray<TWeakObjectPtr<AActor>>& Recipients, const FSharingInfoWithGroup& InfoData);
 
+    //@전달 받은 군중제어 정보 별 처리
+    void ProcessCrowdControllInfo(AActor* SenderAI, const TArray<TWeakObjectPtr<AActor>>& Recipients, const FSharingInfoWithGroup& InfoData);
+    
 protected:
     //@만료된 처리 정보 ID 제거
     void CleanupExpiredProcessedInfoIDs(float CurrentTime);

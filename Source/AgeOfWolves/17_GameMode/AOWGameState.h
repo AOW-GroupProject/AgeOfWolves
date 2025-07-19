@@ -24,6 +24,8 @@ class ABasePlayerController;
 //@이벤트/델리게이트
 #pragma region Delegates
 DECLARE_MULTICAST_DELEGATE_OneParam(FPlayerRespawnCompleted, APlayerController*)
+
+DECLARE_DELEGATE(FRequestLoadingUIRender)
 #pragma endregion
 
 /**
@@ -61,11 +63,18 @@ protected:
 public:
 	//@플레이어 리스폰 완료 이벤트
 	FPlayerRespawnCompleted PlayerRespawnCompleted;
+
+public:
+	//@Loading UI 렌더 요청 이벤트
+	FRequestLoadingUIRender RequestLoadingUIRender;
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
-
+protected:
+	//@UI Manager의 로딩 UI Fade-In 완료 이벤트 콜백
+	UFUNCTION()
+	void OnLoadingUIFadeInCompleted();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
