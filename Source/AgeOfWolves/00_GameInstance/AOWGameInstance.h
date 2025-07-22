@@ -41,6 +41,7 @@ public:
 
 public:
 	virtual void Init() override;
+	virtual void StartGameInstance() override;
 	virtual void Shutdown() override;
 #pragma endregion
 

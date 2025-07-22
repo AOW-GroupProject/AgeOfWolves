@@ -1,6 +1,9 @@
 #include "LevelManagerSubsystem.h"
 #include "Logging/StructuredLog.h"
 
+#include "14_Subsystem/UIManagerSubsystem.h"
+
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogLevelManager)
 
@@ -36,10 +39,42 @@ void ULevelManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         UE_LOGFMT(LogLevelManager, Error, "레벨 데이터 정보 로드 실패 - 경로 확인 필요: /Game/Blueprints/10_Level/DA_LevelDataInfos");
     }
 }
+
+void ULevelManagerSubsystem::ExternalBindToUIManager()
+{
+    
+    auto GameInst = UGameplayStatics::GetGameInstance(this);
+    if (!GameInst)
+    {
+        UE_LOG(LogLevelManager, Warning, TEXT("ExternalBindToUIManager: GameInstance is null"));
+        return;
+    }
+
+    UUIManagerSubsystem* UIManager = GameInst->GetSubsystem<UUIManagerSubsystem>();
+    if (!UIManager)
+    {
+        UE_LOG(LogLevelManager, Warning, TEXT("ExternalBindToUIManager: UIManagerSubsystem is null"));
+        return;
+    }
+
+    auto LoadingUIFadeInCompleteHandle = UIManager->LoadingUIFadeInComplete.AddUObject(
+        this,
+        &ULevelManagerSubsystem::OnLoadingUIFadeInComplete
+    );
+
+    UE_LOG(LogLevelManager, Log, TEXT("Successfully bound to UIManager LoadingUIFadeInComplete event"));
+}
+#pragma endregion
+
+#pragma region Callbacks
+void ULevelManagerSubsystem::OnLoadingUIFadeInComplete()
+{
+}
 #pragma endregion
 
 //@Utility Functions
 #pragma region Utility
+
 TArray<FLevelData> ULevelManagerSubsystem::GetLevelsByType(const ELevelType& LevelType) const
 {
     if (!LevelDataInfos)

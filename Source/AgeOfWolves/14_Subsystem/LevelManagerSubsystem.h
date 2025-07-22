@@ -35,6 +35,7 @@ class AGEOFWOLVES_API ULevelManagerSubsystem : public UGameInstanceSubsystem
 {
 //@친추 클래스
 #pragma region Friend Class
+	friend class UAOWGameInstance;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -46,6 +47,13 @@ public:
 
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+
+protected:
+	//@내부 바인딩
+
+protected:
+	//@외부 바인딩
+	void ExternalBindToUIManager();
 #pragma endregion
 
 //@Property/Info...etc
@@ -61,6 +69,10 @@ protected:
 
 //@Callbacks
 #pragma region Callbacks
+protected:
+	//@Loading UI Fade-In 완료 이벤트 구독, 본격적으로, 레벨 전환이 발생하는 시점(비동기 처리)
+	UFUNCTION()
+	void OnLoadingUIFadeInComplete();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
