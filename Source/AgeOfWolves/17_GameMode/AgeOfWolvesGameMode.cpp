@@ -7,6 +7,8 @@
 #include "03_Player/PlayerStateBase.h"
 #include "17_GameMode/AOWGameState.h"
 
+#include "16_Level/Area.h"
+
 DEFINE_LOG_CATEGORY(LogAOWGameMode)
 
 //@Defualt Setting
@@ -19,7 +21,7 @@ AAgeOfWolvesGameMode::AAgeOfWolvesGameMode()
 #pragma region Property or Subwidgets or Infos...etc
 void AAgeOfWolvesGameMode::HandlePlayerDeath(APlayerController* PlayerController)
 {
-    //@PC
+    //@PC 유효성 검증
     if (!IsValid(PlayerController))
     {
         UE_LOGFMT(LogAOWGameMode, Warning, "플레이어 죽음 처리 - 유효하지 않은 PlayerController입니다");
@@ -40,18 +42,45 @@ void AAgeOfWolvesGameMode::HandlePlayerDeath(APlayerController* PlayerController
 
     if (DetermineDeathRules(PlayerController))
     {
-        //@리스폰 진행
-        if (TestRespawnToPlayerStart(PlayerController))
+        //@즉시 리스폰 대신 GameState를 통해 로딩 UI 표시 요청
+        AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>();
+        if (IsValid(CurrentGameState))
         {
-            UE_LOGFMT(LogAOWGameMode, Log, "리스폰 위치로 재설정 완료!");
+            UE_LOGFMT(LogAOWGameMode, Log, "GameState를 통한 로딩 UI 표시 요청");
+            CurrentGameState->NotifyRequestShowLoadingUI();
         }
-        else UE_LOGFMT(LogAOWGameMode, Warning, "리스폰 위치로 재설정 실패!");
+        else
+        {
+            UE_LOGFMT(LogAOWGameMode, Error, "GameState를 찾을 수 없어 로딩 UI 표시 요청 실패");
+        }
     }
-
-    //@Game State의 죽음 알림 요청
-    NotifyRespawnCompleteViaGameState(PlayerController);
 }
 
+void AAgeOfWolvesGameMode::ExecutePlayerRespawn(APlayerController* PlayerController)
+{
+    UE_LOGFMT(LogAOWGameMode, Log, "실제 리스폰 실행 시작: {0}", GetNameSafe(PlayerController));
+
+    if (!IsValid(PlayerController))
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "리스폰 실행 실패: 유효하지 않은 PlayerController");
+        return;
+    }
+
+    // 실제 리스폰 처리
+    if (TestRespawnToPlayerStart(PlayerController))
+    {
+        UE_LOGFMT(LogAOWGameMode, Log, "리스폰 위치로 재설정 완료!");
+
+        // 리스폰 완료 후 Game State에 알림
+        NotifyRespawnCompleteViaGameState(PlayerController);
+    }
+    else
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "리스폰 위치로 재설정 실패!");
+    }
+}
+
+// 나머지 함수들은 기존과 동일하게 유지...
 void AAgeOfWolvesGameMode::NotifyRespawnCompleteViaGameState(APlayerController* PlayerController)
 {
     UE_LOGFMT(LogAOWGameMode, Log, "Game State를 통한 리스폰 완료 알림 시작");
@@ -143,6 +172,10 @@ bool AAgeOfWolvesGameMode::TestRespawnToPlayerStart(APlayerController* PlayerCon
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
+void AAgeOfWolvesGameMode::OnStructureInteractionActtivated(const FStructureData& StructureData)
+{
+}
+
 bool AAgeOfWolvesGameMode::DetermineDeathRules(APlayerController* PlayerController)
 {
     if (!IsValid(PlayerController))

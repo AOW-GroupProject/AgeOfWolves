@@ -1,8 +1,11 @@
 #include "AOWGameInstance.h"
 #include "Logging/StructuredLog.h"
-#include "Kismet/GameplayStatics.h"
+
+#include "14_Subsystem/LevelManagerSubsystem.h"
 
 #include "15_SaveGame/AOWSaveGame.h"
+
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogGameInstance)
  //UE_LOGFMT(LogGameInstance, Log, "");
@@ -44,6 +47,20 @@ void UAOWGameInstance::Init()
         FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UAOWGameInstance::PostLoadMapEvent);
         UE_LOGFMT(LogGameInstance, Log, "로딩 이벤트 델리게이트 바인딩 완료");
     }
+}
+
+void UAOWGameInstance::StartGameInstance()
+{
+    Super::StartGameInstance();
+    
+    //@바인딩 수행...
+    if (auto* LevelManager = GetSubsystem<ULevelManagerSubsystem>())
+    {
+        UE_LOG(LogGameInstance, Log, TEXT("LevelManager is ready and accessible"));
+
+        LevelManager->ExternalBindToUIManager();
+    }
+
 }
 
 void UAOWGameInstance::Shutdown()

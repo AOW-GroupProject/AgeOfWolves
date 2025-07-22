@@ -24,6 +24,8 @@ class ABasePlayerController;
 //@이벤트/델리게이트
 #pragma region Delegates
 DECLARE_MULTICAST_DELEGATE_OneParam(FPlayerRespawnCompleted, APlayerController*)
+
+DECLARE_DELEGATE(FRequestShowLoadingUI)
 #pragma endregion
 
 /**
@@ -38,6 +40,7 @@ class AGEOFWOLVES_API AAOWGameState : public AGameStateBase
 //@친추 클래스
 #pragma region Friend Class
 	friend class AAgeOfWolvesGameMode;
+	friend class UUIManagerSubsystem;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -46,10 +49,22 @@ class AGEOFWOLVES_API AAOWGameState : public AGameStateBase
 #pragma region Default Setting
 public:
 	AAOWGameState();
+
+protected:
+	//@내부 바인딩
+
+protected:
+	//@외부 바인딩
+	
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+protected:
+	//@Game Mode에서 호출할 함수 - 로딩 UI 표시 요청 처리
+	UFUNCTION()
+	void NotifyRequestShowLoadingUI();
+
 protected:
 	//@Game Mode에서 호출할 함수 - 리스폰 완료 알림 처리
 	UFUNCTION()
@@ -61,11 +76,14 @@ protected:
 public:
 	//@플레이어 리스폰 완료 이벤트
 	FPlayerRespawnCompleted PlayerRespawnCompleted;
+
+public:
+	//@Loading UI 렌더 요청 이벤트
+	FRequestShowLoadingUI RequestShowLoadingUI;
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
-
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

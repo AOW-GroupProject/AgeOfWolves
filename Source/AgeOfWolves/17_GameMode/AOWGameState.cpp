@@ -18,6 +18,14 @@ AAOWGameState::AAOWGameState()
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+void AAOWGameState::NotifyRequestShowLoadingUI()
+{
+    //@Loading UI 그리기 요청 이벤트
+    RequestShowLoadingUI.ExecuteIfBound();
+
+    UE_LOGFMT(LogAOWGameState, Log, "로딩 UI 표시 요청 처리 완료");
+}
+
 void AAOWGameState::NotifyPlayerRespawnCompleted(APlayerController* RespawnedPlayerController)
 {
     //@기본 유효성 검증
