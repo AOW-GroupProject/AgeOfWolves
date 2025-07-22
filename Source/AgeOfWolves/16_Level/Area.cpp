@@ -13,6 +13,13 @@
 #include "00_GameInstance/AOWGameInstance.h"
 #include "14_Subsystem/AreaManagerSubsystem.h"
 
+#if WITH_EDITOR
+#include "Framework/Notifications/NotificationManager.h"
+#include "Widgets/Notifications/SNotificationList.h"
+#include "Misc/MessageDialog.h"
+#include "Engine/Engine.h"
+#endif
+
 DEFINE_LOG_CATEGORY_STATIC(LogArea, Log, All);
 
 //@Defualt Setting
@@ -30,8 +37,8 @@ AArea::AArea()
     AreaBounds->SetCollisionResponseToAllChannels(ECR_Overlap);
     AreaBounds->SetBoxExtent(FVector(2000.0f, 2000.0f, 500.0f));
 
-    //@Area ID
-    AreaID = FGuid::NewGuid();
+    //@Area Tag - 빈 태그로 초기화
+    AreaTag = FGameplayTag();
 
     //@초기화
     MAIGroups.Empty();
@@ -410,6 +417,8 @@ void AArea::UnbindFromAllPlayer()
 void AArea::InitializeArea()
 {
 
+
+
     //@콜리전 이벤트 바인딩
     AreaBounds->OnComponentBeginOverlap.AddDynamic(this, &AArea::OnOverlapBegin);
     AreaBounds->OnComponentEndOverlap.AddDynamic(this, &AArea::OnOverlapEnd);
@@ -456,6 +465,200 @@ void AArea::InitializeArea()
     //}
 #endif
 }
+
+#if WITH_EDITOR
+
+void AArea::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
+{
+    Super::PostEditChangeProperty(PropertyChangedEvent);
+
+    // AreaTag 프로퍼티가 변경되었는지 확인
+    if (PropertyChangedEvent.Property &&
+        PropertyChangedEvent.Property->GetName() == TEXT("AreaTag"))
+    {
+        // 즉시 유효성 검사 수행하여 실시간 피드백 제공
+        ValidateAreaTag(true);
+
+        UE_LOGFMT(LogArea, Log, "Area {0}: AreaTag 변경됨 - {1}",
+            *GetName(), *AreaTag.ToString());
+    }
+}
+
+void AArea::CheckForErrors()
+{
+    Super::CheckForErrors();
+
+    // 맵 체크 시스템을 통한 포괄적인 검증
+    if (!ValidateAreaTag(false))
+    {
+        FString ErrorType;
+        FString SolutionGuide;
+
+        if (!AreaTag.IsValid())
+        {
+            ErrorType = TEXT("Area Tag가 설정되지 않음");
+            SolutionGuide = TEXT("Details 패널에서 'Area.'로 시작하는 GameplayTag를 설정하세요. 예: Area.Forest.Northern");
+        }
+        else
+        {
+            ErrorType = TEXT("Area Tag 명명 규칙 위반");
+            SolutionGuide = FString::Printf(TEXT("현재 태그 '%s'를 'Area.'로 시작하도록 수정하세요."), *AreaTag.ToString());
+        }
+
+        // 맵 체크 결과에 구조화된 오류 정보 추가
+        FString DetailedError = FString::Printf(
+            TEXT("Area '%s': %s. %s"),
+            *GetName(), *ErrorType, *SolutionGuide
+        );
+
+        AddMapCheckError(DetailedError);
+    }
+}
+
+void AArea::PostLoad()
+{
+    Super::PostLoad();
+
+    // 에디터에서 레벨을 로드할 때마다 자동 검증
+    if (GetWorld() && GetWorld()->WorldType == EWorldType::Editor)
+    {
+        // 로드 직후에는 조용한 검증만 수행 (너무 많은 알림 방지)
+        ValidateAreaTag(false);
+    }
+}
+
+void AArea::PostActorCreated()
+{
+    Super::PostActorCreated();
+
+    // 새 Area 액터가 생성되었을 때 개발자에게 설정 안내 제공
+    if (GetWorld() && GetWorld()->WorldType == EWorldType::Editor)
+    {
+        // 생성 직후에는 AreaTag가 비어있을 것이므로 친화적인 안내 메시지 표시
+        ShowAreaTagNotification(
+            FString::Printf(TEXT("새 Area 액터 '%s'가 생성되었습니다. Details 패널에서 Area Tag를 설정해주세요."), *GetName()),
+            false  // 오류가 아닌 정보성 알림
+        );
+    }
+}
+
+bool AArea::ValidateAreaTag(bool bShowDetailedFeedback) const
+{
+    // Area Tag 존재 여부 검사 - 핵심만 간단히
+    if (!AreaTag.IsValid())
+    {
+        if (bShowDetailedFeedback)
+        {
+            FText WarningTitle = FText::FromString(TEXT("Area Tag 필요"));
+            FText WarningMessage = FText::Format(
+                FText::FromString(TEXT("Area '{0}'에 Area.~ 형식의 태그가 필요합니다.\n\n예: Area.Forest.Northern, Area.Desert.Oasis")),
+                FText::FromString(GetName())
+            );
+
+            FMessageDialog::Open(EAppMsgType::Ok, WarningMessage, &WarningTitle);
+
+            ShowAreaTagNotification(
+                FString::Printf(TEXT("Area '%s': Area.~ 태그를 설정해주세요"), *GetName()),
+                true
+            );
+        }
+        return false;
+    }
+
+    // Area Tag 명명 규칙 검사 - 역시 간단히
+    if (!AreaTag.ToString().StartsWith(TEXT("Area.")))
+    {
+        if (bShowDetailedFeedback)
+        {
+            FText WarningTitle = FText::FromString(TEXT("잘못된 Area Tag"));
+            FText WarningMessage = FText::Format(
+                FText::FromString(TEXT("'{0}' 태그를 'Area.'로 시작하도록 변경해주세요.\n\n현재: {1}\n권장: Area.{1}")),
+                FText::FromString(GetName()),
+                FText::FromString(AreaTag.ToString())
+            );
+
+            FMessageDialog::Open(EAppMsgType::Ok, WarningMessage, &WarningTitle);
+
+            ShowAreaTagNotification(
+                FString::Printf(TEXT("Area '%s': 태그는 'Area.'로 시작해야 합니다"), *GetName()),
+                true
+            );
+        }
+        return false;
+    }
+
+    return true;
+}
+void AArea::ShowAreaTagNotification(const FString& Message, bool bIsError) const
+{
+    // SystemMessageConfig의 ShowEditorNotification 패턴을 그대로 적용
+    // 이는 일관된 사용자 경험을 제공하기 위한 중요한 설계 결정입니다
+
+    FNotificationInfo NotificationInfo(FText::FromString(Message));
+
+    // 알림의 생명주기 설정 - 오류는 더 오래, 정보는 짧게
+    NotificationInfo.bFireAndForget = true;
+    NotificationInfo.FadeOutDuration = bIsError ? 3.0f : 2.0f;
+    NotificationInfo.ExpireDuration = bIsError ? 8.0f : 5.0f;  // 오류는 더 오래 표시
+
+    // 메시지 유형에 따른 시각적 구분
+    const FSlateBrush* IconBrush = nullptr;
+
+#if ENGINE_MAJOR_VERSION >= 5
+    // UE5 이상에서 사용 가능한 아이콘들
+    if (bIsError)
+    {
+        IconBrush = FAppStyle::GetBrush(TEXT("MessageLog.Error"));
+    }
+    else
+    {
+        IconBrush = FAppStyle::GetBrush(TEXT("MessageLog.Info"));
+    }
+#else
+    // UE4 호환성을 위한 레거시 아이콘
+    if (bIsError)
+    {
+        IconBrush = FEditorStyle::GetBrush(TEXT("MessageLog.Error"));
+    }
+    else
+    {
+        IconBrush = FEditorStyle::GetBrush(TEXT("MessageLog.Info"));
+    }
+#endif
+
+    if (IconBrush)
+    {
+        NotificationInfo.Image = IconBrush;
+    }
+
+    // 실제 알림 표시
+    FSlateNotificationManager::Get().AddNotification(NotificationInfo);
+
+    // 로그에도 기록 (나중에 추적 가능하도록)
+    if (bIsError)
+    {
+        UE_LOGFMT(LogArea, Warning, "Area Tag 검증 오류: {0}", *Message);
+    }
+    else
+    {
+        UE_LOGFMT(LogArea, Log, "Area Tag 정보: {0}", *Message);
+    }
+}
+
+void AArea::AddMapCheckError(const FString& ErrorMessage) const
+{
+
+    FMessageLog MapCheckLog("MapCheck");
+
+    // 오류 메시지 생성 (클릭 가능한 액터 링크와 함께)
+    TSharedRef<FTokenizedMessage> ErrorToken = FTokenizedMessage::Create(EMessageSeverity::Error);
+
+    // 기본 오류 텍스트 추가
+    ErrorToken->AddToken(FTextToken::Create(FText::FromString(ErrorMessage)));
+
+    MapCheckLog.AddMessage(ErrorToken);
+}
+#endif // WITH_EDITOR
 #pragma endregion
 
 //@Property/Info...etc
