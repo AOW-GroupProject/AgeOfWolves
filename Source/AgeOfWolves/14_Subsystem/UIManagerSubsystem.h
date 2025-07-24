@@ -51,6 +51,7 @@ public:
 	UUIManagerSubsystem();
 
 protected:
+	//@외부 바인딩...
 	void ExternalBindinToGameState();
 
 protected:

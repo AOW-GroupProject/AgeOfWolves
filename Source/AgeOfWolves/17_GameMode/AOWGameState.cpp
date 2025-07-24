@@ -26,6 +26,27 @@ void AAOWGameState::NotifyRequestShowLoadingUI()
     UE_LOGFMT(LogAOWGameState, Log, "로딩 UI 표시 요청 처리 완료");
 }
 
+void AAOWGameState::NotifyRequestStartLevelTransition(const FGameplayTag& NextLevelTag)
+{
+    UE_LOGFMT(LogAOWGameState, Log, "레벨 전환 요청 받음: {0}", *NextLevelTag.ToString());
+
+    //@다음 레벨 태그 유효성 검사
+    if (!NextLevelTag.IsValid())
+    {
+        UE_LOGFMT(LogAOWGameState, Error, "레벨 전환 실패: 유효하지 않은 레벨 태그입니다");
+        return;
+    }
+
+    UE_LOGFMT(LogAOWGameState, Log, "레벨 전환 유효성 검사 통과 - 목적지: {0}",
+        *NextLevelTag.ToString());
+
+    //@레벨 전환 시작 이벤트 브로드캐스트
+    RequestStartLevelTransition.ExecuteIfBound(NextLevelTag);
+
+    UE_LOGFMT(LogAOWGameState, Log, "레벨 전환 시작 이벤트 브로드캐스트 완료: {0}", *NextLevelTag.ToString());
+
+}
+
 void AAOWGameState::NotifyPlayerRespawnCompleted(APlayerController* RespawnedPlayerController)
 {
     //@기본 유효성 검증

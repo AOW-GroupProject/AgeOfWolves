@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "GameFramework/GameStateBase.h"
+#include "GameplayTagContainer.h"
 
 #include "AOWGameState.generated.h"
 
@@ -26,6 +27,9 @@ class ABasePlayerController;
 DECLARE_MULTICAST_DELEGATE_OneParam(FPlayerRespawnCompleted, APlayerController*)
 
 DECLARE_DELEGATE(FRequestShowLoadingUI)
+
+//@레벨 전환 요청 이벤트
+DECLARE_DELEGATE_OneParam(FRequestStartLevelTransition, const FGameplayTag&)
 #pragma endregion
 
 /**
@@ -66,6 +70,10 @@ protected:
 	void NotifyRequestShowLoadingUI();
 
 protected:
+	//@레벨 전환 시작을 요청하는 함수
+	void NotifyRequestStartLevelTransition(const FGameplayTag& NextLevelTag);
+
+protected:
 	//@Game Mode에서 호출할 함수 - 리스폰 완료 알림 처리
 	UFUNCTION()
 	void NotifyPlayerRespawnCompleted(APlayerController* RespawnedPlayerController);
@@ -74,12 +82,16 @@ protected:
 //@Delegates
 #pragma region Delegates
 public:
-	//@플레이어 리스폰 완료 이벤트
-	FPlayerRespawnCompleted PlayerRespawnCompleted;
-
-public:
 	//@Loading UI 렌더 요청 이벤트
 	FRequestShowLoadingUI RequestShowLoadingUI;
+
+public:
+	//@레벨 전환 시작 요청 이벤트
+	FRequestStartLevelTransition RequestStartLevelTransition;
+
+public:
+	//@플레이어 리스폰 완료 이벤트
+	FPlayerRespawnCompleted PlayerRespawnCompleted;
 #pragma endregion
 
 //@Callbacks

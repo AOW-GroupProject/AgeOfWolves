@@ -10,6 +10,7 @@
 DEFINE_LOG_CATEGORY(LogUIManager)
 // UE_LOGFMT(LogUIManager, Log, "");
 
+//@Default Setting
 #pragma region Default Settings
 UUIManagerSubsystem::UUIManagerSubsystem()
 {}
@@ -182,7 +183,7 @@ bool UUIManagerSubsystem::ShowSystemUI(const FGameplayTag& UITag)
     UUserWidget* TargetWidget = *FoundWidget;
 
     //@이미 표시되고 있는지 확인
-    if (TargetWidget->GetVisibility() == ESlateVisibility::Visible)
+    if (TargetWidget->GetVisibility() == ESlateVisibility::SelfHitTestInvisible)
     {
         UE_LOGFMT(LogUIManager, Warning, "System UI가 이미 표시되고 있습니다: {0}",
             *UITag.ToString());
@@ -190,7 +191,7 @@ bool UUIManagerSubsystem::ShowSystemUI(const FGameplayTag& UITag)
     }
 
     //@UI를 Visible 상태로 변경
-    TargetWidget->SetVisibility(ESlateVisibility::Visible);
+    TargetWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
 
     UE_LOGFMT(LogUIManager, Log, "System UI 표시 완료: {0}", *UITag.ToString());
     return true;
@@ -256,9 +257,25 @@ void UUIManagerSubsystem::OnRequestShowLoadingUI()
     //@로딩 UI 렌더링 시작
     UE_LOGFMT(LogUIManager, Log, "로딩 UI 렌더링 요청 받음");
 
-    //@Fade-In 완료 이벤트 호출 (임시로 즉시 호출)
+    //@로딩 UI 태그 생성
+    FGameplayTag LoadingUITag = FGameplayTag::RequestGameplayTag(FName("UI.System.LoadingUI"));
+
+    //@캐시에서 로딩 UI를 찾아서 활성화
+    if (!ShowSystemUI(LoadingUITag))
+    {
+        UE_LOGFMT(LogUIManager, Error, "로딩 UI 활성화 실패 - UI를 찾을 수 없거나 이미 활성화됨");
+
+        //@실패했어도 이벤트는 호출해서 게임 플로우가 멈추지 않도록 함
+        LoadingUIFadeInComplete.Broadcast();
+        UE_LOGFMT(LogUIManager, Warning, "로딩 UI 활성화 실패했지만 Fade-In 완료 이벤트 호출");
+    }
+
+    UE_LOGFMT(LogUIManager, Log, "로딩 UI 활성화 성공");
+
+    //@Fade-In 완료 이벤트 호출 (실제 페이드 인 애니메이션이 없으므로 즉시 호출)
     LoadingUIFadeInComplete.Broadcast();
     UE_LOGFMT(LogUIManager, Log, "로딩 UI Fade-In 완료 이벤트 호출");
+
 }
 #pragma endregion
 
