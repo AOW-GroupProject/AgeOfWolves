@@ -17,6 +17,14 @@ struct FStructureData;
 
 //@열거형
 #pragma region Enums
+//@상태 구분을 위한 열거형
+UENUM()
+enum class EGameModeState : uint8
+{
+    Normal,
+    PlayerDeath,
+    LevelTransition
+};
 #pragma endregion
 
 //@구조체
@@ -57,13 +65,31 @@ private:
     UPROPERTY()
     FGameplayTag CachedNextLevelTag;
 
-public:
-    // PlayerController 기반으로 변경된 public 함수
-    void HandlePlayerDeath(APlayerController* PlayerController);
+    //@현재 상태 및 죽은 플레이어 정보
+    EGameModeState CurrentState = EGameModeState::Normal;
+
+    UPROPERTY()
+    TWeakObjectPtr<APlayerController> CachedDeadPlayerController;
 
 private:
-    //@레벨 전환 시작을 Game State에 알리는 내부 함수
-    void NotifyStartLevelTransition();
+    //@플레이어 리스폰 처리 (두 가지 상황을 지원)
+    void PlayerRespawn();
+
+
+
+    //@플레이어 텔레포트 실행
+    bool PerformPlayerTeleport(APawn* PlayerPawn, const FTransform& TargetTransform);
+
+    //@플레이어 게임플레이 상태 초기화
+    void ResetPlayerGameplayState(APlayerController* PlayerController);
+
+public:
+    //@사용자 죽음
+    void HandlePlayerDeath(APlayerController* PlayerController);
+
+public:
+    //@구조물의 활성화
+    void HandleFirstStructureActivation(const FStructureData& StructureData);
 #pragma endregion
 
 //@Delegates
@@ -75,11 +101,6 @@ private:
 
 //@Callbacks
 #pragma region Callbacks
-protected:
-    //@구조물(늑대 상) 상호작용 발생 이벤트 구독
-    UFUNCTION()
-        void OnStructureInteractionActtivated(const FStructureData& StructureData);
-
 protected:
     //@UI Manager로부터 로딩 UI Fade-In 완료 이벤트 수신
     UFUNCTION()
@@ -96,5 +117,12 @@ protected:
 private:
     //@죽음 규칙 결정
     bool DetermineDeathRules(APlayerController* PlayerController);
+
+private:
+    //@죽음으로 인한 리스폰 위치 찾기
+    bool FindDeathRespawnLocation(APlayerController* PlayerController, FTransform& OutRespawnTransform);
+
+    //@레벨 전환으로 인한 리스폰 위치 찾기  
+    bool FindLevelTransitionRespawnLocation(APlayerController* PlayerController, FTransform& OutRespawnTransform);
 #pragma endregion
 };

@@ -26,6 +26,15 @@ void AAOWGameState::NotifyRequestShowLoadingUI()
     UE_LOGFMT(LogAOWGameState, Log, "로딩 UI 표시 요청 처리 완료");
 }
 
+void AAOWGameState::NotifyRequestHideLoadingUI()
+{
+    //@Loading UI 숨기기 요청 이벤트
+    RequestHideLoadingUI.ExecuteIfBound();
+
+    UE_LOGFMT(LogAOWGameState, Log, "로딩 UI 숨기기 요청 처리 완료");
+
+}
+
 void AAOWGameState::NotifyRequestStartLevelTransition(const FGameplayTag& NextLevelTag)
 {
     UE_LOGFMT(LogAOWGameState, Log, "레벨 전환 요청 받음: {0}", *NextLevelTag.ToString());
@@ -46,6 +55,7 @@ void AAOWGameState::NotifyRequestStartLevelTransition(const FGameplayTag& NextLe
     UE_LOGFMT(LogAOWGameState, Log, "레벨 전환 시작 이벤트 브로드캐스트 완료: {0}", *NextLevelTag.ToString());
 
 }
+
 
 void AAOWGameState::NotifyPlayerRespawnCompleted(APlayerController* RespawnedPlayerController)
 {

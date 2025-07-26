@@ -113,6 +113,8 @@ protected:
 	//@로딩 UI 그리기 요청 이벤트를 구독
 	UFUNCTION()
 	void OnRequestShowLoadingUI();
+	UFUNCTION()
+	void OnRequestHideLoadingUI();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

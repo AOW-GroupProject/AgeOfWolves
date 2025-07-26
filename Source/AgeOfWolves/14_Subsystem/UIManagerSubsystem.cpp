@@ -28,6 +28,7 @@ void UUIManagerSubsystem::ExternalBindinToGameState()
     
     //@외부 바인딩...
     AOWGameState->RequestShowLoadingUI.BindUFunction(this, "OnRequestShowLoadingUI");
+    AOWGameState->RequestHideLoadingUI.BindUFunction(this, "OnRequestHideLoadingUI");
 }
 
 void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
@@ -52,8 +53,6 @@ void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         UE_LOGFMT(LogUIManager, Log, "World BeginPlay 델리게이트에 바인딩 완료");
     }
 
-    //@System UI 생성
-    CreateAndCacheSystemUIs();
 }
 #pragma endregion
 
@@ -250,6 +249,9 @@ void UUIManagerSubsystem::OnWorldBeginPlay()
 {
     //@외부 바인딩...
     ExternalBindinToGameState();
+
+    //@System UI 생성
+    CreateAndCacheSystemUIs();
 }
 
 void UUIManagerSubsystem::OnRequestShowLoadingUI()
@@ -258,7 +260,7 @@ void UUIManagerSubsystem::OnRequestShowLoadingUI()
     UE_LOGFMT(LogUIManager, Log, "로딩 UI 렌더링 요청 받음");
 
     //@로딩 UI 태그 생성
-    FGameplayTag LoadingUITag = FGameplayTag::RequestGameplayTag(FName("UI.System.LoadingUI"));
+    FGameplayTag LoadingUITag = FGameplayTag::RequestGameplayTag("UI.System.LoadingUI");
 
     //@캐시에서 로딩 UI를 찾아서 활성화
     if (!ShowSystemUI(LoadingUITag))
@@ -268,6 +270,8 @@ void UUIManagerSubsystem::OnRequestShowLoadingUI()
         //@실패했어도 이벤트는 호출해서 게임 플로우가 멈추지 않도록 함
         LoadingUIFadeInComplete.Broadcast();
         UE_LOGFMT(LogUIManager, Warning, "로딩 UI 활성화 실패했지만 Fade-In 완료 이벤트 호출");
+
+        return;
     }
 
     UE_LOGFMT(LogUIManager, Log, "로딩 UI 활성화 성공");
@@ -276,6 +280,29 @@ void UUIManagerSubsystem::OnRequestShowLoadingUI()
     LoadingUIFadeInComplete.Broadcast();
     UE_LOGFMT(LogUIManager, Log, "로딩 UI Fade-In 완료 이벤트 호출");
 
+}
+
+void UUIManagerSubsystem::OnRequestHideLoadingUI()
+{
+    UE_LOGFMT(LogUIManager, Log, "로딩 UI 숨김 요청 받음");
+
+    FGameplayTag LoadingUITag = FGameplayTag::RequestGameplayTag("UI.System.LoadingUI");
+
+    if (!HideSystemUI(LoadingUITag))
+    {
+        UE_LOGFMT(LogUIManager, Error, "로딩 UI 숨김 실패 - UI를 찾을 수 없거나 이미 숨겨짐");
+
+        // 실패해도 이벤트 호출로 게임 플로우 유지
+        LoadingUIFadeOutStart.Broadcast();
+        UE_LOGFMT(LogUIManager, Warning, "로딩 UI 숨김 실패했지만 Fade-Out 시작 이벤트 호출");
+        return;
+    }
+
+    UE_LOGFMT(LogUIManager, Log, "로딩 UI 숨김 성공");
+
+    // Fade-Out 시작 이벤트 호출
+    LoadingUIFadeOutStart.Broadcast();
+    UE_LOGFMT(LogUIManager, Log, "로딩 UI Fade-Out 시작 이벤트 호출");
 }
 #pragma endregion
 
@@ -341,6 +368,8 @@ const TArray<FUIInformation>* UUIManagerSubsystem::GetUICategoryInformations(con
         return &UICollection->GetUICategoryInformations(EUICategory::Menu);
     case EUICategory::Interaction:
         return &UICollection->GetUICategoryInformations(EUICategory::Interaction);
+    case EUICategory::System:
+        return &UICollection->GetUICategoryInformations(EUICategory::System);
     default:
         UE_LOGFMT(LogUIManager, Warning, "유효하지 않은 UI Category입니다.");
         return nullptr;

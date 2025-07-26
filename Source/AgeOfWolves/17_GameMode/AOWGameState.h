@@ -28,6 +28,8 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FPlayerRespawnCompleted, APlayerController*)
 
 DECLARE_DELEGATE(FRequestShowLoadingUI)
 
+DECLARE_DELEGATE(FRequestHideLoadingUI)
+
 //@레벨 전환 요청 이벤트
 DECLARE_DELEGATE_OneParam(FRequestStartLevelTransition, const FGameplayTag&)
 #pragma endregion
@@ -68,6 +70,8 @@ protected:
 	//@Game Mode에서 호출할 함수 - 로딩 UI 표시 요청 처리
 	UFUNCTION()
 	void NotifyRequestShowLoadingUI();
+	UFUNCTION()
+	void NotifyRequestHideLoadingUI();
 
 protected:
 	//@레벨 전환 시작을 요청하는 함수
@@ -84,6 +88,8 @@ protected:
 public:
 	//@Loading UI 렌더 요청 이벤트
 	FRequestShowLoadingUI RequestShowLoadingUI;
+	//@Loading UI 숨기기 요청 이벤트
+	FRequestHideLoadingUI RequestHideLoadingUI;
 
 public:
 	//@레벨 전환 시작 요청 이벤트

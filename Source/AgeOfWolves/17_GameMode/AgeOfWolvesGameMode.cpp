@@ -43,18 +43,10 @@ void AAgeOfWolvesGameMode::ExternalBindingToUIManager()
 
     UE_LOGFMT(LogAOWGameMode, Log, "UI Manager Subsystem 획득 성공: {0}", GetNameSafe(UIManager));
 
-    //@UFunction으로 선언된 함수는 FName으로 바인딩해야 함
-    LoadingUIFadeInCompleteHandle = UIManager->LoadingUIFadeInComplete.AddUFunction(
-        this, FName("OnLoadingUIFadeInComplete")
-    );
 
-    //@바인딩 성공 여부 확인
-    if (!LoadingUIFadeInCompleteHandle.IsValid())
-    {
-        UE_LOGFMT(LogAOWGameMode, Log, "UI Manager LoadingUIFadeInComplete 이벤트 바인딩 성공");
-    }
+    UIManager->LoadingUIFadeInComplete.AddUFunction(this, "OnLoadingUIFadeInComplete");
 
-    UE_LOGFMT(LogAOWGameMode, Warning, "UI Manager LoadingUIFadeInComplete 이벤트 바인딩 실패");
+    UE_LOGFMT(LogAOWGameMode, Log, "UI Manager LoadingUIFadeInComplete 이벤트 바인딩 성공");
 }
 
 void AAgeOfWolvesGameMode::ExternalBindingToLevelManager()
@@ -126,16 +118,128 @@ AActor* AAgeOfWolvesGameMode::ChoosePlayerStart_Implementation(AController* Play
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+void AAgeOfWolvesGameMode::PlayerRespawn()
+{
+    UE_LOGFMT(LogAOWGameMode, Log, "플레이어 리스폰 시작 - 현재 상태: {0}",
+        static_cast<int32>(CurrentState));
+
+    // 기본 유효성 검사 - 가장 중요한 전제 조건들을 먼저 확인합니다
+    if (!CachedDeadPlayerController.IsValid())
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "죽은 플레이어 정보가 유효하지 않음");
+        CurrentState = EGameModeState::Normal;
+        return;
+    }
+
+    APlayerController* PlayerController = CachedDeadPlayerController.Get();
+
+    // 추가 유효성 검사 - 게임 환경이 리스폰을 수행할 수 있는 상태인지 확인합니다
+    if (!IsValid(PlayerController) || !IsValid(GetWorld()))
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "PlayerController 또는 World가 유효하지 않음");
+        CurrentState = EGameModeState::Normal;
+        CachedDeadPlayerController.Reset();
+        return;
+    }
+
+    // 현재 Pawn 확인 - 리스폰할 대상이 존재하는지 검증합니다
+    APawn* CurrentPawn = PlayerController->GetPawn();
+    if (!IsValid(CurrentPawn))
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "현재 Pawn이 유효하지 않음");
+        CurrentState = EGameModeState::Normal;
+        CachedDeadPlayerController.Reset();
+        return;
+    }
+
+    // 상태에 따른 리스폰 위치 결정 - 이 부분이 핵심 로직입니다
+    FTransform RespawnTransform;
+    bool bFoundRespawnLocation = false;
+
+    if (CurrentState == EGameModeState::PlayerDeath)
+    {
+        // 죽음으로 인한 리스폰: 기존 ChoosePlayerStart 로직 사용
+        // 이는 레벨 디자이너가 배치한 적절한 PlayerStart를 선택하는 방식입니다
+        bFoundRespawnLocation = FindDeathRespawnLocation(PlayerController, RespawnTransform);
+        UE_LOGFMT(LogAOWGameMode, Log, "죽음 리스폰 위치 검색 결과: {0}",
+            bFoundRespawnLocation ? TEXT("성공") : TEXT("실패"));
+    }
+    else if (CurrentState == EGameModeState::LevelTransition)
+    {
+        // 레벨 전환으로 인한 리스폰: DefaultPlayerStartTag 기반 위치 사용
+        // 이는 정확한 입구 지점으로 플레이어를 배치하는 방식입니다
+        bFoundRespawnLocation = FindLevelTransitionRespawnLocation(PlayerController, RespawnTransform);
+        UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 리스폰 위치 검색 결과: {0}",
+            bFoundRespawnLocation ? TEXT("성공") : TEXT("실패"));
+    }
+    else
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "예상하지 못한 상태에서 PlayerRespawn 호출: {0}",
+            static_cast<int32>(CurrentState));
+        CurrentState = EGameModeState::Normal;
+        CachedDeadPlayerController.Reset();
+        return;
+    }
+
+    // 리스폰 위치를 찾지 못한 경우의 폴백 처리
+    if (!bFoundRespawnLocation)
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "리스폰 위치를 찾을 수 없음 - 기본 위치 사용");
+
+        // 기본 위치로 폴백 (월드 원점에서 약간 위)
+        RespawnTransform = FTransform(FRotator::ZeroRotator, FVector(0, 0, 100), FVector::OneVector);
+    }
+
+    // 상태를 먼저 초기화 (순환 호출 방지 및 상태 정리)
+    EGameModeState PreviousState = CurrentState;
+    CurrentState = EGameModeState::Normal;
+    CachedDeadPlayerController.Reset();
+
+    // 실제 위치 이동 수행 - RestartPlayer 대신 직접 텔레포트를 사용합니다
+    bool bTeleportSuccess = PerformPlayerTeleport(CurrentPawn, RespawnTransform);
+
+    if (!bTeleportSuccess)
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "플레이어 텔레포트 실패 - 강제 위치 설정 시도");
+
+        // 강제 위치 설정 시도 - 마지막 수단으로 직접 위치를 설정합니다
+        CurrentPawn->SetActorLocation(RespawnTransform.GetLocation(), false);
+        CurrentPawn->SetActorRotation(RespawnTransform.GetRotation());
+    }
+
+    // 플레이어 상태 복구 (체력, 능력 등)
+    ResetPlayerGameplayState(PlayerController);
+
+    // 게임 시스템들에게 리스폰 완료 알림
+    if (AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>())
+    {
+        CurrentGameState->NotifyRequestHideLoadingUI();
+        CurrentGameState->NotifyPlayerRespawnCompleted(PlayerController);
+    }
+
+    // 입력 시스템 복구 - 리스폰이 완료되면 플레이어가 다시 조작할 수 있도록 합니다
+    PlayerController->EnableInput(PlayerController);
+
+    UE_LOGFMT(LogAOWGameMode, Log, "플레이어 리스폰 완료 - 이전 상태: {0}, 최종 위치: {1}",
+        static_cast<int32>(PreviousState), *RespawnTransform.GetLocation().ToString());
+}
+
 void AAgeOfWolvesGameMode::HandlePlayerDeath(APlayerController* PlayerController)
 {
-    //@PC 유효성 검증
     if (!IsValid(PlayerController))
     {
         UE_LOGFMT(LogAOWGameMode, Warning, "플레이어 죽음 처리 - 유효하지 않은 PlayerController입니다");
         return;
     }
 
-    //@PlayerState 가져오기
+    PlayerController->DisableInput(PlayerController);
+    UE_LOGFMT(LogAOWGameMode, Log, "플레이어 입력 차단됨: {0}", GetNameSafe(PlayerController));
+
+    //@죽음 상태로 설정 및 플레이어 캐싱
+    CurrentState = EGameModeState::PlayerDeath;
+    CachedDeadPlayerController = PlayerController;
+
+    // 기존 코드와 동일
     APlayerStateBase* PlayerState = PlayerController->GetPlayerState<APlayerStateBase>();
     if (!IsValid(PlayerState))
     {
@@ -149,7 +253,6 @@ void AAgeOfWolvesGameMode::HandlePlayerDeath(APlayerController* PlayerController
 
     if (DetermineDeathRules(PlayerController))
     {
-        //@즉시 리스폰 대신 GameState를 통해 로딩 UI 표시 요청
         AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>();
         if (IsValid(CurrentGameState))
         {
@@ -163,41 +266,10 @@ void AAgeOfWolvesGameMode::HandlePlayerDeath(APlayerController* PlayerController
     }
 }
 
-void AAgeOfWolvesGameMode::NotifyStartLevelTransition()
-{
-    UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 알림 시작 - 대상 레벨: {0}", *CachedNextLevelTag.ToString());
-
-    //@Game State 가져오기
-    AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>();
-    if (!IsValid(CurrentGameState))
-    {
-        UE_LOGFMT(LogAOWGameMode, Error, "Game State를 찾을 수 없어 레벨 전환 알림 실패");
-        return;
-    }
-
-    UE_LOGFMT(LogAOWGameMode, Log, "Game State 확인 완료: {0}", GetNameSafe(CurrentGameState));
-
-    //@Game State를 통해 레벨 전환 요청
-    //@이 시점에서 실제 레벨 스트리밍이나 전환 로직이 시작됨
-    CurrentGameState->NotifyRequestStartLevelTransition(CachedNextLevelTag);
-
-    UE_LOGFMT(LogAOWGameMode, Log, "Game State에 레벨 전환 요청 완료: {0}", *CachedNextLevelTag.ToString());
-
-    //@레벨 전환 요청 후 캐싱된 태그들을 정리
-    CachedNextLevelTag = FGameplayTag();
-
-    UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 캐시 정리 완료");
-}
-#pragma endregion
-
-//@Callbacks...
-#pragma region Callbacks
-void AAgeOfWolvesGameMode::OnStructureInteractionActtivated(const FStructureData& StructureData)
+void AAgeOfWolvesGameMode::HandleFirstStructureActivation(const FStructureData& StructureData)
 {
     UE_LOGFMT(LogAOWGameMode, Log, "구조물 상호작용 활성화됨: {0}", *StructureData.GetStructureName().ToString());
 
-    //@구조물 데이터 유효성 검사
-    //@다음 레벨 태그가 비어있으면 레벨 전환이 불가능
     if (!StructureData.GetNextLevelTag().IsValid())
     {
         UE_LOGFMT(LogAOWGameMode, Warning, "구조물에 다음 레벨 태그가 설정되지 않음: {0}",
@@ -205,8 +277,19 @@ void AAgeOfWolvesGameMode::OnStructureInteractionActtivated(const FStructureData
         return;
     }
 
-    //@현재 레벨 태그 가져오기
-    //@Game State에서 현재 레벨 정보를 관리하고 있다고 가정
+    //@모든 플레이어 입력 차단
+    for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
+    {
+        if (APlayerController* PC = Iterator->Get())
+        {
+            PC->DisableInput(PC);
+        }
+    }
+
+    //@레벨 전환 상태로 설정
+    CurrentState = EGameModeState::LevelTransition;
+    CachedNextLevelTag = StructureData.GetNextLevelTag();
+
     AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>();
     if (!IsValid(CurrentGameState))
     {
@@ -214,60 +297,156 @@ void AAgeOfWolvesGameMode::OnStructureInteractionActtivated(const FStructureData
         return;
     }
 
-    //@실제 구현에서는 Game State의 함수명에 맞게 수정 필요
-    CachedNextLevelTag = StructureData.GetNextLevelTag();
-
     UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 정보 캐싱 완료 - 다음: {0}", *CachedNextLevelTag.ToString());
 
-    //@로딩 UI 표시 요청
     CurrentGameState->NotifyRequestShowLoadingUI();
     UE_LOGFMT(LogAOWGameMode, Log, "구조물 상호작용에 의한 로딩 UI 표시 요청 완료");
 }
 
-void AAgeOfWolvesGameMode::OnLoadingUIFadeInComplete()
+bool AAgeOfWolvesGameMode::PerformPlayerTeleport(APawn* PlayerPawn, const FTransform& TargetTransform)
 {
-    UE_LOGFMT(LogAOWGameMode, Log, "Game Mode: 로딩 UI Fade-In 완료 이벤트 수신됨");
+    // 안전한 텔레포트 수행 - RestartPlayer의 복잡성을 피하면서도 안정적인 이동을 보장합니다
+    // ETeleportType::TeleportPhysics를 사용하여 물리 시뮬레이션도 적절히 처리합니다
 
-    // 캐싱된 레벨 태그 유효성 검사 (빠른 검사만 수행)
-    if (!CachedNextLevelTag.IsValid())
+    if (!IsValid(PlayerPawn))
     {
-        UE_LOGFMT(LogAOWGameMode, Warning, "캐싱된 레벨 태그가 유효하지 않음 - 레벨 전환 중단");
+        UE_LOGFMT(LogAOWGameMode, Error, "텔레포트할 Pawn이 유효하지 않음");
+        return false;
+    }
+
+    // SetActorTransform으로 시도 - 이는 가장 안전하고 직접적인 방법입니다
+    bool bSuccess = PlayerPawn->SetActorTransform(TargetTransform, false, nullptr, ETeleportType::TeleportPhysics);
+
+    if (bSuccess)
+    {
+        UE_LOGFMT(LogAOWGameMode, Log, "플레이어 텔레포트 성공: {0}",
+            *TargetTransform.GetLocation().ToString());
+
+        // 텔레포트 후 물리 상태 안정화 - 이전 움직임의 관성을 제거합니다
+        if (UPrimitiveComponent* RootComp = Cast<UPrimitiveComponent>(PlayerPawn->GetRootComponent()))
+        {
+            RootComp->SetPhysicsLinearVelocity(FVector::ZeroVector);
+            RootComp->SetPhysicsAngularVelocityInDegrees(FVector::ZeroVector);
+        }
+
+        return true;
+    }
+    else
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "SetActorTransform 실패 - 개별 위치/회전 설정 시도");
+        return false;
+    }
+}
+
+void AAgeOfWolvesGameMode::ResetPlayerGameplayState(APlayerController* PlayerController)
+{
+    // 플레이어의 게임플레이 관련 상태를 초기화합니다
+    // 이 함수는 리스폰 후 플레이어가 깨끗한 상태에서 게임을 재개할 수 있도록 도와줍니다
+
+    if (!IsValid(PlayerController))
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "PlayerController가 유효하지 않아 상태 초기화 생략");
         return;
     }
 
-    // 여기서 즉시 return! UI Manager는 블로킹되지 않고 계속 진행할 수 있음
-    UE_LOGFMT(LogAOWGameMode, Log, "비동기 레벨 전환 프로세스 시작 - UI 스레드는 해제됨");
+    APawn* PlayerPawn = PlayerController->GetPawn();
+    if (!IsValid(PlayerPawn))
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "PlayerPawn이 유효하지 않아 상태 초기화 생략");
+        return;
+    }
 
-    // AsyncTask로 실제 레벨 전환 작업을 백그라운드에서 처리
-    AsyncTask(ENamedThreads::GameThread, [this]()
-        {
-            UE_LOGFMT(LogAOWGameMode, Log, "백그라운드에서 레벨 전환 처리 시작");
+    UE_LOGFMT(LogAOWGameMode, Log, "플레이어 게임플레이 상태 초기화 시작");
 
-            //@이 부분은 별도 스레드에서 실행되므로 UI를 블로킹하지 않음
-            NotifyStartLevelTransition();
-        });
+    // 여기에 실제 게임플레이 상태 초기화 로직을 추가할 수 있습니다
+    // 이는 프로젝트의 특성에 맞게 커스터마이징할 수 있는 확장 지점입니다
+
+    // 예시 코드 (주석 처리):
+    // if (auto CharacterBase = Cast<ACharacterBase>(PlayerPawn))
+    // {
+    //     CharacterBase->RestoreFullHealth();
+    //     CharacterBase->ClearAllDebuffs();
+    //     CharacterBase->ResetAbilities();
+    // }
+
+    UE_LOGFMT(LogAOWGameMode, Log, "플레이어 게임플레이 상태 초기화 완료");
+}
+#pragma endregion
+
+//@Callbacks...
+#pragma region Callbacks
+void AAgeOfWolvesGameMode::OnLoadingUIFadeInComplete()
+{
+    // 함수 호출 시점의 GameMode 상태를 먼저 로그 출력
+    UE_LOGFMT(LogAOWGameMode, Log, "OnLoadingUIFadeInComplete 호출됨 - 현재 상태: {0}",
+        static_cast<int32>(CurrentState));
+
+    if (CurrentState == EGameModeState::PlayerDeath)
+    {
+        UE_LOGFMT(LogAOWGameMode, Log, "PlayerDeath 상태 - AsyncTask로 리스폰 처리 시작");
+
+        AsyncTask(ENamedThreads::GameThread, [this]()
+            {
+                UE_LOGFMT(LogAOWGameMode, Log, "AsyncTask 내부 - PlayerRespawn 실행");
+
+                PlayerRespawn();
+                
+            });
+    }
+    else if (CurrentState == EGameModeState::LevelTransition)
+    {
+        UE_LOGFMT(LogAOWGameMode, Log, "LevelTransition 상태 - AsyncTask로 레벨 전환 처리 시작");
+
+        AsyncTask(ENamedThreads::GameThread, [this]()
+            {
+                UE_LOGFMT(LogAOWGameMode, Log, "AsyncTask 내부 - 레벨 전환 요청 시작");
+
+                if (IsValid(this) && CachedNextLevelTag.IsValid())
+                {
+                    if (AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>())
+                    {
+                        CurrentGameState->NotifyRequestStartLevelTransition(CachedNextLevelTag);
+                        CachedNextLevelTag = FGameplayTag();
+                    }
+                }
+            });
+    }
+    else
+    {
+        // 예상하지 못한 상태에서 호출된 경우를 감지
+        UE_LOGFMT(LogAOWGameMode, Warning, "예상하지 못한 상태에서 OnLoadingUIFadeInComplete 호출됨: {0}",
+            static_cast<int32>(CurrentState));
+    }
 }
 
 void AAgeOfWolvesGameMode::OnLevelTransitionCompleted(const FGameplayTag& CompletedLevelTag)
 {
     UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 완료: {0}", *CompletedLevelTag.ToString());
 
-    //@모든 플레이어 리스폰
     for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
     {
         if (APlayerController* PC = Iterator->Get())
         {
-            UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 후 플레이어 리스폰: {0}", GetNameSafe(PC));
-
             RestartPlayer(PC);
 
-            //@Game State에 리스폰 완료 알림
             if (AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>())
             {
                 CurrentGameState->NotifyPlayerRespawnCompleted(PC);
             }
+
+            //@입력 해제
+            PC->EnableInput(PC);
         }
     }
+
+    //@로딩 UI 숨기기
+    if (AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>())
+    {
+        //GameState->NotifyHideLoadingUI()
+    }
+
+    //@상태 초기화
+    CurrentState = EGameModeState::Normal;
 
     UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 후 처리 완료");
 }
@@ -275,7 +454,6 @@ void AAgeOfWolvesGameMode::OnLevelTransitionCompleted(const FGameplayTag& Comple
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
-
 bool AAgeOfWolvesGameMode::DetermineDeathRules(APlayerController* PlayerController)
 {
     if (!IsValid(PlayerController))
@@ -294,4 +472,86 @@ bool AAgeOfWolvesGameMode::DetermineDeathRules(APlayerController* PlayerControll
 
     return true;
 }
+
+bool AAgeOfWolvesGameMode::FindDeathRespawnLocation(APlayerController* PlayerController, FTransform& OutRespawnTransform)
+{
+    // 죽음으로 인한 리스폰에서는 기존의 ChoosePlayerStart 로직을 활용합니다
+    // 이 방식의 장점은 레벨 디자이너가 의도한 안전한 위치들 중에서 선택한다는 점입니다
+
+    AActor* PlayerStart = ChoosePlayerStart(PlayerController);
+    if (!IsValid(PlayerStart))
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "ChoosePlayerStart에서 적절한 위치를 찾지 못함");
+        return false;
+    }
+
+    OutRespawnTransform = PlayerStart->GetTransform();
+
+    UE_LOGFMT(LogAOWGameMode, Log, "죽음 리스폰 위치 확정: {0} (PlayerStart: {1})",
+        *OutRespawnTransform.GetLocation().ToString(), *PlayerStart->GetName());
+
+    return true;
+}
+
+bool AAgeOfWolvesGameMode::FindLevelTransitionRespawnLocation(APlayerController* PlayerController, FTransform& OutRespawnTransform)
+{
+    // 레벨 전환에서는 LevelManager에서 제공하는 DefaultPlayerStartTag를 정확히 활용합니다
+    // 이는 레벨 간 이동 시 플레이어가 정확한 입구 지점에 나타나도록 보장합니다
+
+    // LevelManager에서 현재 레벨 정보 가져오기
+    ULevelManagerSubsystem* LevelManager = GetGameInstance()->GetSubsystem<ULevelManagerSubsystem>();
+    if (!IsValid(LevelManager))
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "LevelManager Subsystem을 찾을 수 없음");
+        return false;
+    }
+
+    // 현재 레벨의 태그 가져오기
+    FGameplayTag CurrentLevelTag = LevelManager->GetCurrentLevelTag();
+    if (!CurrentLevelTag.IsValid())
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "현재 레벨 태그가 유효하지 않음");
+        return false;
+    }
+
+    // 현재 레벨의 기본 PlayerStart 태그 가져오기
+    FGameplayTag DefaultPlayerStartTag = LevelManager->GetDefaultPlayerStartTagForLevel(CurrentLevelTag);
+    if (!DefaultPlayerStartTag.IsValid())
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "현재 레벨의 기본 PlayerStart 태그가 유효하지 않음: {0}",
+            *CurrentLevelTag.ToString());
+        return false;
+    }
+
+    UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 리스폰: 레벨 '{0}'의 PlayerStart 태그 '{1}' 검색 중",
+        *CurrentLevelTag.ToString(), *DefaultPlayerStartTag.ToString());
+
+    // 해당 태그를 가진 PlayerStart 찾기 - 정확한 매칭이 중요합니다
+    FString TargetTagString = DefaultPlayerStartTag.ToString();
+
+    for (TActorIterator<APlayerStart> It(GetWorld()); It; ++It)
+    {
+        APlayerStart* PlayerStart = *It;
+        if (IsValid(PlayerStart))
+        {
+            // PlayerStart의 태그와 정확히 비교합니다
+            if (PlayerStart->PlayerStartTag.ToString() == TargetTagString)
+            {
+                OutRespawnTransform = PlayerStart->GetTransform();
+
+                UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 리스폰 위치 확정: {0} (PlayerStart: {1}, 태그: {2})",
+                    *OutRespawnTransform.GetLocation().ToString(),
+                    *PlayerStart->GetName(),
+                    *TargetTagString);
+
+                return true;
+            }
+        }
+    }
+
+    UE_LOGFMT(LogAOWGameMode, Warning, "태그 '{0}'와 매칭되는 PlayerStart를 찾지 못함",
+        *TargetTagString);
+    return false;
+}
+
 #pragma endregion

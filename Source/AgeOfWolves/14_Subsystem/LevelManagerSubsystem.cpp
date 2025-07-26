@@ -109,6 +109,7 @@ void ULevelManagerSubsystem::PerformLevelStreamingOperations(const FLevelData& T
     FString NewLevelName = TargetLevelData.LevelAsset.GetAssetName();
     UE_LOGFMT(LogLevelManager, Log, "새 레벨 로드: {0}", *NewLevelName);
 
+    //@로드 레벨 스트림
     UGameplayStatics::LoadStreamLevel(World, FName(*NewLevelName),
         true, true, FLatentActionInfo());
 
