@@ -43,8 +43,9 @@ void AAgeOfWolvesGameMode::ExternalBindingToUIManager()
 
     UE_LOGFMT(LogAOWGameMode, Log, "UI Manager Subsystem 획득 성공: {0}", GetNameSafe(UIManager));
 
-
-    UIManager->LoadingUIFadeInComplete.AddUFunction(this, "OnLoadingUIFadeInComplete");
+    //@외부 바인딩...
+    UIManager->LoadingUIShown.AddUFunction(this, "OnLoadingUIShown");
+    UIManager->LoadingUIHidden.AddUFunction(this, "OnLoadingUIHidden");
 
     UE_LOGFMT(LogAOWGameMode, Log, "UI Manager LoadingUIFadeInComplete 이벤트 바인딩 성공");
 }
@@ -190,11 +191,6 @@ void AAgeOfWolvesGameMode::PlayerRespawn()
         RespawnTransform = FTransform(FRotator::ZeroRotator, FVector(0, 0, 100), FVector::OneVector);
     }
 
-    // 상태를 먼저 초기화 (순환 호출 방지 및 상태 정리)
-    EGameModeState PreviousState = CurrentState;
-    CurrentState = EGameModeState::Normal;
-    CachedDeadPlayerController.Reset();
-
     // 실제 위치 이동 수행 - RestartPlayer 대신 직접 텔레포트를 사용합니다
     bool bTeleportSuccess = PerformPlayerTeleport(CurrentPawn, RespawnTransform);
 
@@ -210,18 +206,16 @@ void AAgeOfWolvesGameMode::PlayerRespawn()
     // 플레이어 상태 복구 (체력, 능력 등)
     ResetPlayerGameplayState(PlayerController);
 
-    // 게임 시스템들에게 리스폰 완료 알림
+    // Loading UI 숨기기 요청 - 리스폰 작업 완료 후 UI 페이드 아웃 시작
     if (AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>())
     {
         CurrentGameState->NotifyRequestHideLoadingUI();
-        CurrentGameState->NotifyPlayerRespawnCompleted(PlayerController);
+        UE_LOGFMT(LogAOWGameMode, Log, "Loading UI 숨기기 요청 완료 - 위치: {0}",
+            *RespawnTransform.GetLocation().ToString());
     }
 
-    // 입력 시스템 복구 - 리스폰이 완료되면 플레이어가 다시 조작할 수 있도록 합니다
-    PlayerController->EnableInput(PlayerController);
-
-    UE_LOGFMT(LogAOWGameMode, Log, "플레이어 리스폰 완료 - 이전 상태: {0}, 최종 위치: {1}",
-        static_cast<int32>(PreviousState), *RespawnTransform.GetLocation().ToString());
+    UE_LOGFMT(LogAOWGameMode, Log, "플레이어 리스폰 완료 - 상태: {0}, 위치: {1}",
+        static_cast<int32>(CurrentState), *RespawnTransform.GetLocation().ToString());
 }
 
 void AAgeOfWolvesGameMode::HandlePlayerDeath(APlayerController* PlayerController)
@@ -375,7 +369,7 @@ void AAgeOfWolvesGameMode::ResetPlayerGameplayState(APlayerController* PlayerCon
 
 //@Callbacks...
 #pragma region Callbacks
-void AAgeOfWolvesGameMode::OnLoadingUIFadeInComplete()
+void AAgeOfWolvesGameMode::OnLoadingUIShown()
 {
     // 함수 호출 시점의 GameMode 상태를 먼저 로그 출력
     UE_LOGFMT(LogAOWGameMode, Log, "OnLoadingUIFadeInComplete 호출됨 - 현재 상태: {0}",
@@ -419,36 +413,83 @@ void AAgeOfWolvesGameMode::OnLoadingUIFadeInComplete()
     }
 }
 
+void AAgeOfWolvesGameMode::OnLoadingUIHidden()
+{
+    UE_LOGFMT(LogAOWGameMode, Log, "OnLoadingUIFadeOutStart 호출됨 - 현재 상태: {0}",
+        static_cast<int32>(CurrentState));
+
+    // 리스폰 관련 상태에서만 후속 처리 수행
+    if (CurrentState == EGameModeState::PlayerDeath || CurrentState == EGameModeState::LevelTransition)
+    {
+        // 캐시된 플레이어 컨트롤러 확인
+        if (CachedDeadPlayerController.IsValid())
+        {
+            APlayerController* PlayerController = CachedDeadPlayerController.Get();
+
+            if (IsValid(PlayerController))
+            {
+                // 게임 시스템들에게 리스폰 완료 알림
+                if (AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>())
+                {
+                    CurrentGameState->NotifyPlayerRespawnCompleted(PlayerController);
+                    UE_LOGFMT(LogAOWGameMode, Log, "리스폰 완료 알림 전송: {0}", GetNameSafe(PlayerController));
+                }
+
+                // 입력 시스템 복구 - 플레이어가 다시 조작할 수 있도록 활성화
+                PlayerController->EnableInput(PlayerController);
+                UE_LOGFMT(LogAOWGameMode, Log, "플레이어 입력 활성화: {0}", GetNameSafe(PlayerController));
+            }
+        }
+
+        // 상태 정리 및 초기화
+        EGameModeState PreviousState = CurrentState;
+        CurrentState = EGameModeState::Normal;
+        CachedDeadPlayerController.Reset();
+        CachedNextLevelTag = FGameplayTag();
+
+        UE_LOGFMT(LogAOWGameMode, Log, "Loading UI 페이드 아웃 후속 처리 완료 - 이전 상태: {0}",
+            static_cast<int32>(PreviousState));
+    }
+    else
+    {
+        UE_LOGFMT(LogAOWGameMode, Log, "리스폰 관련 상태가 아니므로 후속 처리 생략");
+    }
+}
+
 void AAgeOfWolvesGameMode::OnLevelTransitionCompleted(const FGameplayTag& CompletedLevelTag)
 {
     UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 완료: {0}", *CompletedLevelTag.ToString());
 
-    for (FConstPlayerControllerIterator Iterator = GetWorld()->GetPlayerControllerIterator(); Iterator; ++Iterator)
+    //@Game Mode State
+    if (CurrentState != EGameModeState::LevelTransition)
     {
-        if (APlayerController* PC = Iterator->Get())
-        {
-            RestartPlayer(PC);
-
-            if (AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>())
-            {
-                CurrentGameState->NotifyPlayerRespawnCompleted(PC);
-            }
-
-            //@입력 해제
-            PC->EnableInput(PC);
-        }
+        UE_LOGFMT(LogAOWGameMode, Warning, "예상하지 못한 상태에서 레벨 전환 완료 이벤트 수신: {0}",
+            static_cast<int32>(CurrentState));
+        return;
     }
 
-    //@로딩 UI 숨기기
-    if (AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>())
+    //@PC
+    APlayerController* PlayerController = GetWorld()->GetFirstPlayerController();
+    if (!IsValid(PlayerController))
     {
-        //GameState->NotifyHideLoadingUI()
+        UE_LOGFMT(LogAOWGameMode, Error, "유효한 PlayerController를 찾을 수 없어 레벨 전환 후처리 실패");
+
+        // 실패해도 상태는 정리
+        CurrentState = EGameModeState::Normal;
+        CachedNextLevelTag = FGameplayTag();
+        return;
     }
 
-    //@상태 초기화
-    CurrentState = EGameModeState::Normal;
+    //@PlayerRespawn에서 처리할 수 있도록 플레이어 정보 캐싱
+    CachedDeadPlayerController = PlayerController;
 
-    UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 후 처리 완료");
+    UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 완료 - 플레이어 캐싱 완료: {0}, 통합된 PlayerRespawn 호출",
+        GetNameSafe(PlayerController));
+
+    //@리스폰
+    PlayerRespawn();
+
+    UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 완료 처리 완료 - PlayerRespawn 위임됨");
 }
 #pragma endregion
 

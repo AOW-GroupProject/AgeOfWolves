@@ -104,7 +104,9 @@ private:
 protected:
     //@UI Manager로부터 로딩 UI Fade-In 완료 이벤트 수신
     UFUNCTION()
-    void OnLoadingUIFadeInComplete();
+    void OnLoadingUIShown();
+    UFUNCTION()
+    void OnLoadingUIHidden();
 
 protected:
     //@Level Manager로부터 레벨 전환 완료 이벤트 수신
