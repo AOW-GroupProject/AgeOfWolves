@@ -54,6 +54,10 @@ private:
 private:
     //@Game State에 리스폰 요청
     void NotifyRespawnCompleteViaGameState(APlayerController* PlayerController);
+
+    //@구조물(늑대 상) 상호작용시 발생
+public:
+    void OnStructureInteractionActtivated(const FStructureData& StructureData);
 #pragma endregion
 
 //@Delegates
@@ -63,9 +67,7 @@ private:
 //@Callbacks
 #pragma region Callbacks
 protected:
-    //@구조물(늑대 상) 상호작용 발생 이벤트 구독
-    UFUNCTION()
-        void OnStructureInteractionActtivated(const FStructureData& StructureData);
+
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

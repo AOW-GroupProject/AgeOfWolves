@@ -168,13 +168,26 @@ bool AAgeOfWolvesGameMode::TestRespawnToPlayerStart(APlayerController* PlayerCon
 
     return bTeleportSuccess;
 }
+
+void AAgeOfWolvesGameMode::OnStructureInteractionActtivated(const FStructureData& StructureData)
+{
+    //@ 재차 상호작용시 => 시스템 메뉴UI 오픈 등..
+    if (StructureData.bIsActive)
+    {
+        
+        UE_LOGFMT(LogAOWGameMode, Log, "구조물 활성화 호출 , 재회!");
+    }
+    else //@첫회 상호작용시 => 레벨전환.. 
+    {
+        
+        UE_LOGFMT(LogAOWGameMode, Log, "구조물 활성화 호출, 첫회! ");
+    }
+}
+
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
-void AAgeOfWolvesGameMode::OnStructureInteractionActtivated(const FStructureData& StructureData)
-{
-}
 
 bool AAgeOfWolvesGameMode::DetermineDeathRules(APlayerController* PlayerController)
 {

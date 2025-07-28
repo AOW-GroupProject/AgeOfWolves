@@ -230,7 +230,7 @@ struct FStructureData
 
     //@실제 레벨에 배치된 구조물 액터에 대한 약한 참조
     //@약한 참조 사용으로 메모리 누수 방지 및 안전한 액터 생명주기 관리
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "액터 참조")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "액터 참조")
     TWeakObjectPtr<AActor> StructureActor;
 
     //@기본 생성자 - 모든 필드를 안전한 기본값으로 초기화
@@ -331,6 +331,8 @@ protected:
     void UnbindFromPlayer(TWeakObjectPtr<APlayerCharacter> Player);
     void UnbindFromAllPlayer();
 
+    void InternalBindToStructure(TWeakObjectPtr<AActor> StructurePtr);
+    
 protected:
     //@외부 바인딩
 
@@ -368,6 +370,8 @@ private:
 #pragma region Property or Subwidgets or Infos...etc
 protected:
     void InitializeAreaAIInfos();
+
+    void InitializeStructureInfos();
 
 protected:
     //@AI 처리 함수
@@ -430,6 +434,11 @@ protected:
     FString DefaultGroupName = "Default";
 
 protected:
+    //@수동 등록할 구조물 리스트
+    UPROPERTY(EditAnywhere, Category = "Area | Structure")
+    TArray<FStructureData> RegisteredStructures;
+
+protected:
     //@등록된 AI 그룹 Map
     UPROPERTY()
     TMap<FGuid, FAIGroupInfo> MAIGroups;
@@ -439,6 +448,10 @@ protected:
     UPROPERTY()
     TMap<TWeakObjectPtr<APlayerCharacter>, FPlayerBindingInfo> MPlayerBindings;
 
+protected:
+    //@영역내 구조물 정보 (key: 구조물의 고유 식별Id, Value: 구조물 데이터)
+    TMap<FGuid, FStructureData> MStructureBindings;
+    
 protected:
     //@정리 타이머
     FTimerHandle CleanupTimerHandle;
@@ -517,6 +530,10 @@ protected:
     //@그룹 정보 수신 콜백
     UFUNCTION()
     void OnSendInfoToBelongingGroup(AActor* AI, FSharingInfoWithGroup SharingInfo);
+
+    //@등록된 구조물이 상호작용 발동시 콜백
+    UFUNCTION()
+    void OnStructureInteractionTriggered(AStructureBase* TriggeredStucture);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -551,6 +568,10 @@ public:
     //@해당 그룹에 속한 모든 AI 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
     TArray<AActor*> GetGroupMembers(const FGuid& GroupID) const;
+
+    //@해당 AI가 속한 그룹 ID 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Area")
+    FGuid GetStructureID(AActor* StructureActor) const;
 #pragma endregion
 
 };
