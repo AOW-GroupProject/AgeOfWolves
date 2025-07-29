@@ -572,6 +572,9 @@ public:
     //@해당 AI가 속한 그룹 ID 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
     FGuid GetStructureID(AActor* StructureActor) const;
+
+    UFUNCTION(BlueprintCallable, Category = "Area")
+    bool ValidateUniqueStructurePlayerStartTags(const TArray<FStructureData>& RegisteredStructureArry, FStructureData TargetStructData);
 #pragma endregion
 
 };

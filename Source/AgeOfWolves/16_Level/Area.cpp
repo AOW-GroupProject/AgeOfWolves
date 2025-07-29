@@ -859,6 +859,50 @@ void AArea::InitializeStructureInfos()
         //@StructureId
         FGuid StructureId = structureData.StructureID.IsValid() ? structureData.StructureID : FGuid::NewGuid();
 
+
+        //@중복 체크
+        if (MStructureBindings.Contains(StructureId))
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 {0}: 유효하지 않은 AI 등록 시도", *StructureId.ToString());
+        }
+
+        //@ Structure Name 글자수 체크
+        FString StructureName = structureData.StructureName.ToString();
+        if (StructureName.Contains(TEXT("\n")) || StructureName.Contains(TEXT("\r")))
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 이름에 개행 문자가 포함되어 있습니다. : {0}", *StructureName);
+        }
+        //@이름 글자 수 제한 체크
+        if (StructureName.Len() > 10)
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 이름은 10자 초과할수 없습니다 : {0}", *StructureName);
+        }
+
+        FString Description = structureData.Description;
+        //@설명 개행 체크
+        if (Description.Contains(TEXT("\n")) || Description.Contains(TEXT("\r")))
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 설명에 개행 문자가 포함되어 있습니다. : {0}", *Description);
+        }
+        //@설명 글자 수 제한 체크
+        if (Description.Len() > 30)
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 설명은 30자 초과할수 없습니다 : {0}", *Description);
+        }
+
+        //@ 구조물 액터 월드에 유효한지 체크
+        if (!IsValid(structureData.GetStructureActor()) || structureData.GetStructureActor()->GetWorld() == nullptr)
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 액터가 월드에 없거나 유효하지 않습니다.");
+        }
+
+        //@ PlayerStartTags 중복 체크
+        if (!ValidateUniqueStructurePlayerStartTags(RegisteredStructures, structureData))
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물의  PlayerStartTags가 중복 될수 없습니다. PlayerStartTags : {0}", structureData.PlayerStartTag.ToString());
+            continue;
+        }
+        
         //@saveGame 데이터 있다면 StructureId 찾아서 NewStructureData에 copy
         //..
         
@@ -1626,5 +1670,20 @@ FGuid AArea::GetStructureID(AActor* StructureActor) const
     }
 
     return FGuid();
+}
+
+bool AArea::ValidateUniqueStructurePlayerStartTags(const TArray<FStructureData>& RegisteredStructureArry , FStructureData TargetStructData)
+{
+    for (auto Data : RegisteredStructureArry)
+    {
+        if (Data.StructureID == TargetStructData.StructureID)
+            continue;
+
+        //@중복은 유효하지 않음
+        if (Data.PlayerStartTag == TargetStructData.PlayerStartTag)
+            return false;
+    }
+
+    return true;
 }
 #pragma endregion
