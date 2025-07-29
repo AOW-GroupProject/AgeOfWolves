@@ -7,6 +7,8 @@
 #include "Engine/Engine.h"
 #include "Kismet/GameplayStatics.h"
 
+#include "08_UI/03_System/LoadingUI.h"
+
 DEFINE_LOG_CATEGORY(LogUIManager)
 
 //@Default Setting
@@ -61,6 +63,30 @@ void UUIManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     }
 
     UE_LOGFMT(LogUIManager, Log, "UIManagerSubsystem 초기화 완료");
+}
+
+void UUIManagerSubsystem::Deinitialize()
+{
+    // 모든 미완료 Promise들을 완료 상태로 만들어줍니다
+    for (auto& Pair : UIMinimumTimePromises) // 실제 변수명에 맞게 수정 필요
+    {
+        if (Pair.Value.IsValid())
+        {
+            TSharedPtr<TPromise<void>> Promise = Pair.Value;
+            if (Promise.IsValid())
+            {
+                UE_LOGFMT(LogUIManager, Warning, "강제로 미완료 UI 작업을 정리합니다: {0}",
+                    *Pair.Key.ToString());
+
+                Promise->SetValue();
+            }
+        }
+    }
+
+    // 맵을 완전히 비워줍니다
+    UIMinimumTimePromises.Empty();
+
+    Super::Deinitialize();
 }
 #pragma endregion
 
@@ -182,7 +208,7 @@ bool UUIManagerSubsystem::ShowSystemUI(const FGameplayTag& UITag)
 {
     UE_LOGFMT(LogUIManager, Log, "System UI 표시 요청: {0}", *UITag.ToString());
 
-    //@캐시에서 UI 위젯 찾기
+    // 캐시에서 UI 위젯 찾기
     TObjectPtr<UUserWidget>* FoundWidget = CachedSystemUIs.Find(UITag);
     if (!FoundWidget || !IsValid(*FoundWidget))
     {
@@ -193,18 +219,44 @@ bool UUIManagerSubsystem::ShowSystemUI(const FGameplayTag& UITag)
 
     UUserWidget* TargetWidget = *FoundWidget;
 
-    //@이미 표시되고 있는지 확인
-    if (TargetWidget->GetVisibility() == ESlateVisibility::SelfHitTestInvisible)
+    // LoadingUI인지 확인하고 타입에 맞는 처리를 수행합니다
+    // 이는 각 위젯의 특성을 존중하는 객체지향적 접근법입니다
+    if (ULoadingUI* LoadingUIWidget = Cast<ULoadingUI>(TargetWidget))
     {
-        UE_LOGFMT(LogUIManager, Warning, "System UI가 이미 표시되고 있습니다: {0}",
+        // LoadingUI의 경우: 전용 인터페이스를 사용하여 특별한 동작을 활용합니다
+        // 이미 표시되고 있는지 확인 (LoadingUI 전용 함수 사용)
+        if (LoadingUIWidget->IsLoadingUIVisible())
+        {
+            UE_LOGFMT(LogUIManager, Warning, "LoadingUI가 이미 표시되고 있습니다: {0}",
+                *UITag.ToString());
+            return true;
+        }
+
+        // LoadingUI 전용 가시성 설정 함수 호출
+        // 이 함수를 통해 자동으로 애니메이션과 이벤트가 발생합니다
+        LoadingUIWidget->SetLoadingUIVisibility(ESlateVisibility::SelfHitTestInvisible);
+
+        UE_LOGFMT(LogUIManager, Log, "LoadingUI 전용 인터페이스로 표시 완료: {0}",
             *UITag.ToString());
-        return true;
+    }
+    else
+    {
+        // 일반 위젯의 경우: 기존 방식을 유지합니다
+        // 이미 표시되고 있는지 확인
+        if (TargetWidget->GetVisibility() == ESlateVisibility::SelfHitTestInvisible)
+        {
+            UE_LOGFMT(LogUIManager, Warning, "System UI가 이미 표시되고 있습니다: {0}",
+                *UITag.ToString());
+            return true;
+        }
+
+        // 일반적인 가시성 설정
+        TargetWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+
+        UE_LOGFMT(LogUIManager, Log, "일반 위젯으로 표시 완료: {0}",
+            *UITag.ToString());
     }
 
-    //@UI를 Visible 상태로 변경
-    TargetWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-
-    UE_LOGFMT(LogUIManager, Log, "System UI 표시 완료: {0}", *UITag.ToString());
     return true;
 }
 
@@ -212,7 +264,7 @@ bool UUIManagerSubsystem::HideSystemUI(const FGameplayTag& UITag)
 {
     UE_LOGFMT(LogUIManager, Log, "System UI 숨김 요청: {0}", *UITag.ToString());
 
-    //@캐시에서 UI 위젯 찾기
+    // 캐시에서 UI 위젯 찾기
     TObjectPtr<UUserWidget>* FoundWidget = CachedSystemUIs.Find(UITag);
     if (!FoundWidget || !IsValid(*FoundWidget))
     {
@@ -223,18 +275,43 @@ bool UUIManagerSubsystem::HideSystemUI(const FGameplayTag& UITag)
 
     UUserWidget* TargetWidget = *FoundWidget;
 
-    //@이미 숨겨져 있는지 확인
-    if (TargetWidget->GetVisibility() == ESlateVisibility::Collapsed)
+    // LoadingUI인지 확인하고 타입에 맞는 처리를 수행합니다
+    if (ULoadingUI* LoadingUIWidget = Cast<ULoadingUI>(TargetWidget))
     {
-        UE_LOGFMT(LogUIManager, Warning, "System UI가 이미 숨겨져 있습니다: {0}",
+        // LoadingUI의 경우: 전용 인터페이스를 사용합니다
+        // 이미 숨겨져 있는지 확인 (LoadingUI 전용 함수 사용)
+        if (LoadingUIWidget->IsLoadingUIHidden())
+        {
+            UE_LOGFMT(LogUIManager, Warning, "LoadingUI가 이미 숨겨져 있습니다: {0}",
+                *UITag.ToString());
+            return true;
+        }
+
+        // LoadingUI 전용 가시성 설정 함수 호출
+        // 이를 통해 숨김 애니메이션과 완료 이벤트가 자동으로 발생합니다
+        LoadingUIWidget->SetLoadingUIVisibility(ESlateVisibility::Collapsed);
+
+        UE_LOGFMT(LogUIManager, Log, "LoadingUI 전용 인터페이스로 숨김 완료: {0}",
             *UITag.ToString());
-        return true;
+    }
+    else
+    {
+        // 일반 위젯의 경우: 기존 방식을 유지합니다
+        // 이미 숨겨져 있는지 확인
+        if (TargetWidget->GetVisibility() == ESlateVisibility::Collapsed)
+        {
+            UE_LOGFMT(LogUIManager, Warning, "System UI가 이미 숨겨져 있습니다: {0}",
+                *UITag.ToString());
+            return true;
+        }
+
+        // 일반적인 가시성 설정
+        TargetWidget->SetVisibility(ESlateVisibility::Collapsed);
+
+        UE_LOGFMT(LogUIManager, Log, "일반 위젯으로 숨김 완료: {0}",
+            *UITag.ToString());
     }
 
-    //@UI를 Collapsed 상태로 변경 (렌더링에서 완전히 제외)
-    TargetWidget->SetVisibility(ESlateVisibility::Collapsed);
-
-    UE_LOGFMT(LogUIManager, Log, "System UI 숨김 완료: {0}", *UITag.ToString());
     return true;
 }
 
@@ -244,20 +321,37 @@ void UUIManagerSubsystem::HideAllSystemUIs()
         CachedSystemUIs.Num());
 
     int32 HiddenCount = 0;
+    int32 LoadingUICount = 0;
+
     for (auto& UIPair : CachedSystemUIs)
     {
         if (IsValid(UIPair.Value))
         {
-            UIPair.Value->SetVisibility(ESlateVisibility::Collapsed);
+            // 각 위젯의 타입에 맞는 처리를 수행합니다
+            if (ULoadingUI* LoadingUIWidget = Cast<ULoadingUI>(UIPair.Value))
+            {
+                // LoadingUI의 경우: 전용 인터페이스 사용
+                LoadingUIWidget->SetLoadingUIVisibility(ESlateVisibility::Collapsed);
+                LoadingUICount++;
+                UE_LOGFMT(LogUIManager, Verbose, "LoadingUI 전용 방식으로 숨김: {0}",
+                    *UIPair.Key.ToString());
+            }
+            else
+            {
+                // 일반 위젯의 경우: 기존 방식 사용
+                UIPair.Value->SetVisibility(ESlateVisibility::Collapsed);
+            }
             HiddenCount++;
         }
     }
 
-    //@모든 최소 표시 시간 추적 정보도 정리
+    // 모든 최소 표시 시간 추적 정보도 정리
     MinimumDisplayTimeInfoMap.Empty();
     UIMinimumTimePromises.Empty();
 
-    UE_LOGFMT(LogUIManager, Log, "모든 System UI 숨김 완료 - {0}개 처리됨, 시간 추적 정보 정리됨", HiddenCount);
+    UE_LOGFMT(LogUIManager, Log,
+        "모든 System UI 숨김 완료 - 총 {0}개 처리됨 (LoadingUI: {1}개, 일반: {2}개), 시간 추적 정보 정리됨",
+        HiddenCount, LoadingUICount, HiddenCount - LoadingUICount);
 }
 
 void UUIManagerSubsystem::SetupMinimumDisplayTimeForUI(const FGameplayTag& UITag, const FUIInformation& UIInfo)
@@ -413,44 +507,65 @@ void UUIManagerSubsystem::OnRequestShowLoadingUI()
 {
     UE_LOGFMT(LogUIManager, Log, "로딩 UI 표시 요청 받음");
 
-    //@로딩 UI 태그 생성
     FGameplayTag LoadingUITag = FGameplayTag::RequestGameplayTag("UI.System.LoadingUI");
+    FTimerHandle LoadingUIShownTimerHandle;
 
-    //@UI 정보 가져오기 (최소 표시 시간 설정을 위해)
     const FUIInformation* UIInfo = GetUIInformation(EUICategory::System, LoadingUITag);
     if (!UIInfo)
     {
         UE_LOGFMT(LogUIManager, Warning, "로딩 UI 정보를 찾을 수 없음 - 기본 동작으로 진행");
 
-        //@정보가 없어도 UI 표시는 시도
         if (ShowSystemUI(LoadingUITag))
         {
             UE_LOGFMT(LogUIManager, Log, "로딩 UI 활성화 성공 (정보 없음)");
         }
 
-        LoadingUIShown.Broadcast();
+        // 3초 후 이벤트 호출
+        if (UWorld* World = GetWorld())
+        {
+            World->GetTimerManager().SetTimer(
+                LoadingUIShownTimerHandle,
+                [this]() { LoadingUIShown.Broadcast(); },
+                3.0f,
+                false
+            );
+        }
         return;
     }
 
-    //@최소 표시 시간 설정 (Promise/Future 패턴 시작)
     SetupMinimumDisplayTimeForUI(LoadingUITag, *UIInfo);
 
-    //@캐시에서 로딩 UI를 찾아서 활성화
     if (!ShowSystemUI(LoadingUITag))
     {
         UE_LOGFMT(LogUIManager, Error, "로딩 UI 활성화 실패 - UI를 찾을 수 없거나 이미 활성화됨");
 
-        //@실패했어도 이벤트는 호출해서 게임 플로우가 멈추지 않도록 함
-        LoadingUIShown.Broadcast();
+        // 3초 후 이벤트 호출
+        if (UWorld* World = GetWorld())
+        {
+            World->GetTimerManager().SetTimer(
+                LoadingUIShownTimerHandle,
+                [this]() { LoadingUIShown.Broadcast(); },
+                3.0f,
+                false
+            );
+        }
         UE_LOGFMT(LogUIManager, Warning, "로딩 UI 활성화 실패했지만 이벤트는 브로드캐스트됨");
         return;
     }
 
     UE_LOGFMT(LogUIManager, Log, "로딩 UI 활성화 성공");
 
-    //@Fade-In 완료 이벤트 호출 (실제 페이드 인 애니메이션이 없으므로 즉시 호출)
-    LoadingUIShown.Broadcast();
-    UE_LOGFMT(LogUIManager, Log, "로딩 UI Fade-In 완료 이벤트 브로드캐스트 완료");
+    // 3초 후 이벤트 호출
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().SetTimer(
+            LoadingUIShownTimerHandle,
+            [this]() { LoadingUIShown.Broadcast(); },
+            3.0f,
+            false
+        );
+    }
+    UE_LOGFMT(LogUIManager, Log, "로딩 UI Fade-In 완료 이벤트 3초 후 브로드캐스트 예약됨");
 }
 
 void UUIManagerSubsystem::OnRequestHideLoadingUI()

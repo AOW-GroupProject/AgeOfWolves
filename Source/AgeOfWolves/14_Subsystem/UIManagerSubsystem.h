@@ -108,6 +108,7 @@ protected:
 
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize()override;
 #pragma endregion
 
 	//@Property/Info...etc

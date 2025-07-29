@@ -70,7 +70,7 @@ void AArea::BeginPlay()
 
             UE_LOGFMT(LogArea, Log, "레벨 전환 요청 전달 완료");
 
-        }, 5.0f, false);
+        }, 20.0f, false);
 }
 
 void AArea::EndPlay(const EEndPlayReason::Type EndPlayReason)
