@@ -4,6 +4,7 @@
 #include "17_GameMode/AOWGameState.h"
 
 #include "Kismet/GameplayStatics.h"
+#include "Engine/LevelStreaming.h"
 
 DEFINE_LOG_CATEGORY(LogLevelManager)
 
@@ -77,50 +78,126 @@ void ULevelManagerSubsystem::ExternalBindinToGameState()
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+
 void ULevelManagerSubsystem::PerformLevelStreamingOperations(const FLevelData& TargetLevelData)
 {
     UWorld* World = GetWorld();
     if (!World)
     {
         UE_LOGFMT(LogLevelManager, Error, "World를 찾을 수 없습니다");
-
-        //@실패 시 상태 정리
         FScopeLock Lock(&LevelTransitionLock);
         bIsLevelTransitionInProgress = false;
         PendingLevelTag = FGameplayTag();
         return;
     }
 
-    //@현재 레벨 언로드
-    if (CurrentLevelTag.IsValid())
-    {
-        FLevelData CurrentLevelData;
-        if (LevelDataInfos->GetLevelByTag(CurrentLevelTag, CurrentLevelData))
-        {
-            FString CurrentLevelName = CurrentLevelData.LevelAsset.GetAssetName();
-            UE_LOGFMT(LogLevelManager, Log, "현재 레벨 언로드: {0}", *CurrentLevelName);
+    // 목표 레벨 데이터를 멤버 변수에 저장
+    PendingLevelData = TargetLevelData;
 
-            UGameplayStatics::UnloadStreamLevel(World, FName(*CurrentLevelName),
-                FLatentActionInfo(), true);
+    // 현재 로드된 모든 스트리밍 레벨을 확인합니다
+    const TArray<ULevelStreaming*>& StreamingLevels = World->GetStreamingLevels();
+    UE_LOGFMT(LogLevelManager, Log, "현재 스트리밍 레벨 개수: {0}", StreamingLevels.Num());
+
+    // 언로드해야 할 레벨들을 수집합니다
+    TArray<FString> LevelsToUnload;
+
+    // 로드되어 있는 모든 스트리밍 레벨을 언로드 대상으로 추가합니다
+    for (ULevelStreaming* StreamingLevel : StreamingLevels)
+    {
+        UE_LOGFMT(LogLevelManager, Log, "레벨 스트리밍: {0}", StreamingLevel->GetName());
+
+        if (StreamingLevel && (StreamingLevel->IsLevelLoaded() || StreamingLevel->IsLevelVisible()))
+        {
+            FString PackageName = StreamingLevel->GetWorldAssetPackageName();
+            FString ShortName = FPackageName::GetShortName(PackageName);
+
+            UE_LOGFMT(LogLevelManager, Log, "언로드 대상 추가: 전체경로='{0}', 짧은이름='{1}'",
+                *PackageName, *ShortName);
+
+            LevelsToUnload.Add(ShortName);
         }
     }
 
-    //@새 레벨 로드
-    FString NewLevelName = TargetLevelData.LevelAsset.GetAssetName();
-    UE_LOGFMT(LogLevelManager, Log, "새 레벨 로드: {0}", *NewLevelName);
+    // 언로드할 레벨이 있는지 확인합니다
+    if (LevelsToUnload.Num() > 0)
+    {
+        UE_LOGFMT(LogLevelManager, Log, "총 {0}개의 스트리밍 레벨을 언로드합니다", LevelsToUnload.Num());
 
-    //@로드 레벨 스트림
+        // 모든 스트리밍 레벨을 순차적으로 언로드합니다
+        // 첫 번째 레벨부터 시작해서 하나씩 언로드하는 방식을 사용합니다
+        CurrentUnloadIndex = 0;
+        LevelsToUnloadArray = LevelsToUnload;
+
+        // 첫 번째 레벨 언로드를 시작합니다
+        UnloadNextLevel();
+    }
+    else
+    {
+        // 언로드할 스트리밍 레벨이 없다면 바로 새 레벨 로드로 진행합니다
+        UE_LOGFMT(LogLevelManager, Log, "언로드할 스트리밍 레벨이 없습니다. 바로 새 레벨 로드를 시작합니다");
+        StartNewLevelLoad();
+    }
+}
+
+void ULevelManagerSubsystem::UnloadNextLevel()
+{
+    // 언로드할 레벨이 더 있는지 확인합니다
+    if (CurrentUnloadIndex < LevelsToUnloadArray.Num())
+    {
+        FString LevelToUnload = LevelsToUnloadArray[CurrentUnloadIndex];
+        UE_LOGFMT(LogLevelManager, Log, "레벨 언로드 진행 [{0}/{1}]: '{2}'",
+            CurrentUnloadIndex + 1, LevelsToUnloadArray.Num(), *LevelToUnload);
+
+        // 언로드 완료 콜백 설정
+        FLatentActionInfo UnloadLatentInfo;
+        UnloadLatentInfo.CallbackTarget = this;
+        UnloadLatentInfo.ExecutionFunction = FName("OnLevelUnloadComplete");
+        UnloadLatentInfo.Linkage = 0;
+        UnloadLatentInfo.UUID = GetUniqueID();
+
+        // 해당 레벨 언로드 실행
+        UGameplayStatics::UnloadStreamLevel(GetWorld(), FName(*LevelToUnload), UnloadLatentInfo, true);
+    }
+    else
+    {
+        // 모든 레벨 언로드가 완료되었습니다
+        UE_LOGFMT(LogLevelManager, Log, "모든 스트리밍 레벨 언로드 완료, 새 레벨 로드 시작");
+
+        // 언로드 관련 변수들을 정리합니다
+        CurrentUnloadIndex = 0;
+        LevelsToUnloadArray.Empty();
+
+        // 새 레벨 로드를 시작합니다
+        StartNewLevelLoad();
+    }
+}
+
+void ULevelManagerSubsystem::StartNewLevelLoad()
+{
+    // 이 함수는 언로드가 완료되었거나 언로드할 레벨이 없을 때 호출됩니다
+    UWorld* World = GetWorld();
+    if (!World)
+    {
+        UE_LOGFMT(LogLevelManager, Error, "World를 찾을 수 없어 로드 실패");
+        FScopeLock Lock(&LevelTransitionLock);
+        bIsLevelTransitionInProgress = false;
+        PendingLevelTag = FGameplayTag();
+        return;
+    }
+
+    // 로드용 FLatentActionInfo 설정
+    FLatentActionInfo LoadLatentInfo;
+    LoadLatentInfo.CallbackTarget = this;
+    LoadLatentInfo.ExecutionFunction = FName("OnLevelLoadComplete");
+    LoadLatentInfo.Linkage = 0;
+    LoadLatentInfo.UUID = GetUniqueID();
+
+    // 새 레벨 로드 시작
+    FString NewLevelName = PendingLevelData.LevelAsset.GetAssetName();
+    UE_LOGFMT(LogLevelManager, Log, "새 레벨 로드 시작: {0}", *NewLevelName);
+
     UGameplayStatics::LoadStreamLevel(World, FName(*NewLevelName),
-        true, true, FLatentActionInfo());
-
-    CurrentLevelTag = PendingLevelTag;
-    bIsLevelTransitionInProgress = false;
-    PendingLevelTag = FGameplayTag();
-
-    //@완료 이벤트 호출
-    LevelTransitionCompleted.ExecuteIfBound(CurrentLevelTag);
-
-    UE_LOGFMT(LogLevelManager, Log, "레벨 전환 완료: {0}", *CurrentLevelTag.ToString());
+        true, true, LoadLatentInfo);
 }
 #pragma endregion
 
@@ -184,6 +261,32 @@ void ULevelManagerSubsystem::OnRequestStartLevelTransition(const FGameplayTag& N
 
     //@이미 GameThread에서 실행 중이므로 직접 레벨 스트리밍 수행
     PerformLevelStreamingOperations(TargetLevelData);
+}
+
+void ULevelManagerSubsystem::OnLevelUnloadComplete()
+{
+    UE_LOGFMT(LogLevelManager, Log, "레벨 언로드 완료, 다음 레벨 처리로 진행");
+
+    // 다음 언로드 인덱스로 이동
+    CurrentUnloadIndex++;
+
+    // 다음 레벨 언로드를 진행합니다
+    UnloadNextLevel();
+}
+
+void ULevelManagerSubsystem::OnLevelLoadComplete()
+{
+    //@레벨 로딩 완료 후 상태 업데이트
+    FScopeLock Lock(&LevelTransitionLock);
+
+    CurrentLevelTag = PendingLevelTag;
+    bIsLevelTransitionInProgress = false;
+    PendingLevelTag = FGameplayTag();
+
+    //@완료 이벤트 호출
+    LevelTransitionCompleted.ExecuteIfBound(CurrentLevelTag);
+
+    UE_LOGFMT(LogLevelManager, Log, "레벨 전환 완료: {0}", *CurrentLevelTag.ToString());
 }
 #pragma endregion
 

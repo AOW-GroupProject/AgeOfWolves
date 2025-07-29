@@ -57,11 +57,14 @@ protected:
     virtual void InitGame(const FString& MapName, const FString& Options, FString& ErrorMessage) override;
     //@플레이어 시작 위치 선택 (레벨별 커스터마이징)
     virtual AActor* ChoosePlayerStart_Implementation(AController* Player) override;
+    virtual void BeginPlay() override;
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 private:
+    mutable FCriticalSection RespawnDataMutex;
+
     UPROPERTY()
     FGameplayTag CachedNextLevelTag;
 
@@ -71,25 +74,33 @@ private:
     UPROPERTY()
     TWeakObjectPtr<APlayerController> CachedDeadPlayerController;
 
+    // 캐시된 리스폰 위치 정보
+    FTransform CachedRespawnTransform;
+    bool bHasValidRespawnTransform = false;
+
 private:
     //@플레이어 리스폰 처리 (두 가지 상황을 지원)
     void PlayerRespawn();
-
-
-
-    //@플레이어 텔레포트 실행
-    bool PerformPlayerTeleport(APawn* PlayerPawn, const FTransform& TargetTransform);
-
-    //@플레이어 게임플레이 상태 초기화
-    void ResetPlayerGameplayState(APlayerController* PlayerController);
 
 public:
     //@사용자 죽음
     void HandlePlayerDeath(APlayerController* PlayerController);
 
-public:
     //@구조물의 활성화
     void HandleFirstStructureActivation(const FStructureData& StructureData);
+
+private:
+    bool PreCacheDeathRespawnLocation(APlayerController* PlayerController);
+
+    bool PreCacheLevelTransitionRespawnLocation(const FGameplayTag& TargetLevelTag);
+
+private:
+    //@플레이어 텔레포트 실행
+    bool PerformPlayerTeleport(APawn* PlayerPawn, const FTransform& TargetTransform);
+
+private:
+    //@플레이어 게임플레이 상태 초기화
+    void ResetPlayerGameplayState(APlayerController* PlayerController);
 #pragma endregion
 
 //@Delegates

@@ -63,6 +63,10 @@ protected:
 private:
 	void PerformLevelStreamingOperations(const FLevelData& TargetLevelData);
 
+private:
+	void UnloadNextLevel();
+	void StartNewLevelLoad();  // 새로 추가할 헬퍼 함수
+
 protected:
 	UPROPERTY()
 	TObjectPtr<ULevelDataInfos> LevelDataInfos;
@@ -77,6 +81,13 @@ private:
 	FGameplayTag CurrentLevelTag;
 	UPROPERTY()
 	FGameplayTag PendingLevelTag;
+
+	// 언로드 완료 후 로드할 레벨 데이터를 저장하기 위한 변수 추가
+	FLevelData PendingLevelData;
+
+	// 순차적 언로드를 위한 변수들 추가
+	int32 CurrentUnloadIndex = 0;
+	TArray<FString> LevelsToUnloadArray;
 #pragma endregion
 
 //@Delegates
@@ -99,6 +110,13 @@ public:
 private:
 	UFUNCTION()
 	void OnRequestStartLevelTransition(const FGameplayTag& NextLevelTag);
+
+private:
+	UFUNCTION()
+	void OnLevelUnloadComplete();  // 언로드 완료 콜백 함수 추가
+
+	UFUNCTION()
+	void OnLevelLoadComplete();    // 기존 로드 완료 콜백
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

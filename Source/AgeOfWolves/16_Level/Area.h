@@ -404,10 +404,13 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Area | AI", meta = (EditCondition = "bAddUnassignedAIToDefaultGroup"))
     FString DefaultGroupName = "Default";
 
-protected:
     //@등록된 AI 그룹 Map
     UPROPERTY()
     TMap<FGuid, FAIGroupInfo> MAIGroups;
+
+protected:
+    UPROPERTY(EditAnywhere, Category = "Area | 구조물")
+    FStructureData StructureData;
 
 protected:
     //@영역 내 플레이어 정보
@@ -422,7 +425,7 @@ protected:
     float LastCleanupTime;
 
     //@정리 주기 (초)
-    UPROPERTY(EditAnywhere, Category = "Area | Advanced")
+    UPROPERTY(EditAnywhere, Category = "Area")
     float CleanupInterval = 60.0f;
 
 protected:
