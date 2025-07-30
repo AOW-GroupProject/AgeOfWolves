@@ -36,11 +36,6 @@ void APlayerStateBase::PostInitializeComponents()
 {
     Super::PostInitializeComponents();
 
-    //@Game Mode
-    
-    //@내부 바인딩
-    InternalBindingToASC();
-
     //@Ability Manager Subsystem
     const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
     if (!GameInstance)
@@ -69,25 +64,6 @@ void APlayerStateBase::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
     Super::EndPlay(EndPlayReason);
 
-    //// ASC 찾아서 이벤트 구독 해제
-    //if (auto ASC = Cast<UBaseAbilitySystemComponent>(GetAbilitySystemComponent()))
-    //{
-    //    ASC->CharacterStateEventOnGameplay.RemoveAll(this);
-    //}
-}
-
-void APlayerStateBase::InternalBindingToASC()
-{
-    if (!AbilitySystemComponent)
-    {
-        UE_LOGFMT(LogPlayerStateBase, Warning, "InternalBindingToASC: ASC가 유효하지 않습니다");
-        return;
-    }
-
-    //@내부 바인딩
-    AbilitySystemComponent->CharacterStateEventOnGameplay.AddUFunction(this, "OnCharacterStateEventOnGameplay");
-
-    UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 상태 관련 이벤트 콜백이 성공적으로 바인딩되었습니다");
 }
 
 void APlayerStateBase::InitializePlayerState()
@@ -286,43 +262,6 @@ bool APlayerStateBase::ProcessItemAbilityActivation(const TArray<TSubclassOf<UBa
 void APlayerStateBase::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
 {
     OnAnyAttributeValueChanged.Broadcast(Data.Attribute, Data.OldValue, Data.NewValue);
-}
-
-void APlayerStateBase::OnCharacterStateEventOnGameplay(AActor* Character, const FGameplayTag& CharacterStateTag)
-{
-    //@GetTagName()을 사용하여 깔끔한 태그 이름 출력
-    UE_LOGFMT(LogPlayerStateBase, Log,
-        "캐릭터 상태 이벤트 처리 완료 | 태그: {0}",
-        CharacterStateTag.ToString());
-
-    //@태그 비교를 위한 정적 태그 생성 (한 번만 생성되어 성능도 좋음)
-    static const FGameplayTag DeadStateTag = FGameplayTag::RequestGameplayTag("State.Dead");
-    static const FGameplayTag NormalStateTag = FGameplayTag::RequestGameplayTag("State.Normal");
-
-    if (StateTagCache.MatchesTagExact(CharacterStateTag)) return;
-
-    //@부활 감지
-    if (StateTagCache.MatchesTagExact(DeadStateTag)
-        && CharacterStateTag.MatchesTagExact(NormalStateTag))
-    {
-        UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 부활 감지 - 처리 시작");
-
-        //@죽음 이벤트 호출
-        NotifyPlayerRevivalEvent.Broadcast(this);
-    }
-
-    //@죽음 상태
-    if (CharacterStateTag.MatchesTagExact(DeadStateTag))
-    {
-        UE_LOGFMT(LogPlayerStateBase, Log, "캐릭터 죽음 감지 - 처리 시작");
-
-        //@죽음 이벤트 호출
-        NotifyPlayerDeathEvent.Broadcast(this);
-    }
-
-    //@상태 태그 캐싱
-    StateTagCache = CharacterStateTag;
-
 }
 #pragma endregion
 

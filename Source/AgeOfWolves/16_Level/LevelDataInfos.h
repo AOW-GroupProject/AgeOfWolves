@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "Engine/DataAsset.h"
+#include "GameplayTagContainer.h"
 
 #include "LevelDataInfos.generated.h"
 
@@ -22,9 +23,10 @@ class UWorld;
 UENUM(BlueprintType)
 enum class ELevelType : uint8
 {
-    Title       UMETA(DisplayName = "Title"),
+    Title =0    UMETA(DisplayName = "Title"),
     World       UMETA(DisplayName = "World"),
     BossArena   UMETA(DisplayName = "Boss Arena"),
+    Test        UMETA(DisplayName = "Test"),
     MAX
 };
 
@@ -40,8 +42,9 @@ enum class ELevelValidationError : uint8
 
     //@기본 데이터 오류
     EmptyLevelData          UMETA(DisplayName = "비어있는 레벨 데이터"),
-    InvalidLevelID          UMETA(DisplayName = "유효하지 않은 레벨 ID"),
-    DuplicateLevelID        UMETA(DisplayName = "중복된 레벨 ID"),
+    InvalidLevelTag         UMETA(DisplayName = "유효하지 않은 레벨 태그"),
+    DuplicateLevelTag       UMETA(DisplayName = "중복된 레벨 태그"),
+    MismatchedTagCategory   UMETA(DisplayName = "태그와 카테고리 불일치"),
 
     //@레벨 정보 오류
     EmptyLevelName          UMETA(DisplayName = "비어있는 레벨 이름"),
@@ -55,7 +58,11 @@ enum class ELevelValidationError : uint8
 
     //@논리적 일관성 오류
     DisabledRequiredLevel   UMETA(DisplayName = "비활성화된 필수 레벨"),
-    InconsistentLevelState  UMETA(DisplayName = "일관성 없는 레벨 상태")
+    InconsistentLevelState  UMETA(DisplayName = "일관성 없는 레벨 상태"),
+    MultipleDefaultLevels   UMETA(DisplayName = "복수 기본 레벨 지정"),
+
+    InvalidPlayerStartTag   UMETA(DisplayName = "유효하지 않은 플레이어 시작 태그"),
+    MissingPlayerStartTags  UMETA(DisplayName = "플레이어 시작 태그 누락"),
 };
 #pragma endregion
 
@@ -72,9 +79,12 @@ struct FLevelData
     GENERATED_BODY()
 
 public:
-    //@고유 레벨 식별자
+    //@레벨 분류
     UPROPERTY(EditDefaultsOnly, Category = "레벨 기본 정보")
-    FGuid LevelID;
+    ELevelType LevelCategory;
+    //@고유 레벨 식별자 (GameplayTag 기반)
+    UPROPERTY(EditDefaultsOnly, Category = "레벨 기본 정보", meta = (Categories = "Level"))
+    FGameplayTag LevelTag;
 
     //@표시용 레벨 이름
     UPROPERTY(EditDefaultsOnly, Category = "레벨 기본 정보")
@@ -83,33 +93,43 @@ public:
     //@레벨 설명
     UPROPERTY(EditDefaultsOnly, Category = "레벨 기본 정보")
     FText LevelDescription;
-
-    //@레벨 분류
-    UPROPERTY(EditDefaultsOnly, Category = "레벨 기본 정보")
-    ELevelType LevelCategory;
-
     //@레벨 에셋 참조
     UPROPERTY(EditDefaultsOnly, Category = "레벨 에셋")
     TSoftObjectPtr<UWorld> LevelAsset;
 
+    //@기본 시작 레벨 여부
+    UPROPERTY(EditDefaultsOnly, Category = "레벨 설정")
+    bool bIsDefaultLevel = false;
+
     //@레벨 활성화 여부
     UPROPERTY(EditDefaultsOnly, Category = "레벨 설정")
-    bool bIsEnabled = true;
+    bool bIsEnabled = false;
+
+    //@플레이어 시작 위치 (기본 시작점)
+    UPROPERTY(EditDefaultsOnly, Category = "플레이어 시작")
+    FGameplayTag DefaultPlayerStartTag;
+
+    //@사용 가능한 모든 시작 위치 태그
+    UPROPERTY(EditDefaultsOnly, Category = "플레이어 시작", meta = (Categories = "PlayerStart"))
+    TArray<FGameplayTag> AvailablePlayerStartTags;
 
 public:
     FLevelData()
-        : LevelID(FGuid::NewGuid())
+        : LevelTag(FGameplayTag::EmptyTag)
         , LevelName(FText::FromString(TEXT("New Level")))
         , LevelDescription(FText::GetEmpty())
         , LevelCategory(ELevelType::World)
-        , bIsEnabled(true)
+        , bIsDefaultLevel(false)
+        , bIsEnabled(false)
+        , DefaultPlayerStartTag(FGameplayTag::EmptyTag)
+        , AvailablePlayerStartTags()
     {
     }
 
-    //@레벨 ID 비교 연산자
-    bool operator==(const FGuid& OtherID) const
+    //@레벨 태그 비교 연산자
+    bool operator==(const FGameplayTag& OtherTag) const
     {
-        return LevelID == OtherID;
+        return LevelTag.MatchesTagExact(OtherTag);
     }
 
     //@레벨 이름이 유효한지 확인
@@ -118,10 +138,21 @@ public:
         return !LevelName.IsEmpty() && !LevelName.ToString().IsEmpty();
     }
 
+    //@레벨 태그가 유효한지 확인
+    bool HasValidTag() const
+    {
+        return LevelTag.IsValid();
+    }
+
     //@레벨 에셋이 유효한지 확인
     bool HasValidAsset() const
     {
         return !LevelAsset.IsNull();
+    }
+
+    bool HasValidPlayerStartTags() const
+    {
+        return DefaultPlayerStartTag.IsValid() && AvailablePlayerStartTags.Num() > 0;
     }
 };
 
@@ -203,11 +234,12 @@ protected:
 
     //@개별 검증 함수들
     FLevelValidationResult ValidateBasicSettings() const;
-    FLevelValidationResult ValidateLevelIDs() const;
+    FLevelValidationResult ValidateLevelTags() const;
     FLevelValidationResult ValidateLevelNames() const;
     FLevelValidationResult ValidateLevelTypes() const;
     FLevelValidationResult ValidateLevelAssets() const;
     FLevelValidationResult ValidateLogicalConsistency() const;
+    FLevelValidationResult ValidatePlayerStartTags() const;
 
     //@오류 표시 및 자동 수정
     void ShowValidationError(const FLevelValidationResult& ValidationResult) const;
@@ -228,12 +260,12 @@ public:
 
 public:
     //@레벨 검색 함수들 (C++ 전용 - 포인터 반환)
-    const FLevelData* FindLevelByID(const FGuid& LevelID) const;
+    const FLevelData* FindLevelByTag(const FGameplayTag& LevelTag) const;
     const FLevelData* FindLevelByName(const FText& LevelName) const;
 
     //@Blueprint 호환 검색 함수들 (값 반환)
     UFUNCTION(BlueprintCallable, Category = "Level Data")
-    bool GetLevelByID(const FGuid& LevelID, FLevelData& OutLevelData) const;
+    bool GetLevelByTag(const FGameplayTag& LevelTag, FLevelData& OutLevelData) const;
 
     UFUNCTION(BlueprintCallable, Category = "Level Data")
     bool GetLevelByName(const FText& LevelName, FLevelData& OutLevelData) const;
@@ -245,7 +277,7 @@ public:
     TArray<FLevelData> GetEnabledLevels() const;
 
     UFUNCTION(BlueprintCallable, Category = "Level Data")
-    bool IsLevelEnabled(const FGuid& LevelID) const;
+    bool IsLevelEnabled(const FGameplayTag& LevelTag) const;
 
     UFUNCTION(BlueprintCallable, Category = "Level Data")
     int32 GetLevelCount() const { return LevelDataList.Num(); }
@@ -260,10 +292,6 @@ public:
 
     UFUNCTION(CallInEditor, Category = "Level Validation")
     void ValidateLevelNamesOnly();
-
-    //@에디터 유틸리티 함수들
-    UFUNCTION(CallInEditor, Category = "Level Utilities")
-    void GenerateNewLevelIDs();
 
     UFUNCTION(CallInEditor, Category = "Level Utilities")
     void SortLevelsByType();
@@ -281,6 +309,9 @@ public:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
+    //@Default 시작 레벨 가져오기
+    const FLevelData* GetDefaultLevel() const;
+
     //@타입별 레벨 개수 반환
     int32 GetLevelCountByType(ELevelType LevelType) const;
 

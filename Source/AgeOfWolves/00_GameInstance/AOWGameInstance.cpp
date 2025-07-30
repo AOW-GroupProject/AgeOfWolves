@@ -52,14 +52,6 @@ void UAOWGameInstance::Init()
 void UAOWGameInstance::StartGameInstance()
 {
     Super::StartGameInstance();
-    
-    //@바인딩 수행...
-    if (auto* LevelManager = GetSubsystem<ULevelManagerSubsystem>())
-    {
-        UE_LOG(LogGameInstance, Log, TEXT("LevelManager is ready and accessible"));
-
-        LevelManager->ExternalBindToUIManager();
-    }
 
 }
 

@@ -31,7 +31,6 @@ class UHUD_HPToolItemDotGauge;
 DECLARE_MULTICAST_DELEGATE(FRequestStartInitByHUD);
 //@HUD 초기화 완료 이벤트
 DECLARE_DELEGATE(FHUDInitFinished);
-#pragma endregion
 
 //@State Bars 초기화 완료 이벤트
 DECLARE_DELEGATE(FNotifyStateBarsInitFinished);

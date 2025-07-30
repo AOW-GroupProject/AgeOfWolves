@@ -33,7 +33,11 @@ enum class EUICollectionValidationError : uint8
     //@Logical consistency errors
     InputBindingInconsistency       UMETA(DisplayName = "Input Binding Inconsistency"),
     TooManyBeginPlayUIs             UMETA(DisplayName = "Too Many BeginPlay UIs"),
-    CategoryMismatch                UMETA(DisplayName = "Category Mismatch")
+    CategoryMismatch                UMETA(DisplayName = "Category Mismatch"),
+
+    //@새로 추가된 최소 표시 시간 관련 에러들
+    InvalidMinimumDisplayTime       UMETA(DisplayName = "Invalid Minimum Display Time"),
+    MinimumDisplayTimeOnNonSystemUI UMETA(DisplayName = "Minimum Display Time On Non-System UI")
 };
 
 /*
@@ -59,7 +63,7 @@ struct FUICollectionValidationResult
 
 public:
     //@Validation success status
-    UPROPERTY(BlueprintReadOnly)
+    UPROPERTY(BlueprintReadOnly)    
     bool bIsValid = true;
 
     //@Error type identifier
@@ -129,6 +133,14 @@ public:
     //@Input Tags
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (Categories = "UI Information | Key Binding", EditCondition = "bInputBinded == true"))
     TArray<FGameplayTag> InputTags;
+
+    //@최소 그리기 보장 시간 사용 여부 (System UI에만 적용)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (Categories = "UI Information | Minimum Display Time", EditCondition = "UICategory == EUICategory::System"))
+    bool bUseMinimumDisplayTime = false;
+
+    //@최소 그리기 보장 시간 (초 단위, 2-10초 범위)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Meta = (Categories = "UI Information | Minimum Display Time", EditCondition = "bUseMinimumDisplayTime == true && UICategory == EUICategory::System", ClampMin = "2", ClampMax = "10"))
+    int32 MinimumDisplayTimeSeconds = 5;
 };
 
 /**
@@ -160,6 +172,7 @@ protected:
     FUICollectionValidationResult ValidateUILogicalConsistency() const;
     FUICollectionValidationResult ValidateCategoryConsistency() const;
     FUICollectionValidationResult ValidateBeginPlayUILimits() const;
+    FUICollectionValidationResult ValidateMinimumDisplayTime() const;
 
     //@Error handling functions
     void ShowValidationError(const FUICollectionValidationResult& ValidationResult) const;

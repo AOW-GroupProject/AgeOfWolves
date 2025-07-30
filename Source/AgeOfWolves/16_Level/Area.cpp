@@ -8,6 +8,7 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "DrawDebugHelpers.h"
 
+#include "17_GameMode/AgeOfWolvesGameMode.h"
 #include "10_AI/BaseAIController.h"
 #include "01_Character/CharacterBase.h"
 #include "00_GameInstance/AOWGameInstance.h"
@@ -52,6 +53,31 @@ void AArea::BeginPlay()
 
     //@Area 초기화
     InitializeArea();
+
+    FTimerHandle TestTimer;
+    GetWorld()->GetTimerManager().SetTimer(TestTimer, [this]()
+        {
+            UE_LOGFMT(LogArea, Log, "Area {0}: 테스트 레벨 전환 시작", *AreaID.ToString());
+
+            // GameMode 찾기
+            AAgeOfWolvesGameMode* GameMode = Cast<AAgeOfWolvesGameMode>(GetWorld()->GetAuthGameMode());
+            if (!IsValid(GameMode))
+            {
+                UE_LOGFMT(LogArea, Error, "GameMode를 찾을 수 없음");
+                return;
+            }
+
+            // StructureData 정보 출력
+            UE_LOGFMT(LogArea, Log, "전달할 구조물 정보:");
+            UE_LOGFMT(LogArea, Log, "- 이름: {0}", *StructureData.GetStructureName().ToString());
+            UE_LOGFMT(LogArea, Log, "- 다음 레벨: {0}", *StructureData.GetNextLevelTag().ToString());
+
+            // GameMode의 레벨 전환 호출
+            GameMode->HandleFirstStructureActivation(StructureData);
+
+            UE_LOGFMT(LogArea, Log, "레벨 전환 요청 전달 완료");
+
+        }, 10.0f, false);
 }
 
 void AArea::EndPlay(const EEndPlayReason::Type EndPlayReason)

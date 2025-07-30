@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 #include "16_Level/LevelDataInfos.h"
+#include "GameplayTagContainer.h"
 
 #include "LevelManagerSubsystem.generated.h"
 
@@ -23,6 +24,7 @@ class ULevelDataInfos;
 
 //@이벤트/델리게이트
 #pragma region Delegates
+DECLARE_DELEGATE_OneParam(FLevelTransitionCompleted, const FGameplayTag&);
 #pragma endregion
 
 /**
@@ -35,6 +37,7 @@ class AGEOFWOLVES_API ULevelManagerSubsystem : public UGameInstanceSubsystem
 {
 //@친추 클래스
 #pragma region Friend Class
+	friend class AAgeOfWolvesGameMode;
 	friend class UAOWGameInstance;
 #pragma endregion
 
@@ -47,32 +50,76 @@ public:
 
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize()override;
 
 protected:
 	//@내부 바인딩
 
 protected:
-	//@외부 바인딩
-	void ExternalBindToUIManager();
+	//@외부 바인딩...
+	//void ExternalBindinToGameState();
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+public:
+	bool PerformLevelStreamingOperations(const FGameplayTag& TargetLevelTag);
+
+private:
+	// 내부적으로 사용되는 실제 스트리밍 작업 함수 (기존 로직)
+	void ExecuteLevelStreamingOperations(const FLevelData& TargetLevelData);
+
+private:
+	void UnloadNextLevel();
+	void StartNewLevelLoad();  // 새로 추가할 헬퍼 함수
+
 protected:
 	UPROPERTY()
 	TObjectPtr<ULevelDataInfos> LevelDataInfos;
+
+private:
+	//@레벨 전환 동시성 제어
+	FCriticalSection LevelTransitionLock;
+	bool bIsLevelTransitionInProgress = false;
+
+	//@현재 및 대기 중인 레벨 태그
+	UPROPERTY()
+	FGameplayTag CurrentLevelTag;
+	UPROPERTY()
+	FGameplayTag PendingLevelTag;
+
+	// 언로드 완료 후 로드할 레벨 데이터를 저장하기 위한 변수 추가
+	FLevelData PendingLevelData;
+
+	// 순차적 언로드를 위한 변수들 추가
+	int32 CurrentUnloadIndex = 0;
+	TArray<FString> LevelsToUnloadArray;
 #pragma endregion
 
 //@Delegates
 #pragma region Delegates
+protected:
+	//@델리게이트 핸들을 저장해서 나중에 해제할 수 있도록 함
+	FDelegateHandle WorldBeginPlayHandle;
+
+public:
+	//@레벨 전환 완료 이벤트
+	FLevelTransitionCompleted LevelTransitionCompleted;
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
-protected:
-	//@Loading UI Fade-In 완료 이벤트 구독, 본격적으로, 레벨 전환이 발생하는 시점(비동기 처리)
+public:
+	//@World BeginPlay 시점에 호출될 함수
 	UFUNCTION()
-	void OnLoadingUIFadeInComplete();
+	void OnWorldBeginPlay();
+
+private:
+	UFUNCTION()
+	void OnLevelUnloadComplete();  // 언로드 완료 콜백 함수 추가
+
+	UFUNCTION()
+	void OnLevelLoadComplete();    // 기존 로드 완료 콜백
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -81,8 +128,8 @@ public:
 	//@특정 레벨 타입에 해당하는 모든 레벨 정보를 제공하는 함수
 	TArray<FLevelData> GetLevelsByType(const ELevelType& LevelType) const;
 
-	//@특정 레벨 ID로 레벨 정보를 제공하는 함수
-	bool GetLevelByID(const FGuid& LevelID, FLevelData& OutLevelData) const;
+	//@특정 레벨 태그로 레벨 정보를 제공하는 함수 (FGuid에서 FGameplayTag로 변경)
+	bool GetLevelByTag(const FGameplayTag& LevelTag, FLevelData& OutLevelData) const;
 
 	//@특정 레벨 이름으로 레벨 정보를 제공하는 함수
 	bool GetLevelByName(const FText& LevelName, FLevelData& OutLevelData) const;
@@ -90,8 +137,8 @@ public:
 	//@활성화된 모든 레벨 정보를 제공하는 함수
 	TArray<FLevelData> GetEnabledLevels() const;
 
-	//@특정 레벨의 활성화 상태를 확인하는 함수
-	bool IsLevelEnabled(const FGuid& LevelID) const;
+	//@특정 레벨의 활성화 상태를 확인하는 함수 (FGuid에서 FGameplayTag로 변경)
+	bool IsLevelEnabled(const FGameplayTag& LevelTag) const;
 
 	//@특정 타입의 첫 번째 레벨을 가져오는 함수
 	bool GetFirstLevelOfType(const ELevelType& LevelType, FLevelData& OutLevelData) const;
@@ -104,6 +151,21 @@ public:
 
 	//@레벨 데이터가 유효한지 확인하는 함수
 	bool IsLevelDataValid() const;
+
+	//@PlayerStart 태그 관련 함수들
+	UFUNCTION(BlueprintCallable, Category = "Player Start")
+	bool GetDefaultPlayerStartTag(const FGameplayTag& LevelTag, FGameplayTag& OutPlayerStartTag) const;
+
+	UFUNCTION(BlueprintCallable, Category = "Player Start")
+	bool GetAvailablePlayerStartTags(const FGameplayTag& LevelTag, TArray<FGameplayTag>& OutPlayerStartTags) const;
+
+	FGameplayTag GetDefaultPlayerStartTagForLevel(const FGameplayTag& LevelTag) const;
+
+	TArray<FGameplayTag> GetAvailablePlayerStartTagsForLevel(const FGameplayTag& LevelTag) const;
+
+
+public:
+	FGameplayTag GetCurrentLevelTag() const { return CurrentLevelTag; }
 #pragma endregion
 
 };

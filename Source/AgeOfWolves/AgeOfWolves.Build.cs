@@ -22,6 +22,7 @@ public class AgeOfWolves : ModuleRules
             "GameplayTasks",
             "NavigationSystem",
             "Niagara",
+            "DeveloperSettings",
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] {
@@ -36,6 +37,7 @@ public class AgeOfWolves : ModuleRules
             "AnimGraphRuntime",
             "MovieScene",
             "Niagara",
+            "DeveloperSettings",
         });
     }
 }
