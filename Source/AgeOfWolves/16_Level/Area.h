@@ -337,6 +337,31 @@ protected:
 protected:
     //@초기화
     void InitializeArea();
+
+#if WITH_EDITOR
+protected:
+    // 에디터에서 프로퍼티 변경 시 호출되는 함수
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
+    // 에디터의 맵 체크 기능에서 호출되는 함수  
+    virtual void CheckForErrors() override;
+
+    // 에디터에서 액터 로드 완료 후 호출되는 함수
+    virtual void PostLoad() override;
+
+    // 에디터에서 액터가 생성된 직후 호출되는 함수
+    virtual void PostActorCreated() override;
+
+private:
+    // Area Tag 유효성 검사 헬퍼 함수
+    bool ValidateAreaTag(bool bShowDetailedFeedback = true) const;
+
+    // 에디터 알림 표시 함수 - SystemMessageConfig의 ShowEditorNotification을 참고
+    void ShowAreaTagNotification(const FString& Message, bool bIsError = true) const;
+
+    // 맵 체크 오류 추가 함수
+    void AddMapCheckError(const FString& ErrorMessage) const;
+#endif
 #pragma endregion
 
 //@Property/Info...etc
@@ -368,13 +393,13 @@ protected:
     UCrowdControlComponent* CrowdControlComponent;
 
 protected:
-    //@영역 식별자
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
-    FGuid AreaID;
+    //@영역 태그
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area", meta = (Categories = "Area"))
+    FGameplayTag AreaTag;
 
-    //@영역 태그 (전투 지역, 휴식 지역 등 특성)
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
-    TArray<FGameplayTag> AreaTags;
+    //@영역 식별자
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Area")
+    FGuid AreaID;
 
     //@영역 우선순위 (중첩 처리용)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
@@ -500,13 +525,13 @@ protected:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
+    //@영역 태그
+    UFUNCTION(BlueprintCallable, Category = "Area")
+    FGameplayTag GetAreaTag() const { return AreaTag; }
+
     //@영역 ID 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
     FGuid GetAreaID() const { return AreaID; }
-
-    //@영역 태그 가져오기
-    UFUNCTION(BlueprintCallable, Category = "Area")
-    const TArray<FGameplayTag>& GetAreaTags() const { return AreaTags; }
 
     //@영역 우선순위 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
