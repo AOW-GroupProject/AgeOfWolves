@@ -5,12 +5,14 @@
 
 #include "AOWGameState.generated.h"
 
+
 DECLARE_LOG_CATEGORY_EXTERN(LogAOWGameState, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
 class APlayerStateBase;
 class ABasePlayerController;
+struct FQuestDataInfo;
 #pragma endregion
 
 //@열거형
@@ -24,6 +26,7 @@ class ABasePlayerController;
 //@이벤트/델리게이트
 #pragma region Delegates
 DECLARE_MULTICAST_DELEGATE_OneParam(FPlayerRespawnCompleted, APlayerController*)
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnQuestCompleted, const FQuestDataInfo&)
 #pragma endregion
 
 /**
@@ -54,6 +57,10 @@ protected:
 	//@Game Mode에서 호출할 함수 - 리스폰 완료 알림 처리
 	UFUNCTION()
 	void NotifyPlayerRespawnCompleted(APlayerController* RespawnedPlayerController);
+
+	//@Game Mode에서 호출할 함수 - 퀘스트 완료 알림 처리
+	UFUNCTION()
+	void NotifyPlayerQuestCompleted(const FQuestDataInfo& QuestData);
 #pragma endregion
 
 //@Delegates
@@ -61,6 +68,10 @@ protected:
 public:
 	//@플레이어 리스폰 완료 이벤트
 	FPlayerRespawnCompleted PlayerRespawnCompleted;
+
+	//@퀘스트 완료 이벤트
+	FOnQuestCompleted OnQuestCompleted;
+	
 #pragma endregion
 
 //@Callbacks

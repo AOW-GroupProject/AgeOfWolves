@@ -1,7 +1,10 @@
 #include "AOWGameState.h"
+#include "Kismet/GameplayStatics.h"
 #include "Logging/StructuredLog.h"
 
+#include "00_GameInstance/AOWGameInstance.h"
 #include "03_Player/PlayerStateBase.h"
+
 
 DEFINE_LOG_CATEGORY(LogAOWGameState)
 
@@ -33,6 +36,21 @@ void AAOWGameState::NotifyPlayerRespawnCompleted(APlayerController* RespawnedPla
     PlayerRespawnCompleted.Broadcast(RespawnedPlayerController);
 
     UE_LOGFMT(LogAOWGameState, Log, "플레이어 리스폰 완료 이벤트 브로드캐스트 완료");
+}
+
+void AAOWGameState::NotifyPlayerQuestCompleted(const FQuestDataInfo& QuestData)
+{
+    OnQuestCompleted.Broadcast(QuestData);
+    
+    const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
+    if (!GameInstance)
+    {
+        UE_LOGFMT(LogAOWGameState, Warning, "GameInstance가 유효하지 않음");
+        return;
+    }
+
+    GameInstance->UpdateQuestProgress(QuestData);
+    UE_LOGFMT(LogAOWGameState, Log, "퀘스트 완료 이벤트 브로드캐스트 완료");
 }
 #pragma endregion
 

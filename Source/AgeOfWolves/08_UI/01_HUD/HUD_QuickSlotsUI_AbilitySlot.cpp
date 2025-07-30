@@ -37,15 +37,15 @@ void UHUD_QuickSlotsUI_AbilitySlot::AssignNewAbility_Implementation(FGameplayTag
     //@UEditable Text Box
     if (!AbilityName)
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBox°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBoxï¿½ï¿½ ï¿½ï¿½È¿ï¿½ï¿½ï¿½ï¿½ ï¿½Ê½ï¿½ï¿½Ï´ï¿½.", __FUNCDNAME__);
         return;
     }
 
-    //@FGameplayTag·ÎºÎÅÍ Ability Type ¸í°ú Ability ¸í ÃßÃâ
+    //@FGameplayTagï¿½Îºï¿½ï¿½ï¿½ Ability Type ï¿½ï¿½ï¿½ï¿½ Ability ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     FString TypeName, AbilityNameStr;
     if (!ExtractAbilityNamesFromTag(Tag, TypeName, AbilityNameStr))
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : Tag·ÎºÎÅÍ ÀÌ¸§ ÃßÃâ¿¡ ½ÇÆÐÇß½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : Tagï¿½Îºï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½â¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½Ï´ï¿½.", __FUNCDNAME__);
         return;
     }
 
@@ -59,21 +59,21 @@ void UHUD_QuickSlotsUI_AbilitySlot::AssignNewAbilityFromSlot_Implementation(UAbi
 
     if (!FromSlot)
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : ¼Ò½º ½½·ÔÀÌ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : ï¿½Ò½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½È¿ï¿½ï¿½ï¿½ï¿½ ï¿½Ê½ï¿½ï¿½Ï´ï¿½.", __FUNCDNAME__);
         return;
     }
 
     if (!AbilityName )
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBox°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBoxï¿½ï¿½ ï¿½ï¿½È¿ï¿½ï¿½ï¿½ï¿½ ï¿½Ê½ï¿½ï¿½Ï´ï¿½.", __FUNCDNAME__);
         return;
     }
 
-    //@FGameplayTag·ÎºÎÅÍ Ability Type ¸í°ú Ability ¸í ÃßÃâ
+    //@FGameplayTagï¿½Îºï¿½ï¿½ï¿½ Ability Type ï¿½ï¿½ï¿½ï¿½ Ability ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½
     FString TypeName, AbilityNameStr;
     if (!ExtractAbilityNamesFromTag(FromSlot->GetAbilityTag(), TypeName, AbilityNameStr))
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : Tag·ÎºÎÅÍ ÀÌ¸§ ÃßÃâ¿¡ ½ÇÆÐÇß½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : Tagï¿½Îºï¿½ï¿½ï¿½ ï¿½Ì¸ï¿½ ï¿½ï¿½ï¿½â¿¡ ï¿½ï¿½ï¿½ï¿½ï¿½ß½ï¿½ï¿½Ï´ï¿½.", __FUNCDNAME__);
         return;
     }
 
@@ -87,7 +87,7 @@ void UHUD_QuickSlotsUI_AbilitySlot::ClearAssignedAbility_Implementation(bool bFo
 
     if (!AbilityName)
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBox°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBoxï¿½ï¿½ ï¿½ï¿½È¿ï¿½ï¿½ï¿½ï¿½ ï¿½Ê½ï¿½ï¿½Ï´ï¿½.", __FUNCDNAME__);
         return;
     }
 
@@ -106,25 +106,25 @@ bool UHUD_QuickSlotsUI_AbilitySlot::ExtractAbilityNamesFromTag(const FGameplayTa
 {
     if (!Tag.IsValid())
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : À¯È¿ÇÏÁö ¾ÊÀº GameplayTagÀÔ´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : ï¿½ï¿½È¿ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ GameplayTagï¿½Ô´Ï´ï¿½.", __FUNCDNAME__);
         return false;
     }
 
-    //@Tag ¹®ÀÚ¿­À» '.' ±âÁØÀ¸·Î ºÐ¸®
+    //@Tag ï¿½ï¿½ï¿½Ú¿ï¿½ï¿½ï¿½ '.' ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ð¸ï¿½
     FString TagString = Tag.ToString();
     TArray<FString> TagHierarchy;
     TagString.ParseIntoArray(TagHierarchy, TEXT("."), true);
 
-    //@ÃÖ¼Ò 3°èÃþ ÀÌ»óÀÇ ÅÂ±×°¡ ÇÊ¿ä (Ability.Type.Name)
+    //@ï¿½Ö¼ï¿½ 3ï¿½ï¿½ï¿½ï¿½ ï¿½Ì»ï¿½ï¿½ï¿½ ï¿½Â±×°ï¿½ ï¿½Ê¿ï¿½ (Ability.Type.Name)
     if (TagHierarchy.Num() < 3)
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : ¾îºô¸®Æ¼ ÅÂ±×ÀÇ °èÃþÀÌ ÃæºÐÇÏÁö ¾Ê½À´Ï´Ù: {1}", __FUNCDNAME__, TagString);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : ï¿½ï¿½ï¿½ï¿½ï¿½Æ¼ ï¿½Â±ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ï¿½ ï¿½Ê½ï¿½ï¿½Ï´ï¿½: {1}", __FUNCDNAME__, TagString);
         return false;
     }
 
-    //@Type Name°ú Ability Name ¼³Á¤
+    //@Type Nameï¿½ï¿½ Ability Name ï¿½ï¿½ï¿½ï¿½
     OutTypeName = TagHierarchy[2];  // Battoujutsu
-    OutAbilityName = TagHierarchy[TagHierarchy.Num() - 1];  // ½ÇÁ¦ ±â¼ú¸í
+    OutAbilityName = TagHierarchy[TagHierarchy.Num() - 1];  // ï¿½ï¿½ï¿½ï¿½ ï¿½ï¿½ï¿½ï¿½ï¿½
 
     return true;
 }

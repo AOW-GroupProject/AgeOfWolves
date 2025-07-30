@@ -3,6 +3,8 @@
 #include "Kismet/GameplayStatics.h"
 
 #include "15_SaveGame/AOWSaveGame.h"
+#include "16_Level/AreaQuestDataInfos.h"
+#include "17_GameMode/AOWGameState.h"
 
 DEFINE_LOG_CATEGORY(LogGameInstance)
  //UE_LOGFMT(LogGameInstance, Log, "");
@@ -37,7 +39,6 @@ void UAOWGameInstance::Init()
         UE_LOGFMT(LogGameInstance, Log, "세이브 파일이 존재하지 않음 - 새 인스턴스 생성");
         SaveGameInstance = CreateNewSaveGameInstance();
     }
-
     //@Loading
     {
         FCoreUObjectDelegates::PreLoadMap.AddUObject(this, &UAOWGameInstance::PreLoadMapEvent);
@@ -80,6 +81,18 @@ bool UAOWGameInstance::DoesSaveGameExist()
     UE_LOGFMT(LogGameInstance, Log, "세이브 파일 존재 여부 확인 - 파일명: {0}, 인덱스: {1}, 결과: {2}",
         SaveFileName, SaveIndex, bExists ? TEXT("존재") : TEXT("없음"));
     return bExists;
+}
+
+bool UAOWGameInstance::UpdateQuestProgress(const FQuestDataInfo& QuestData)
+{
+    if (SaveGameInstance->UpdateAreaQuestProgress(QuestData))
+    {
+        UE_LOGFMT(LogGameInstance, Error, "UpdateQuestProgress");
+        return true;
+    }
+
+    UE_LOGFMT(LogGameInstance, Error, "UpdateQuestProgress Fail");
+    return false;
 }
 
 UAOWSaveGame* UAOWGameInstance::GetSaveGameInstance()

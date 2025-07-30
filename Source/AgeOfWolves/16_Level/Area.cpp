@@ -11,6 +11,7 @@
 #include "10_AI/BaseAIController.h"
 #include "01_Character/CharacterBase.h"
 #include "00_GameInstance/AOWGameInstance.h"
+#include "04_Component/QuestComponent.h"
 #include "14_Subsystem/AreaManagerSubsystem.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogArea, Log, All);
@@ -37,19 +38,20 @@ AArea::AArea()
     MAIGroups.Empty();
     MPlayerBindings.Empty();
     LastCleanupTime = 0.0f;
+
+    //@Quest Component
+    QuestComponent = CreateDefaultSubobject<UQuestComponent>(TEXT("QuestComponent"));
 }
 
 void AArea::BeginPlay()
 {
     Super::BeginPlay();
-
     //@Area 초기화
     InitializeArea();
 }
 
 void AArea::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-
     //@플레이어 등록 해제
     UnregisterAllPlayer();
 
@@ -1255,6 +1257,27 @@ FGuid AArea::GetAIGroupID(AActor* AIActor) const
     }
 
     return FGuid();
+}
+
+EAIHierarchyType AArea::GetAIHierarchyType(AActor* AIActor) const
+{
+    if (!IsValid(AIActor))
+        return EAIHierarchyType::Regular; 
+    
+    for (const auto& GroupPair : MAIGroups)
+    {
+        const FAIGroupInfo& GroupInfo = GroupPair.Value;
+        
+        for (const FAreaAIInfo& MemberInfo : GroupInfo.GroupMembers)
+        {
+            if (MemberInfo.AIActor.Get() == AIActor)
+            {
+                return MemberInfo.HierarchyType;
+            }
+        }
+    }
+
+    return EAIHierarchyType::Regular; 
 }
 
 TArray<FAIGroupInfo> AArea::GetAllAIGroupsAsArray() const

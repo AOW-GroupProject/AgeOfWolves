@@ -5,6 +5,7 @@
 
 #include "01_Character/CharacterBase.h"
 #include "03_Player/PlayerStateBase.h"
+#include "16_Level/AreaQuestDataInfos.h"
 #include "17_GameMode/AOWGameState.h"
 
 DEFINE_LOG_CATEGORY(LogAOWGameMode)
@@ -77,6 +78,54 @@ void AAgeOfWolvesGameMode::NotifyRespawnCompleteViaGameState(APlayerController* 
 
     UE_LOGFMT(LogAOWGameMode, Log, "Game State 리스폰 알림 호출 완료: PlayerController {0}에 대한 알림을 전송했습니다",
         GetNameSafe(PlayerController));
+}
+
+void AAgeOfWolvesGameMode::HandleAreaQuestCompletion(const FQuestDataInfo& QuestData)
+{
+    UE_LOGFMT(LogAOWGameMode, Log, "Game State를 통한 리스폰 완료 알림 시작");
+
+    AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>();
+    if (!IsValid(CurrentGameState))
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "리스폰 알림 실패: AOWGameState를 찾을 수 없습니다");
+        return;
+    }
+
+    if (!QuestData.QuestTag.IsValid())
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "QuestTag가 유효하지 않습니다.");
+        return;
+    }
+    
+    if (QuestData.QuestStatus != EQuestStatus::Completed)
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "QuestStatus가 완료 상태가 아닙니다. {0}", *QuestData.QuestTag.ToString());
+        return;
+    }
+    
+    UE_LOGFMT(LogAOWGameMode, Log, "AOWGameState 가져오기 성공: {0}", GetNameSafe(CurrentGameState));
+
+    NotifyQuestCompleteViaGameState(QuestData);
+    
+    UE_LOGFMT(LogAOWGameMode, Log, "Game State 리스폰 알림 호출 완료");
+}
+
+void AAgeOfWolvesGameMode::NotifyQuestCompleteViaGameState(const FQuestDataInfo& QuestData)
+{
+    UE_LOGFMT(LogAOWGameMode, Log, "Game State를 통한 퀘스트 완료 알림 시작");
+
+    AAOWGameState* CurrentGameState = GetGameState<AAOWGameState>();
+    if (!IsValid(CurrentGameState))
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "퀘스트 완료 알림 실패: AOWGameState를 찾을 수 없습니다");
+        return;
+    }
+
+    UE_LOGFMT(LogAOWGameMode, Log, "AOWGameState 가져오기 성공: {0}", GetNameSafe(CurrentGameState));
+
+    CurrentGameState->NotifyPlayerQuestCompleted(QuestData);
+
+    UE_LOGFMT(LogAOWGameMode, Log, "Game State 리스폰 알림 호출 완료");
 }
 
 bool AAgeOfWolvesGameMode::TestRespawnToPlayerStart(APlayerController* PlayerController)

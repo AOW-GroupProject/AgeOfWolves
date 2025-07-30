@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "GameFramework/SaveGame.h"
 #include "04_Component/InventoryComponent.h"
+#include "16_Level/AreaQuestDataInfos.h"
 
 #include "AOWSaveGame.generated.h"
 
@@ -146,6 +147,9 @@ public:
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+public:
+	bool UpdateAreaQuestProgress(const FQuestDataInfo& QuestData);
+	
 protected:
 	void AddCharacterStateToHistory(
 		const FGameplayTag& CharacterStateTag,
@@ -158,6 +162,9 @@ protected:
 
 	//@캐릭터 상태 변화 이벤트를 모아둔 큐
 	TArray<FCharacterInformation> CharacterStateHistory;
+	
+	//@ 완료 퀘스트 정보 
+	TArray<FQuestDataInfo> CompletedAreaQuestSets;
 
 public:
 	TArray<FInventoryItemSaveInfo> InventoryItemSaveInfos;

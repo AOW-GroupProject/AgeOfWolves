@@ -3,12 +3,14 @@
 #include "GameFramework/GameModeBase.h"
 #include "AgeOfWolvesGameMode.generated.h"
 
+
 DECLARE_LOG_CATEGORY_EXTERN(LogAOWGameMode, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
 class APlayerStateBase;
 class AAOWGameStateBase;
+struct FQuestDataInfo;
 #pragma endregion
 
 UCLASS(minimalapi)
@@ -35,6 +37,14 @@ private:
 private:
     //@Game State에 리스폰 요청
     void NotifyRespawnCompleteViaGameState(APlayerController* PlayerController);
+
+    //@ Quest 관련 완료 조건 체크
+public:
+    // 퀘스트 완료 확인
+    void HandleAreaQuestCompletion(const FQuestDataInfo& QuestData);
+
+    //@Game State에 퀘스트 완료 알림
+    void NotifyQuestCompleteViaGameState(const FQuestDataInfo& QuestData);
 #pragma endregion
 
     //@Utility(Setter, Getter,...etc)
