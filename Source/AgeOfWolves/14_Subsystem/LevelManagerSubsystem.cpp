@@ -11,11 +11,11 @@ DEFINE_LOG_CATEGORY(LogLevelManager)
 //@Default Setting
 #pragma region Default Setting
 ULevelManagerSubsystem::ULevelManagerSubsystem()
+    : Super()
 {}
 
 void ULevelManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
 {
-    Super::Initialize(Collection);
 
     //@레벨 데이터 에셋 로드
     LevelDataInfos = LoadObject<ULevelDataInfos>(nullptr, TEXT("/Game/Blueprints/10_Level/DA_LevelDataInfos"));
@@ -58,29 +58,97 @@ void ULevelManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
         WorldBeginPlayHandle = World->OnWorldBeginPlay.AddUObject(this, &ULevelManagerSubsystem::OnWorldBeginPlay);
         UE_LOGFMT(LogLevelManager, Log, "World BeginPlay 델리게이트에 바인딩 완료");
     }
+
+    Super::Initialize(Collection);
 }
 
-void ULevelManagerSubsystem::ExternalBindinToGameState()
+void ULevelManagerSubsystem::Deinitialize()
 {
-    //@AOW Game State
-    auto GameState = UGameplayStatics::GetGameState(GetGameInstance());
-    if (!GameState)
-    {
-        return;
-    }
-
-    auto AOWGameState = CastChecked<AAOWGameState>(GameState);
-
-    //@외부 바인딩...
-    AOWGameState->RequestStartLevelTransition.BindUFunction(this, "OnRequestStartLevelTransition");
+    Super::Deinitialize();
 }
+
+//void ULevelManagerSubsystem::ExternalBindinToGameState()
+//{
+//    //@AOW Game State
+//    auto GameState = UGameplayStatics::GetGameState(GetGameInstance());
+//    if (!GameState)
+//    {
+//        return;
+//    }
+//
+//    auto AOWGameState = CastChecked<AAOWGameState>(GameState);
+//
+//    //@외부 바인딩...
+//    AOWGameState->RequestStartLevelTransition.BindUFunction(this, "OnRequestStartLevelTransition");
+//}
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 
-void ULevelManagerSubsystem::PerformLevelStreamingOperations(const FLevelData& TargetLevelData)
+bool ULevelManagerSubsystem::PerformLevelStreamingOperations(const FGameplayTag& TargetLevelTag)
 {
+    UE_LOGFMT(LogLevelManager, Log, "레벨 전환 작업 시작: {0}", *TargetLevelTag.ToString());
+
+    // 첫 번째 단계: 동시성 제어 (기존 OnRequestStartLevelTransition에서 이동)
+    if (bIsLevelTransitionInProgress)
+    {
+        UE_LOGFMT(LogLevelManager, Warning, "레벨 전환이 이미 진행 중입니다. 현재 목표: {0}", *PendingLevelTag.ToString());
+        return false;
+    }
+
+    // 크리티컬 섹션으로 동시 접근 방지
+    FScopeLock Lock(&LevelTransitionLock);
+
+    // 두 번째 단계: 기본 유효성 검사
+    if (!TargetLevelTag.IsValid())
+    {
+        UE_LOGFMT(LogLevelManager, Error, "유효하지 않은 레벨 태그: {0}", *TargetLevelTag.ToString());
+        return false;
+    }
+
+    // 중복 체크 (이미 위에서 했지만 크리티컬 섹션 내에서 재확인)
+    if (bIsLevelTransitionInProgress)
+    {
+        UE_LOGFMT(LogLevelManager, Warning, "레벨 전환이 이미 진행 중입니다 (재확인). 현재 목표: {0}", *PendingLevelTag.ToString());
+        return false;
+    }
+
+    if (!LevelDataInfos)
+    {
+        UE_LOGFMT(LogLevelManager, Error, "레벨 데이터 정보가 로드되지 않았습니다");
+        return false;
+    }
+
+    // 세 번째 단계: 대상 레벨 데이터 검색 및 검증
+    FLevelData TargetLevelData;
+    if (!LevelDataInfos->GetLevelByTag(TargetLevelTag, TargetLevelData))
+    {
+        UE_LOGFMT(LogLevelManager, Error, "레벨 태그를 찾을 수 없습니다: {0}", *TargetLevelTag.ToString());
+        return false;
+    }
+
+    if (!TargetLevelData.bIsEnabled || !TargetLevelData.HasValidAsset())
+    {
+        UE_LOGFMT(LogLevelManager, Error, "레벨을 로드할 수 없습니다 (비활성화되었거나 에셋이 유효하지 않음): {0}", *TargetLevelTag.ToString());
+        return false;
+    }
+
+    // 네 번째 단계: 전환 상태 설정
+    bIsLevelTransitionInProgress = true;
+    PendingLevelTag = TargetLevelTag;
+
+    UE_LOGFMT(LogLevelManager, Log, "레벨 전환 검증 완료, 스트리밍 작업 시작: {0}", *TargetLevelTag.ToString());
+
+    // 다섯 번째 단계: 실제 스트리밍 작업 수행
+    ExecuteLevelStreamingOperations(TargetLevelData);
+
+    return true;
+}
+
+void ULevelManagerSubsystem::ExecuteLevelStreamingOperations(const FLevelData& TargetLevelData)
+{
+    // 기존 PerformLevelStreamingOperations의 실제 스트리밍 로직을 이 함수로 이동
     UWorld* World = GetWorld();
     if (!World)
     {
@@ -94,18 +162,15 @@ void ULevelManagerSubsystem::PerformLevelStreamingOperations(const FLevelData& T
     // 목표 레벨 데이터를 멤버 변수에 저장
     PendingLevelData = TargetLevelData;
 
-    // 현재 로드된 모든 스트리밍 레벨을 확인합니다
+    // 기존의 스트리밍 로직은 그대로 유지
     const TArray<ULevelStreaming*>& StreamingLevels = World->GetStreamingLevels();
     UE_LOGFMT(LogLevelManager, Log, "현재 스트리밍 레벨 개수: {0}", StreamingLevels.Num());
 
-    // 언로드해야 할 레벨들을 수집합니다
+    // 언로드해야 할 레벨들을 수집
     TArray<FString> LevelsToUnload;
 
-    // 로드되어 있는 모든 스트리밍 레벨을 언로드 대상으로 추가합니다
     for (ULevelStreaming* StreamingLevel : StreamingLevels)
     {
-        UE_LOGFMT(LogLevelManager, Log, "레벨 스트리밍: {0}", StreamingLevel->GetName());
-
         if (StreamingLevel && (StreamingLevel->IsLevelLoaded() || StreamingLevel->IsLevelVisible()))
         {
             FString PackageName = StreamingLevel->GetWorldAssetPackageName();
@@ -118,22 +183,19 @@ void ULevelManagerSubsystem::PerformLevelStreamingOperations(const FLevelData& T
         }
     }
 
-    // 언로드할 레벨이 있는지 확인합니다
+    // 언로드할 레벨이 있는지 확인
     if (LevelsToUnload.Num() > 0)
     {
         UE_LOGFMT(LogLevelManager, Log, "총 {0}개의 스트리밍 레벨을 언로드합니다", LevelsToUnload.Num());
 
-        // 모든 스트리밍 레벨을 순차적으로 언로드합니다
-        // 첫 번째 레벨부터 시작해서 하나씩 언로드하는 방식을 사용합니다
         CurrentUnloadIndex = 0;
         LevelsToUnloadArray = LevelsToUnload;
 
-        // 첫 번째 레벨 언로드를 시작합니다
+        // 첫 번째 레벨 언로드를 시작
         UnloadNextLevel();
     }
     else
     {
-        // 언로드할 스트리밍 레벨이 없다면 바로 새 레벨 로드로 진행합니다
         UE_LOGFMT(LogLevelManager, Log, "언로드할 스트리밍 레벨이 없습니다. 바로 새 레벨 로드를 시작합니다");
         StartNewLevelLoad();
     }
@@ -206,61 +268,7 @@ void ULevelManagerSubsystem::StartNewLevelLoad()
 void ULevelManagerSubsystem::OnWorldBeginPlay()
 {
     //@외부 바인딩...
-    ExternalBindinToGameState();
-}
-
-void ULevelManagerSubsystem::OnRequestStartLevelTransition(const FGameplayTag& NextLevelTag)
-{
-    UE_LOGFMT(LogLevelManager, Log, "레벨 전환 요청: {0}", *NextLevelTag.ToString());
-
-    if (bIsLevelTransitionInProgress)
-    {
-        UE_LOGFMT(LogLevelManager, Warning, "레벨 전환이 이미 진행 중입니다. 현재 목표: {0}", *PendingLevelTag.ToString());
-        return;
-    }
-
-    //@크리티컬 섹션으로 동시 접근 방지
-    FScopeLock Lock(&LevelTransitionLock);
-
-    //@기본 유효성 검사
-    if (!NextLevelTag.IsValid())
-    {
-        UE_LOGFMT(LogLevelManager, Error, "유효하지 않은 레벨 태그: {0}", *NextLevelTag.ToString());
-        return;
-    }
-
-    if (bIsLevelTransitionInProgress)
-    {
-        UE_LOGFMT(LogLevelManager, Warning, "레벨 전환이 이미 진행 중입니다. 현재 목표: {0}", *PendingLevelTag.ToString());
-        return;
-    }
-
-    if (!LevelDataInfos)
-    {
-        UE_LOGFMT(LogLevelManager, Error, "레벨 데이터 정보가 로드되지 않았습니다");
-        return;
-    }
-
-    //@대상 레벨 데이터 검색 및 검증
-    FLevelData TargetLevelData;
-    if (!LevelDataInfos->GetLevelByTag(NextLevelTag, TargetLevelData))
-    {
-        UE_LOGFMT(LogLevelManager, Error, "레벨 태그를 찾을 수 없습니다: {0}", *NextLevelTag.ToString());
-        return;
-    }
-
-    if (!TargetLevelData.bIsEnabled || !TargetLevelData.HasValidAsset())
-    {
-        UE_LOGFMT(LogLevelManager, Error, "레벨을 로드할 수 없습니다: {0}", *NextLevelTag.ToString());
-        return;
-    }
-
-    //@전환 상태 설정
-    bIsLevelTransitionInProgress = true;
-    PendingLevelTag = NextLevelTag;
-
-    //@이미 GameThread에서 실행 중이므로 직접 레벨 스트리밍 수행
-    PerformLevelStreamingOperations(TargetLevelData);
+    //ExternalBindinToGameState();
 }
 
 void ULevelManagerSubsystem::OnLevelUnloadComplete()

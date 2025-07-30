@@ -93,6 +93,7 @@ class AGEOFWOLVES_API UUIManagerSubsystem : public UGameInstanceSubsystem
 
 	//@친추 클래스
 #pragma region Friend Class
+	friend class AAgeOfWolvesGameMode;
 #pragma endregion
 
 	GENERATED_BODY()
@@ -104,7 +105,7 @@ public:
 
 protected:
 	//@외부 바인딩 - GameState와의 이벤트 연결
-	void ExternalBindinToGameState();
+	//void ExternalBindinToGameState();
 
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
@@ -129,14 +130,18 @@ private:
 	UPROPERTY()
 	TMap<FGameplayTag, FMinimumDisplayTimeInfo> MinimumDisplayTimeInfoMap;
 
-	//@UI별 최소 표시 시간 Promise를 저장하는 맵 (UITag -> Promise)
-	//@각 UI당 최초 표시시 한 번만 생성되어 최소 시간 경과를 추적합니다
+private:
+	// Promise는 값 설정용으로만 사용 (Timer에서 완료 신호를 보낼 때)
 	TMap<FGameplayTag, TSharedPtr<TPromise<void>>> UIMinimumTimePromises;
+
+	// Future는 상태 확인용으로 별도 저장 (여러 번 IsReady() 호출 가능)
+	TMap<FGameplayTag, TSharedPtr<TFuture<void>>> UIMinimumTimeFutures;
 
 protected:
 	//@특정 System UI를 표시하는 함수
 	UFUNCTION(BlueprintCallable, Category = "UI Management")
 	bool ShowSystemUI(const FGameplayTag& UITag);
+
 
 	//@특정 System UI를 숨기는 함수 (Collapsed 상태로 설정)
 	UFUNCTION(BlueprintCallable, Category = "UI Management")
@@ -147,16 +152,17 @@ protected:
 	void HideAllSystemUIs();
 
 private:
-	//@최소 표시 시간 보장을 위한 핵심 함수들
+	// LoadingUI 표시 완료 이벤트를 스케줄링하는 헬퍼 함수
+	void ScheduleLoadingUIShownEvent();
 
+private:
 	//@UI 표시시 최소 표시 시간 설정 및 Promise/Timer 생성
 	void SetupMinimumDisplayTimeForUI(const FGameplayTag& UITag, const FUIInformation& UIInfo);
 
 	//@Promise가 완료된(최소 시간이 경과한) UI의 pending 요청을 처리
 	void ProcessPendingHideRequestIfExists(const FGameplayTag& UITag);
 
-	//@UI를 즉시 숨길 수 있는지 Future 상태를 확인하여 판단
-	bool CanHideUIImmediately(const FGameplayTag& UITag) const;
+
 
 	//@UI 관련 Promise 및 시간 정보를 정리
 	void CleanupUITimeTrackingInfo(const FGameplayTag& UITag);
@@ -185,20 +191,28 @@ public:
 #pragma region Callbacks
 public:
 	//@World BeginPlay 시점에 호출될 함수
-	void OnWorldBeginPlay();
-
-protected:
-	//@GameState로부터 로딩 UI 표시 요청을 받는 콜백
 	UFUNCTION()
-	void OnRequestShowLoadingUI();
-
-	//@GameState로부터 로딩 UI 숨김 요청을 받는 콜백
-	UFUNCTION()
-	void OnRequestHideLoadingUI();
+		void OnWorldBeginPlay();
 #pragma endregion
 
 	//@Utility(Setter, Getter,...etc)
 #pragma region Utility
+private:
+	// 특정 UI를 안전하게 생성하는 함수 (ShowSystemUI에서만 호출)
+	bool EnsureUICreatedOnDemand(const FGameplayTag& UITag);
+
+public:
+	// UI 생성 가능 상태인지 확인하는 함수
+	UFUNCTION(BlueprintPure, Category = "UI Management")
+	bool CanCreateUICurrently() const;
+
+	//@UI를 즉시 숨길 수 있는지 Future 상태를 확인하여 판단
+	bool CanHideUIImmediately(const FGameplayTag& UITag) const;
+
+	// 특정 UI가 생성되어 있는지 확인하는 함수  
+	UFUNCTION(BlueprintPure, Category = "UI Management")
+	bool IsUICreated(const FGameplayTag& UITag) const;
+
 private:
 	//@System UI 캐시 상태를 검증하는 헬퍼 함수
 	bool ValidateSystemUICache() const;

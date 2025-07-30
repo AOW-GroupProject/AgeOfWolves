@@ -37,6 +37,7 @@ class AGEOFWOLVES_API ULevelManagerSubsystem : public UGameInstanceSubsystem
 {
 //@친추 클래스
 #pragma region Friend Class
+	friend class AAgeOfWolvesGameMode;
 	friend class UAOWGameInstance;
 #pragma endregion
 
@@ -49,19 +50,24 @@ public:
 
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
+	virtual void Deinitialize()override;
 
 protected:
 	//@내부 바인딩
 
 protected:
 	//@외부 바인딩...
-	void ExternalBindinToGameState();
+	//void ExternalBindinToGameState();
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+public:
+	bool PerformLevelStreamingOperations(const FGameplayTag& TargetLevelTag);
+
 private:
-	void PerformLevelStreamingOperations(const FLevelData& TargetLevelData);
+	// 내부적으로 사용되는 실제 스트리밍 작업 함수 (기존 로직)
+	void ExecuteLevelStreamingOperations(const FLevelData& TargetLevelData);
 
 private:
 	void UnloadNextLevel();
@@ -105,11 +111,8 @@ public:
 #pragma region Callbacks
 public:
 	//@World BeginPlay 시점에 호출될 함수
-	void OnWorldBeginPlay();
-
-private:
 	UFUNCTION()
-	void OnRequestStartLevelTransition(const FGameplayTag& NextLevelTag);
+	void OnWorldBeginPlay();
 
 private:
 	UFUNCTION()
