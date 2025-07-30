@@ -8,19 +8,19 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTeamManager, Log, All)
 
-//@���� ����
+//@전방 선언
 #pragma region Forward Declaration
 class UTeamSettingInfos;
 #pragma endregion
-//@������
+//@열거형
 #pragma region Enums
 #pragma endregion
 
-//@����ü
+//@구조체
 #pragma region Structs
 #pragma endregion
 
-//@�̺�Ʈ/��������Ʈ
+//@이벤트/델리게이트
 #pragma region Delegates
 #pragma endregion
 
@@ -28,7 +28,7 @@ class UTeamSettingInfos;
 /**
  *	@UTeamManagerSubsystem
  *
- *	�� ���� ������ �����ϴ� ����ý���
+ *	팀 관련 정보를 관리하는 서브시스템
  */
 UCLASS()
 class AGEOFWOLVES_API UTeamManagerSubsystem : public UGameInstanceSubsystem
@@ -47,10 +47,10 @@ protected:
     //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 private:
-    // �� �µ� ĳ��
+    // 팀 태도 캐시
     TMap<uint8, TMap<uint8, TEnumAsByte<ETeamAttitude::Type>>> TeamAttitudeCache;
 
-    // �� ���� ������
+    // 팀 설정 데이터
     UPROPERTY()
         TObjectPtr<UTeamSettingInfos> TeamSettingInfos;
 #pragma endregion
@@ -63,11 +63,11 @@ private:
 //@Utility
 #pragma region Utility
 public:
-    // �� �µ� ��ȸ
+    // 팀 태도 조회
     ETeamAttitude::Type GetAttitude(uint8 SourceTeamId, uint8 TargetTeamId) const;
 
 private:
-    // �� �µ� ĳ�� �ʱ�ȭ
+    // 팀 태도 캐시 초기화
     void InitializeTeamAttitudeCache();
 #pragma endregion
 };
