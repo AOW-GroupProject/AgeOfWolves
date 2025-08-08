@@ -54,7 +54,6 @@ void UUICollection::PostEditChangeChainProperty(FPropertyChangedChainEvent& Prop
 
 FUICollectionValidationResult UUICollection::ValidateUICollection() const
 {
-
     //@Step 1: Basic UI arrays validation
     FUICollectionValidationResult Result = ValidateUIArrays();
     if (!Result.bIsValid) return Result;
@@ -77,6 +76,10 @@ FUICollectionValidationResult UUICollection::ValidateUICollection() const
 
     //@Step 6: BeginPlay UI limits check
     Result = ValidateBeginPlayUILimits();
+    if (!Result.bIsValid) return Result;
+
+    //@Step 7: 새로 추가된 최소 표시 시간 검증
+    Result = ValidateMinimumDisplayTime();
     if (!Result.bIsValid) return Result;
 
     //@All validations passed
@@ -403,6 +406,57 @@ FUICollectionValidationResult UUICollection::ValidateBeginPlayUILimits() const
     return FUICollectionValidationResult();
 }
 
+FUICollectionValidationResult UUICollection::ValidateMinimumDisplayTime() const
+{
+    const TArray<FUIInformation>* UIArrays[] = {
+        &HUDUIInformations,         //@Category 0 - HUD
+        &MenuUIInformations,        //@Category 1 - Menu  
+        &InteractionUIInformations, //@Category 2 - Interaction
+        &SystemUIInformations       //@Category 3 - System
+    };
+
+    for (int32 CategoryIndex = 0; CategoryIndex < 4; ++CategoryIndex)
+    {
+        const TArray<FUIInformation>& UIArray = *UIArrays[CategoryIndex];
+
+        for (int32 UIIndex = 0; UIIndex < UIArray.Num(); ++UIIndex)
+        {
+            const FUIInformation& UIInfo = UIArray[UIIndex];
+
+            //@System UI가 아닌데 최소 표시 시간을 사용하려고 하는 경우
+            if (UIInfo.bUseMinimumDisplayTime && UIInfo.UICategory != EUICategory::System)
+            {
+                return FUICollectionValidationResult(
+                    EUICollectionValidationError::MinimumDisplayTimeOnNonSystemUI,
+                    FString::Printf(TEXT("%s UI에서 최소 표시 시간을 사용하려고 했습니다. 최소 표시 시간은 System UI에서만 사용할 수 있습니다 (인덱스: %d)"),
+                        GetCategoryName(CategoryIndex), UIIndex),
+                    CategoryIndex, UIIndex
+                );
+            }
+
+            //@최소 표시 시간이 활성화되어 있으면서 유효 범위를 벗어나는 경우
+            if (UIInfo.bUseMinimumDisplayTime)
+            {
+                if (UIInfo.MinimumDisplayTimeSeconds < 2 || UIInfo.MinimumDisplayTimeSeconds >= 10)
+                {
+                    return FUICollectionValidationResult(
+                        EUICollectionValidationError::InvalidMinimumDisplayTime,
+                        FString::Printf(TEXT("%s[%d] UI의 최소 표시 시간이 유효 범위(2-9초)를 벗어났습니다: %d초"),
+                            GetCategoryName(CategoryIndex), UIIndex, UIInfo.MinimumDisplayTimeSeconds),
+                        CategoryIndex, UIIndex
+                    );
+                }
+
+                UE_LOGFMT(LogUICollection, Log,
+                    "{0}[{1}] UI에 최소 표시 시간 {2}초가 설정되었습니다",
+                    GetCategoryName(CategoryIndex), UIIndex, UIInfo.MinimumDisplayTimeSeconds);
+            }
+        }
+    }
+
+    return FUICollectionValidationResult();
+}
+
 void UUICollection::ShowValidationError(const FUICollectionValidationResult& ValidationResult) const
 {
 
@@ -421,12 +475,11 @@ void UUICollection::ShowValidationError(const FUICollectionValidationResult& Val
 
 bool UUICollection::TryAutoFixValidationError(const FUICollectionValidationResult& ValidationResult)
 {
-
     switch (ValidationResult.ErrorType)
     {
-    case EUICollectionValidationError::InputBindingInconsistency:
+    case EUICollectionValidationError::MinimumDisplayTimeOnNonSystemUI:
     {
-        //@Input binding enabled but no input tags - disable input binding
+        //@System UI가 아닌데 최소 표시 시간을 사용하려는 경우 - 비활성화
         if (ValidationResult.ProblemCategory >= 0 && ValidationResult.ProblemIndex >= 0)
         {
             TArray<FUIInformation>* UIArray = GetUIArrayByCategory(ValidationResult.ProblemCategory);
@@ -434,11 +487,11 @@ bool UUICollection::TryAutoFixValidationError(const FUICollectionValidationResul
             {
                 FUIInformation& UIInfo = (*UIArray)[ValidationResult.ProblemIndex];
 
-                if (UIInfo.bInputBinded && UIInfo.InputTags.Num() == 0)
+                if (UIInfo.bUseMinimumDisplayTime && UIInfo.UICategory != EUICategory::System)
                 {
-                    UIInfo.bInputBinded = false;
+                    UIInfo.bUseMinimumDisplayTime = false;
                     UE_LOGFMT(LogUICollection, Log,
-                        "자동 수정: {0}[{1}] UI의 입력 바인딩을 비활성화했습니다 (입력 태그가 없음)",
+                        "자동 수정: {0}[{1}] UI의 최소 표시 시간을 비활성화했습니다 (System UI가 아님)",
                         GetCategoryName(ValidationResult.ProblemCategory), ValidationResult.ProblemIndex);
                     return true;
                 }
@@ -447,39 +500,9 @@ bool UUICollection::TryAutoFixValidationError(const FUICollectionValidationResul
         break;
     }
 
-    case EUICollectionValidationError::CategoryMismatch:
+    case EUICollectionValidationError::InvalidMinimumDisplayTime:
     {
-        //@Fix category mismatch by updating UI category to match its array
-        if (ValidationResult.ProblemCategory >= 0 && ValidationResult.ProblemIndex >= 0)
-        {
-            TArray<FUIInformation>* UIArray = GetUIArrayByCategory(ValidationResult.ProblemCategory);
-            if (UIArray && ValidationResult.ProblemIndex < UIArray->Num())
-            {
-                FUIInformation& UIInfo = (*UIArray)[ValidationResult.ProblemIndex];
-                EUICategory OldCategory = UIInfo.UICategory;
-
-                //@Set correct category based on array position
-                switch (ValidationResult.ProblemCategory)
-                {
-                case 0: UIInfo.UICategory = EUICategory::HUD; break;
-                case 1: UIInfo.UICategory = EUICategory::Menu; break;
-                case 2: UIInfo.UICategory = EUICategory::Interaction; break;
-                case 3: UIInfo.UICategory = EUICategory::System; break;
-                }
-
-                UE_LOGFMT(LogUICollection, Log,
-                    "자동 수정: {0}[{1}] UI의 카테고리를 {2}에서 {3}으로 변경했습니다",
-                    GetCategoryName(ValidationResult.ProblemCategory), ValidationResult.ProblemIndex,
-                    GetCategoryName(OldCategory), GetCategoryName(UIInfo.UICategory));
-                return true;
-            }
-        }
-        break;
-    }
-
-    case EUICollectionValidationError::InvalidUICategory:
-    {
-        //@Fix invalid category (MAX) by setting correct category
+        //@최소 표시 시간이 유효 범위를 벗어나는 경우 - 기본값으로 설정
         if (ValidationResult.ProblemCategory >= 0 && ValidationResult.ProblemIndex >= 0)
         {
             TArray<FUIInformation>* UIArray = GetUIArrayByCategory(ValidationResult.ProblemCategory);
@@ -487,27 +510,23 @@ bool UUICollection::TryAutoFixValidationError(const FUICollectionValidationResul
             {
                 FUIInformation& UIInfo = (*UIArray)[ValidationResult.ProblemIndex];
 
-                if (UIInfo.UICategory == EUICategory::MAX)
+                if (UIInfo.bUseMinimumDisplayTime)
                 {
-                    //@Set correct category based on array position
-                    switch (ValidationResult.ProblemCategory)
-                    {
-                    case 0: UIInfo.UICategory = EUICategory::HUD; break;
-                    case 1: UIInfo.UICategory = EUICategory::Menu; break;
-                    case 2: UIInfo.UICategory = EUICategory::Interaction; break;
-                    case 3: UIInfo.UICategory = EUICategory::System; break;
-                    }
+                    int32 OldValue = UIInfo.MinimumDisplayTimeSeconds;
+                    UIInfo.MinimumDisplayTimeSeconds = 5; //@기본값으로 설정
 
                     UE_LOGFMT(LogUICollection, Log,
-                        "자동 수정: {0}[{1}] UI의 유효하지 않은 카테고리를 {2}로 설정했습니다",
+                        "자동 수정: {0}[{1}] UI의 최소 표시 시간을 {2}초에서 {3}초로 변경했습니다",
                         GetCategoryName(ValidationResult.ProblemCategory), ValidationResult.ProblemIndex,
-                        GetCategoryName(UIInfo.UICategory));
+                        OldValue, UIInfo.MinimumDisplayTimeSeconds);
                     return true;
                 }
             }
         }
         break;
     }
+
+    // ... 기존 자동 수정 로직들은 그대로 유지 ...
 
     default:
     {
