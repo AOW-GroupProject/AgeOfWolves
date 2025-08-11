@@ -59,9 +59,6 @@ public:
     void HandleFirstStructureActivation(const FStructureData& StructureData);
 
 private:
-    //@Game State에 리스폰 요청
-    void NotifyRespawnCompleteViaGameState(APlayerController* PlayerController);
-
     // 플레이어 리스폰 실행 (GameState 정보 기반)
     void ExecutePlayerRespawn();
 
@@ -95,6 +92,7 @@ public:
 
 //@Callbacks
 #pragma region Callbacks
+protected:
     // 로딩 UI 표시 완료 후 콜백
     UFUNCTION()
     void OnLoadingUIShown();
