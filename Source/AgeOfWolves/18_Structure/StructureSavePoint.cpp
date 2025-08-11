@@ -1,7 +1,4 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
-#include "18_Structure/StructureSavePoint.h"
+#include "StructureSavePoint.h"
 
 AStructureSavePoint::AStructureSavePoint()
 {

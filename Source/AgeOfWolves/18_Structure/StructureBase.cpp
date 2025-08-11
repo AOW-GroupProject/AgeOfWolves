@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "18_Structure/StructureBase.h"
 #include "Logging/StructuredLog.h"
 
@@ -8,9 +5,8 @@
 #include "Components/BoxComponent.h"
 
 DEFINE_LOG_CATEGORY_STATIC(LogStructure, Log, All);
-
-
-// Sets default values
+//@Defualt Setting
+#pragma region Default Setting
 AStructureBase::AStructureBase()
 {
 
@@ -27,7 +23,6 @@ AStructureBase::AStructureBase()
 	StructureBoxComponent->SetBoxExtent(FVector(500.0f, 500.0f, 500.0f));
 }
 
-// Called when the game starts or when spawned
 void AStructureBase::BeginPlay()
 {
 	Super::BeginPlay();
@@ -36,11 +31,12 @@ void AStructureBase::BeginPlay()
 	StructureBoxComponent->OnComponentBeginOverlap.AddDynamic(this, &AStructureBase::OnOverlapBegin);
 	StructureBoxComponent->OnComponentEndOverlap.AddDynamic(this, &AStructureBase::OnOverlapEnd);
 }
-
-void AStructureBase::SetStructureActive(bool IsActive)
-{
-}
-
+#pragma endregion
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+#pragma endregion
+//@Callbacks
+#pragma region Callbacks
 void AStructureBase::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	// 액터 유효성 검사
@@ -86,5 +82,11 @@ void AStructureBase::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* O
 		}
 	}
 }
+#pragma endregion
 
-
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+void AStructureBase::SetStructureActive(bool IsActive)
+{
+}
+#pragma endregion

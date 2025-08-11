@@ -1,10 +1,9 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "16_Level/Area.h"
 #include "GameFramework/Actor.h"
+
 #include "StructureBase.generated.h"
 
 //@전방 선언
@@ -23,8 +22,8 @@ class UStaticMeshComponent;
 
 //@이벤트/델리게이트
 #pragma region Delegates
-	DECLARE_DELEGATE_OneParam(FOnInteractionBegin, AStructureBase*);
-	DECLARE_DELEGATE_OneParam(FOnInteractionEnd, AStructureBase*);
+DECLARE_DELEGATE_OneParam(FOnInteractionBegin, AStructureBase*);
+DECLARE_DELEGATE_OneParam(FOnInteractionEnd, AStructureBase*);
 #pragma endregion
 
 /**
@@ -36,13 +35,13 @@ class UStaticMeshComponent;
 UCLASS()
 class AGEOFWOLVES_API AStructureBase : public AActor
 {
-	//@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 #pragma endregion
 	
 	GENERATED_BODY()
 
-	//@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 	
 public:	
@@ -55,10 +54,9 @@ protected:
 	
 public:
 	virtual void SetStructureActive(bool IsActive);
-	
 #pragma endregion
 
-	//@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* StructureMesh;
@@ -70,17 +68,16 @@ public:
 public:
 	UPROPERTY(EditAnywhere, Category = "Structure | Data")
 	FStructureData StructureData;
-	
 #pragma endregion
 
-	//@Delegates
+//@Delegates
 #pragma region Delegates
 public:
 	FOnInteractionBegin OnStructureInteractionBegin; //상호작용 시작 (닿을 시작시)
 	FOnInteractionEnd OnStructureInteractionEnd; //상호작용 종료 (닿고나서 이탈시) 
 #pragma endregion
 
-	//@Callbacks
+//@Callbacks
 #pragma region Callbacks
 	
 protected:
@@ -95,7 +92,7 @@ protected:
 		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
 #pragma endregion
 
-	//@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 #pragma endregion
 

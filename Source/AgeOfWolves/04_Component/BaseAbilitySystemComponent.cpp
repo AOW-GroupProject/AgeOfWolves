@@ -9,6 +9,7 @@
 #include "02_AbilitySystem/AbilityTagRelationshipMapping.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 
+#include "17_GameMode/AgeOfWolvesGameMode.h"
 #include "17_GameMode/AOWGameState.h"
 
 DEFINE_LOG_CATEGORY(LogASC)
@@ -1240,6 +1241,18 @@ void UBaseAbilitySystemComponent::OnGameplayEffectApplied(
 			UE_LOGFMT(LogASC, Log, "상태 변화 감지: {0}", TagFromEffect.ToString());
 
 			CharacterStateEventOnGameplay.Broadcast(GetAvatarActor(), TagFromEffect);
+
+			// 죽음 상태 특별 처리
+			if (TagFromEffect.MatchesTagExact(DeadStateTag))
+			{
+				if (APlayerController* PC = Cast<APlayerController>(Cast<APawn>(GetAvatarActor())->GetController()))
+				{
+					if (AAgeOfWolvesGameMode* GameMode = GetWorld()->GetAuthGameMode<AAgeOfWolvesGameMode>())
+					{
+						GameMode->HandlePlayerDeath(PC);
+					}
+				}
+			}
 		}
 	}
 }

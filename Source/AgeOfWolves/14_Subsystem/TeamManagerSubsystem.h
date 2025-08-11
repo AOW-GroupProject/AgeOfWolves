@@ -8,19 +8,19 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogTeamManager, Log, All)
 
-//@Àü¹æ ¼±¾ğ
+//@ì „ë°© ì„ ì–¸
 #pragma region Forward Declaration
 class UTeamSettingInfos;
 #pragma endregion
-//@¿­°ÅÇü
+//@ì—´ê±°í˜•
 #pragma region Enums
 #pragma endregion
 
-//@±¸Á¶Ã¼
+//@êµ¬ì¡°ì²´
 #pragma region Structs
 #pragma endregion
 
-//@ÀÌº¥Æ®/µ¨¸®°ÔÀÌÆ®
+//@ì´ë²¤íŠ¸/ë¸ë¦¬ê²Œì´íŠ¸
 #pragma region Delegates
 #pragma endregion
 
@@ -28,7 +28,7 @@ class UTeamSettingInfos;
 /**
  *	@UTeamManagerSubsystem
  *
- *	ÆÀ °ü·Ã Á¤º¸¸¦ °ü¸®ÇÏ´Â ¼­ºê½Ã½ºÅÛ
+ *	íŒ€ ê´€ë ¨ ì •ë³´ë¥¼ ê´€ë¦¬í•˜ëŠ” ì„œë¸Œì‹œìŠ¤í…œ
  */
 UCLASS()
 class AGEOFWOLVES_API UTeamManagerSubsystem : public UGameInstanceSubsystem
@@ -47,10 +47,10 @@ protected:
     //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 private:
-    // ÆÀ ÅÂµµ Ä³½Ã
+    // íŒ€ íƒœë„ ìºì‹œ
     TMap<uint8, TMap<uint8, TEnumAsByte<ETeamAttitude::Type>>> TeamAttitudeCache;
 
-    // ÆÀ ¼³Á¤ µ¥ÀÌÅÍ
+    // íŒ€ ì„¤ì • ë°ì´í„°
     UPROPERTY()
         TObjectPtr<UTeamSettingInfos> TeamSettingInfos;
 #pragma endregion
@@ -63,11 +63,11 @@ private:
 //@Utility
 #pragma region Utility
 public:
-    // ÆÀ ÅÂµµ Á¶È¸
+    // íŒ€ íƒœë„ ì¡°íšŒ
     ETeamAttitude::Type GetAttitude(uint8 SourceTeamId, uint8 TargetTeamId) const;
 
 private:
-    // ÆÀ ÅÂµµ Ä³½Ã ÃÊ±âÈ­
+    // íŒ€ íƒœë„ ìºì‹œ ì´ˆê¸°í™”
     void InitializeTeamAttitudeCache();
 #pragma endregion
 };

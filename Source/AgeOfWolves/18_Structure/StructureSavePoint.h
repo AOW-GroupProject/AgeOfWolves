@@ -1,9 +1,8 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
 #include "18_Structure/StructureBase.h"
+
 #include "StructureSavePoint.generated.h"
 
 
@@ -29,38 +28,36 @@
 UCLASS()
 class AGEOFWOLVES_API AStructureSavePoint : public AStructureBase
 {
-	//@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 #pragma endregion
 	
 	GENERATED_BODY()
 
-	//@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	AStructureSavePoint();
 
 public:
 	virtual void SetStructureActive(bool IsActive) override;
-	
 #pragma endregion
 
-
+//@Property
 #pragma region Property or Subwidgets or Infos...etc
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* StructureSavePointActivatedMesh;
 #pragma endregion
-
 	
-	//@Delegates
+//@Delegates
 #pragma region Delegates
 #pragma endregion
 
-	//@Callbacks
+//@Callbacks
 #pragma region Callbacks
 #pragma endregion
 
-	//@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 #pragma endregion
 };

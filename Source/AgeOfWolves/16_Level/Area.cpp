@@ -8,9 +8,11 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "DrawDebugHelpers.h"
 
+#include "17_GameMode/AgeOfWolvesGameMode.h"
 #include "10_AI/BaseAIController.h"
 #include "01_Character/CharacterBase.h"
 #include "00_GameInstance/AOWGameInstance.h"
+#include "04_Component/QuestComponent.h"
 #include "14_Subsystem/AreaManagerSubsystem.h"
 #include "17_GameMode/AgeOfWolvesGameMode.h"
 #include "18_Structure/StructureBase.h"
@@ -46,19 +48,45 @@ AArea::AArea()
     MAIGroups.Empty();
     MPlayerBindings.Empty();
     LastCleanupTime = 0.0f;
+
+    //@Quest Component
+    QuestComponent = CreateDefaultSubobject<UQuestComponent>(TEXT("QuestComponent"));
 }
 
 void AArea::BeginPlay()
 {
     Super::BeginPlay();
-
     //@Area 초기화
     InitializeArea();
+
+    FTimerHandle TestTimer;
+    GetWorld()->GetTimerManager().SetTimer(TestTimer, [this]()
+        {
+            UE_LOGFMT(LogArea, Log, "Area {0}: 테스트 레벨 전환 시작", *AreaID.ToString());
+
+            // GameMode 찾기
+            AAgeOfWolvesGameMode* GameMode = Cast<AAgeOfWolvesGameMode>(GetWorld()->GetAuthGameMode());
+            if (!IsValid(GameMode))
+            {
+                UE_LOGFMT(LogArea, Error, "GameMode를 찾을 수 없음");
+                return;
+            }
+
+            // StructureData 정보 출력
+            UE_LOGFMT(LogArea, Log, "전달할 구조물 정보:");
+            UE_LOGFMT(LogArea, Log, "- 이름: {0}", *StructureData.GetStructureName().ToString());
+            UE_LOGFMT(LogArea, Log, "- 다음 레벨: {0}", *StructureData.GetNextLevelTag().ToString());
+
+            // GameMode의 레벨 전환 호출
+            GameMode->HandleFirstStructureActivation(StructureData);
+
+            UE_LOGFMT(LogArea, Log, "레벨 전환 요청 전달 완료");
+
+        }, 10.0f, false);
 }
 
 void AArea::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-
     //@플레이어 등록 해제
     UnregisterAllPlayer();
 
@@ -1544,7 +1572,7 @@ void AArea::OnStructureInteractionTriggered(AStructureBase* TriggeredStucture)
         return;
     }
 
-    FStructureData StructureData = MStructureBindings[StructureID];
+    FStructureData Structure = MStructureBindings[StructureID];
 
     //게임모드에게 상호작용 전달
     //..
@@ -1552,19 +1580,17 @@ void AArea::OnStructureInteractionTriggered(AStructureBase* TriggeredStucture)
     {
         if (IsValid(GameMode))
         {
-            GameMode->OnStructureInteractionActtivated(StructureData);
+            GameMode->HandleFirstStructureActivation(Structure);
         }
     }
 
     //@  게임모드에게 구조물데이터 전달후, 활성값 true로 전환
     //@ 최초 상호작요이라면 bIsActive 가 false 임 
-    if (!StructureData.bIsActive)
-        StructureData.bIsActive = true;
+    if (!Structure.bIsActive)
+        Structure.bIsActive = true;
 
-
-    
     //@area가 bIsActive 확인해서 구조물 active하기
-    TriggeredStucture->SetStructureActive(StructureData.bIsActive);
+    TriggeredStucture->SetStructureActive(Structure.bIsActive);
 }
 #pragma endregion
 
@@ -1617,6 +1643,27 @@ FGuid AArea::GetAIGroupID(AActor* AIActor) const
     }
 
     return FGuid();
+}
+
+EAIHierarchyType AArea::GetAIHierarchyType(AActor* AIActor) const
+{
+    if (!IsValid(AIActor))
+        return EAIHierarchyType::Regular; 
+    
+    for (const auto& GroupPair : MAIGroups)
+    {
+        const FAIGroupInfo& GroupInfo = GroupPair.Value;
+        
+        for (const FAreaAIInfo& MemberInfo : GroupInfo.GroupMembers)
+        {
+            if (MemberInfo.AIActor.Get() == AIActor)
+            {
+                return MemberInfo.HierarchyType;
+            }
+        }
+    }
+
+    return EAIHierarchyType::Regular; 
 }
 
 TArray<FAIGroupInfo> AArea::GetAllAIGroupsAsArray() const

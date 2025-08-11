@@ -3,6 +3,7 @@
 
 #include "Kismet/GameplayStatics.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+#include "14_Subsystem/AreaManagerSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogSaveGame)
 // UE_LOGFMT(LogSaveGame, Log, "");
@@ -103,6 +104,43 @@ void UAOWSaveGame::AddCharacterStateToHistory(
     //{
     //    CharacterStateEventToCache.Broadcast(StateInfo);
     //}
+}
+
+bool UAOWSaveGame::UpdateAreaQuestProgress(const FQuestDataInfo& QuestData)
+{
+    //@ QuestData의 QuestTag 유효성 검사
+    if (!QuestData.QuestTag.IsValid())
+    {
+        UE_LOGFMT(LogSaveGame, Warning, "UpdateAreaQuestProgress 실패: QuestTag가 유효하지 않습니다.");
+        return false;
+    }
+    
+    //@ QuestTag로 완료된 퀘스트인지 확인
+    bool bAlreadyCompleted = false;
+    for (const FQuestDataInfo& CompletedQuest : CompletedAreaQuestSets)
+    {
+        if (!CompletedQuest.QuestTag.IsValid())
+        {
+            UE_LOGFMT(LogTemp, Error, "CompletedQuest.QuestTag 가 유효하지 않음!");
+        }
+    
+        if (!QuestData.QuestTag.IsValid())
+        {
+            UE_LOGFMT(LogTemp, Error, "QuestData.QuestTag 가 유효하지 않음!");
+        }
+
+        UE_LOGFMT(LogTemp, Log, "비교 시작: {0} vs {1}", 
+                  *CompletedQuest.QuestTag.ToString(), 
+                  *QuestData.QuestTag.ToString());
+
+        if (CompletedQuest.QuestTag == QuestData.QuestTag)
+        {
+            bAlreadyCompleted = true;
+            break;
+        }
+    }
+    
+    return true;
 }
 #pragma endregion
 

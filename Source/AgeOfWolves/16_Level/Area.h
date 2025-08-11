@@ -11,10 +11,12 @@
 
 //@전방 선언
 #pragma region Forward Declaration
+class UQuestComponent;
 class UBoxComponent;
 class UObjectiveDetectionComponent;
 class UCrowdControlComponent;
 class ACharacterBase;
+struct FSharingInfoWithGroup;
 #pragma endregion
 
 //@열거형
@@ -405,10 +407,17 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Area")
     FGuid AreaID;
 
+    //@영역 고유 이름 태그
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
+    FGameplayTag AreaNameTag;
+
+    //@영역 태그 (전투 지역, 휴식 지역 등 특성)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
+    TArray<FGameplayTag> AreaTags;
+
     //@영역 우선순위 (중첩 처리용)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
     int32 AreaPriority = 0;
-
     //@자동으로 영역 내 AI 감지할지 여부
     UPROPERTY(EditAnywhere, Category = "Area | AI")
     bool bAutoDetectAI = true;
@@ -444,6 +453,10 @@ protected:
     TMap<FGuid, FAIGroupInfo> MAIGroups;
 
 protected:
+    UPROPERTY(EditAnywhere, Category = "Area | 구조물")
+    FStructureData StructureData;
+
+protected:
     //@영역 내 플레이어 정보
     UPROPERTY()
     TMap<TWeakObjectPtr<APlayerCharacter>, FPlayerBindingInfo> MPlayerBindings;
@@ -460,7 +473,7 @@ protected:
     float LastCleanupTime;
 
     //@정리 주기 (초)
-    UPROPERTY(EditAnywhere, Category = "Area | Advanced")
+    UPROPERTY(EditAnywhere, Category = "Area")
     float CleanupInterval = 60.0f;
 
 protected:
@@ -471,6 +484,11 @@ protected:
 protected:
     //@자원 정리
     void CleanupInvalidReferences();
+
+protected:
+    //@ 퀘스트 컴포넌트
+    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UQuestComponent* QuestComponent;
 #pragma endregion
 
 //@Delegates
@@ -545,6 +563,10 @@ public:
 
     //@영역 ID 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
+    FGameplayTag GetAreaNameTag() const { return AreaNameTag; }
+    
+    //@영역 태그 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Area")
     FGuid GetAreaID() const { return AreaID; }
 
     //@영역 우선순위 가져오기
@@ -560,6 +582,10 @@ public:
     //@해당 AI가 속한 그룹 ID 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
     FGuid GetAIGroupID(AActor* AIActor) const;
+
+    //@해당 AI의 계급 타입 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Area")
+    EAIHierarchyType GetAIHierarchyType(AActor* AIActor) const;
 
     //@영역 내 모든 AI 그룹 정보를 배열로 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
