@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "04_Component/QuestComponent.h"
 
 #include "03_Player/PlayerStateBase.h"
@@ -8,6 +5,7 @@
 #include "Logging/StructuredLog.h"
 
 #include "14_Subsystem/AreaManagerSubsystem.h"
+#include "17_GameMode/AgeOfWolvesGameMode.h"
 
 DEFINE_LOG_CATEGORY(LogQuest)
 // UE_LOGFMT(LogQuest, Log, "");
@@ -101,7 +99,7 @@ void UQuestComponent::ExternalBindToPlayerState()
 		return;
 	}
 
-	PS->NotifyPlayerDeathEvent.AddUFunction(this, "OnPlayerDeath");
+	//PS->NotifyPlayerDeathEvent.AddUFunction(this, "OnPlayerDeath");
 }
 
 void UQuestComponent::UnbindFromArea()
@@ -138,73 +136,9 @@ void UQuestComponent::UnbindFromPlayerState()
 	}
 	
 	//@외부 바인딩 해제...
-	PS->NotifyPlayerDeathEvent.RemoveAll(this);
+	//PS->NotifyPlayerDeathEvent.RemoveAll(this);
 
 	UE_LOGFMT(LogQuest, Log, "PlayerState와 바인딩 해제 완료");
-}
-
-void UQuestComponent::UpdateQuestElapsedTime(float DeltaTime)
-{
-	for (FEliminationQuestDataInfo& EliminationQuest : AreaQuest.EliminationQuests)
-	{
-		if (EliminationQuest.bHasTimeLimit)
-		{
-			EliminationQuest.ElapsedTime += DeltaTime;
-
-			if (EliminationQuest.ElapsedTime >= EliminationQuest.TimeLimit)
-			{
-				EliminationQuest.QuestFail();
-			}
-		}
-	}
-}
-
-void UQuestComponent::OnAreaAIStateChanged(AActor* AIActor, const FGameplayTag& StateTag,
-                                           AArea* SourceArea, const FGuid& AreaID)
-{
-	//@ Dead 상태 태그 확인
-	if (!StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead"))) return;
-	
-	if (!AIActor)
-	{
-		UE_LOGFMT(LogQuest, Warning, "처치 대상 AI가 유효하지 않습니다.");
-		return;
-	}
-
-	if (!SourceArea)
-	{
-		UE_LOGFMT(LogQuest, Warning, "처치 대상 AI의 SourceArea가 유효하지 않습니다.");
-		return;
-	}
-
-	for (FEliminationQuestDataInfo& EliminationQuest : AreaQuest.EliminationQuests)
-	{
-		//@ 퀘스트 내용 진행
-		if (EliminationQuest.ProcessEvent(FGameplayTag::EmptyTag, AIActor, SourceArea, AIActor->GetActorLocation()))
-		{
-			//@ 퀘스트 완료 확인
-			if (EliminationQuest.CheckCompletion(SourceArea))
-			{
-				EliminationQuest.QuestSuccess();
-            
-				// 완료시 AreaQuest를 GameMode에 전달
-				AAgeOfWolvesGameMode* AOWGameMode = Cast<AAgeOfWolvesGameMode>(SourceArea->GetWorld()->GetAuthGameMode());
-				if (AOWGameMode)
-				{
-					AOWGameMode->HandleAreaQuestCompletion(EliminationQuest);  
-				}
-			}
-		}
-	}
-}
-
-void UQuestComponent::OnPlayerDeath(APlayerStateBase* DeadPlayerState)
-{
-	for (FEliminationQuestDataInfo& EliminationQuest : AreaQuest.EliminationQuests)
-	{
-		//@ 플레이어 죽음관련 퀘스트 처리
-		EliminationQuest.QuestFail();
-	}
 }
 
 void UQuestComponent::BeginPlay()
@@ -255,10 +189,72 @@ void UQuestComponent::TickComponent(float DeltaTime, enum ELevelTick TickType, F
 
 //@Property/Info...etc
 #pragma region Quest
+void UQuestComponent::UpdateQuestElapsedTime(float DeltaTime)
+{
+	for (FEliminationQuestDataInfo& EliminationQuest : AreaQuest.EliminationQuests)
+	{
+		if (EliminationQuest.bHasTimeLimit)
+		{
+			EliminationQuest.ElapsedTime += DeltaTime;
+
+			if (EliminationQuest.ElapsedTime >= EliminationQuest.TimeLimit)
+			{
+				EliminationQuest.QuestFail();
+			}
+		}
+	}
+}
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
+void UQuestComponent::OnAreaAIStateChanged(AActor* AIActor, const FGameplayTag& StateTag,
+	AArea* SourceArea, const FGuid& AreaID)
+{
+	//@ Dead 상태 태그 확인
+	if (!StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead"))) return;
+
+	if (!AIActor)
+	{
+		UE_LOGFMT(LogQuest, Warning, "처치 대상 AI가 유효하지 않습니다.");
+		return;
+	}
+
+	if (!SourceArea)
+	{
+		UE_LOGFMT(LogQuest, Warning, "처치 대상 AI의 SourceArea가 유효하지 않습니다.");
+		return;
+	}
+
+	for (FEliminationQuestDataInfo& EliminationQuest : AreaQuest.EliminationQuests)
+	{
+		//@ 퀘스트 내용 진행
+		if (EliminationQuest.ProcessEvent(FGameplayTag::EmptyTag, AIActor, SourceArea, AIActor->GetActorLocation()))
+		{
+			//@ 퀘스트 완료 확인
+			if (EliminationQuest.CheckCompletion(SourceArea))
+			{
+				EliminationQuest.QuestSuccess();
+
+				// 완료시 AreaQuest를 GameMode에 전달
+				auto* AOWGameMode = Cast<AAgeOfWolvesGameMode>(SourceArea->GetWorld()->GetAuthGameMode());
+				if (AOWGameMode)
+				{
+					AOWGameMode->HandleAreaQuestCompletion(EliminationQuest);
+				}
+			}
+		}
+	}
+}
+
+void UQuestComponent::OnPlayerDeath(APlayerStateBase* DeadPlayerState)
+{
+	for (FEliminationQuestDataInfo& EliminationQuest : AreaQuest.EliminationQuests)
+	{
+		//@ 플레이어 죽음관련 퀘스트 처리
+		EliminationQuest.QuestFail();
+	}
+}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

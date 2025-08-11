@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -7,7 +5,7 @@
 #include "GameplayTags.h"
 
 #include "Area.h"
-#include "17_GameMode/AgeOfWolvesGameMode.h"
+
 #include "AreaQuestDataInfos.generated.h"
 
 
@@ -18,13 +16,9 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAreaQuestDataInfos, Log, All)
 class AItem;
 class UAreaManagerSubsystem;
 #pragma endregion
-/**
- * 
- */
 
 //@열거형
 #pragma region Enums
-//@열거형
 /*
  *  @EQuestType
  *
@@ -41,7 +35,6 @@ enum class EQuestType : uint8
 	MAX,        
 };
 
-//@열거형
 /*
  *  @EQuestStatus
  *
@@ -58,7 +51,6 @@ enum class EQuestStatus : uint8
 	MAX,        
 };
 
-//@열거형
 /*
  *  @EQuestRetryPolicy
  *
@@ -111,8 +103,6 @@ enum class EAreaQuestDataValidationError : uint8
 
 //@구조체
 #pragma region Structs
-
-
 /**
  * @FAreaQuestDataValidationResult
  *

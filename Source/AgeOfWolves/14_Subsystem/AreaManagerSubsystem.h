@@ -110,15 +110,6 @@ public:
     //@ AreaQuestDataInfos 제공
     UFUNCTION(BlueprintCallable, Category = "Area|Quest")
     const UAreaQuestDataInfos* GetAreaQuestDataInfos() const;
-
-public:
-    // //@단일 AI 데이터셋 반환
-    // UFUNCTION(BlueprintCallable, Category = "AI|DataSet")
-    // bool GetAIDataSet(EAIType AIType, FAIDataSet& OutDataSet) const;
-    //
-    // //@여러 AI 데이터셋 반환
-    // UFUNCTION(BlueprintCallable, Category = "AI|DataSet")
-    // TArray<FAIDataSet> GetAIDataSets(const TArray<EAIType>& AITypes) const;
 #pragma endregion
 
 };

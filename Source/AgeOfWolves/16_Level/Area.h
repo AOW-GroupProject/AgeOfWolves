@@ -16,6 +16,7 @@ class UBoxComponent;
 class UObjectiveDetectionComponent;
 class UCrowdControlComponent;
 class ACharacterBase;
+struct FSharingInfoWithGroup;
 #pragma endregion
 
 //@열거형
@@ -27,6 +28,19 @@ enum class EAIHierarchyType : uint8
     Officer     UMETA(DisplayName = "간부"),
     Regular     UMETA(DisplayName = "병사 - 근거리"),
     Support     UMETA(DisplayName = "병사 - 원거리"),
+};
+
+/*
+ *  @EStructureType
+ *
+ *  게임 내 구조물의 기본 타입을 정의하는 열거형
+ */
+UENUM(BlueprintType)
+enum class EStructureType : uint8
+{
+    SavePoint       UMETA(DisplayName = "세이브 포인트"),
+    Store           UMETA(DisplayName = "상점"),
+    StoryTeller     UMETA(DisplayName = "스토리텔러"),
 };
 #pragma endregion
 
@@ -169,6 +183,96 @@ struct FPlayerBindingInfo
     }
 
 };
+
+/*
+*   @FStructureData
+*
+*   게임 내 구조물의 메타데이터와 상태 정보를 관리하는 구조체
+*/
+USTRUCT(BlueprintType)
+struct FStructureData
+{
+    GENERATED_BODY()
+
+    //@구조물의 고유 식별자
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "식별자")
+    FGuid StructureID;
+
+    //@개발자 친화적인 구조물 이름
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "식별자")
+    FName StructureName;
+
+    //@구조물의 기본 타입
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "메타데이터")
+    EStructureType StructureType = EStructureType::SavePoint;
+
+    //@구조물의 용도나 특징에 대한 설명
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "메타데이터", meta = (MultiLine = true))
+    FString Description;
+
+    //@전환 요청할 다음 레벨의 태그
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "메타데이터", meta = (Categories = "Level"))
+    FGameplayTag NextLevelTag;
+
+    //@플레이어 시작 위치의 태그 (리스폰 및 레벨 전환 시 사용)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "메타데이터", meta = (Categories = "PlayerStart"))
+    FGameplayTag PlayerStartTag;
+
+    //@구조물이 파괴 가능한지 여부
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "설정")
+    bool bIsDestructible = false;
+
+    //@구조물이 이동 가능한지 여부
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "설정")
+    bool bIsMovable = false;
+
+    //@구조물의 현재 활성화 상태
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "상태")
+    bool bIsActive = false;
+
+    //@실제 레벨에 배치된 구조물 액터에 대한 약한 참조
+    //@약한 참조 사용으로 메모리 누수 방지 및 안전한 액터 생명주기 관리
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "액터 참조")
+    TWeakObjectPtr<AActor> StructureActor;
+
+    //@기본 생성자 - 모든 필드를 안전한 기본값으로 초기화
+    FStructureData()
+    {
+        StructureID = FGuid::NewGuid();
+        StructureName = FName("DefaultStructure");
+        StructureType = EStructureType::SavePoint;
+        Description = FString("기본 구조물");
+        NextLevelTag = FGameplayTag(); // 빈 태그로 초기화
+        PlayerStartTag = FGameplayTag(); // 빈 태그로 초기화
+        bIsDestructible = false;
+        bIsMovable = false;
+        bIsActive = false;
+        StructureActor.Reset(); // 약한 참조를 명시적으로 초기화
+    }
+
+    //@매개변수 생성자 - 필수 정보를 받아서 구조체를 초기화
+    FStructureData(const FName& InName, EStructureType InType, const FString& InDescription)
+        : FStructureData() // 위임 생성자로 기본 생성자를 먼저 호출하여 중복 코드 방지
+    {
+        StructureName = InName;
+        StructureType = InType;
+        Description = InDescription;
+    }
+
+    //@Getter 메서드들 - 각 필드에 대한 읽기 전용 접근을 제공
+    FGuid GetStructureID() const { return StructureID; }
+    FName GetStructureName() const { return StructureName; }
+    EStructureType GetStructureType() const { return StructureType; }
+    FString GetDescription() const { return Description; }
+    FGameplayTag GetNextLevelTag() const { return NextLevelTag; }
+    FGameplayTag GetPlayerStartTag() const { return PlayerStartTag; }
+    bool IsDestructible() const { return bIsDestructible; }
+    bool IsMovable() const { return bIsMovable; }
+    bool IsActive() const { return bIsActive; }
+
+    //@약한 참조의 특성상 액터가 파괴되었을 수 있으므로 유효성 검사가 중요
+    AActor* GetStructureActor() const { return StructureActor.Get(); }
+};
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -235,6 +339,31 @@ protected:
 protected:
     //@초기화
     void InitializeArea();
+
+#if WITH_EDITOR
+protected:
+    // 에디터에서 프로퍼티 변경 시 호출되는 함수
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
+    // 에디터의 맵 체크 기능에서 호출되는 함수  
+    virtual void CheckForErrors() override;
+
+    // 에디터에서 액터 로드 완료 후 호출되는 함수
+    virtual void PostLoad() override;
+
+    // 에디터에서 액터가 생성된 직후 호출되는 함수
+    virtual void PostActorCreated() override;
+
+private:
+    // Area Tag 유효성 검사 헬퍼 함수
+    bool ValidateAreaTag(bool bShowDetailedFeedback = true) const;
+
+    // 에디터 알림 표시 함수 - SystemMessageConfig의 ShowEditorNotification을 참고
+    void ShowAreaTagNotification(const FString& Message, bool bIsError = true) const;
+
+    // 맵 체크 오류 추가 함수
+    void AddMapCheckError(const FString& ErrorMessage) const;
+#endif
 #pragma endregion
 
 //@Property/Info...etc
@@ -266,8 +395,12 @@ protected:
     UCrowdControlComponent* CrowdControlComponent;
 
 protected:
+    //@영역 태그
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area", meta = (Categories = "Area"))
+    FGameplayTag AreaTag;
+
     //@영역 식별자
-    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
+    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Area")
     FGuid AreaID;
 
     //@영역 고유 이름 태그
@@ -281,13 +414,12 @@ protected:
     //@영역 우선순위 (중첩 처리용)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
     int32 AreaPriority = 0;
-
     //@자동으로 영역 내 AI 감지할지 여부
-    UPROPERTY(EditAnywhere, Category = "Area|AI")
+    UPROPERTY(EditAnywhere, Category = "Area | AI")
     bool bAutoDetectAI = true;
 
     //@영역 내 AI 감지 반경 (자동 감지 시)
-    UPROPERTY(EditAnywhere, Category = "Area|AI", meta = (EditCondition = "bAutoDetectAI"))
+    UPROPERTY(EditAnywhere, Category = "Area | AI", meta = (EditCondition = "bAutoDetectAI"))
     float AIDetectionRadius = 1000.0f;
 
 protected:
@@ -306,10 +438,13 @@ protected:
     UPROPERTY(EditAnywhere, Category = "Area | AI", meta = (EditCondition = "bAddUnassignedAIToDefaultGroup"))
     FString DefaultGroupName = "Default";
 
-protected:
     //@등록된 AI 그룹 Map
     UPROPERTY()
     TMap<FGuid, FAIGroupInfo> MAIGroups;
+
+protected:
+    UPROPERTY(EditAnywhere, Category = "Area | 구조물")
+    FStructureData StructureData;
 
 protected:
     //@영역 내 플레이어 정보
@@ -324,7 +459,7 @@ protected:
     float LastCleanupTime;
 
     //@정리 주기 (초)
-    UPROPERTY(EditAnywhere, Category = "Area|Advanced")
+    UPROPERTY(EditAnywhere, Category = "Area")
     float CleanupInterval = 60.0f;
 
 protected:
@@ -404,9 +539,9 @@ protected:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
-    //@영역 ID 가져오기
+    //@영역 태그
     UFUNCTION(BlueprintCallable, Category = "Area")
-    FGuid GetAreaID() const { return AreaID; }
+    FGameplayTag GetAreaTag() const { return AreaTag; }
 
     //@영역 ID 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
@@ -414,7 +549,7 @@ public:
     
     //@영역 태그 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
-    const TArray<FGameplayTag>& GetAreaTags() const { return AreaTags; }
+    FGuid GetAreaID() const { return AreaID; }
 
     //@영역 우선순위 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")

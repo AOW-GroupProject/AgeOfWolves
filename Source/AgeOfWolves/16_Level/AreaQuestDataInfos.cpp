@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "16_Level/AreaQuestDataInfos.h"
 #include "Logging/StructuredLog.h"
 
