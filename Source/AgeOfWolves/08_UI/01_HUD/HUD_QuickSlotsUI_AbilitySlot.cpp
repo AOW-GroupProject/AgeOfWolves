@@ -37,15 +37,15 @@ void UHUD_QuickSlotsUI_AbilitySlot::AssignNewAbility_Implementation(FGameplayTag
     //@UEditable Text Box
     if (!AbilityName)
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBox°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBoxê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.", __FUNCDNAME__);
         return;
     }
 
-    //@FGameplayTag·ÎºÎÅÍ Ability Type ¸í°ú Ability ¸í ÃßÃâ
+    //@FGameplayTagë¡œë¶€í„° Ability Type ëª…ê³¼ Ability ëª… ì¶”ì¶œ
     FString TypeName, AbilityNameStr;
     if (!ExtractAbilityNamesFromTag(Tag, TypeName, AbilityNameStr))
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : Tag·ÎºÎÅÍ ÀÌ¸§ ÃßÃâ¿¡ ½ÇÆĞÇß½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : Tagë¡œë¶€í„° ì´ë¦„ ì¶”ì¶œì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤.", __FUNCDNAME__);
         return;
     }
 
@@ -59,21 +59,21 @@ void UHUD_QuickSlotsUI_AbilitySlot::AssignNewAbilityFromSlot_Implementation(UAbi
 
     if (!FromSlot)
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : ¼Ò½º ½½·ÔÀÌ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : ì†ŒìŠ¤ ìŠ¬ë¡¯ì´ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.", __FUNCDNAME__);
         return;
     }
 
     if (!AbilityName )
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBox°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBoxê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.", __FUNCDNAME__);
         return;
     }
 
-    //@FGameplayTag·ÎºÎÅÍ Ability Type ¸í°ú Ability ¸í ÃßÃâ
+    //@FGameplayTagë¡œë¶€í„° Ability Type ëª…ê³¼ Ability ëª… ì¶”ì¶œ
     FString TypeName, AbilityNameStr;
     if (!ExtractAbilityNamesFromTag(FromSlot->GetAbilityTag(), TypeName, AbilityNameStr))
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : Tag·ÎºÎÅÍ ÀÌ¸§ ÃßÃâ¿¡ ½ÇÆĞÇß½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : Tagë¡œë¶€í„° ì´ë¦„ ì¶”ì¶œì— ì‹¤íŒ¨í–ˆìŠµë‹ˆë‹¤.", __FUNCDNAME__);
         return;
     }
 
@@ -87,7 +87,7 @@ void UHUD_QuickSlotsUI_AbilitySlot::ClearAssignedAbility_Implementation(bool bFo
 
     if (!AbilityName)
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBox°¡ À¯È¿ÇÏÁö ¾Ê½À´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : TextBoxê°€ ìœ íš¨í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤.", __FUNCDNAME__);
         return;
     }
 
@@ -106,25 +106,25 @@ bool UHUD_QuickSlotsUI_AbilitySlot::ExtractAbilityNamesFromTag(const FGameplayTa
 {
     if (!Tag.IsValid())
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : À¯È¿ÇÏÁö ¾ÊÀº GameplayTagÀÔ´Ï´Ù.", __FUNCDNAME__);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : ìœ íš¨í•˜ì§€ ì•Šì€ GameplayTagì…ë‹ˆë‹¤.", __FUNCDNAME__);
         return false;
     }
 
-    //@Tag ¹®ÀÚ¿­À» '.' ±âÁØÀ¸·Î ºĞ¸®
+    //@Tag ë¬¸ìì—´ì„ '.' ê¸°ì¤€ìœ¼ë¡œ ë¶„ë¦¬
     FString TagString = Tag.ToString();
     TArray<FString> TagHierarchy;
     TagString.ParseIntoArray(TagHierarchy, TEXT("."), true);
 
-    //@ÃÖ¼Ò 3°èÃş ÀÌ»óÀÇ ÅÂ±×°¡ ÇÊ¿ä (Ability.Type.Name)
+    //@ìµœì†Œ 3ê³„ì¸µ ì´ìƒì˜ íƒœê·¸ê°€ í•„ìš” (Ability.Type.Name)
     if (TagHierarchy.Num() < 3)
     {
-        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : ¾îºô¸®Æ¼ ÅÂ±×ÀÇ °èÃşÀÌ ÃæºĞÇÏÁö ¾Ê½À´Ï´Ù: {1}", __FUNCDNAME__, TagString);
+        UE_LOGFMT(LogQuickSlotsAbilitySlot, Warning, "{0} : ì–´ë¹Œë¦¬í‹° íƒœê·¸ì˜ ê³„ì¸µì´ ì¶©ë¶„í•˜ì§€ ì•ŠìŠµë‹ˆë‹¤: {1}", __FUNCDNAME__, TagString);
         return false;
     }
 
-    //@Type Name°ú Ability Name ¼³Á¤
+    //@Type Nameê³¼ Ability Name ì„¤ì •
     OutTypeName = TagHierarchy[2];  // Battoujutsu
-    OutAbilityName = TagHierarchy[TagHierarchy.Num() - 1];  // ½ÇÁ¦ ±â¼ú¸í
+    OutAbilityName = TagHierarchy[TagHierarchy.Num() - 1];  // ì‹¤ì œ ê¸°ìˆ ëª…
 
     return true;
 }

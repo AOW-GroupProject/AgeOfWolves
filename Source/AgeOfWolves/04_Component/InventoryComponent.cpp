@@ -12,6 +12,9 @@
 #include "08_UI/02_Menu/01_InventoryUI/InventoryUI.h"
 #include "08_UI/02_Menu/01_InventoryUI/ItemSlots.h"
 
+#include "16_Level/AreaQuestDataInfos.h"
+#include "17_GameMode/AOWGameState.h"
+
 DEFINE_LOG_CATEGORY(LogInventory)
 // UE_LOGFMT(LogInventory, Log, "");
 
@@ -167,7 +170,6 @@ void UInventoryComponent::ExternalBindToInputComponent(const AController* Contro
 
 void UInventoryComponent::ExternalBindToInventoryUI()
 {
-
     //@World
     UWorld* World = GetWorld();
     if (!World)
@@ -241,6 +243,41 @@ void UInventoryComponent::ExternalBindToInventoryUI()
     UE_LOGFMT(LogInventory, Log, "{0}: InventoryUI에 성공적으로 바인딩되었습니다.", __FUNCTION__);
 }
 
+void UInventoryComponent::ExternalBindToGameState()
+{
+    UE_LOGFMT(LogInventory, Log, "Game State 이벤트 바인딩 시작");
+
+    //@World 
+    UWorld* World = GetWorld();
+    if (!IsValid(World))
+    {
+        UE_LOGFMT(LogInventory, Error, "{0}: World is null", __FUNCTION__);
+        return;
+    }
+
+    //@GameState
+    AGameStateBase* GameStateBase = World->GetGameState();
+    if (!IsValid(GameStateBase))
+    {
+        UE_LOGFMT(LogInventory, Warning, "{0}: GameState를 가져오는 데 실패했습니다.", __FUNCTION__);
+        return;
+    }
+
+    //@AOWGameState
+    AAOWGameState* AOWGameState = Cast<AAOWGameState>(GameStateBase);
+    if (!IsValid(AOWGameState))
+    {
+        UE_LOGFMT(LogInventory, Warning, "{0}: AOWGameState를 가져오는 데 실패했습니다.", __FUNCTION__);
+        return;
+    }
+
+    //@외부 바인딩
+
+    AOWGameState->OnQuestCompleted.AddUFunction(this, "OnQuestCompleted");
+
+    UE_LOGFMT(LogInventory, Log, "{0}: AOWGameState 에 성공적으로 바인딩되었습니다.", __FUNCTION__);
+}
+
 void UInventoryComponent::InternalBindToItem(AItem* Item, FGuid UniqueItemID)
 {
     if (!Item)
@@ -273,7 +310,8 @@ void UInventoryComponent::LoadInventory()
 
     //@외부 바인딩
     ExternalBindToInventoryUI();
-
+    ExternalBindToGameState();
+    
     //@GameInstance
     if (const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this)))
     {
@@ -985,6 +1023,54 @@ void UInventoryComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
         //@Start Use Item
         StartUseItem(ItemID, 1);
         return;
+    }
+}
+
+void UInventoryComponent::OnQuestCompleted(const FQuestDataInfo& QuestData)
+{
+    UE_LOGFMT(LogInventory, Warning, "OnQuestCompleted 실행");
+    
+    //@ QuestData의 QuestTag 유효성 검사
+    if (!QuestData.QuestTag.IsValid())
+    {
+        UE_LOGFMT(LogInventory, Warning, "OnQuestCompleted 실패: QuestTag가 유효하지 않습니다.");
+        return;
+    }
+
+    //@ 보상이 있는지 확인
+    if (!QuestData.bHasReward)
+    {
+        UE_LOGFMT(LogInventory, Log, "퀘스트 {0}에는 보상이 없습니다.", *QuestData.QuestTag.ToString());
+        return;
+    }
+
+    //@ 보상 아이템이 있는지 확인
+    if (QuestData.RewardItems.Num() == 0)
+    {
+        UE_LOGFMT(LogInventory, Warning, "퀘스트 {0}에 보상 아이템이 없습니다.", *QuestData.QuestTag.ToString());
+        return;
+    }
+
+    //@ 퀘스트의 보상 아이템 처리
+    for (int32 i = 0; i < QuestData.RewardItems.Num(); ++i)
+    {
+        const FQuestRewardItem& RewardItem = QuestData.RewardItems[i];
+        
+        if (!RewardItem.ItemClass)
+        {
+            UE_LOGFMT(LogInventory, Warning, "보상 아이템 클래스가 유효하지 않습니다. Quest: {0}, Reward Index: {1}", 
+                *QuestData.QuestTag.ToString(), i);
+            continue;
+        }
+
+        //@ 아이템 추가
+        AddItem(CachedItemManager.Get(), RewardItem.ItemClass, RewardItem.Quantity);
+
+        UE_LOGFMT(LogInventory, Warning, 
+            "보상 아이템이 인벤토리에 추가되었습니다. Quest: {0}, Item: {1}, Quantity: {2}", 
+            *QuestData.QuestTag.ToString(), 
+            *RewardItem.ItemClass->GetName(), 
+            RewardItem.Quantity);
     }
 }
 #pragma endregion

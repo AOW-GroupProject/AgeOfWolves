@@ -12,6 +12,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAOWGameState, Log, All)
 //@전방 선언
 #pragma region Forward Declaration
 class APlayerStateBase;
+struct FQuestDataInfo;
 class APlayerController;
 #pragma endregion
 
@@ -165,6 +166,7 @@ struct FLevelTransitionInfo
 
 //@이벤트/델리게이트
 #pragma region Delegates
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnQuestCompleted, const FQuestDataInfo&)
  // 게임 모드 상태가 변경될 때 호출되는 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FGameModeStateChanged, EGameModeState /* PreviousState */, EGameModeState /* NewState */)
 
@@ -204,7 +206,7 @@ class AGEOFWOLVES_API AAOWGameState : public AGameStateBase
 
     GENERATED_BODY()
 
-    //@기본 설정
+//@기본 설정
 #pragma region Default Setting
 public:
     AAOWGameState();
@@ -214,7 +216,7 @@ protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 #pragma endregion
 
-    //@속성 및 상태 정보
+//@속성 및 상태 정보
 #pragma region Property or State Information
 private:
     /**
@@ -224,6 +226,11 @@ private:
     mutable FCriticalSection GameModeStateMutex;
     mutable FCriticalSection RespawnInfoMutex;
     mutable FCriticalSection LevelTransitionMutex;
+
+protected:
+    //@Game Mode에서 호출할 함수 - 퀘스트 완료 알림 처리
+    UFUNCTION()
+    void NotifyPlayerQuestCompleted(const FQuestDataInfo& QuestData);
 
 protected:
     /**
@@ -296,7 +303,7 @@ private:
     bool IsValidStateTransition(EGameModeState FromState, EGameModeState ToState) const;
 #pragma endregion
 
-    //@이벤트 델리게이트
+//@이벤트 델리게이트
 #pragma region Event Delegates
 public:
     /**
@@ -315,9 +322,12 @@ public:
 
     // 플레이어 리스폰 완료 이벤트
     FPlayerRespawnCompleted PlayerRespawnCompleted;
+
+    //@퀘스트 완료 이벤트
+    FOnQuestCompleted OnQuestCompleted;
 #pragma endregion
 
-    //@상태 조회 함수들 (읽기 전용)
+//@상태 조회 함수들 (읽기 전용)
 #pragma region State Query Functions
 public:
     /**

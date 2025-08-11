@@ -1,7 +1,13 @@
 #include "AOWGameState.h"
 #include "Logging/StructuredLog.h"
+
+#include "Kismet/GameplayStatics.h"
 #include "Engine/World.h"
+
 #include "GameFramework/PlayerController.h"
+#include "00_GameInstance/AOWGameInstance.h"
+#include "03_Player/PlayerStateBase.h"
+
 
 DEFINE_LOG_CATEGORY(LogAOWGameState)
 
@@ -272,6 +278,21 @@ void AAOWGameState::ClearLevelTransitionInfo()
         // 초기화된 레벨 전환 정보로 이벤트 브로드캐스트
         LevelTransitionInfoUpdated.Broadcast(CurrentLevelTransitionInfo);
     }
+}
+
+void AAOWGameState::NotifyPlayerQuestCompleted(const FQuestDataInfo& QuestData)
+{
+    OnQuestCompleted.Broadcast(QuestData);
+    
+    const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
+    if (!GameInstance)
+    {
+        UE_LOGFMT(LogAOWGameState, Warning, "GameInstance가 유효하지 않음");
+        return;
+    }
+
+    GameInstance->UpdateQuestProgress(QuestData);
+    UE_LOGFMT(LogAOWGameState, Log, "퀘스트 완료 이벤트 브로드캐스트 완료");
 }
 #pragma endregion
 

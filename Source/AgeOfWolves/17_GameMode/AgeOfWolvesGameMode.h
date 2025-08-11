@@ -7,11 +7,14 @@
 
 #include "AgeOfWolvesGameMode.generated.h"
 
+
 DECLARE_LOG_CATEGORY_EXTERN(LogAOWGameMode, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
 class APlayerStateBase;
+class AAOWGameStateBase;
+struct FQuestDataInfo;
 class UUIManagerSubsystem;
 class ULevelManagerSubsystem;
 struct FStructureData;
@@ -31,7 +34,7 @@ class AAgeOfWolvesGameMode : public AGameModeBase
 {
     GENERATED_BODY()
 
-    //@기본 설정
+//@기본 설정
 #pragma region Default Setting
 public:
     AAgeOfWolvesGameMode();
@@ -56,6 +59,9 @@ public:
     void HandleFirstStructureActivation(const FStructureData& StructureData);
 
 private:
+    //@Game State에 리스폰 요청
+    void NotifyRespawnCompleteViaGameState(APlayerController* PlayerController);
+
     // 플레이어 리스폰 실행 (GameState 정보 기반)
     void ExecutePlayerRespawn();
 
@@ -78,6 +84,13 @@ private:
 
     // 로딩 UI 숨김 (UIManager 직접 호출)
     void HideLoadingUI();
+
+public:
+    // 퀘스트 완료 확인
+    void HandleAreaQuestCompletion(const FQuestDataInfo& QuestData);
+
+    //@Game State에 퀘스트 완료 알림
+    void NotifyQuestCompleteViaGameState(const FQuestDataInfo& QuestData);
 #pragma endregion
 
 //@Callbacks
@@ -94,7 +107,6 @@ private:
     // LevelManager로부터 레벨 전환 완료 알림을 받는 콜백
     UFUNCTION()
     void OnLevelTransitionCompleted(const FGameplayTag& CompletedLevelTag);
-
 #pragma endregion
 
 //@유틸리티
