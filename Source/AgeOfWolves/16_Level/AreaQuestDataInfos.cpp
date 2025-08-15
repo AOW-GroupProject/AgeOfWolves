@@ -335,23 +335,23 @@ FAreaQuestDataValidationResult UAreaQuestDataInfos::ValidateRewardItemUniqueness
 		{
 			const FEliminationQuestDataInfo& QuestInfo = AreaQuestDataInfo.EliminationQuests[QuestIndex];
 
-			TMap<TSubclassOf<AItem>, int32> UsedItemClasses;
+			TMap<FGameplayTag, int32> UsedRewardTags;
 
 			for (int32 RewardIndex = 0; RewardIndex < QuestInfo.RewardItems.Num(); ++RewardIndex)
 			{
 				const FQuestRewardItem& RewardItem = QuestInfo.RewardItems[RewardIndex];
 
-				if (!RewardItem.ItemClass)
+				if (!RewardItem.RewardItemTag.IsValid())
 				{
 					continue;
 				}
 
-				if (int32* ExistingIndex = UsedItemClasses.Find(RewardItem.ItemClass))
+				if (int32* ExistingIndex = UsedRewardTags.Find(RewardItem.RewardItemTag))
 				{
 					return FAreaQuestDataValidationResult(
 						EAreaQuestDataValidationError::DuplicateRewardItem,
-						FString::Printf(TEXT("중복된 RewardItem.ItemClass 발견: %s (Area: %s, Quest 인덱스 %d, 보상 인덱스 %d와 %d)"),
-							*RewardItem.ItemClass->GetName(),
+						FString::Printf(TEXT("중복된 RewardItemTag 발견: %s (Area: %s, Quest 인덱스 %d, 보상 인덱스 %d와 %d)"),
+							*RewardItem.RewardItemTag.ToString(),
 							*AreaQuestDataInfo.AreaTag.ToString(),
 							QuestIndex,
 							*ExistingIndex,
@@ -360,7 +360,7 @@ FAreaQuestDataValidationResult UAreaQuestDataInfos::ValidateRewardItemUniqueness
 					);
 				}
 
-				UsedItemClasses.Add(RewardItem.ItemClass, RewardIndex);
+				UsedRewardTags.Add(RewardItem.RewardItemTag, RewardIndex);
 			}
 		}
 	}
@@ -384,8 +384,8 @@ FAreaQuestDataValidationResult UAreaQuestDataInfos::ValidateRewardItemQuantityEx
 				{
 					return FAreaQuestDataValidationResult(
 						EAreaQuestDataValidationError::StringLengthExceeded,
-						FString::Printf(TEXT("보상 아이템 %s 개수 50개 초과 (Area: %s, Quest 인덱스 %d)"),
-							*RewardItem.ItemClass->GetName(),
+						FString::Printf(TEXT("RewardItemTag :  %s 개수 50개 초과 (Area: %s, Quest 인덱스 %d)"),
+							*RewardItem.RewardItemTag.ToString(),
 							*AreaQuestDataInfo.AreaTag.ToString(),
 							QuestIndex),
 						AreaIndex, QuestIndex
@@ -458,12 +458,12 @@ void UAreaQuestDataInfos::ValidateAreaQuestDataManually()
 
 	if (ValidationResult.bIsValid)
 	{
-		UE_LOGFMT(LogAreaQuestDataInfos, Log, "✅ AreaQuest Data 무결성 검사 성공: 모든 설정이 유효합니다");
+		UE_LOGFMT(LogAreaQuestDataInfos, Log, "AreaQuest Data 무결성 검사 성공: 모든 설정이 유효합니다");
 
 		if (GEngine)
 		{
 			GEngine->AddOnScreenDebugMessage(-1, 5.0f, FColor::Green,
-				TEXT("✅ AreaQuest Data 검증 성공! 모든 Area의 QuestData 설정이 올바릅니다."));
+				TEXT("AreaQuest Data 검증 성공! 모든 Area의 QuestData 설정이 올바릅니다."));
 		}
 	}
 	else

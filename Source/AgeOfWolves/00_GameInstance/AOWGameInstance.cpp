@@ -92,15 +92,10 @@ bool UAOWGameInstance::DoesSaveGameExist()
     return bExists;
 }
 
-bool UAOWGameInstance::UpdateQuestProgress(const FQuestDataInfo& QuestData)
+bool UAOWGameInstance::SaveCompleteAreaQuest(FGameplayTag AreaTag, const FQuestDataInfo& QuestData)
 {
-    if (SaveGameInstance->UpdateAreaQuestProgress(QuestData))
-    {
-        UE_LOGFMT(LogGameInstance, Error, "UpdateQuestProgress");
-        return true;
-    }
-
-    UE_LOGFMT(LogGameInstance, Error, "UpdateQuestProgress Fail");
+    SaveGameInstance->AddCompleteAreaQuest(AreaTag, QuestData);
+    
     return false;
 }
 

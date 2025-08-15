@@ -55,7 +55,7 @@ public:
 	bool DoesSaveGameExist();
 
 	UFUNCTION()
-	bool UpdateQuestProgress(const FQuestDataInfo& QuestData);
+	bool SaveCompleteAreaQuest(FGameplayTag AreaTag, const FQuestDataInfo& QuestData);
 private:
 	//@Save 파일 인스턴스
 	TObjectPtr<UAOWSaveGame> SaveGameInstance = nullptr;
