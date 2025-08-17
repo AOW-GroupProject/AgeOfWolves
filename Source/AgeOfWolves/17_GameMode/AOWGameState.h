@@ -230,7 +230,7 @@ private:
 protected:
     //@Game Mode에서 호출할 함수 - 퀘스트 완료 알림 처리
     UFUNCTION()
-    void NotifyPlayerQuestCompleted(const FQuestDataInfo& QuestData);
+    void NotifyPlayerQuestCompleted(FGameplayTag AreaTag, const FQuestDataInfo& QuestData);
 
 protected:
     /**

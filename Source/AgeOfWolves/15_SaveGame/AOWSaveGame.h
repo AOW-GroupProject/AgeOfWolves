@@ -115,6 +115,36 @@ public:
 		int32 EnhancementCount = -1;
 
 };
+
+USTRUCT(BlueprintType)
+struct FAreaQuestSaveInfo
+{
+	GENERATED_BODY()
+	
+	UPROPERTY(BlueprintReadOnly, Category = "Quest Save Info | Area", meta = (Categories = "Area"))
+	FGameplayTag AreaTag = FGameplayTag::EmptyTag;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Quest Save Info | Quest")
+	EQuestType QuestType = EQuestType::EliminateEnemies;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Quest Save Info | Quest", meta = (Categories = "Quest"))
+	FGameplayTag QuestTag = FGameplayTag::EmptyTag;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Quest Save Info | Quest")
+	EQuestStatus QuestStatus = EQuestStatus::NotStarted;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Quest Save Info | Quest")
+	bool bHasReward = false;
+
+	UPROPERTY(BlueprintReadOnly, Category = "Quest Save Info | Quest", meta = (EditCondition = "bHasReward"))
+	TArray<FQuestRewardItem> RewardItems;
+
+	bool operator==(const FAreaQuestSaveInfo& Other) const
+	{
+		return AreaTag == Other.AreaTag && QuestTag == Other.QuestTag;
+	}
+};
+
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -148,7 +178,7 @@ public:
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
-	bool UpdateAreaQuestProgress(const FQuestDataInfo& QuestData);
+	void AddCompleteAreaQuest(FGameplayTag AreaTag, const FQuestDataInfo& QuestData);
 	
 protected:
 	void AddCharacterStateToHistory(
@@ -163,8 +193,8 @@ protected:
 	//@캐릭터 상태 변화 이벤트를 모아둔 큐
 	TArray<FCharacterInformation> CharacterStateHistory;
 	
-	//@ 완료 퀘스트 정보 
-	TArray<FQuestDataInfo> CompletedAreaQuestSets;
+	//@ 완료된 퀘스트를 모아둔 배열
+	TArray<FAreaQuestSaveInfo> CompleteAreaQuests;
 
 public:
 	TArray<FInventoryItemSaveInfo> InventoryItemSaveInfos;

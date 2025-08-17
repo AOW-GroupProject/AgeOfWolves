@@ -84,10 +84,12 @@ private:
 
 public:
     // 퀘스트 완료 확인
-    void HandleAreaQuestCompletion(const FQuestDataInfo& QuestData);
+    void HandleAreaQuestCompletion(FGameplayTag AreaTag, const FQuestDataInfo& QuestData);
 
-    //@Game State에 퀘스트 완료 알림
-    void NotifyQuestCompleteViaGameState(const FQuestDataInfo& QuestData);
+private:
+    // 퀘스트 완료 알림
+    void NotifyQuestCompleteViaGameState(FGameplayTag AreaTag, const FQuestDataInfo& QuestData);
+    
 #pragma endregion
 
 //@Callbacks
