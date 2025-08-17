@@ -329,6 +329,11 @@ protected:
     //@잠재적 암살 타겟 변경 이벤트 구독
     UFUNCTION()
         void OnAmbushTargetChanged(AActor* PotentialAmbushTarget);
+
+protected:
+    //@구조물 감지 변경 이벤트 수신 콜백
+    UFUNCTION()
+    void OnDetectedStructureChanged(const AActor* DetectedStructureActor, bool isEnteredDetection);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

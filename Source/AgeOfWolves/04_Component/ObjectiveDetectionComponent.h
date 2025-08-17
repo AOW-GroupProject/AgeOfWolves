@@ -112,6 +112,9 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FAmbushTargetChanged, const AActor*)
 //@시야 안에 있는 AI 중 처형 가능 타겟 변경 이벤트
 DECLARE_MULTICAST_DELEGATE_OneParam(FExecutionTargetChanged, const AActor*)
 
+//@시야 안에 구조물 감지 이벤트
+DECLARE_MULTICAST_DELEGATE_TwoParams(FDetectedStructureChanged, const AActor*, bool)
+
 //@Area와 바인딩/언바인딩 이벤트
 DECLARE_MULTICAST_DELEGATE_TwoParams(FPlyaerBoundToArea, FAreaBindingInfo, bool);
 #pragma endregion
@@ -192,6 +195,10 @@ protected:
 
     //@처형 가능한 AI 정보 업데이트
     void UpdateExecutionTargetState();
+
+protected:
+    //@구조물 감지 체크 업데이트
+    void UpdateExecutionDetectionStructure();
 
 protected:
     UPROPERTY()
@@ -276,6 +283,27 @@ protected:
     //@마지막 체크 시간
     float LastBackExposureCheckTime = 0.0f;
     float LastExecutionCheckTime = 0.0f;
+
+protected:
+    //@감지된 구조물 액터
+    UPROPERTY()
+    TWeakObjectPtr<AActor> DetectedStructureActor;
+    
+    //@ 구조물 감지 최대 거리(반경) 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Structure")
+    float DetectionStructureDistance = 500.f;
+
+    //@ 구조물 감지 총 각도(좌/우 합). 30이면 반각=15° 
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Structure", meta=(ClampMin="0.0", ClampMax="180.0"))
+    float DetectionStructureTotalAngleDegrees = 30.f;
+    
+    //@구조물 체크 간격 (seconds)
+    UPROPERTY(EditAnywhere, Category = "Objective Detection|Structure")
+    float ExecutionStructureCheckInterval = 0.1f;
+
+    //@구조물 마지막 체크 시간
+    float LastExecutionStructureCheckTime = 0.0f;
+    
 #pragma endregion
 
 //@Delegates
@@ -290,6 +318,9 @@ public:
 
     //@처형 가능한 AI 타겟 변경 이벤트
     FExecutionTargetChanged ExecutionTargetChanged;
+
+    //@구조물 감지 변화 이벤트
+    FDetectedStructureChanged DetectedStructureChanged;
 
 public:
     //@Area 바인딩 이벤트

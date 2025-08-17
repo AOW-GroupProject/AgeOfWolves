@@ -573,6 +573,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Area")
     int32 GetAreaPriority() const { return AreaPriority; }
 
+    //@영역 내 모든 AI 정보 목록 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Area")
+    TArray<FStructureData> GetStructureDatas() {return RegisteredStructures;};
+
 public:
     //@영역 내 모든 AI 정보 목록 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")

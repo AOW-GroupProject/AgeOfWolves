@@ -149,6 +149,8 @@ void UInteractionComponent::ExternalBindToODComp()
 
     ODComp->ExecutionTargetChanged.AddUFunction(this, "OnExecutionTargetChanged");
     ODComp->AmbushTargetChanged.AddUFunction(this, "OnAmbushTargetChanged");
+
+    ODComp->DetectedStructureChanged.AddUFunction(this, "OnDetectedStructureChanged");
 }
 
 void UInteractionComponent::UnbindExternalBindToODComp()
@@ -839,6 +841,10 @@ void UInteractionComponent::OnAmbushTargetChanged(AActor* PotentialAmbushTarget)
 
     UE_LOGFMT(LogInteraction, Log, "{0}: 암살 타겟 처리 완료 - 액터: {1}에 대한 암살 상호작용 등록",
         __FUNCDNAME__, *PotentialAmbushTarget->GetName());
+}
+
+void UInteractionComponent::OnDetectedStructureChanged(const AActor* DetectedStructureActor, bool isEnteredDetection)
+{
 }
 #pragma endregion
 

@@ -13,6 +13,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "04_Component/LockOnComponent.h"
+#include "Chaos/PBDSuspensionConstraintData.h"
 #include "Components/BillboardComponent.h"
 
 DEFINE_LOG_CATEGORY(LogObjectiveDetection)
@@ -90,6 +91,13 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
     {
         UpdateExecutionTargetState();
         LastExecutionCheckTime = CurrentTime;
+    }
+
+    //@ 일정 간격으로 구조물 감지 체크
+    if (CurrentTime - LastExecutionStructureCheckTime >= ExecutionStructureCheckInterval)
+    {
+        UpdateExecutionDetectionStructure();
+        LastExecutionStructureCheckTime = CurrentTime;
     }
 }
 
@@ -807,6 +815,90 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
         AmbushTargetChanged.Broadcast(AmbushTarget.Get());
     }
 }
+
+void UObjectiveDetectionComponent::UpdateExecutionDetectionStructure()
+{
+    FVector OwnerLocation;
+    if (const APlayerController* PC = Cast<APlayerController>(GetOwner()))
+    {
+        if (const APawn* P = PC->GetPawn())
+        {
+            OwnerLocation = P->GetActorLocation();
+        }
+    }
+
+
+    //@ 반각(총각도의 절반)
+    const float HalfAngleDeg = FMath::Max(0.f, DetectionStructureTotalAngleDegrees * 0.5f);
+    const float CosThreshold = FMath::Cos(FMath::DegreesToRadians(HalfAngleDeg));
+    const float DistSqLimit  = DetectionStructureDistance * DetectionStructureDistance;
+
+    TArray<AActor*> NewList;
+    NewList.Reserve(BoundAreas.Num());
+
+    
+    for (const FAreaBindingInfo& AreaInfo : BoundAreas)
+    {
+
+        TArray<FStructureData> StructureDatas = AreaInfo.AreaRef.Get()->GetStructureDatas();
+        
+        float LowestDistSq =FLT_MAX;
+        bool HasFound = false;
+        for (const FStructureData& StructureData : StructureDatas)
+        {
+            AActor* Target = StructureData.GetStructureActor();
+            if (!IsValid(Target)) continue;
+
+            //@ 감지 거리 체크
+            const FVector ToOwner = OwnerLocation - Target->GetActorLocation();
+            float DistSq  = FVector::Dist(ToOwner, OwnerLocation);
+            if (DistSq > DistSqLimit)
+                continue;
+
+            FVector TargetForwardDir = Target->GetActorForwardVector();
+            FVector OwerToTargetDir = ToOwner;
+
+            // if (bIgnoreZ) { TargetForwardDir.Z = 0; OwerToTargetDir.Z = 0; }
+            if (!TargetForwardDir.Normalize() || !OwerToTargetDir.Normalize())
+                continue;
+
+            //@구조물 보는 방향 x각도 이내에 있는지 체크
+            const float CosAngle = FVector::DotProduct(TargetForwardDir, OwerToTargetDir);
+            if (CosAngle < CosThreshold)
+                continue;
+
+            if (DistSq >= LowestDistSq) continue;        //@ 이미 더 가까운 게 있음
+
+            HasFound = true;
+            
+            LowestDistSq = DistSq;
+
+            //@감지된 구조물 액터 캐싱
+            DetectedStructureActor = Target;
+        }
+
+        if (!HasFound)
+        {
+            if (DetectedStructureActor != nullptr)
+            {
+                //@ 이전 감지한 구조물이 범위 밖인지 체크
+                const FVector ToOwner = OwnerLocation - DetectedStructureActor->GetActorLocation();
+                float DistSq  = FVector::Dist(ToOwner, OwnerLocation);
+                if (DistSq > DistSqLimit)
+                {
+                    //@이전 감지한 구조물 감지 해제됨 이벤트
+                    DetectedStructureChanged.Broadcast(DetectedStructureActor.Get(), false);
+                }
+            }
+        }
+        else
+        {
+            //@ 구조물 감지됨 이벤트
+            DetectedStructureChanged.Broadcast(DetectedStructureActor.Get(), true);
+        }
+    }
+}
+
 #pragma endregion
 
 //@Callbacks
