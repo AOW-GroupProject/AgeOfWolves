@@ -164,7 +164,7 @@ struct FQuestRewardItem
 
 	//@ 보상 아이템 클래스
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-	TSubclassOf<AItem> ItemClass = nullptr;
+	FGameplayTag RewardItemTag = FGameplayTag::EmptyTag;
 
 	//@ 아이템 수량
 	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (ClampMin = "1", ClampMax = "50"))

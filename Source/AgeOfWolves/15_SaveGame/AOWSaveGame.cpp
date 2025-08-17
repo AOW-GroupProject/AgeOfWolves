@@ -106,41 +106,46 @@ void UAOWSaveGame::AddCharacterStateToHistory(
     //}
 }
 
-bool UAOWSaveGame::UpdateAreaQuestProgress(const FQuestDataInfo& QuestData)
+void UAOWSaveGame::AddCompleteAreaQuest(FGameplayTag AreaTag, const FQuestDataInfo& QuestData)
 {
-    //@ QuestData의 QuestTag 유효성 검사
+    //@ 기본 유효성 검사
     if (!QuestData.QuestTag.IsValid())
     {
-        UE_LOGFMT(LogSaveGame, Warning, "UpdateAreaQuestProgress 실패: QuestTag가 유효하지 않습니다.");
-        return false;
+        UE_LOGFMT(LogSaveGame, Warning, "AddCompleteAreaQuest 실패: QuestTag가 유효하지 않습니다.");
+        return;
     }
-    
-    //@ QuestTag로 완료된 퀘스트인지 확인
-    bool bAlreadyCompleted = false;
-    for (const FQuestDataInfo& CompletedQuest : CompletedAreaQuestSets)
+
+    //@ AreaTag 검사
+    if (!AreaTag.IsValid())
     {
-        if (!CompletedQuest.QuestTag.IsValid())
-        {
-            UE_LOGFMT(LogTemp, Error, "CompletedQuest.QuestTag 가 유효하지 않음!");
-        }
-    
-        if (!QuestData.QuestTag.IsValid())
-        {
-            UE_LOGFMT(LogTemp, Error, "QuestData.QuestTag 가 유효하지 않음!");
-        }
-
-        UE_LOGFMT(LogTemp, Log, "비교 시작: {0} vs {1}", 
-                  *CompletedQuest.QuestTag.ToString(), 
-                  *QuestData.QuestTag.ToString());
-
-        if (CompletedQuest.QuestTag == QuestData.QuestTag)
-        {
-            bAlreadyCompleted = true;
-            break;
-        }
+        UE_LOGFMT(LogSaveGame, Warning, "AddCompleteAreaQuest 실패: AreaTag가 유효하지 않습니다.");
+        return;
     }
-    
-    return true;
+
+    //@ QuestInfo 초기화
+    FAreaQuestSaveInfo QuestInfo;
+    QuestInfo.AreaTag = AreaTag;
+    QuestInfo.QuestType = QuestData.QuestType;
+    QuestInfo.QuestTag = QuestData.QuestTag;
+    QuestInfo.QuestStatus = QuestData.QuestStatus;
+    QuestInfo.bHasReward = QuestData.bHasReward;
+    if (QuestData.bHasReward)
+    {
+        QuestInfo.RewardItems = QuestData.RewardItems;
+    }
+
+    FString StatusString = UEnum::GetValueAsString(QuestInfo.QuestStatus);
+
+    UE_LOGFMT(LogSaveGame, Log,
+        "완료 퀘스트 기록 | AreaTag: {0}, QuestType: {1}, QuestTag: {2}, Status: {3}, RewardCount: {4}",
+        *QuestInfo.AreaTag.ToString(),
+        static_cast<int32>(QuestInfo.QuestType),
+        *QuestInfo.QuestTag.ToString(),
+        *StatusString,
+        QuestInfo.RewardItems.Num());
+
+    //@ 배열에 추가
+    CompleteAreaQuests.AddUnique(QuestInfo);
 }
 #pragma endregion
 
