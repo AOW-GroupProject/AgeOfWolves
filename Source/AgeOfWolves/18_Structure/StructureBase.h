@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "16_Level/Area.h"
+#include "19_Interface/InteractionInterface.h"
 #include "GameFramework/Actor.h"
 
 #include "StructureBase.generated.h"
@@ -33,9 +34,12 @@ DECLARE_DELEGATE_OneParam(FOnInteractionEnd, AStructureBase*);
  *	구조물 의 base 클래스입니다
  */
 UCLASS()
-class AGEOFWOLVES_API AStructureBase : public AActor
+class AGEOFWOLVES_API AStructureBase : public AActor, public IInteractionInterface
 {
-//@친추 클래스
+
+
+private:
+	//@친추 클래스
 #pragma region Friend Class
 #pragma endregion
 	
@@ -68,6 +72,18 @@ public:
 public:
 	UPROPERTY(EditAnywhere, Category = "Structure | Data")
 	FStructureData StructureData;
+
+public:
+	UPROPERTY(EditAnywhere, Category = "구조물 태그")
+	FGameplayTag StructureTag;
+
+
+
+public:
+	virtual FGameplayTag GetObjectTag() override
+	{
+		return StructureTag;
+	}
 #pragma endregion
 
 //@Delegates
