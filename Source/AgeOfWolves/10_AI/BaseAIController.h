@@ -115,9 +115,10 @@ struct FSharingInfoWithGroup
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 		EAISharingInfoType SharingType = EAISharingInfoType::All;
 
-	//@AI의 상태 태그
+	//@공유 정보 태그 (기존 StateTag에서 변경)
+	//@예: "InfoShare.Combat.RequestSupport", "InfoShare.CrowdControl.Threatened"
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
-		FGameplayTag StateTag;
+		FGameplayTag InfoTag;
 
 	//@AI에게 요청되는 군중 제어 태그
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
@@ -157,15 +158,13 @@ struct FSharingInfoWithGroup
 	// 매개변수 생성자
 	FSharingInfoWithGroup(
 		EAISharingInfoType InSharingType,
-		const FGameplayTag& InStateTag,
+		const FGameplayTag& InInfoTag,  // StateTag에서 InfoTag로 변경
 		int32 InPriority = 0,
 		float InValidTime = 5.0f,
-		const FVector& InLastKnownLocation = FVector::ZeroVector,
-		AActor* InDetectedTarget = nullptr,
 		AActor* InOptionalObject = nullptr)
 		: InfoID(FGuid::NewGuid())
 		, SharingType(InSharingType)
-		, StateTag(InStateTag)
+		, InfoTag(InInfoTag)  // 변경된 필드명
 		, Priority(InPriority)
 		, ValidTime(InValidTime)
 		, OptionalObject(InOptionalObject)
@@ -300,9 +299,13 @@ protected:
 	void UnbindTargetActorStateEvents(AActor* OldTarget);
 
 protected:
-	//@AI Group에게 공유 정보 전달
+	//@Player가 현재 Area에 있는지 여부
+	bool bPlayerInCurrentArea = true;
+
+protected:
+	//@AI Group에게 공유 정보 전달 (기존 ShareInfoToGroup 수정)
 	bool ShareInfoToGroup(
-		const FGameplayTag& StateTag,
+		const FGameplayTag& InfoTag,  // StateTag에서 InfoTag로 변경
 		EAISharingInfoType SharingType = EAISharingInfoType::All,
 		int32 Priority = 1,
 		float ValidTime = 5.0f,
@@ -313,9 +316,13 @@ protected:
 	UFUNCTION()
 		void ReceiveInfoFromGroup(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo);
 
+private:
 	//@그룹으로부터 전달 받은 정보를 처리하는 함수
 	void ProcessReceivedGroupInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo);
 
+protected:
+	//@단순 정보 처리 함수
+	void ProcessSimpleInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo);
 	//@군중 제어 관련 정보 처리 함수
 	void ProcessCrowdControlInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo);
 
