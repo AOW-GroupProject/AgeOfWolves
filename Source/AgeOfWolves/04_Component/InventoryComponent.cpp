@@ -1056,20 +1056,28 @@ void UInventoryComponent::OnQuestCompleted(const FQuestDataInfo& QuestData)
     {
         const FQuestRewardItem& RewardItem = QuestData.RewardItems[i];
         
-        if (!RewardItem.ItemClass)
+            if (!RewardItem.RewardItemTag.IsValid())
         {
-            UE_LOGFMT(LogInventory, Warning, "보상 아이템 클래스가 유효하지 않습니다. Quest: {0}, Reward Index: {1}", 
+            UE_LOGFMT(LogInventory, Warning, "보상 아이템 Tag가 유효하지 않습니다. Quest: {0}, Reward Index: {1}", 
                 *QuestData.QuestTag.ToString(), i);
             continue;
         }
 
+        //@ ItemManager에서 Tag를 통해 데이터 테이블에 등록된 Item을 가져옴
+        const FItemInformation* ItemInfo = CachedItemManager->GetItemInformationByItemTag<FItemInformation>(RewardItem.RewardItemTag);
+        if (!ItemInfo)
+        {
+            UE_LOGFMT(LogInventory, Error, "ItemInformation을 가져올 수 없습니다.");
+            return;
+        }
+
         //@ 아이템 추가
-        AddItem(CachedItemManager.Get(), RewardItem.ItemClass, RewardItem.Quantity);
+        AddItem(CachedItemManager.Get(), ItemInfo->ItemClass, RewardItem.Quantity);
 
         UE_LOGFMT(LogInventory, Warning, 
             "보상 아이템이 인벤토리에 추가되었습니다. Quest: {0}, Item: {1}, Quantity: {2}", 
             *QuestData.QuestTag.ToString(), 
-            *RewardItem.ItemClass->GetName(), 
+            *ItemInfo->ItemClass->GetName(), 
             RewardItem.Quantity);
     }
 }

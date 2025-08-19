@@ -235,13 +235,13 @@ void UQuestComponent::OnAreaAIStateChanged(AActor* AIActor, const FGameplayTag& 
 			if (EliminationQuest.CheckCompletion(SourceArea))
 			{
 				EliminationQuest.QuestSuccess();
+			}
 
-				// 완료시 AreaQuest를 GameMode에 전달
-				auto* AOWGameMode = Cast<AAgeOfWolvesGameMode>(SourceArea->GetWorld()->GetAuthGameMode());
-				if (AOWGameMode)
-				{
-					AOWGameMode->HandleAreaQuestCompletion(EliminationQuest);
-				}
+			// AreaQuest의 변화를 GameMode에 전달
+			auto* AOWGameMode = Cast<AAgeOfWolvesGameMode>(SourceArea->GetWorld()->GetAuthGameMode());
+			if (AOWGameMode)
+			{
+				AOWGameMode->HandleAreaQuestCompletion(AreaQuest.AreaTag, EliminationQuest);
 			}
 		}
 	}
@@ -251,8 +251,11 @@ void UQuestComponent::OnPlayerDeath(APlayerStateBase* DeadPlayerState)
 {
 	for (FEliminationQuestDataInfo& EliminationQuest : AreaQuest.EliminationQuests)
 	{
-		//@ 플레이어 죽음관련 퀘스트 처리
-		EliminationQuest.QuestFail();
+		if (EliminationQuest.QuestStatus == EQuestStatus::InProgress)
+		{
+			//@ 플레이어 죽음관련 퀘스트 처리
+			EliminationQuest.QuestFail();
+		}
 	}
 }
 #pragma endregion

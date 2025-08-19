@@ -280,10 +280,10 @@ void AAOWGameState::ClearLevelTransitionInfo()
     }
 }
 
-void AAOWGameState::NotifyPlayerQuestCompleted(const FQuestDataInfo& QuestData)
+void AAOWGameState::NotifyPlayerQuestCompleted(FGameplayTag AreaTag, const FQuestDataInfo& QuestData)
 {
     OnQuestCompleted.Broadcast(QuestData);
-    
+
     const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this));
     if (!GameInstance)
     {
@@ -291,7 +291,7 @@ void AAOWGameState::NotifyPlayerQuestCompleted(const FQuestDataInfo& QuestData)
         return;
     }
 
-    GameInstance->UpdateQuestProgress(QuestData);
+    GameInstance->SaveCompleteAreaQuest(AreaTag, QuestData);
     UE_LOGFMT(LogAOWGameState, Log, "퀘스트 완료 이벤트 브로드캐스트 완료");
 }
 #pragma endregion
