@@ -58,31 +58,6 @@ void AArea::BeginPlay()
     Super::BeginPlay();
     //@Area 초기화
     InitializeArea();
-
-    //FTimerHandle TestTimer;
-    //GetWorld()->GetTimerManager().SetTimer(TestTimer, [this]()
-    //    {
-    //        UE_LOGFMT(LogArea, Log, "Area {0}: 테스트 레벨 전환 시작", *AreaID.ToString());
-
-    //        // GameMode 찾기
-    //        AAgeOfWolvesGameMode* GameMode = Cast<AAgeOfWolvesGameMode>(GetWorld()->GetAuthGameMode());
-    //        if (!IsValid(GameMode))
-    //        {
-    //            UE_LOGFMT(LogArea, Error, "GameMode를 찾을 수 없음");
-    //            return;
-    //        }
-
-    //        // StructureData 정보 출력
-    //        UE_LOGFMT(LogArea, Log, "전달할 구조물 정보:");
-    //        UE_LOGFMT(LogArea, Log, "- 이름: {0}", *StructureData.GetStructureName().ToString());
-    //        UE_LOGFMT(LogArea, Log, "- 다음 레벨: {0}", *StructureData.GetNextLevelTag().ToString());
-
-    //        // GameMode의 레벨 전환 호출
-    //        GameMode->HandleFirstStructureActivation(StructureData);
-
-    //        UE_LOGFMT(LogArea, Log, "레벨 전환 요청 전달 완료");
-
-    //    }, 10.0f, false);
 }
 
 void AArea::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -479,9 +454,6 @@ void AArea::InternalBindToStructure(TWeakObjectPtr<AActor> StructurePtr)
 
 void AArea::InitializeArea()
 {
-
-
-
     //@콜리전 이벤트 바인딩
     AreaBounds->OnComponentBeginOverlap.AddDynamic(this, &AArea::OnOverlapBegin);
     AreaBounds->OnComponentEndOverlap.AddDynamic(this, &AArea::OnOverlapEnd);
@@ -1226,6 +1198,20 @@ void AArea::UnregisterPlayer(APlayerCharacter* Player)
     //@내부 바인딩 해제...
     UnbindFromPlayer(PlayerPtr);
 
+    //@AI들에게 Player Area 이탈 정보 전달 (태그 수정)
+    FSharingInfoWithGroup PlayerExitInfo;
+    PlayerExitInfo.InfoTag = FGameplayTag::RequestGameplayTag("InfoToShare.Simple.PlayerExitArea");
+    PlayerExitInfo.ResultTag = FGameplayTag::RequestGameplayTag("Simple.LostTargetActor");
+    PlayerExitInfo.SharingType = EAISharingInfoType::All;
+    PlayerExitInfo.Priority = 1;
+    PlayerExitInfo.ValidTime = 5.0f;
+    PlayerExitInfo.OptionalObject = Player;
+
+    NotifyGroupToShareInfo.Broadcast(nullptr, PlayerExitInfo);
+
+    UE_LOGFMT(LogArea, Log, "Area {0}: 플레이어 {1} 이탈. AI들에게 알림 전송 및 바인딩 해제 지연 시작",
+        *AreaID.ToString(), *Player->GetName());
+
     //@현재 시간 가져오기
     float CurrentTime = GetWorld()->GetTimeSeconds();
 
@@ -1525,7 +1511,7 @@ void AArea::OnSendInfoToBelongingGroup(AActor* AI, FSharingInfoWithGroup Sharing
     }
 
     //@상태 태그 유효성 검사
-    if (!SharingInfo.StateTag.IsValid())
+    if (!SharingInfo.InfoTag.IsValid())
     {
         UE_LOGFMT(LogArea, Warning, "Area {0}: 그룹 정보 전달 실패 - 유효하지 않은 상태 태그", *AreaID.ToString());
         return;
@@ -1555,7 +1541,7 @@ void AArea::OnSendInfoToBelongingGroup(AActor* AI, FSharingInfoWithGroup Sharing
     NotifyGroupToShareInfo.Broadcast(AI, SharingInfo);
 
     UE_LOGFMT(LogArea, Log, "Area {0}: AI {1}의 그룹 {2}에 정보 전달 - 상태: {3}, 우선순위: {4}",
-        *AreaID.ToString(), *AI->GetName(), *GroupID.ToString(), *SharingInfo.StateTag.ToString(), SharingInfo.Priority);
+        *AreaID.ToString(), *AI->GetName(), *GroupID.ToString(), *SharingInfo.InfoTag.ToString(), SharingInfo.Priority);
 }
 
 void AArea::OnStructureInteractionTriggered(AStructureBase* TriggeredStucture)
