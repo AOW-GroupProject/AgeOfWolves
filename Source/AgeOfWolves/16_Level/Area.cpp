@@ -473,7 +473,8 @@ void AArea::InternalBindToStructure(TWeakObjectPtr<AActor> StructurePtr)
     }
 
     //@내부 바인딩...
-    StructureBase->OnStructureInteractionBegin.BindUObject(this,&AArea::OnStructureInteractionTriggered);
+    // StructureBase->OnStructureInteractionBegin.BindUObject(this,&AArea::OnStructureInteractionTriggered);
+    StructureBase->OnStructureInteractionTriggered.AddUFunction(this, "OnStructureInteractionTriggered");
     
 }
 
@@ -1562,6 +1563,8 @@ void AArea::OnStructureInteractionTriggered(AStructureBase* TriggeredStucture)
 {
     if (!TriggeredStucture)
         return;
+
+    UE_LOGFMT(LogArea, Warning, "구조물 상호작용 발동됨!");
     
     //@구조물의 구조물 ID 찾기
     FGuid StructureID = GetStructureID(TriggeredStucture);

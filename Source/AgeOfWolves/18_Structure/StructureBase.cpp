@@ -39,48 +39,48 @@ void AStructureBase::BeginPlay()
 #pragma region Callbacks
 void AStructureBase::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
-	// 액터 유효성 검사
-	if (!IsValid(OtherActor))
-	{
-		return;
-	}
-	UE_LOGFMT(LogStructure, Warning, "구조물 {0} OnOverlapBegin 발동 , OtherActor : {1}", *this->GetName(), *OtherActor->GetName());
-
-	//@플레이어 검사
-	APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
-	if (Player)
-	{
-		//@플레이어 확인, 감지됨
-		UE_LOGFMT(LogStructure, Warning, "구조물 {0} OnOverlapBegin 플레이어 감지됨 , OtherActor : {1}", *this->GetName(), *OtherActor->GetName());
-
-		if (OnStructureInteractionBegin.IsBound())
-		{
-			OnStructureInteractionBegin.Execute(this);
-		}
-	}
+	// // 액터 유효성 검사
+	// if (!IsValid(OtherActor))
+	// {
+	// 	return;
+	// }
+	// UE_LOGFMT(LogStructure, Warning, "구조물 {0} OnOverlapBegin 발동 , OtherActor : {1}", *this->GetName(), *OtherActor->GetName());
+	//
+	// //@플레이어 검사
+	// APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
+	// if (Player)
+	// {
+	// 	//@플레이어 확인, 감지됨
+	// 	UE_LOGFMT(LogStructure, Warning, "구조물 {0} OnOverlapBegin 플레이어 감지됨 , OtherActor : {1}", *this->GetName(), *OtherActor->GetName());
+	//
+	// 	// if (OnStructureInteractionBegin.IsBound())
+	// 	// {
+	// 	// 	OnStructureInteractionBegin.Execute(this);
+	// 	// }
+	// }
 
 
 }
 
 void AStructureBase::OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-	// 액터 유효성 검사
-	if (!IsValid(OtherActor))
-	{
-		return;
-	}
-
-	//@플레이어 검사
-	APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
-	if (Player)
-	{
-		//@플레이어 확인, 감지됨
-
-		if (OnStructureInteractionEnd.IsBound())
-		{
-			OnStructureInteractionEnd.Execute(this);
-		}
-	}
+	// // 액터 유효성 검사
+	// if (!IsValid(OtherActor))
+	// {
+	// 	return;
+	// }
+	//
+	// //@플레이어 검사
+	// APlayerCharacter* Player = Cast<APlayerCharacter>(OtherActor);
+	// if (Player)
+	// {
+	// 	//@플레이어 확인, 감지됨
+	//
+	// 	// if (OnStructureInteractionEnd.IsBound())
+	// 	// {
+	// 	// 	OnStructureInteractionEnd.Execute(this);
+	// 	// }
+	// }
 }
 #pragma endregion
 

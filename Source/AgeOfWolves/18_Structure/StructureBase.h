@@ -25,6 +25,7 @@ class UStaticMeshComponent;
 #pragma region Delegates
 DECLARE_DELEGATE_OneParam(FOnInteractionBegin, AStructureBase*);
 DECLARE_DELEGATE_OneParam(FOnInteractionEnd, AStructureBase*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnInteractionTriggered, AStructureBase*);
 #pragma endregion
 
 /**
@@ -89,8 +90,13 @@ public:
 //@Delegates
 #pragma region Delegates
 public:
-	FOnInteractionBegin OnStructureInteractionBegin; //상호작용 시작 (닿을 시작시)
-	FOnInteractionEnd OnStructureInteractionEnd; //상호작용 종료 (닿고나서 이탈시) 
+	FOnInteractionTriggered OnStructureInteractionTriggered; //상호작용 발동시
+
+	UFUNCTION(BlueprintCallable, Category="Interaction")
+	void BP_OnStructureInteractionTriggered()
+	{
+		OnStructureInteractionTriggered.Broadcast(this);
+	}
 #pragma endregion
 
 //@Callbacks
