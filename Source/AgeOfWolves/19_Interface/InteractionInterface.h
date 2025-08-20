@@ -8,7 +8,7 @@
 #include "InteractionInterface.generated.h"
 
 // This class does not need to be modified.
-UINTERFACE(MinimalAPI)
+UINTERFACE(BlueprintType,NotBlueprintable)
 class UInteractionInterface : public UInterface
 {
 	GENERATED_BODY()
@@ -22,6 +22,10 @@ class AGEOFWOLVES_API IInteractionInterface
 	GENERATED_BODY()
 
 public:
+
+	UFUNCTION(BlueprintCallable, Category="Interaction")
+	virtual void PerformInteraction() = 0;
+	
 	virtual FGameplayTag GetObjectTag() = 0;
 };
 

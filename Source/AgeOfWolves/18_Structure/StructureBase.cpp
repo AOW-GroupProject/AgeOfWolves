@@ -34,15 +34,32 @@ void AStructureBase::BeginPlay()
 #pragma endregion
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+
+void AStructureBase::PerformInteraction()
+{
+	//이펙트및 효과 노출
+	//..
+
+	
+	//상호작용 콜백 호출
+	OnStructureInteractionTriggered.Broadcast(this);
+}
+
 #pragma endregion
 //@Callbacks
 #pragma region Callbacks
+
+
 void AStructureBase::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor, UPrimitiveComponent* OtherComp, int32 OtherBodyIndex, bool bFromSweep, const FHitResult& SweepResult)
 {
 	// // 액터 유효성 검사
 	// if (!IsValid(OtherActor))
 	// {
 	// 	return;
+	// 	UE_LOGFMT(LogStructure, Warning, "구조물 {0} OnOverlapBegin 플레이어 감지됨 , OtherActor : {1}", *this->GetName(), *OtherActor->GetName());
+	//
+	// 	// if (OnStructureInteractionBegin.IsBound())
+	// 	// {
 	// }
 	// UE_LOGFMT(LogStructure, Warning, "구조물 {0} OnOverlapBegin 발동 , OtherActor : {1}", *this->GetName(), *OtherActor->GetName());
 	//
@@ -51,10 +68,6 @@ void AStructureBase::OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor*
 	// if (Player)
 	// {
 	// 	//@플레이어 확인, 감지됨
-	// 	UE_LOGFMT(LogStructure, Warning, "구조물 {0} OnOverlapBegin 플레이어 감지됨 , OtherActor : {1}", *this->GetName(), *OtherActor->GetName());
-	//
-	// 	// if (OnStructureInteractionBegin.IsBound())
-	// 	// {
 	// 	// 	OnStructureInteractionBegin.Execute(this);
 	// 	// }
 	// }

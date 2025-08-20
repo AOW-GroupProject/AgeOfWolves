@@ -81,6 +81,10 @@ public:
 
 
 public:
+
+	//@ 상호작용 실행
+	virtual void PerformInteraction() override;
+	
 	virtual FGameplayTag GetObjectTag() override
 	{
 		return StructureTag;
@@ -91,12 +95,6 @@ public:
 #pragma region Delegates
 public:
 	FOnInteractionTriggered OnStructureInteractionTriggered; //상호작용 발동시
-
-	UFUNCTION(BlueprintCallable, Category="Interaction")
-	void BP_OnStructureInteractionTriggered()
-	{
-		OnStructureInteractionTriggered.Broadcast(this);
-	}
 #pragma endregion
 
 //@Callbacks
