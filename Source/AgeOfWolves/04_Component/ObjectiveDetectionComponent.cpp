@@ -100,7 +100,7 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
     //@ 일정 간격으로 구조물 감지 체크
     if (CurrentTime - LastExecutionStructureCheckTime >= ExecutionStructureCheckInterval)
     {
-        UpdateExecutionDetectionStructure();
+        UpdateDetectionStructure();
         LastExecutionStructureCheckTime = CurrentTime;
     }
 }
@@ -828,7 +828,7 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
     }
 }
 
-void UObjectiveDetectionComponent::UpdateExecutionDetectionStructure()
+void UObjectiveDetectionComponent::UpdateDetectionStructure()
 {
     FVector OwnerLocation;
     if (const APlayerController* PC = Cast<APlayerController>(GetOwner()))

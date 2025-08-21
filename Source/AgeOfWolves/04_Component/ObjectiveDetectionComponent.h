@@ -198,7 +198,7 @@ protected:
 
 protected:
     //@구조물 감지 체크 업데이트
-    void UpdateExecutionDetectionStructure();
+    void UpdateDetectionStructure();
 
 protected:
     UPROPERTY()
