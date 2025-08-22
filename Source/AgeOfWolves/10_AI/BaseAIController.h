@@ -367,7 +367,7 @@ protected:
 
 	//@AI 유형
 	UPROPERTY(VisibleAnywhere, Category = "AI | AI 상태")
-	EAIState AIState;
+		EAIState AIState;
 	
 
 	//@AI가 속한 그룹 ID
