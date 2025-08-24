@@ -253,6 +253,174 @@ public:
 };
 
 /**
+ * @FAISimplifiedPersonality
+ * 2가지 핵심 성향으로 간소화된 AI 성격 시스템
+ */
+USTRUCT(BlueprintType)
+struct FAISimplifiedPersonality
+{
+    GENERATED_BODY()
+
+public:
+    FAISimplifiedPersonality()
+        : Aggressiveness(50.0f)
+        , Agility(50.0f)
+    {
+    }
+
+public:
+    //@공격성: Skills 계열 행동에 주로 영향
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "간소화된 AI 성향",
+        meta = (ClampMin = "0", ClampMax = "100", UIMin = "0", UIMax = "100",
+            ToolTip = "공격적인 행동의 선호도에 영향을 줍니다"))
+    float Aggressiveness;
+
+    //@기민함: StrafeOrDodge 계열 행동에 주로 영향  
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "간소화된 AI 성향",
+        meta = (ClampMin = "0", ClampMax = "100", UIMin = "0", UIMax = "100",
+            ToolTip = "회피 및 기동성 행동의 선호도에 영향을 줍니다"))
+    float Agility;
+
+public:
+    //@특정 행동 카테고리에 대한 초기 선호도 계산
+    float GetInitialActionPreference(const FGameplayTag& ActionCategory) const
+    {
+        if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills"))))
+        {
+            return (Aggressiveness + Agility) * 0.5f; // 균등 가중치
+        }
+        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills"))))
+        {
+            return Aggressiveness * 0.8f + Agility * 0.2f; // 공격성 위주
+        }
+        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge"))))
+        {
+            return Agility * 0.8f + Aggressiveness * 0.2f; // 기민함 위주
+        }
+        return 50.0f; // 기본값
+    }
+};
+
+/**
+ * @FAIRewardCalculator
+ * 3가지 보상 요소의 정규화 가중합 계산 및 학습률 관리
+ */
+USTRUCT(BlueprintType)
+struct FAIRewardCalculator
+{
+    GENERATED_BODY()
+
+public:
+    FAIRewardCalculator()
+        : DamageWeight(1.0f)
+        , DistanceWeight(0.7f)
+        , SuccessWeight(0.8f)
+        , BaseLearningRate(0.08f)
+        , LearningDecayFactor(0.95f)
+        , OptimalCombatDistance(300.0f)
+    {
+    }
+
+public:
+    //@데미지 받음에 대한 가중치 (음의 보상)
+    UPROPERTY(EditAnywhere, Category = "보상 가중치",
+        meta = (ClampMin = "0.1", ClampMax = "2.0", ToolTip = "받은 데미지에 대한 패널티 가중치"))
+    float DamageWeight;
+
+    //@거리 유지에 대한 가중치
+    UPROPERTY(EditAnywhere, Category = "보상 가중치",
+        meta = (ClampMin = "0.1", ClampMax = "2.0", ToolTip = "최적 거리 유지에 대한 보상 가중치"))
+    float DistanceWeight;
+
+    //@어빌리티 성공에 대한 가중치
+    UPROPERTY(EditAnywhere, Category = "보상 가중치",
+        meta = (ClampMin = "0.1", ClampMax = "2.0", ToolTip = "어빌리티 성공에 대한 보상 가중치"))
+    float SuccessWeight;
+
+    //@기본 학습률
+    UPROPERTY(EditAnywhere, Category = "학습 파라미터",
+        meta = (ClampMin = "0.01", ClampMax = "0.5", ToolTip = "초기 학습률"))
+    float BaseLearningRate;
+
+    //@학습률 감쇠 팩터
+    UPROPERTY(EditAnywhere, Category = "학습 파라미터",
+        meta = (ClampMin = "0.8", ClampMax = "0.99", ToolTip = "시간에 따른 학습률 감소율"))
+    float LearningDecayFactor;
+
+    //@최적 전투 거리
+    UPROPERTY(EditAnywhere, Category = "전투 파라미터",
+        meta = (ClampMin = "100.0", ClampMax = "1000.0", ToolTip = "AI가 선호하는 적과의 거리"))
+    float OptimalCombatDistance;
+
+public:
+    //@정규화된 가중합 보상 계산
+    float CalculateNormalizedReward(float DamageReceived, float CurrentDistance, bool bAbilitySuccess) const
+    {
+        // 1. 데미지 보상 정규화 (0-100 데미지 → 0~-1)
+        float NormalizedDamage = -FMath::Clamp(DamageReceived / 100.0f, 0.0f, 1.0f);
+
+        // 2. 거리 보상 정규화 (최적거리와의 차이 → -1~1)
+        float DistanceDiff = FMath::Abs(CurrentDistance - OptimalCombatDistance);
+        float MaxAcceptableDistance = OptimalCombatDistance * 2.0f;
+        float NormalizedDistance = FMath::Max(0.0f, 1.0f - (DistanceDiff / MaxAcceptableDistance));
+
+        // 3. 성공 보상 (이진값)
+        float NormalizedSuccess = bAbilitySuccess ? 1.0f : -1.0f;
+
+        // 가중합 계산 및 정규화
+        float TotalWeight = DamageWeight + DistanceWeight + SuccessWeight;
+        float WeightedSum = (NormalizedDamage * DamageWeight) +
+            (NormalizedDistance * DistanceWeight) +
+            (NormalizedSuccess * SuccessWeight);
+
+        return FMath::Clamp(WeightedSum / TotalWeight, -1.0f, 1.0f);
+    }
+
+    //@적응적 학습률 계산
+    float CalculateAdaptiveLearningRate(int32 LearningCount) const
+    {
+        float AdaptiveRate = BaseLearningRate * FMath::Pow(LearningDecayFactor, LearningCount / 10.0f);
+        return FMath::Clamp(AdaptiveRate, 0.01f, 0.15f); // 최소/최대 학습률 제한
+    }
+};
+
+/**
+ * @FAIAdaptiveBehaviorConfig
+ * 적응형 행동 시스템의 설정 정보 (에디터에서 설정)
+ */
+USTRUCT(BlueprintType)
+struct FAIAdaptiveBehaviorConfig
+{
+    GENERATED_BODY()
+
+public:
+    FAIAdaptiveBehaviorConfig()
+        : bEnableAdaptiveLearning(false)
+        , SimplifiedPersonality()
+        , RewardCalculator()
+    {
+    }
+
+public:
+    //@적응형 학습 시스템 활성화 여부
+    UPROPERTY(EditAnywhere, Category = "적응형 시스템 활성화",
+        meta = (ToolTip = "체크하면 이 AI가 플레이어 패턴에 적응하여 학습합니다"))
+    bool bEnableAdaptiveLearning;
+
+    //@간소화된 성향 시스템 (적응형 시스템 활성화 시 사용)
+    UPROPERTY(EditAnywhere, Category = "적응형 성향",
+        meta = (EditCondition = "bEnableAdaptiveLearning",
+            ToolTip = "기존 4가지 성향을 2가지로 간소화한 시스템"))
+    FAISimplifiedPersonality SimplifiedPersonality;
+
+    //@보상 계산 시스템
+    UPROPERTY(EditAnywhere, Category = "적응형 보상 시스템",
+        meta = (EditCondition = "bEnableAdaptiveLearning",
+            ToolTip = "AI가 행동 결과를 어떻게 평가할지 결정"))
+    FAIRewardCalculator RewardCalculator;
+};
+
+/**
  * @FAIDataSet
  * AI의 기본 정보와 행동 패턴 설정
  */
@@ -277,6 +445,11 @@ public:
     //@AI 성향 특성
     UPROPERTY(EditDefaultsOnly, Category = "AI 성향 설정")
     FAIPersonalityTraits PersonalityTraits;
+
+    //@적응형 행동 시스템 설정 (실험적 기능)
+    UPROPERTY(EditDefaultsOnly, Category = "AI 적응형 시스템 (실험적)",
+        meta = (ToolTip = "새로운 적응형 학습 시스템 설정"))
+    FAIAdaptiveBehaviorConfig AdaptiveBehaviorConfig;
 };
 
 /**
@@ -337,13 +510,13 @@ public:
 UCLASS()
 class AGEOFWOLVES_API UAIDataSetInfos : public UPrimaryDataAsset
 {
-    //@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 #pragma endregion
 
     GENERATED_BODY()
 
-    //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UAIDataSetInfos(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
@@ -359,7 +532,7 @@ public:
 #endif
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
     UPROPERTY(EditDefaultsOnly, Category = "AI 정보 목록")
@@ -434,7 +607,7 @@ public:
 
 #endif
 
-    //@Delegates
+//@Delegates
 #pragma region Delegates
 #pragma endregion
 
@@ -479,6 +652,43 @@ public:
     bool HasAIType(EAIType AIType) const
     {
         return FindAIDataSetByType(AIType) != nullptr;
+    }
+
+
+    //@기존 PersonalityTraits를 새 시스템으로 변환
+    UFUNCTION(BlueprintCallable, Category = "AI 적응형 시스템")
+    FAISimplifiedPersonality ConvertLegacyPersonalityToSimplified(EAIType AIType) const
+    {
+        const FAIDataSet* DataSet = FindAIDataSetByType(AIType);
+        if (!DataSet)
+        {
+            return FAISimplifiedPersonality();
+        }
+
+        FAISimplifiedPersonality SimplifiedPersonality;
+        const FAIPersonalityTraits& Legacy = DataSet->PersonalityTraits;
+
+        // 4가지를 2가지로 변환
+        SimplifiedPersonality.Aggressiveness = (Legacy.Aggressiveness + Legacy.Proactiveness) * 0.5f;
+        SimplifiedPersonality.Agility = (Legacy.Agility + Legacy.Methodicalness) * 0.5f;
+
+        return SimplifiedPersonality;
+    }
+
+    //@적응형 시스템이 활성화되어 있는지 확인
+    UFUNCTION(BlueprintCallable, Category = "AI 적응형 시스템")
+    bool IsAdaptiveSystemEnabled(EAIType AIType) const
+    {
+        const FAIDataSet* DataSet = FindAIDataSetByType(AIType);
+        return DataSet && DataSet->AdaptiveBehaviorConfig.bEnableAdaptiveLearning;
+    }
+
+    //@특정 AI의 적응형 설정 가져오기
+    UFUNCTION(BlueprintCallable, Category = "AI 적응형 시스템")
+    FAIAdaptiveBehaviorConfig GetAdaptiveBehaviorConfig(EAIType AIType) const
+    {
+        const FAIDataSet* DataSet = FindAIDataSetByType(AIType);
+        return DataSet ? DataSet->AdaptiveBehaviorConfig : FAIAdaptiveBehaviorConfig();
     }
 #pragma endregion
 
