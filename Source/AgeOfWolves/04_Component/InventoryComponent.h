@@ -124,6 +124,7 @@ private:
 	void ExternalBindToUIComponent(const AController* Controller);
 	void ExternalBindToInputComponent(const AController* Controller);
 	void ExternalBindToInventoryUI();
+	void ExternalBindToGameState();
 
 private:
 	//@내부 바인딩
@@ -232,6 +233,11 @@ protected:
 	//@UI 입력 태그 활성화 이벤트 구독
 	UFUNCTION()
 		void OnUIInputTriggered(const FGameplayTag& InputTag);
+
+protected:
+	//@GameState의 Quest 완료 알림에 따른 아이템 요청
+	UFUNCTION()
+	void OnQuestCompleted(const FQuestDataInfo& AreaQuestData);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

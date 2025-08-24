@@ -11,8 +11,7 @@ DEFINE_LOG_CATEGORY(LogLevelDataInfos)
 #pragma region Default Setting
 ULevelDataInfos::ULevelDataInfos(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
-{
-}
+{}
 
 #if WITH_EDITOR
 void ULevelDataInfos::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -56,20 +55,20 @@ void ULevelDataInfos::PostEditChangeChainProperty(FPropertyChangedChainEvent& Pr
 
 FLevelValidationResult ULevelDataInfos::ValidateLevelData() const
 {
-    //@1단계: 기본 설정 검증
-    FLevelValidationResult Result = ValidateBasicSettings();
+    //@1단계: 레벨 타입 검증
+    FLevelValidationResult Result = ValidateLevelTypes();
     if (!Result.bIsValid) return Result;
 
-    //@2단계: 레벨 ID 검증
-    Result = ValidateLevelIDs();
+    //@2단계: 기본 설정 검증
+    Result = ValidateBasicSettings();
     if (!Result.bIsValid) return Result;
 
-    //@3단계: 레벨 이름 검증
+    //@3단계: 레벨 태그 검증 (기존 ID 검증 대체)
+    Result = ValidateLevelTags();
+    if (!Result.bIsValid) return Result;
+
+    //@4단계: 레벨 이름 검증
     Result = ValidateLevelNames();
-    if (!Result.bIsValid) return Result;
-
-    //@4단계: 레벨 타입 검증
-    Result = ValidateLevelTypes();
     if (!Result.bIsValid) return Result;
 
     //@5단계: 레벨 에셋 검증
@@ -79,6 +78,10 @@ FLevelValidationResult ULevelDataInfos::ValidateLevelData() const
     //@6단계: 논리적 일관성 검증
     Result = ValidateLogicalConsistency();
     if (!Result.bIsValid) return Result;
+
+    //@7단계: PlayerStart 태그 검증 - 추후에 진행
+    //Result = ValidatePlayerStartTags();
+    //if (!Result.bIsValid) return Result;
 
     return FLevelValidationResult(); //@모든 검증 통과
 }
@@ -104,36 +107,71 @@ FLevelValidationResult ULevelDataInfos::ValidateBasicSettings() const
     return FLevelValidationResult();
 }
 
-FLevelValidationResult ULevelDataInfos::ValidateLevelIDs() const
+FLevelValidationResult ULevelDataInfos::ValidateLevelTags() const
 {
-    TSet<FGuid> UsedLevelIDs;
+    TSet<FGameplayTag> UsedLevelTags;
 
     for (int32 LevelIndex = 0; LevelIndex < LevelDataList.Num(); ++LevelIndex)
     {
         const FLevelData& LevelData = LevelDataList[LevelIndex];
 
-        //@유효하지 않은 GUID 검사
-        if (!LevelData.LevelID.IsValid())
+        //@유효하지 않은 태그 검사
+        if (!LevelData.LevelTag.IsValid())
         {
             return FLevelValidationResult(
-                ELevelValidationError::InvalidLevelID,
-                FString::Printf(TEXT("유효하지 않은 레벨 ID입니다 (인덱스: %d)"), LevelIndex),
+                ELevelValidationError::InvalidLevelTag,
+                FString::Printf(TEXT("유효하지 않은 레벨 태그입니다 (인덱스: %d)"), LevelIndex),
                 LevelIndex
             );
         }
 
-        //@중복 GUID 검사
-        if (UsedLevelIDs.Contains(LevelData.LevelID))
+        //@중복 태그 검사
+        if (UsedLevelTags.Contains(LevelData.LevelTag))
         {
             return FLevelValidationResult(
-                ELevelValidationError::DuplicateLevelID,
-                FString::Printf(TEXT("중복된 레벨 ID 발견: %s (인덱스: %d)"),
-                    *LevelData.LevelID.ToString(), LevelIndex),
+                ELevelValidationError::DuplicateLevelTag,
+                FString::Printf(TEXT("중복된 레벨 태그 발견: %s (인덱스: %d)"),
+                    *LevelData.LevelTag.ToString(), LevelIndex),
                 LevelIndex
             );
         }
 
-        UsedLevelIDs.Add(LevelData.LevelID);
+        //@태그와 카테고리 일치성 검사
+        FString ExpectedPrefix;
+        switch (LevelData.LevelCategory)
+        {
+        case ELevelType::World:
+            ExpectedPrefix = TEXT("Level.World");
+            break;
+        case ELevelType::BossArena:
+            ExpectedPrefix = TEXT("Level.BossArena");
+            break;
+        case ELevelType::Title:
+            ExpectedPrefix = TEXT("Level.Title");
+            break;
+        case ELevelType::Test:
+            ExpectedPrefix = TEXT("Level.Test");
+            break;
+        default:
+            return FLevelValidationResult(
+                ELevelValidationError::InvalidLevelType,
+                FString::Printf(TEXT("지원하지 않는 레벨 타입입니다 (인덱스: %d)"), LevelIndex),
+                LevelIndex
+            );
+        }
+
+        FString TagString = LevelData.LevelTag.ToString();
+        if (!TagString.StartsWith(ExpectedPrefix))
+        {
+            return FLevelValidationResult(
+                ELevelValidationError::MismatchedTagCategory,
+                FString::Printf(TEXT("레벨 태그가 카테고리와 일치하지 않습니다. 예상: %s.*, 실제: %s (인덱스: %d)"),
+                    *ExpectedPrefix, *TagString, LevelIndex),
+                LevelIndex
+            );
+        }
+
+        UsedLevelTags.Add(LevelData.LevelTag);
     }
 
     return FLevelValidationResult();
@@ -257,9 +295,17 @@ FLevelValidationResult ULevelDataInfos::ValidateLevelAssets() const
 
 FLevelValidationResult ULevelDataInfos::ValidateLogicalConsistency() const
 {
+    int32 DefaultLevelCount = 0;
+
     for (int32 LevelIndex = 0; LevelIndex < LevelDataList.Num(); ++LevelIndex)
     {
         const FLevelData& LevelData = LevelDataList[LevelIndex];
+
+        //@기본 레벨 개수 카운트
+        if (LevelData.bIsDefaultLevel && LevelData.bIsEnabled)
+        {
+            DefaultLevelCount++;
+        }
 
         //@비활성화된 필수 레벨 검사
         if (!LevelData.bIsEnabled && LevelData.LevelCategory == ELevelType::Title)
@@ -284,6 +330,15 @@ FLevelValidationResult ULevelDataInfos::ValidateLogicalConsistency() const
         }
     }
 
+    //@기본 레벨이 복수로 지정되었는지 확인
+    if (DefaultLevelCount > 1)
+    {
+        return FLevelValidationResult(
+            ELevelValidationError::MultipleDefaultLevels,
+            FString::Printf(TEXT("기본 레벨이 %d개 설정되어 있습니다. 하나만 설정해야 합니다."), DefaultLevelCount)
+        );
+    }
+
     //@타입별 레벨 분포 검사
     TMap<ELevelType, int32> TypeCounts;
     for (const FLevelData& LevelData : LevelDataList)
@@ -300,6 +355,37 @@ FLevelValidationResult ULevelDataInfos::ValidateLogicalConsistency() const
         UE_LOGFMT(LogLevelDataInfos, Warning,
             "보스 아레나 레벨이 많습니다 ({0}개). 메모리 사용량을 확인하세요.",
             TypeCounts.FindRef(ELevelType::BossArena));
+    }
+
+    return FLevelValidationResult();
+}
+
+FLevelValidationResult ULevelDataInfos::ValidatePlayerStartTags() const
+{
+    for (int32 LevelIndex = 0; LevelIndex < LevelDataList.Num(); ++LevelIndex)
+    {
+        const FLevelData& LevelData = LevelDataList[LevelIndex];
+
+        //@활성화된 레벨은 기본 PlayerStart 태그가 필요
+        if (LevelData.bIsEnabled && !LevelData.DefaultPlayerStartTag.IsValid())
+        {
+            return FLevelValidationResult(
+                ELevelValidationError::InvalidPlayerStartTag,
+                FString::Printf(TEXT("활성화된 레벨에 기본 PlayerStart 태그가 설정되지 않음 (인덱스: %d)"), LevelIndex),
+                LevelIndex
+            );
+        }
+
+        //@기본 태그가 사용 가능한 태그 목록에 포함되어야 함
+        if (LevelData.DefaultPlayerStartTag.IsValid() &&
+            !LevelData.AvailablePlayerStartTags.Contains(LevelData.DefaultPlayerStartTag))
+        {
+            return FLevelValidationResult(
+                ELevelValidationError::MissingPlayerStartTags,
+                FString::Printf(TEXT("기본 PlayerStart 태그가 사용 가능한 태그 목록에 없음 (인덱스: %d)"), LevelIndex),
+                LevelIndex
+            );
+        }
     }
 
     return FLevelValidationResult();
@@ -322,34 +408,162 @@ bool ULevelDataInfos::TryAutoFixValidationError(const FLevelValidationResult& Va
 {
     switch (ValidationResult.ErrorType)
     {
-    case ELevelValidationError::InvalidLevelID:
+    case ELevelValidationError::InvalidLevelTag:
     {
-        //@유효하지 않은 GUID를 새로운 GUID로 교체
+        //@유효하지 않은 태그를 카테고리에 맞는 기본 태그로 교체
         if (ValidationResult.ProblemLevelIndex >= 0 && ValidationResult.ProblemLevelIndex < LevelDataList.Num())
         {
             FLevelData& LevelData = const_cast<FLevelData&>(LevelDataList[ValidationResult.ProblemLevelIndex]);
-            FGuid OldID = LevelData.LevelID;
-            LevelData.LevelID = FGuid::NewGuid();
+
+            // 카테고리에 따른 기본 태그 생성
+            FString NewTagString;
+            switch (LevelData.LevelCategory)
+            {
+            case ELevelType::World:
+                NewTagString = FString::Printf(TEXT("Level.World.DefaultLevel_%d"), ValidationResult.ProblemLevelIndex);
+                break;
+            case ELevelType::BossArena:
+                NewTagString = FString::Printf(TEXT("Level.BossArena.DefaultArena_%d"), ValidationResult.ProblemLevelIndex);
+                break;
+            case ELevelType::Title:
+                NewTagString = FString::Printf(TEXT("Level.Title.DefaultTitle_%d"), ValidationResult.ProblemLevelIndex);
+                break;
+            default:
+                NewTagString = FString::Printf(TEXT("Level.World.DefaultLevel_%d"), ValidationResult.ProblemLevelIndex);
+                break;
+            }
+
+            LevelData.LevelTag = FGameplayTag::RequestGameplayTag(FName(*NewTagString));
 
             UE_LOGFMT(LogLevelDataInfos, Log,
-                "자동 수정: 유효하지 않은 레벨 ID를 새로운 ID로 교체했습니다 (인덱스: {0})",
-                ValidationResult.ProblemLevelIndex);
+                "자동 수정: 유효하지 않은 레벨 태그를 새로운 태그로 교체했습니다 (인덱스: {0}, 새 태그: {1})",
+                ValidationResult.ProblemLevelIndex, *NewTagString);
             return true;
         }
         break;
     }
 
-    case ELevelValidationError::DuplicateLevelID:
+    case ELevelValidationError::DuplicateLevelTag:
     {
-        //@중복된 GUID를 새로운 GUID로 교체
+        //@중복된 태그를 고유한 태그로 교체
         if (ValidationResult.ProblemLevelIndex >= 0 && ValidationResult.ProblemLevelIndex < LevelDataList.Num())
         {
             FLevelData& LevelData = const_cast<FLevelData&>(LevelDataList[ValidationResult.ProblemLevelIndex]);
-            LevelData.LevelID = FGuid::NewGuid();
+
+            // 기존 태그를 기반으로 고유한 변형 생성
+            FString OriginalTagString = LevelData.LevelTag.ToString();
+            FString NewTagString;
+
+            // 이미 숫자 접미사가 있는지 확인
+            int32 UnderscoreIndex = OriginalTagString.Find(TEXT("_"), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+            if (UnderscoreIndex != INDEX_NONE)
+            {
+                // 기존 접미사를 제거하고 새로운 번호 추가
+                FString BaseTag = OriginalTagString.Left(UnderscoreIndex);
+                NewTagString = FString::Printf(TEXT("%s_%d"), *BaseTag, ValidationResult.ProblemLevelIndex);
+            }
+            else
+            {
+                // 접미사가 없다면 추가
+                NewTagString = FString::Printf(TEXT("%s_%d"), *OriginalTagString, ValidationResult.ProblemLevelIndex);
+            }
+
+            LevelData.LevelTag = FGameplayTag::RequestGameplayTag(FName(*NewTagString));
 
             UE_LOGFMT(LogLevelDataInfos, Log,
-                "자동 수정: 중복된 레벨 ID를 새로운 ID로 교체했습니다 (인덱스: {0})",
-                ValidationResult.ProblemLevelIndex);
+                "자동 수정: 중복된 레벨 태그를 고유한 태그로 교체했습니다 (인덱스: {0}, 새 태그: {1})",
+                ValidationResult.ProblemLevelIndex, *NewTagString);
+            return true;
+        }
+        break;
+    }
+
+    case ELevelValidationError::MismatchedTagCategory:
+    {
+        //@태그와 카테고리가 일치하지 않는 경우 태그를 카테고리에 맞게 수정
+        if (ValidationResult.ProblemLevelIndex >= 0 && ValidationResult.ProblemLevelIndex < LevelDataList.Num())
+        {
+            FLevelData& LevelData = const_cast<FLevelData&>(LevelDataList[ValidationResult.ProblemLevelIndex]);
+
+            FString OldTagString = LevelData.LevelTag.ToString();
+            FString NewTagString;
+
+            // 기존 태그에서 Level. 이후 부분을 추출
+            FString TagSuffix;
+            int32 DotIndex = OldTagString.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromStart);
+            if (DotIndex != INDEX_NONE)
+            {
+                int32 SecondDotIndex = OldTagString.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromStart, DotIndex + 1);
+                if (SecondDotIndex != INDEX_NONE)
+                {
+                    // Level.Category. 이후 부분을 보존
+                    TagSuffix = OldTagString.Mid(SecondDotIndex + 1);
+                }
+            }
+
+            // 태그 접미사가 없으면 기본값 사용
+            if (TagSuffix.IsEmpty())
+            {
+                TagSuffix = FString::Printf(TEXT("CorrectedLevel_%d"), ValidationResult.ProblemLevelIndex);
+            }
+
+            // 카테고리에 맞는 올바른 접두사로 교체
+            switch (LevelData.LevelCategory)
+            {
+            case ELevelType::World:
+                NewTagString = FString::Printf(TEXT("Level.World.%s"), *TagSuffix);
+                break;
+            case ELevelType::BossArena:
+                NewTagString = FString::Printf(TEXT("Level.BossArena.%s"), *TagSuffix);
+                break;
+            case ELevelType::Title:
+                NewTagString = FString::Printf(TEXT("Level.Title.%s"), *TagSuffix);
+                break;
+            default:
+                NewTagString = FString::Printf(TEXT("Level.World.%s"), *TagSuffix);
+                break;
+            }
+
+            LevelData.LevelTag = FGameplayTag::RequestGameplayTag(FName(*NewTagString));
+
+            UE_LOGFMT(LogLevelDataInfos, Log,
+                "자동 수정: 태그를 카테고리에 맞게 수정했습니다 (인덱스: {0}, 이전: {1}, 새 태그: {2})",
+                ValidationResult.ProblemLevelIndex, *OldTagString, *NewTagString);
+            return true;
+        }
+        break;
+    }
+
+    case ELevelValidationError::MultipleDefaultLevels:
+    {
+        //@복수의 기본 레벨이 설정된 경우, 첫 번째를 제외하고 모두 해제
+        int32 DefaultLevelFoundCount = 0;
+
+        for (int32 LevelIndex = 0; LevelIndex < LevelDataList.Num(); ++LevelIndex)
+        {
+            FLevelData& LevelData = const_cast<FLevelData&>(LevelDataList[LevelIndex]);
+
+            if (LevelData.bIsDefaultLevel && LevelData.bIsEnabled)
+            {
+                DefaultLevelFoundCount++;
+
+                if (DefaultLevelFoundCount > 1)
+                {
+                    // 첫 번째 기본 레벨을 제외하고 모두 해제
+                    LevelData.bIsDefaultLevel = false;
+
+                    UE_LOGFMT(LogLevelDataInfos, Log,
+                        "자동 수정: 중복된 기본 레벨 플래그를 해제했습니다 (인덱스: {0}, 이름: {1})",
+                        LevelIndex, *LevelData.LevelName.ToString());
+                }
+            }
+        }
+
+        if (DefaultLevelFoundCount > 1)
+        {
+            UE_LOGFMT(LogLevelDataInfos, Log,
+                "자동 수정 완료: {0}개의 중복 기본 레벨 플래그를 해제했습니다",
+                DefaultLevelFoundCount - 1);
             return true;
         }
         break;
@@ -357,15 +571,38 @@ bool ULevelDataInfos::TryAutoFixValidationError(const FLevelValidationResult& Va
 
     case ELevelValidationError::EmptyLevelName:
     {
-        //@비어있는 이름을 기본 이름으로 교체
+        //@비어있는 이름을 태그 기반 기본 이름으로 교체
         if (ValidationResult.ProblemLevelIndex >= 0 && ValidationResult.ProblemLevelIndex < LevelDataList.Num())
         {
             FLevelData& LevelData = const_cast<FLevelData&>(LevelDataList[ValidationResult.ProblemLevelIndex]);
-            LevelData.LevelName = FText::FromString(FString::Printf(TEXT("Level_%d"), ValidationResult.ProblemLevelIndex));
+
+            // 태그에서 의미 있는 이름 추출 시도
+            FString NewLevelName;
+            if (LevelData.LevelTag.IsValid())
+            {
+                FString TagString = LevelData.LevelTag.ToString();
+                int32 LastDotIndex = TagString.Find(TEXT("."), ESearchCase::IgnoreCase, ESearchDir::FromEnd);
+                if (LastDotIndex != INDEX_NONE)
+                {
+                    NewLevelName = TagString.Mid(LastDotIndex + 1);
+                    // 언더스코어를 공백으로 변경하여 더 읽기 쉽게 만듦
+                    NewLevelName = NewLevelName.Replace(TEXT("_"), TEXT(" "));
+                }
+                else
+                {
+                    NewLevelName = TagString;
+                }
+            }
+            else
+            {
+                NewLevelName = FString::Printf(TEXT("Level %d"), ValidationResult.ProblemLevelIndex);
+            }
+
+            LevelData.LevelName = FText::FromString(NewLevelName);
 
             UE_LOGFMT(LogLevelDataInfos, Log,
-                "자동 수정: 비어있는 레벨 이름을 기본 이름으로 설정했습니다 (인덱스: {0})",
-                ValidationResult.ProblemLevelIndex);
+                "자동 수정: 비어있는 레벨 이름을 태그 기반 이름으로 설정했습니다 (인덱스: {0}, 새 이름: {1})",
+                ValidationResult.ProblemLevelIndex, *NewLevelName);
             return true;
         }
         break;
@@ -373,15 +610,21 @@ bool ULevelDataInfos::TryAutoFixValidationError(const FLevelValidationResult& Va
 
     case ELevelValidationError::InvalidLevelType:
     {
-        //@유효하지 않은 레벨 타입을 World로 설정
+        //@유효하지 않은 레벨 타입을 World로 설정하고 태그도 함께 수정
         if (ValidationResult.ProblemLevelIndex >= 0 && ValidationResult.ProblemLevelIndex < LevelDataList.Num())
         {
             FLevelData& LevelData = const_cast<FLevelData&>(LevelDataList[ValidationResult.ProblemLevelIndex]);
+
+            ELevelType OldCategory = LevelData.LevelCategory;
             LevelData.LevelCategory = ELevelType::World;
 
+            // 태그도 새로운 카테고리에 맞게 수정
+            FString NewTagString = FString::Printf(TEXT("Level.World.CorrectedLevel_%d"), ValidationResult.ProblemLevelIndex);
+            LevelData.LevelTag = FGameplayTag::RequestGameplayTag(FName(*NewTagString));
+
             UE_LOGFMT(LogLevelDataInfos, Log,
-                "자동 수정: 유효하지 않은 레벨 타입을 World로 설정했습니다 (인덱스: {0})",
-                ValidationResult.ProblemLevelIndex);
+                "자동 수정: 유효하지 않은 레벨 타입을 World로 설정하고 태그를 수정했습니다 (인덱스: {0}, 새 태그: {1})",
+                ValidationResult.ProblemLevelIndex, *NewTagString);
             return true;
         }
         break;
@@ -514,27 +757,6 @@ void ULevelDataInfos::ValidateLevelNamesOnly()
     }
 }
 
-void ULevelDataInfos::GenerateNewLevelIDs()
-{
-    int32 RegeneratedCount = 0;
-
-    for (FLevelData& LevelData : LevelDataList)
-    {
-        if (!LevelData.LevelID.IsValid())
-        {
-            LevelData.LevelID = FGuid::NewGuid();
-            RegeneratedCount++;
-        }
-    }
-
-    UE_LOGFMT(LogLevelDataInfos, Log, "새로운 레벨 ID {0}개를 생성했습니다", RegeneratedCount);
-    if (GEngine)
-    {
-        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green,
-            FString::Printf(TEXT("새로운 레벨 ID %d개를 생성했습니다"), RegeneratedCount));
-    }
-}
-
 void ULevelDataInfos::SortLevelsByType()
 {
     LevelDataList.Sort([](const FLevelData& A, const FLevelData& B)
@@ -561,11 +783,11 @@ void ULevelDataInfos::SortLevelsByType()
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 
-const FLevelData* ULevelDataInfos::FindLevelByID(const FGuid& LevelID) const
+const FLevelData* ULevelDataInfos::FindLevelByTag(const FGameplayTag& LevelTag) const
 {
-    return LevelDataList.FindByPredicate([LevelID](const FLevelData& LevelData)
+    return LevelDataList.FindByPredicate([LevelTag](const FLevelData& LevelData)
         {
-            return LevelData.LevelID == LevelID;
+            return LevelData.LevelTag.MatchesTagExact(LevelTag);
         });
 }
 
@@ -578,9 +800,9 @@ const FLevelData* ULevelDataInfos::FindLevelByName(const FText& LevelName) const
         });
 }
 
-bool ULevelDataInfos::GetLevelByID(const FGuid& LevelID, FLevelData& OutLevelData) const
+bool ULevelDataInfos::GetLevelByTag(const FGameplayTag& LevelTag, FLevelData& OutLevelData) const
 {
-    const FLevelData* FoundLevel = FindLevelByID(LevelID);
+    const FLevelData* FoundLevel = FindLevelByTag(LevelTag);
     if (FoundLevel)
     {
         OutLevelData = *FoundLevel;
@@ -630,10 +852,46 @@ TArray<FLevelData> ULevelDataInfos::GetEnabledLevels() const
     return EnabledLevels;
 }
 
-bool ULevelDataInfos::IsLevelEnabled(const FGuid& LevelID) const
+bool ULevelDataInfos::IsLevelEnabled(const FGameplayTag& LevelTag) const
 {
-    const FLevelData* FoundLevel = FindLevelByID(LevelID);
-    return FoundLevel ? FoundLevel->bIsEnabled : false;
+    // 먼저 태그 자체의 유효성을 검사
+    if (!LevelTag.IsValid())
+    {
+        UE_LOGFMT(LogLevelDataInfos, Warning,
+            "레벨 활성화 상태 확인 실패: 유효하지 않은 레벨 태그입니다");
+        return false;
+    }
+
+    // 태그로 레벨 데이터 검색
+    const FLevelData* FoundLevel = FindLevelByTag(LevelTag);
+
+    if (!FoundLevel)
+    {
+        UE_LOGFMT(LogLevelDataInfos, Warning,
+            "레벨 활성화 상태 확인 실패: 태그 '{0}'에 해당하는 레벨을 찾을 수 없습니다",
+            *LevelTag.ToString());
+        return false;
+    }
+
+    // 디버깅을 위한 상세 로깅 (VeryVerbose 레벨로 성능에 영향 없음)
+    UE_LOGFMT(LogLevelDataInfos, VeryVerbose,
+        "레벨 활성화 상태 확인: 태그 '{0}', 이름 '{1}', 활성화 상태: {2}",
+        *LevelTag.ToString(),
+        *FoundLevel->LevelName.ToString(),
+        FoundLevel->bIsEnabled ? TEXT("활성화") : TEXT("비활성화"));
+
+    return FoundLevel->bIsEnabled;
+}
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
+const FLevelData* ULevelDataInfos::GetDefaultLevel() const
+{
+    return LevelDataList.FindByPredicate([](const FLevelData& LevelData)
+        {
+            return LevelData.bIsDefaultLevel && LevelData.bIsEnabled;
+        });
 }
 
 int32 ULevelDataInfos::GetLevelCountByType(ELevelType LevelType) const
@@ -692,5 +950,4 @@ bool ULevelDataInfos::GetLevelAtIndexBlueprint(int32 Index, FLevelData& OutLevel
     }
     return false;
 }
-
 #pragma endregion

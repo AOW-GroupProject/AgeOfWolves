@@ -160,7 +160,7 @@ class AGEOFWOLVES_API UTeamSettingInfos : public UPrimaryDataAsset
 {
     GENERATED_BODY()
 
-    //@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
     UTeamSettingInfos(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get());
@@ -197,7 +197,7 @@ protected:
 
 #pragma endregion
 
-    //@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
     //@팀 설정 정보 목록
@@ -225,4 +225,5 @@ public:
 #endif
 
 #pragma endregion
+
 };

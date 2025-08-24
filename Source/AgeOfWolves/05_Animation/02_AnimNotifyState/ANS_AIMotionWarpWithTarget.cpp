@@ -95,7 +95,9 @@ void UANS_AIMotionWarpWithTarget::NotifyTick(USkeletalMeshComponent* MeshComp, U
     WarpTarget.Name = WarpTargetName;
 
     WarpTarget.Location = TargetActor->GetActorLocation();
-    WarpTarget.Rotation = AIController->GetControlRotation();
+    // YAW만 적용하도록 수정
+    FRotator ControlRotation = AIController->GetControlRotation();
+    WarpTarget.Rotation = FRotator(0.0f, ControlRotation.Yaw, 0.0f);
 
     //@Warp Target 업데이트
     MotionWarpingComp->AddOrUpdateWarpTarget(WarpTarget);

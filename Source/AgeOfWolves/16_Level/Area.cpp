@@ -8,10 +8,14 @@
 #include "Kismet/KismetSystemLibrary.h"
 #include "DrawDebugHelpers.h"
 
+#include "17_GameMode/AgeOfWolvesGameMode.h"
 #include "10_AI/BaseAIController.h"
 #include "01_Character/CharacterBase.h"
 #include "00_GameInstance/AOWGameInstance.h"
+#include "04_Component/QuestComponent.h"
 #include "14_Subsystem/AreaManagerSubsystem.h"
+#include "17_GameMode/AgeOfWolvesGameMode.h"
+#include "18_Structure/StructureBase.h"
 
 #if WITH_EDITOR
 #include "Framework/Notifications/NotificationManager.h"
@@ -44,19 +48,20 @@ AArea::AArea()
     MAIGroups.Empty();
     MPlayerBindings.Empty();
     LastCleanupTime = 0.0f;
+
+    //@Quest Component
+    QuestComponent = CreateDefaultSubobject<UQuestComponent>(TEXT("QuestComponent"));
 }
 
 void AArea::BeginPlay()
 {
     Super::BeginPlay();
-
     //@Area 초기화
     InitializeArea();
 }
 
 void AArea::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-
     //@플레이어 등록 해제
     UnregisterAllPlayer();
 
@@ -414,17 +419,50 @@ void AArea::UnbindFromAllPlayer()
     UE_LOGFMT(LogArea, Log, "Area {0}: 모든 플레이어 언바인딩 완료", *AreaID.ToString());
 }
 
+void AArea::InternalBindToStructure(TWeakObjectPtr<AActor> StructurePtr)
+{
+    //@Actor가 유효한지 확인
+    AActor* StructActor = StructurePtr.Get();
+    if (!IsValid(StructActor))
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 바인딩 실패 - 유효하지 않은 구조물", *AreaID.ToString());
+        return;
+    }
+
+    //@구조물의 구조물 ID 찾기
+    FGuid StructureID = GetStructureID(StructActor);
+    if (!StructureID.IsValid() || !MStructureBindings.Contains(StructureID))
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 바인딩 실패 - 구조물 {1}이(가) 등록된 구조물에 속해 있지 않음",
+            *AreaID.ToString(), *StructActor->GetName());
+        return;
+    }
+
+    // BaseAIController로 캐스팅
+    AStructureBase* StructureBase = Cast<AStructureBase>(StructActor);
+    if (!StructureBase)
+    {
+        UE_LOGFMT(LogArea, Warning, "Area {0}: 구조물 {1}의 구조물액터 AStructureBase로 캐스팅할 수 없음",
+            *AreaID.ToString(), *StructActor->GetName());
+        return;
+    }
+
+    //@내부 바인딩...
+    StructureBase->OnStructureInteractionBegin.BindUObject(this,&AArea::OnStructureInteractionTriggered);
+    
+}
+
 void AArea::InitializeArea()
 {
-
-
-
     //@콜리전 이벤트 바인딩
     AreaBounds->OnComponentBeginOverlap.AddDynamic(this, &AArea::OnOverlapBegin);
     AreaBounds->OnComponentEndOverlap.AddDynamic(this, &AArea::OnOverlapEnd);
 
     //@영역 내 AI 초기화
     InitializeAreaAIInfos();
+
+    //@영역내 구조물 초기화
+    InitializeStructureInfos();
 
     //@정리 타이머 설정
     GetWorld()->GetTimerManager().SetTimer(
@@ -814,6 +852,90 @@ void AArea::InitializeAreaAIInfos()
     }
 }
 
+void AArea::InitializeStructureInfos()
+{
+    for (auto structureData : RegisteredStructures)
+    {
+        //@StructureId
+        FGuid StructureId = structureData.StructureID.IsValid() ? structureData.StructureID : FGuid::NewGuid();
+
+
+        //@중복 체크
+        if (MStructureBindings.Contains(StructureId))
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 {0}: 유효하지 않은 AI 등록 시도", *StructureId.ToString());
+        }
+
+        //@ Structure Name 글자수 체크
+        FString StructureName = structureData.StructureName.ToString();
+        if (StructureName.Contains(TEXT("\n")) || StructureName.Contains(TEXT("\r")))
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 이름에 개행 문자가 포함되어 있습니다. : {0}", *StructureName);
+        }
+        //@이름 글자 수 제한 체크
+        if (StructureName.Len() > 10)
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 이름은 10자 초과할수 없습니다 : {0}", *StructureName);
+        }
+
+        FString Description = structureData.Description;
+        //@설명 개행 체크
+        if (Description.Contains(TEXT("\n")) || Description.Contains(TEXT("\r")))
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 설명에 개행 문자가 포함되어 있습니다. : {0}", *Description);
+        }
+        //@설명 글자 수 제한 체크
+        if (Description.Len() > 30)
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 설명은 30자 초과할수 없습니다 : {0}", *Description);
+        }
+
+        //@ 구조물 액터 월드에 유효한지 체크
+        if (!IsValid(structureData.GetStructureActor()) || structureData.GetStructureActor()->GetWorld() == nullptr)
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물 액터가 월드에 없거나 유효하지 않습니다.");
+        }
+
+        //@ PlayerStartTags 중복 체크
+        if (!ValidateUniqueStructurePlayerStartTags(RegisteredStructures, structureData))
+        {
+            UE_LOGFMT(LogArea, Warning, "Initialize 구조물의  PlayerStartTags가 중복 될수 없습니다. PlayerStartTags : {0}", structureData.PlayerStartTag.ToString());
+            continue;
+        }
+        
+        //@saveGame 데이터 있다면 StructureId 찾아서 NewStructureData에 copy
+        //..
+        
+        //@FStructureData
+        FStructureData NewStructureData;
+        NewStructureData.StructureID = StructureId;
+        NewStructureData.StructureName = structureData.StructureName;
+        NewStructureData.StructureType = structureData.StructureType;
+        NewStructureData.Description = structureData.Description;
+        NewStructureData.NextLevelTag = structureData.NextLevelTag;
+        NewStructureData.PlayerStartTag = structureData.PlayerStartTag;
+        NewStructureData.bIsDestructible = structureData.bIsDestructible;
+        NewStructureData.bIsMovable = structureData.bIsMovable;
+        NewStructureData.bIsActive = structureData.bIsActive;
+        NewStructureData.StructureActor = structureData.StructureActor;
+
+        //@StructureId 별로  StructureData 맵핑
+        if (!MStructureBindings.Contains(StructureId))
+            MStructureBindings.Add(StructureId, NewStructureData);
+
+        //@구조물 내부에 콜백 바인딩
+        InternalBindToStructure(NewStructureData.StructureActor.Get());
+        
+        //@구조물 활성 처리 한다.
+        if (NewStructureData.StructureActor.Get())
+        {
+            AStructureBase* Structure = Cast<AStructureBase>(NewStructureData.StructureActor.Get());
+            if (Structure)
+                Structure->SetStructureActive(NewStructureData.bIsActive);
+        }
+    }
+}
+
 void AArea::RegisterAI(AActor* AIActor)
 {
     //@AI 
@@ -1075,6 +1197,20 @@ void AArea::UnregisterPlayer(APlayerCharacter* Player)
 
     //@내부 바인딩 해제...
     UnbindFromPlayer(PlayerPtr);
+
+    //@AI들에게 Player Area 이탈 정보 전달 (태그 수정)
+    FSharingInfoWithGroup PlayerExitInfo;
+    PlayerExitInfo.InfoTag = FGameplayTag::RequestGameplayTag("InfoToShare.Simple.PlayerExitArea");
+    PlayerExitInfo.ResultTag = FGameplayTag::RequestGameplayTag("Simple.LostTargetActor");
+    PlayerExitInfo.SharingType = EAISharingInfoType::All;
+    PlayerExitInfo.Priority = 1;
+    PlayerExitInfo.ValidTime = 5.0f;
+    PlayerExitInfo.OptionalObject = Player;
+
+    NotifyGroupToShareInfo.Broadcast(nullptr, PlayerExitInfo);
+
+    UE_LOGFMT(LogArea, Log, "Area {0}: 플레이어 {1} 이탈. AI들에게 알림 전송 및 바인딩 해제 지연 시작",
+        *AreaID.ToString(), *Player->GetName());
 
     //@현재 시간 가져오기
     float CurrentTime = GetWorld()->GetTimeSeconds();
@@ -1375,7 +1511,7 @@ void AArea::OnSendInfoToBelongingGroup(AActor* AI, FSharingInfoWithGroup Sharing
     }
 
     //@상태 태그 유효성 검사
-    if (!SharingInfo.StateTag.IsValid())
+    if (!SharingInfo.InfoTag.IsValid())
     {
         UE_LOGFMT(LogArea, Warning, "Area {0}: 그룹 정보 전달 실패 - 유효하지 않은 상태 태그", *AreaID.ToString());
         return;
@@ -1405,7 +1541,42 @@ void AArea::OnSendInfoToBelongingGroup(AActor* AI, FSharingInfoWithGroup Sharing
     NotifyGroupToShareInfo.Broadcast(AI, SharingInfo);
 
     UE_LOGFMT(LogArea, Log, "Area {0}: AI {1}의 그룹 {2}에 정보 전달 - 상태: {3}, 우선순위: {4}",
-        *AreaID.ToString(), *AI->GetName(), *GroupID.ToString(), *SharingInfo.StateTag.ToString(), SharingInfo.Priority);
+        *AreaID.ToString(), *AI->GetName(), *GroupID.ToString(), *SharingInfo.InfoTag.ToString(), SharingInfo.Priority);
+}
+
+void AArea::OnStructureInteractionTriggered(AStructureBase* TriggeredStucture)
+{
+    if (!TriggeredStucture)
+        return;
+    
+    //@구조물의 구조물 ID 찾기
+    FGuid StructureID = GetStructureID(TriggeredStucture);
+    if (!StructureID.IsValid() || !MStructureBindings.Contains(StructureID))
+    {
+        UE_LOGFMT(LogArea, Warning, "구조물 상호작용 발동, 등록된 구조물찾기 실패, 구조물 {1}이(가) 등록된 구조물에 속해 있지 않음",
+            *AreaID.ToString(), *TriggeredStucture->GetName());
+        return;
+    }
+
+    FStructureData Structure = MStructureBindings[StructureID];
+
+    //게임모드에게 상호작용 전달
+    //..
+    if (auto GameMode = Cast<AAgeOfWolvesGameMode>(GetWorld()->GetAuthGameMode()))
+    {
+        if (IsValid(GameMode))
+        {
+            GameMode->HandleFirstStructureActivation(Structure);
+        }
+    }
+
+    //@  게임모드에게 구조물데이터 전달후, 활성값 true로 전환
+    //@ 최초 상호작요이라면 bIsActive 가 false 임 
+    if (!Structure.bIsActive)
+        Structure.bIsActive = true;
+
+    //@area가 bIsActive 확인해서 구조물 active하기
+    TriggeredStucture->SetStructureActive(Structure.bIsActive);
 }
 #pragma endregion
 
@@ -1460,6 +1631,27 @@ FGuid AArea::GetAIGroupID(AActor* AIActor) const
     return FGuid();
 }
 
+EAIHierarchyType AArea::GetAIHierarchyType(AActor* AIActor) const
+{
+    if (!IsValid(AIActor))
+        return EAIHierarchyType::Regular; 
+    
+    for (const auto& GroupPair : MAIGroups)
+    {
+        const FAIGroupInfo& GroupInfo = GroupPair.Value;
+        
+        for (const FAreaAIInfo& MemberInfo : GroupInfo.GroupMembers)
+        {
+            if (MemberInfo.AIActor.Get() == AIActor)
+            {
+                return MemberInfo.HierarchyType;
+            }
+        }
+    }
+
+    return EAIHierarchyType::Regular; 
+}
+
 TArray<FAIGroupInfo> AArea::GetAllAIGroupsAsArray() const
 {
     TArray<FAIGroupInfo> GroupInfos;
@@ -1494,5 +1686,37 @@ TArray<AActor*> AArea::GetGroupMembers(const FGuid& GroupID) const
     }
 
     return Members;
+}
+
+FGuid AArea::GetStructureID(AActor* StructureActor) const
+{
+    if (!IsValid(StructureActor))
+        return FGuid();
+
+    // 등록된 구조물을 검사
+    for (const auto& GroupPair : MStructureBindings)
+    {
+        auto StructureID = GroupPair.Key;
+        auto Data = GroupPair.Value;
+        if (Data.StructureActor.Get() == StructureActor)
+            return StructureID;
+    }
+
+    return FGuid();
+}
+
+bool AArea::ValidateUniqueStructurePlayerStartTags(const TArray<FStructureData>& RegisteredStructureArry , FStructureData TargetStructData)
+{
+    for (auto Data : RegisteredStructureArry)
+    {
+        if (Data.StructureID == TargetStructData.StructureID)
+            continue;
+
+        //@중복은 유효하지 않음
+        if (Data.PlayerStartTag == TargetStructData.PlayerStartTag)
+            return false;
+    }
+
+    return true;
 }
 #pragma endregion

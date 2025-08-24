@@ -34,9 +34,6 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE(FAttributeSetInitialized);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_ThreeParams(FAnyAttributeValueChanged, FGameplayAttribute, Attribute, float, OldValue, float, NewValue);
 
-DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyPlayerDeathEvent, APlayerStateBase*);
-DECLARE_MULTICAST_DELEGATE_OneParam(FNotifyPlayerRevivalEvent, APlayerStateBase*);
-
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FRequestGrantAbilities, const TArray<TSubclassOf<UBaseGameplayAbility>>&, const FGameplayTag&, bool);
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FRequestActivateAbilities, const TArray<TSubclassOf<UBaseGameplayAbility>>&, const FGameplayTag&, bool);
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FRequestApplyEffects, const TArray<TSubclassOf<UGameplayEffect>>&, const FGameplayTag&, bool);
@@ -71,7 +68,6 @@ protected:
 
 protected:
 	//@내부 바인딩
-	void InternalBindingToASC();
 	
 
 protected:
@@ -131,12 +127,6 @@ public:
 	FAnyAttributeValueChanged OnAnyAttributeValueChanged;
 
 public:
-	//@플레이어 죽음 알림 이벤트
-	FNotifyPlayerDeathEvent NotifyPlayerDeathEvent;
-	//@부활 어빌리티 종료 이벤트
-	FNotifyPlayerRevivalEvent NotifyPlayerRevivalEvent;
-
-public:
 	//@어빌리티 등록 요청
 	FRequestGrantAbilities RequestGrantAbilities;
 	//@어빌리티 활성화 요청
@@ -149,10 +139,6 @@ public:
 #pragma region Callbacks
 protected:
 	void OnAttributeValueChanged(const FOnAttributeChangeData& Data);
-
-protected:
-	UFUNCTION()
-		void OnCharacterStateEventOnGameplay(AActor* Actor, const FGameplayTag& CharacterStateTag);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

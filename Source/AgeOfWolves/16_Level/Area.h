@@ -11,10 +11,12 @@
 
 //@전방 선언
 #pragma region Forward Declaration
+class UQuestComponent;
 class UBoxComponent;
 class UObjectiveDetectionComponent;
 class UCrowdControlComponent;
 class ACharacterBase;
+struct FSharingInfoWithGroup;
 #pragma endregion
 
 //@열거형
@@ -230,7 +232,7 @@ struct FStructureData
 
     //@실제 레벨에 배치된 구조물 액터에 대한 약한 참조
     //@약한 참조 사용으로 메모리 누수 방지 및 안전한 액터 생명주기 관리
-    UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "액터 참조")
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "액터 참조")
     TWeakObjectPtr<AActor> StructureActor;
 
     //@기본 생성자 - 모든 필드를 안전한 기본값으로 초기화
@@ -331,6 +333,8 @@ protected:
     void UnbindFromPlayer(TWeakObjectPtr<APlayerCharacter> Player);
     void UnbindFromAllPlayer();
 
+    void InternalBindToStructure(TWeakObjectPtr<AActor> StructurePtr);
+    
 protected:
     //@외부 바인딩
 
@@ -369,6 +373,8 @@ private:
 protected:
     void InitializeAreaAIInfos();
 
+    void InitializeStructureInfos();
+
 protected:
     //@AI 처리 함수
     void RegisterAI(AActor* AIActor);
@@ -401,10 +407,17 @@ protected:
     UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = "Area")
     FGuid AreaID;
 
+    //@영역 고유 이름 태그
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
+    FGameplayTag AreaNameTag;
+
+    //@영역 태그 (전투 지역, 휴식 지역 등 특성)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
+    TArray<FGameplayTag> AreaTags;
+
     //@영역 우선순위 (중첩 처리용)
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Area")
     int32 AreaPriority = 0;
-
     //@자동으로 영역 내 AI 감지할지 여부
     UPROPERTY(EditAnywhere, Category = "Area | AI")
     bool bAutoDetectAI = true;
@@ -430,15 +443,28 @@ protected:
     FString DefaultGroupName = "Default";
 
 protected:
+    //@수동 등록할 구조물 리스트
+    UPROPERTY(EditAnywhere, Category = "Area | Structure")
+    TArray<FStructureData> RegisteredStructures;
+
+protected:
     //@등록된 AI 그룹 Map
     UPROPERTY()
     TMap<FGuid, FAIGroupInfo> MAIGroups;
+
+protected:
+    UPROPERTY(EditAnywhere, Category = "Area | 구조물")
+    FStructureData StructureData;
 
 protected:
     //@영역 내 플레이어 정보
     UPROPERTY()
     TMap<TWeakObjectPtr<APlayerCharacter>, FPlayerBindingInfo> MPlayerBindings;
 
+protected:
+    //@영역내 구조물 정보 (key: 구조물의 고유 식별Id, Value: 구조물 데이터)
+    TMap<FGuid, FStructureData> MStructureBindings;
+    
 protected:
     //@정리 타이머
     FTimerHandle CleanupTimerHandle;
@@ -447,7 +473,7 @@ protected:
     float LastCleanupTime;
 
     //@정리 주기 (초)
-    UPROPERTY(EditAnywhere, Category = "Area | Advanced")
+    UPROPERTY(EditAnywhere, Category = "Area")
     float CleanupInterval = 60.0f;
 
 protected:
@@ -458,6 +484,11 @@ protected:
 protected:
     //@자원 정리
     void CleanupInvalidReferences();
+
+protected:
+    //@ 퀘스트 컴포넌트
+    UPROPERTY(VisibleAnywhere, Category = "Components")
+    UQuestComponent* QuestComponent;
 #pragma endregion
 
 //@Delegates
@@ -517,6 +548,10 @@ protected:
     //@그룹 정보 수신 콜백
     UFUNCTION()
     void OnSendInfoToBelongingGroup(AActor* AI, FSharingInfoWithGroup SharingInfo);
+
+    //@등록된 구조물이 상호작용 발동시 콜백
+    UFUNCTION()
+    void OnStructureInteractionTriggered(AStructureBase* TriggeredStucture);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -527,6 +562,10 @@ public:
     FGameplayTag GetAreaTag() const { return AreaTag; }
 
     //@영역 ID 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Area")
+    FGameplayTag GetAreaNameTag() const { return AreaNameTag; }
+    
+    //@영역 태그 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
     FGuid GetAreaID() const { return AreaID; }
 
@@ -544,6 +583,10 @@ public:
     UFUNCTION(BlueprintCallable, Category = "Area")
     FGuid GetAIGroupID(AActor* AIActor) const;
 
+    //@해당 AI의 계급 타입 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Area")
+    EAIHierarchyType GetAIHierarchyType(AActor* AIActor) const;
+
     //@영역 내 모든 AI 그룹 정보를 배열로 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
     TArray<FAIGroupInfo> GetAllAIGroupsAsArray() const;
@@ -551,6 +594,13 @@ public:
     //@해당 그룹에 속한 모든 AI 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
     TArray<AActor*> GetGroupMembers(const FGuid& GroupID) const;
+
+    //@해당 AI가 속한 그룹 ID 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Area")
+    FGuid GetStructureID(AActor* StructureActor) const;
+
+    UFUNCTION(BlueprintCallable, Category = "Area")
+    bool ValidateUniqueStructurePlayerStartTags(const TArray<FStructureData>& RegisteredStructureArry, FStructureData TargetStructData);
 #pragma endregion
 
 };
