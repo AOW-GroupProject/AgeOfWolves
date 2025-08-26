@@ -14,6 +14,7 @@ class UUIComponent;
 class AController;
 class UBaseAnimInstance;
 class ULockOnComponent;
+class UDynamicCameraComponent;
 #pragma endregion
 
 //@열거형
@@ -77,7 +78,7 @@ protected:
 
 protected:
 	UPROPERTY(VisibleAnywhere, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class USpringArmComponent* SpringArm;
+		class USpringArmComponent* SA_Back;
 
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
 		class UCameraComponent* FollowCamera;
@@ -87,6 +88,9 @@ protected:
 
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		ULockOnComponent* LockComponent;
+
+	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
+		UDynamicCameraComponent* DynamicCameraComponent;
 #pragma endregion
 
 //@Delegates
@@ -105,7 +109,7 @@ public:
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
 	UFUNCTION(BlueprintCallable)
-		FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SpringArm; }
+		FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SA_Back; }
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE UInventoryComponent* GetInventoryComponent() { return InventoryComponent; }
 	UFUNCTION(BlueprintCallable)

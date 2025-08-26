@@ -4,7 +4,8 @@
 
 #include "04_Component/BaseCharacterMovementComponent.h"
 #include "04_Component/InventoryComponent.h"
-#include "04_Component/LockOnComponent.h" 
+#include "04_Component/LockOnComponent.h"
+#include "04_Component/DynamicCameraComponent.h"
 #include "GameFramework/SpringArmComponent.h"
 #include "Components/CapsuleComponent.h"
 #include "Camera/CameraComponent.h"
@@ -35,6 +36,7 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	{
 		InventoryComponent = CreateDefaultSubobject<UInventoryComponent>(TEXT("Inventory Component"));
 		LockComponent = CreateDefaultSubobject<ULockOnComponent>(TEXT("LockOn Component"));
+		DynamicCameraComponent = CreateDefaultSubobject<UDynamicCameraComponent>(TEXT("DynamicCamera Component"));
 	}
 	// @Capsule
 	{
@@ -64,29 +66,29 @@ APlayerCharacter::APlayerCharacter(const FObjectInitializer& ObjectInitializer)
 	}
 	// @Camera
 	{
-		SpringArm = CreateDefaultSubobject<USpringArmComponent>(TEXT("SpringArm"));
-		SpringArm->SetupAttachment(RootComponent);
+		SA_Back = CreateDefaultSubobject<USpringArmComponent>(TEXT("SA_Main"));
+		SA_Back->SetupAttachment(RootComponent);
 
 		// 카메라 거리 조정 (세키로 스타일)
-		SpringArm->TargetArmLength = 350.f;
-		SpringArm->bUsePawnControlRotation = true;
+		SA_Back->TargetArmLength = 350.f;
+		SA_Back->bUsePawnControlRotation = true;
 
 		// 카메라 래그 설정
-		SpringArm->bEnableCameraLag = true;
-		SpringArm->bEnableCameraRotationLag = true;
-		SpringArm->CameraLagSpeed = 10.f;
-		SpringArm->CameraRotationLagSpeed = 8.f;
-		SpringArm->CameraLagMaxDistance = 100.f;
+		SA_Back->bEnableCameraLag = true;
+		SA_Back->bEnableCameraRotationLag = true;
+		SA_Back->CameraLagSpeed = 10.f;
+		SA_Back->CameraRotationLagSpeed = 8.f;
+		SA_Back->CameraLagMaxDistance = 100.f;
 
 		// 스프링암 위치와 회전 조정
-		SpringArm->SetRelativeLocation(FVector(0.f, 0.f, 250.f));  // 높이 조정
-		SpringArm->SetRelativeRotation(FRotator(-15.f, 0.f, 0.f)); // 아래를 내려다보는 각도
+		SA_Back->SetRelativeLocation(FVector(0.f, 0.f, 250.f));  // 높이 조정
+		SA_Back->SetRelativeRotation(FRotator(-15.f, 0.f, 0.f)); // 아래를 내려다보는 각도
 
 		// 소켓 오프셋 조정으로 카메라 위치 미세 조정
-		SpringArm->SocketOffset = FVector(0.f, 0.f, 0.f);
+		SA_Back->SocketOffset = FVector(0.f, 0.f, 0.f);
 
 		FollowCamera = CreateDefaultSubobject<UCameraComponent>(TEXT("FollowCamera"));
-		FollowCamera->SetupAttachment(SpringArm, USpringArmComponent::SocketName);
+		FollowCamera->SetupAttachment(SA_Back, USpringArmComponent::SocketName);
 		FollowCamera->bUsePawnControlRotation = false;
 	}
 	//@무기
@@ -119,6 +121,7 @@ void APlayerCharacter::PostInitializeComponents()
 
 	RequestStartInitByPlayerCharacter.AddUFunction(InventoryComponent, "InitializeInventory");
 	RequestStartInitByPlayerCharacter.AddUFunction(LockComponent, "InitializeLockOnComp");
+	RequestStartInitByPlayerCharacter.AddUFunction(DynamicCameraComponent, "InitializeDynamicCameraComp");
 }
 
 void APlayerCharacter::BeginPlay()
