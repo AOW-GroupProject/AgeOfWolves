@@ -298,6 +298,15 @@ public:
 public:
 	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM; }
 
+protected:
+	/**
+	 * 체인 관련 이벤트의 Payload를 구성하는 헬퍼 함수
+	 * @param EventTag - 처리할 이벤트 태그
+	 * @param OutEventData - 구성된 이벤트 데이터 (출력)
+	 * @return 체인 관련 이벤트이고 유효한 Payload를 구성했는지 여부
+	 */
+	bool CreateChainEventPayload(const FGameplayTag& EventTag, OUT FGameplayEventData& OutEventData);
+
 public:
 	FORCEINLINE bool IsChainWindowActive() const { return bChainWindowActive; }
 

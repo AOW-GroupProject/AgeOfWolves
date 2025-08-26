@@ -719,12 +719,18 @@ bool UCombatLibrary::SendGameplayEventToTarget(
     UObject* OptionalObject,
     UObject* OptionalObject2)
 {
-    //@Target
+    //@함수 시작 로그
+    UE_LOGFMT(LogCombatLibrary, Log, "SendGameplayEventToTarget 시작 - Event: {0}, Magnitude: {1}",
+        *EventTag.ToString(), Magnitude);
+
+    //@Target 유효성 검사
     if (!IsValid(TargetActor))
     {
         UE_LOGFMT(LogCombatLibrary, Warning, "GameplayEvent 전송 실패 - 사유: TargetActor가 유효하지 않음");
         return false;
     }
+
+    UE_LOGFMT(LogCombatLibrary, Log, "Target Actor 확인 완료 - {0}", *TargetActor->GetName());
 
     //@Target ASC 가져오기
     UAbilitySystemComponent* TargetASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(TargetActor);
@@ -735,11 +741,32 @@ bool UCombatLibrary::SendGameplayEventToTarget(
         return false;
     }
 
+    UE_LOGFMT(LogCombatLibrary, Log, "Target ASC 확인 완료 - Target: {0}", *TargetActor->GetName());
+
+    //@Instigator 정보 로그
+    if (IsValid(InstigatorActor))
+    {
+        UE_LOGFMT(LogCombatLibrary, Log, "Instigator Actor 확인 완료 - {0}", *InstigatorActor->GetName());
+    }
+    else
+    {
+        UE_LOGFMT(LogCombatLibrary, Log, "Instigator Actor가 유효하지 않음 - Target ASC로 Context 생성 예정");
+    }
+
     //@Instigator ASC 가져오기 (Context 생성용)
     UAbilitySystemComponent* InstigatorASC = nullptr;
     if (IsValid(InstigatorActor))
     {
         InstigatorASC = UAbilitySystemBlueprintLibrary::GetAbilitySystemComponent(InstigatorActor);
+        if (InstigatorASC)
+        {
+            UE_LOGFMT(LogCombatLibrary, Log, "Instigator ASC 확인 완료 - {0}", *InstigatorActor->GetName());
+        }
+        else
+        {
+            UE_LOGFMT(LogCombatLibrary, Log, "Instigator ASC를 찾을 수 없음 - Target ASC로 Context 생성 - Instigator: {0}",
+                *InstigatorActor->GetName());
+        }
     }
 
     //@Context Handle 생성
@@ -747,14 +774,29 @@ bool UCombatLibrary::SendGameplayEventToTarget(
     if (InstigatorASC)
     {
         ContextHandle = InstigatorASC->MakeEffectContext();
+        UE_LOGFMT(LogCombatLibrary, Log, "Context Handle 생성 완료 - Instigator ASC 사용");
     }
     else
     {
         ContextHandle = TargetASC->MakeEffectContext();
+        UE_LOGFMT(LogCombatLibrary, Log, "Context Handle 생성 완료 - Target ASC 사용");
     }
 
     //@HitResult 추가
     ContextHandle.AddHitResult(HitResult);
+    UE_LOGFMT(LogCombatLibrary, Log, "HitResult 추가 완료 - Impact Point: {0}, Hit Actor: {1}",
+        *HitResult.ImpactPoint.ToString(),
+        HitResult.GetActor() ? *HitResult.GetActor()->GetName() : TEXT("None"));
+
+    //@Optional Objects 로그
+    if (OptionalObject)
+    {
+        UE_LOGFMT(LogCombatLibrary, Log, "OptionalObject 설정됨 - {0}", *OptionalObject->GetName());
+    }
+    if (OptionalObject2)
+    {
+        UE_LOGFMT(LogCombatLibrary, Log, "OptionalObject2 설정됨 - {0}", *OptionalObject2->GetName());
+    }
 
     //@Event Data 구성
     FGameplayEventData Payload;
@@ -766,6 +808,12 @@ bool UCombatLibrary::SendGameplayEventToTarget(
     Payload.ContextHandle = ContextHandle;
     Payload.EventMagnitude = Magnitude;
 
+    UE_LOGFMT(LogCombatLibrary, Log, "GameplayEventData 구성 완료 - Event: {0}, Target: {1}, Instigator: {2}, Magnitude: {3}",
+        *EventTag.ToString(),
+        *TargetActor->GetName(),
+        IsValid(InstigatorActor) ? *InstigatorActor->GetName() : TEXT("None"),
+        Magnitude);
+
     //@Event 전송
     if (!TargetASC->HandleGameplayEvent(EventTag, &Payload))
     {
@@ -774,10 +822,11 @@ bool UCombatLibrary::SendGameplayEventToTarget(
         return false;
     }
 
-    UE_LOGFMT(LogCombatLibrary, Log, "GameplayEvent 전송 완료 - Target: {0}, Event: {1}, Instigator: {2}",
+    UE_LOGFMT(LogCombatLibrary, Log, "GameplayEvent 전송 완료 - Target: {0}, Event: {1}, Instigator: {2}, Magnitude: {3}",
         *TargetActor->GetName(),
         *EventTag.ToString(),
-        IsValid(InstigatorActor) ? *InstigatorActor->GetName() : TEXT("None"));
+        IsValid(InstigatorActor) ? *InstigatorActor->GetName() : TEXT("None"),
+        Magnitude);
 
     return true;
 }
