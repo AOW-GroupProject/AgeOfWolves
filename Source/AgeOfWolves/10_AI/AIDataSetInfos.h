@@ -385,6 +385,201 @@ public:
 };
 
 /**
+ * @FAIExperienceWeightConfig
+ * 경험 가중치 시스템 설정 및 제한사항
+ */
+USTRUCT(BlueprintType)
+struct FAIExperienceWeightConfig
+{
+    GENERATED_BODY()
+
+public:
+    FAIExperienceWeightConfig()
+        : MaxWeightChange(0.3f)
+        , MinSingleChange(0.01f)
+        , MinCategoryProbability(0.05f)
+        , EarlyStopThreshold(30)
+        , AdaptiveResetPercentage(0.1f)
+    {
+    }
+
+public:
+    //@경험 가중치 최대 변화량 (초기 성향 대비 ±30%)
+    UPROPERTY(EditAnywhere, Category = "경험 가중치 제한",
+        meta = (ClampMin = "0.1", ClampMax = "0.5", ToolTip = "초기 성향 대비 최대 변화 허용량"))
+    float MaxWeightChange;
+
+    //@1회 최대 변화량 (급격한 변화 방지)
+    UPROPERTY(EditAnywhere, Category = "경험 가중치 제한",
+        meta = (ClampMin = "0.005", ClampMax = "0.05", ToolTip = "한 번에 변경 가능한 최대 가중치"))
+    float MinSingleChange;
+
+    //@카테고리별 최소 확률 보장 (5%)
+    UPROPERTY(EditAnywhere, Category = "경험 가중치 제한",
+        meta = (ClampMin = "0.01", ClampMax = "0.2", ToolTip = "각 행동 카테고리의 최소 선택 확률"))
+    float MinCategoryProbability;
+
+    //@조기 회피 임계값 (20-30회)
+    UPROPERTY(EditAnywhere, Category = "안정성 제어",
+        meta = (ClampMin = "10", ClampMax = "50", ToolTip = "조기 학습 중단을 위한 최소 시행 횟수"))
+    int32 EarlyStopThreshold;
+
+    //@적응적 리셋 비율 (10% 원점 이동)
+    UPROPERTY(EditAnywhere, Category = "안정성 제어",
+        meta = (ClampMin = "0.05", ClampMax = "0.3", ToolTip = "급격한 행동 변화 방지를 위한 리셋 비율"))
+    float AdaptiveResetPercentage;
+
+public:
+    //@경험 가중치 범위 내 클램핑
+    float ClampWeightChange(float CurrentWeight, float InitialWeight, float ProposedChange) const
+    {
+        float NewWeight = CurrentWeight + ProposedChange;
+        float MaxAllowed = InitialWeight + MaxWeightChange;
+        float MinAllowed = InitialWeight - MaxWeightChange;
+
+        return FMath::Clamp(NewWeight, MinAllowed, MaxAllowed);
+    }
+
+    //@단일 변화량 제한
+    float ClampSingleChange(float ProposedChange) const
+    {
+        return FMath::Clamp(ProposedChange, -MinSingleChange, MinSingleChange);
+    }
+
+    //@카테고리 확률 정규화 및 최소값 보장
+    void NormalizeCategoryProbabilities(TArray<float>& Probabilities) const
+    {
+        int32 NumCategories = Probabilities.Num();
+        if (NumCategories == 0) return;
+
+        // 최소 확률 보장
+        for (float& Prob : Probabilities)
+        {
+            Prob = FMath::Max(Prob, MinCategoryProbability);
+        }
+
+        // 정규화
+        float Total = 0.0f;
+        for (float Prob : Probabilities)
+        {
+            Total += Prob;
+        }
+
+        if (Total > 0.0f)
+        {
+            for (float& Prob : Probabilities)
+            {
+                Prob /= Total;
+            }
+        }
+    }
+};
+
+/**
+ * @FAIRuntimeLearningState
+ * 런타임 중 AI의 학습 상태 추적 (Data Asset에 저장하지 않음)
+ */
+USTRUCT(BlueprintType)
+struct FAIRuntimeLearningState
+{
+    GENERATED_BODY()
+
+public:
+    FAIRuntimeLearningState()
+        : LearningCount(0)
+        , bIsOverdrivePrevention(false)
+        , CurrentLearningRate(0.08f)
+    {
+        // 초기 경험 가중치는 0으로 시작 (초기 성향 그대로 사용)
+        OpeningSkillsWeight = 0.0f;
+        SkillsWeight = 0.0f;
+        StrafeOrDodgeWeight = 0.0f;
+    }
+
+public:
+    //@현재 학습 횟수
+    UPROPERTY(BlueprintReadOnly)
+    int32 LearningCount;
+
+    //@Overdrive 방지 모드 활성화 여부
+    UPROPERTY(BlueprintReadOnly)
+    bool bIsOverdrivePrevention;
+
+    //@현재 학습률
+    UPROPERTY(BlueprintReadOnly)
+    float CurrentLearningRate;
+
+    //@각 행동 카테고리의 경험 가중치 (초기값 대비 변화량)
+    UPROPERTY(BlueprintReadOnly)
+    float OpeningSkillsWeight;
+
+    UPROPERTY(BlueprintReadOnly)
+    float SkillsWeight;
+
+    UPROPERTY(BlueprintReadOnly)
+    float StrafeOrDodgeWeight;
+
+public:
+    //@경험 가중치 업데이트
+    void UpdateExperienceWeight(const FGameplayTag& ActionCategory, float WeightChange, const FAIExperienceWeightConfig& Config, const FAISimplifiedPersonality& InitialPersonality)
+    {
+        float ClampedChange = Config.ClampSingleChange(WeightChange);
+
+        if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills"))))
+        {
+            OpeningSkillsWeight = Config.ClampWeightChange(OpeningSkillsWeight, 0.0f, ClampedChange);
+        }
+        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills"))))
+        {
+            SkillsWeight = Config.ClampWeightChange(SkillsWeight, 0.0f, ClampedChange);
+        }
+        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge"))))
+        {
+            StrafeOrDodgeWeight = Config.ClampWeightChange(StrafeOrDodgeWeight, 0.0f, ClampedChange);
+        }
+
+        LearningCount++;
+    }
+
+
+    //@현재 행동 선호도 계산 (초기 성향 + 경험 가중치)
+    float GetCurrentActionPreference(const FGameplayTag& ActionCategory, const FAISimplifiedPersonality& InitialPersonality) const
+    {
+        float InitialPreference = InitialPersonality.GetInitialActionPreference(ActionCategory);
+        float ExperienceWeight = 0.0f;
+
+        if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills"))))
+        {
+            ExperienceWeight = OpeningSkillsWeight;
+        }
+        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills"))))
+        {
+            ExperienceWeight = SkillsWeight;
+        }
+        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge"))))
+        {
+            ExperienceWeight = StrafeOrDodgeWeight;
+        }
+
+        return FMath::Clamp(InitialPreference + (ExperienceWeight * 100.0f), 0.0f, 100.0f);
+    }
+
+    //@적응적 리셋 실행
+    void ApplyAdaptiveReset(const FAIExperienceWeightConfig& Config)
+    {
+        float ResetFactor = 1.0f - Config.AdaptiveResetPercentage;
+
+        OpeningSkillsWeight *= ResetFactor;
+        SkillsWeight *= ResetFactor;
+        StrafeOrDodgeWeight *= ResetFactor;
+
+        bIsOverdrivePrevention = true;
+
+        UE_LOG(LogTemp, Log, TEXT("적응적 리셋 적용 - 가중치가 %f%% 원점으로 이동"), Config.AdaptiveResetPercentage * 100.0f);
+    }
+};
+
+/**
  * @FAIAdaptiveBehaviorConfig
  * 적응형 행동 시스템의 설정 정보 (에디터에서 설정)
  */
@@ -418,6 +613,12 @@ public:
         meta = (EditCondition = "bEnableAdaptiveLearning",
             ToolTip = "AI가 행동 결과를 어떻게 평가할지 결정"))
     FAIRewardCalculator RewardCalculator;
+
+    //@경험 가중치 시스템 설정
+    UPROPERTY(EditAnywhere, Category = "적응형 학습 제한",
+        meta = (EditCondition = "bEnableAdaptiveLearning",
+            ToolTip = "경험 가중치 변화의 제한사항과 안전장치 설정"))
+    FAIExperienceWeightConfig ExperienceWeightConfig;
 };
 
 /**
@@ -576,6 +777,9 @@ protected:
     // 성향 특성 검증
     FAIDataSetValidationResult ValidatePersonalityTraits() const;
 
+    // 적응형 시스템 설정 검증 (기존 검증 함수들과 함께 추가)
+    FAIDataSetValidationResult ValidateAdaptiveSystemSettings() const;
+
     // 논리적 일관성 검증
     FAIDataSetValidationResult ValidateLogicalConsistency() const;
 
@@ -599,12 +803,15 @@ public:
     UFUNCTION(CallInEditor, Category = "AI DataSet Validation")
     void ValidatePersonalityTraitsOnly();
 
+    // 적응형 시스템 전용 검증 함수 (에디터 호출용)
+    UFUNCTION(CallInEditor, Category = "AI DataSet Validation")
+    void ValidateAdaptiveSystemOnly();
+
     // === 유틸리티 함수들 ===
 
     // 모든 어빌리티 블록의 우선순위를 자동으로 정렬
     UFUNCTION(CallInEditor, Category = "AI DataSet Utilities")
     void SortAllAbilityBlocksByPriority();
-
 #endif
 
 //@Delegates
@@ -636,6 +843,7 @@ public:
             });
     }
 
+public:
     // 전체 AI DataSet 목록 반환
     const TArray<FAIDataSet>& GetAIDataSets() const { return AIDataSets; }
 
@@ -654,7 +862,7 @@ public:
         return FindAIDataSetByType(AIType) != nullptr;
     }
 
-
+public:
     //@기존 PersonalityTraits를 새 시스템으로 변환
     UFUNCTION(BlueprintCallable, Category = "AI 적응형 시스템")
     FAISimplifiedPersonality ConvertLegacyPersonalityToSimplified(EAIType AIType) const
@@ -689,6 +897,104 @@ public:
     {
         const FAIDataSet* DataSet = FindAIDataSetByType(AIType);
         return DataSet ? DataSet->AdaptiveBehaviorConfig : FAIAdaptiveBehaviorConfig();
+    }
+
+    //@적응형 시스템이 활성화된 AI 목록 반환
+    UFUNCTION(BlueprintCallable, Category = "AI 적응형 시스템 분석")
+    TArray<EAIType> GetAdaptiveEnabledAITypes() const
+    {
+        TArray<EAIType> AdaptiveAIs;
+
+        for (const FAIDataSet& DataSet : AIDataSets)
+        {
+            if (DataSet.AdaptiveBehaviorConfig.bEnableAdaptiveLearning)
+            {
+                AdaptiveAIs.Add(DataSet.AIType);
+            }
+        }
+
+        return AdaptiveAIs;
+    }
+
+public:
+    //@에디터에서 경험 가중치 설정 프리셋 적용
+    UFUNCTION(CallInEditor, Category = "AI 적응형 시스템 설정")
+    void ApplyConservativeLearningPreset();
+
+    //@에디터에서 경험 가중치 설정 프리셋 적용
+    UFUNCTION(CallInEditor, Category = "AI 적응형 시스템 설정")
+    void ApplyAggressiveLearningPreset();
+
+public:
+    //@적응형 시스템의 이론적 최종 수렴값 예측
+    UFUNCTION(BlueprintCallable, Category = "AI 적응형 시스템 분석")
+    TArray<float> PredictLearningConvergence(EAIType AIType, float DamagePerAction, float AverageDistance, float SuccessRate) const
+    {
+        TArray<float> ConvergenceValues;
+
+        const FAIDataSet* DataSet = FindAIDataSetByType(AIType);
+        if (!DataSet || !DataSet->AdaptiveBehaviorConfig.bEnableAdaptiveLearning)
+        {
+            return ConvergenceValues;
+        }
+
+        const FAIRewardCalculator& Calculator = DataSet->AdaptiveBehaviorConfig.RewardCalculator;
+        const FAISimplifiedPersonality& Personality = DataSet->AdaptiveBehaviorConfig.SimplifiedPersonality;
+
+        // 이론적 보상값 계산
+        float TheoreticalReward = Calculator.CalculateNormalizedReward(DamagePerAction, AverageDistance, SuccessRate > 0.5f);
+
+        // 각 카테고리별 초기 선호도
+        float OpeningPref = Personality.GetInitialActionPreference(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills")));
+        float SkillsPref = Personality.GetInitialActionPreference(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills")));
+        float DodgePref = Personality.GetInitialActionPreference(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge")));
+
+        // 수렴 예상값 (매우 단순화된 모델)
+        float LearningImpact = TheoreticalReward * 10.0f; // 임시 계산
+
+        ConvergenceValues.Add(FMath::Clamp(OpeningPref + LearningImpact, 0.0f, 100.0f));
+        ConvergenceValues.Add(FMath::Clamp(SkillsPref + LearningImpact, 0.0f, 100.0f));
+        ConvergenceValues.Add(FMath::Clamp(DodgePref + LearningImpact, 0.0f, 100.0f));
+
+        return ConvergenceValues;
+    }
+
+public:
+    //@특정 AI의 적응형 학습 복잡도 평가
+    UFUNCTION(BlueprintCallable, Category = "AI 적응형 시스템 분석")
+    float EvaluateLearningComplexity(EAIType AIType) const
+    {
+        const FAIDataSet* DataSet = FindAIDataSetByType(AIType);
+        if (!DataSet || !DataSet->AdaptiveBehaviorConfig.bEnableAdaptiveLearning)
+        {
+            return 0.0f;
+        }
+
+        float Complexity = 0.0f;
+
+        // 전투 패턴 복잡도
+        const FAICombatSequence& Sequence = DataSet->CombatSequence;
+        int32 TotalAbilities = Sequence.StartBlock.AbilityBlockUnits.Num() +
+            Sequence.ExitBlock.AbilityBlockUnits.Num();
+
+        for (const FAIAbilityBlock& Block : Sequence.AbilityBlocks)
+        {
+            TotalAbilities += Block.AbilityBlockUnits.Num();
+        }
+
+        Complexity += TotalAbilities * 0.1f; // 어빌리티 개수
+        Complexity += Sequence.AbilityBlocks.Num() * 0.2f; // 블록 개수
+
+        // 보상 시스템 복잡도
+        const FAIRewardCalculator& Calculator = DataSet->AdaptiveBehaviorConfig.RewardCalculator;
+        float WeightSum = Calculator.DamageWeight + Calculator.DistanceWeight + Calculator.SuccessWeight;
+        Complexity += (WeightSum / 3.0f) * 0.3f; // 평균 가중치
+
+        // 학습률 복잡도
+        Complexity += Calculator.BaseLearningRate * 10.0f; // 학습률
+        Complexity += (1.0f - Calculator.LearningDecayFactor) * 20.0f; // 감쇠율
+
+        return FMath::Clamp(Complexity, 0.0f, 10.0f);
     }
 #pragma endregion
 

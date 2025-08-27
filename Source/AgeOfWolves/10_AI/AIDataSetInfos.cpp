@@ -85,6 +85,10 @@ FAIDataSetValidationResult UAIDataSetInfos::ValidateAIDataSets() const
     Result = ValidateLogicalConsistency();
     if (!Result.bIsValid) return Result;
 
+    // === 8단계: 적응형 시스템 검증 (새로 추가) ===
+    Result = ValidateAdaptiveSystemSettings();
+    if (!Result.bIsValid) return Result;
+
     return FAIDataSetValidationResult(); // 모든 검증 통과
 }
 
@@ -460,6 +464,168 @@ FAIDataSetValidationResult UAIDataSetInfos::ValidatePersonalityTraits() const
     return FAIDataSetValidationResult(); // 성공
 }
 
+FAIDataSetValidationResult UAIDataSetInfos::ValidateAdaptiveSystemSettings() const
+{
+    for (int32 DataSetIndex = 0; DataSetIndex < AIDataSets.Num(); ++DataSetIndex)
+    {
+        const FAIDataSet& DataSet = AIDataSets[DataSetIndex];
+
+        if (!DataSet.AdaptiveBehaviorConfig.bEnableAdaptiveLearning)
+        {
+            continue; // 적응형 시스템이 비활성화된 AI는 건너뛰기
+        }
+
+        const FAIRewardCalculator& Calculator = DataSet.AdaptiveBehaviorConfig.RewardCalculator;
+        const FAIExperienceWeightConfig& WeightConfig = DataSet.AdaptiveBehaviorConfig.ExperienceWeightConfig;
+        const FAISimplifiedPersonality& Personality = DataSet.AdaptiveBehaviorConfig.SimplifiedPersonality;
+
+        // === 보상 계산기 검증 ===
+        if (Calculator.BaseLearningRate <= 0.0f || Calculator.BaseLearningRate > 0.5f)
+        {
+            return FAIDataSetValidationResult(
+                EAIDataSetValidationError::InvalidPersonalityValue,
+                FString::Printf(TEXT("부적절한 기본 학습률: AI %d (값: %.3f, 권장: 0.01-0.5)"),
+                    DataSetIndex, Calculator.BaseLearningRate),
+                DataSetIndex
+            );
+        }
+
+        if (Calculator.LearningDecayFactor < 0.8f || Calculator.LearningDecayFactor >= 1.0f)
+        {
+            return FAIDataSetValidationResult(
+                EAIDataSetValidationError::InvalidPersonalityValue,
+                FString::Printf(TEXT("부적절한 학습률 감쇠 인수: AI %d (값: %.3f, 권장: 0.8-0.99)"),
+                    DataSetIndex, Calculator.LearningDecayFactor),
+                DataSetIndex
+            );
+        }
+
+        if (Calculator.OptimalCombatDistance < 100.0f || Calculator.OptimalCombatDistance > 1000.0f)
+        {
+            return FAIDataSetValidationResult(
+                EAIDataSetValidationError::InvalidPersonalityValue,
+                FString::Printf(TEXT("부적절한 최적 전투 거리: AI %d (값: %.1f, 권장: 100-1000)"),
+                    DataSetIndex, Calculator.OptimalCombatDistance),
+                DataSetIndex
+            );
+        }
+
+        // === 경험 가중치 설정 검증 ===
+        if (WeightConfig.MaxWeightChange <= 0.0f || WeightConfig.MaxWeightChange > 1.0f)
+        {
+            return FAIDataSetValidationResult(
+                EAIDataSetValidationError::InvalidPersonalityValue,
+                FString::Printf(TEXT("부적절한 최대 가중치 변화량: AI %d (값: %.3f, 권장: 0.1-0.5)"),
+                    DataSetIndex, WeightConfig.MaxWeightChange),
+                DataSetIndex
+            );
+        }
+
+        if (WeightConfig.MinSingleChange <= 0.0f || WeightConfig.MinSingleChange > 0.1f)
+        {
+            return FAIDataSetValidationResult(
+                EAIDataSetValidationError::InvalidPersonalityValue,
+                FString::Printf(TEXT("부적절한 최소 단일 변화량: AI %d (값: %.4f, 권장: 0.005-0.05)"),
+                    DataSetIndex, WeightConfig.MinSingleChange),
+                DataSetIndex
+            );
+        }
+
+        if (WeightConfig.MinCategoryProbability <= 0.0f || WeightConfig.MinCategoryProbability > 0.5f)
+        {
+            return FAIDataSetValidationResult(
+                EAIDataSetValidationError::InvalidPersonalityValue,
+                FString::Printf(TEXT("부적절한 최소 카테고리 확률: AI %d (값: %.3f, 권장: 0.01-0.2)"),
+                    DataSetIndex, WeightConfig.MinCategoryProbability),
+                DataSetIndex
+            );
+        }
+
+        if (WeightConfig.EarlyStopThreshold < 5 || WeightConfig.EarlyStopThreshold > 100)
+        {
+            return FAIDataSetValidationResult(
+                EAIDataSetValidationError::InvalidPersonalityValue,
+                FString::Printf(TEXT("부적절한 조기 중단 임계값: AI %d (값: %d, 권장: 10-50)"),
+                    DataSetIndex, WeightConfig.EarlyStopThreshold),
+                DataSetIndex
+            );
+        }
+
+        if (WeightConfig.AdaptiveResetPercentage <= 0.0f || WeightConfig.AdaptiveResetPercentage > 0.5f)
+        {
+            return FAIDataSetValidationResult(
+                EAIDataSetValidationError::InvalidPersonalityValue,
+                FString::Printf(TEXT("부적절한 적응적 리셋 비율: AI %d (값: %.3f, 권장: 0.05-0.3)"),
+                    DataSetIndex, WeightConfig.AdaptiveResetPercentage),
+                DataSetIndex
+            );
+        }
+
+        // === 간소화된 성향 검증 ===
+        if (Personality.Aggressiveness < 0.0f || Personality.Aggressiveness > 100.0f)
+        {
+            return FAIDataSetValidationResult(
+                EAIDataSetValidationError::InvalidPersonalityValue,
+                FString::Printf(TEXT("적응형 공격성 값이 유효 범위를 벗어남: AI %d (값: %.2f, 권장: 0-100)"),
+                    DataSetIndex, Personality.Aggressiveness),
+                DataSetIndex
+            );
+        }
+
+        if (Personality.Agility < 0.0f || Personality.Agility > 100.0f)
+        {
+            return FAIDataSetValidationResult(
+                EAIDataSetValidationError::InvalidPersonalityValue,
+                FString::Printf(TEXT("적응형 기민함 값이 유효 범위를 벗어남: AI %d (값: %.2f, 권장: 0-100)"),
+                    DataSetIndex, Personality.Agility),
+                DataSetIndex
+            );
+        }
+
+        // === 보상 가중치 밸런스 확인 (경고) ===
+        float TotalWeight = Calculator.DamageWeight + Calculator.DistanceWeight + Calculator.SuccessWeight;
+        if (TotalWeight < 1.0f || TotalWeight > 6.0f)
+        {
+            UE_LOGFMT(LogAIDataSetInfos, Warning,
+                "AI {0}: 보상 가중치 총합이 권장 범위를 벗어남 (합계: {1}, 권장: 1.0-6.0). 정규화에 영향을 줄 수 있습니다.",
+                DataSetIndex, TotalWeight);
+        }
+
+        // === 성향 조합 경고 ===
+        if (Personality.Aggressiveness > 80.0f && Personality.Agility < 20.0f)
+        {
+            UE_LOGFMT(LogAIDataSetInfos, Warning,
+                "AI {0}: 극도로 공격적이지만 기민함이 낮습니다 (공격성: {1}, 기민함: {2}). 적응 과정에서 불균형이 발생할 수 있습니다.",
+                DataSetIndex, Personality.Aggressiveness, Personality.Agility);
+        }
+        else if (Personality.Agility > 80.0f && Personality.Aggressiveness < 20.0f)
+        {
+            UE_LOGFMT(LogAIDataSetInfos, Warning,
+                "AI {0}: 극도로 기민하지만 공격성이 낮습니다 (기민함: {1}, 공격성: {2}). 소극적인 AI가 될 수 있습니다.",
+                DataSetIndex, Personality.Agility, Personality.Aggressiveness);
+        }
+
+        // === 학습 복잡도 경고 ===
+        float LearningComplexity = EvaluateLearningComplexity(DataSet.AIType);
+        if (LearningComplexity > 7.0f)
+        {
+            UE_LOGFMT(LogAIDataSetInfos, Warning,
+                "AI {0}: 학습 복잡도가 매우 높습니다 (복잡도: {1}/10). 성능 저하나 불안정한 학습이 발생할 수 있습니다.",
+                DataSetIndex, LearningComplexity);
+        }
+
+        // === 학습률과 변화량 조합 검증 ===
+        if (Calculator.BaseLearningRate > 0.1f && WeightConfig.MinSingleChange > 0.02f)
+        {
+            UE_LOGFMT(LogAIDataSetInfos, Warning,
+                "AI {0}: 높은 학습률({1})과 큰 변화량({2})의 조합으로 과도하게 급진적인 학습이 될 수 있습니다.",
+                DataSetIndex, Calculator.BaseLearningRate, WeightConfig.MinSingleChange);
+        }
+    }
+
+    return FAIDataSetValidationResult(); // 검증 성공
+}
+
 FAIDataSetValidationResult UAIDataSetInfos::ValidateLogicalConsistency() const
 {
     for (int32 DataSetIndex = 0; DataSetIndex < AIDataSets.Num(); ++DataSetIndex)
@@ -566,20 +732,24 @@ bool UAIDataSetInfos::TryAutoFixValidationError(const FAIDataSetValidationResult
     {
     case EAIDataSetValidationError::InvalidPersonalityValue:
     {
-        // 성향 값이 범위를 벗어난 경우 자동으로 클램핑
+        // 기존 성향 값 자동 수정
         if (ValidationResult.ProblemDataSetIndex >= 0 && ValidationResult.ProblemDataSetIndex < AIDataSets.Num())
         {
             FAIDataSet& DataSet = const_cast<FAIDataSet&>(AIDataSets[ValidationResult.ProblemDataSetIndex]);
             FAIPersonalityTraits& Traits = DataSet.PersonalityTraits;
+            FAIRewardCalculator& Calculator = DataSet.AdaptiveBehaviorConfig.RewardCalculator;
+            FAIExperienceWeightConfig& WeightConfig = DataSet.AdaptiveBehaviorConfig.ExperienceWeightConfig;
+            FAISimplifiedPersonality& SimplifiedPersonality = DataSet.AdaptiveBehaviorConfig.SimplifiedPersonality;
 
             bool bFixed = false;
             FString FixedValues;
 
+            // === 기존 성향 특성 수정 ===
             if (Traits.Aggressiveness < 0.0f || Traits.Aggressiveness > 100.0f)
             {
                 float OldValue = Traits.Aggressiveness;
                 Traits.Aggressiveness = FMath::Clamp(Traits.Aggressiveness, 0.0f, 100.0f);
-                FixedValues += FString::Printf(TEXT("공격성: %.2f -> %.2f "), OldValue, Traits.Aggressiveness);
+                FixedValues += FString::Printf(TEXT("공격성: %.2f->%.2f "), OldValue, Traits.Aggressiveness);
                 bFixed = true;
             }
 
@@ -587,7 +757,7 @@ bool UAIDataSetInfos::TryAutoFixValidationError(const FAIDataSetValidationResult
             {
                 float OldValue = Traits.Agility;
                 Traits.Agility = FMath::Clamp(Traits.Agility, 0.0f, 100.0f);
-                FixedValues += FString::Printf(TEXT("기민함: %.2f -> %.2f "), OldValue, Traits.Agility);
+                FixedValues += FString::Printf(TEXT("기민함: %.2f->%.2f "), OldValue, Traits.Agility);
                 bFixed = true;
             }
 
@@ -595,7 +765,7 @@ bool UAIDataSetInfos::TryAutoFixValidationError(const FAIDataSetValidationResult
             {
                 float OldValue = Traits.Proactiveness;
                 Traits.Proactiveness = FMath::Clamp(Traits.Proactiveness, 0.0f, 100.0f);
-                FixedValues += FString::Printf(TEXT("적극성: %.2f -> %.2f "), OldValue, Traits.Proactiveness);
+                FixedValues += FString::Printf(TEXT("적극성: %.2f->%.2f "), OldValue, Traits.Proactiveness);
                 bFixed = true;
             }
 
@@ -603,14 +773,55 @@ bool UAIDataSetInfos::TryAutoFixValidationError(const FAIDataSetValidationResult
             {
                 float OldValue = Traits.Methodicalness;
                 Traits.Methodicalness = FMath::Clamp(Traits.Methodicalness, 0.0f, 100.0f);
-                FixedValues += FString::Printf(TEXT("계획성: %.2f -> %.2f "), OldValue, Traits.Methodicalness);
+                FixedValues += FString::Printf(TEXT("계획성: %.2f->%.2f "), OldValue, Traits.Methodicalness);
+                bFixed = true;
+            }
+
+            // === 적응형 시스템 설정 자동 수정 ===
+            if (Calculator.BaseLearningRate <= 0.0f || Calculator.BaseLearningRate > 0.5f)
+            {
+                float OldValue = Calculator.BaseLearningRate;
+                Calculator.BaseLearningRate = FMath::Clamp(Calculator.BaseLearningRate, 0.01f, 0.15f);
+                FixedValues += FString::Printf(TEXT("학습률: %.3f->%.3f "), OldValue, Calculator.BaseLearningRate);
+                bFixed = true;
+            }
+
+            if (Calculator.LearningDecayFactor < 0.8f || Calculator.LearningDecayFactor >= 1.0f)
+            {
+                float OldValue = Calculator.LearningDecayFactor;
+                Calculator.LearningDecayFactor = FMath::Clamp(Calculator.LearningDecayFactor, 0.9f, 0.99f);
+                FixedValues += FString::Printf(TEXT("감쇠율: %.3f->%.3f "), OldValue, Calculator.LearningDecayFactor);
+                bFixed = true;
+            }
+
+            if (WeightConfig.MaxWeightChange <= 0.0f || WeightConfig.MaxWeightChange > 1.0f)
+            {
+                float OldValue = WeightConfig.MaxWeightChange;
+                WeightConfig.MaxWeightChange = FMath::Clamp(WeightConfig.MaxWeightChange, 0.15f, 0.5f);
+                FixedValues += FString::Printf(TEXT("최대변화량: %.3f->%.3f "), OldValue, WeightConfig.MaxWeightChange);
+                bFixed = true;
+            }
+
+            if (SimplifiedPersonality.Aggressiveness < 0.0f || SimplifiedPersonality.Aggressiveness > 100.0f)
+            {
+                float OldValue = SimplifiedPersonality.Aggressiveness;
+                SimplifiedPersonality.Aggressiveness = FMath::Clamp(SimplifiedPersonality.Aggressiveness, 0.0f, 100.0f);
+                FixedValues += FString::Printf(TEXT("적응형공격성: %.2f->%.2f "), OldValue, SimplifiedPersonality.Aggressiveness);
+                bFixed = true;
+            }
+
+            if (SimplifiedPersonality.Agility < 0.0f || SimplifiedPersonality.Agility > 100.0f)
+            {
+                float OldValue = SimplifiedPersonality.Agility;
+                SimplifiedPersonality.Agility = FMath::Clamp(SimplifiedPersonality.Agility, 0.0f, 100.0f);
+                FixedValues += FString::Printf(TEXT("적응형기민함: %.2f->%.2f "), OldValue, SimplifiedPersonality.Agility);
                 bFixed = true;
             }
 
             if (bFixed)
             {
                 UE_LOGFMT(LogAIDataSetInfos, Log,
-                    "자동 수정: AI DataSet {0}의 성향 값들을 유효 범위로 조정했습니다. {1}",
+                    "자동 수정: AI DataSet {0}의 설정값들을 유효 범위로 조정했습니다. {1}",
                     ValidationResult.ProblemDataSetIndex, *FixedValues);
                 return true;
             }
@@ -621,11 +832,10 @@ bool UAIDataSetInfos::TryAutoFixValidationError(const FAIDataSetValidationResult
     case EAIDataSetValidationError::InvalidExecutionPriority:
     case EAIDataSetValidationError::InvalidAbilityPriority:
     {
-        // 음수 우선순위를 0으로 자동 수정
         UE_LOGFMT(LogAIDataSetInfos, Log,
             "자동 수정 시도: 우선순위 오류는 수동 검토가 필요합니다. DataSet {0}을 확인하세요.",
             ValidationResult.ProblemDataSetIndex);
-        return false; // 우선순위는 게임 로직과 밀접하므로 자동 수정하지 않음
+        return false;
     }
 
     default:
@@ -699,6 +909,41 @@ void UAIDataSetInfos::ValidatePersonalityTraitsOnly()
     }
 }
 
+void UAIDataSetInfos::ValidateAdaptiveSystemOnly()
+{
+    FAIDataSetValidationResult Result = ValidateAdaptiveSystemSettings();
+
+    if (Result.bIsValid)
+    {
+        // 적응형 시스템이 활성화된 AI 개수 확인
+        int32 AdaptiveEnabledCount = 0;
+        for (const FAIDataSet& DataSet : AIDataSets)
+        {
+            if (DataSet.AdaptiveBehaviorConfig.bEnableAdaptiveLearning)
+            {
+                AdaptiveEnabledCount++;
+            }
+        }
+
+        UE_LOGFMT(LogAIDataSetInfos, Log,
+            "✅ 적응형 시스템 검증 완료: {0}개 AI의 적응형 설정이 유효합니다",
+            AdaptiveEnabledCount);
+
+        if (GEngine)
+        {
+            FString Message = FString::Printf(
+                TEXT("✅ 적응형 시스템 검증 성공! (%d개 AI 설정 유효)"),
+                AdaptiveEnabledCount
+            );
+            GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green, Message);
+        }
+    }
+    else
+    {
+        ShowValidationError(Result);
+    }
+}
+
 void UAIDataSetInfos::SortAllAbilityBlocksByPriority()
 {
     bool bAnySorted = false;
@@ -747,6 +992,72 @@ void UAIDataSetInfos::SortAllAbilityBlocksByPriority()
         UE_LOGFMT(LogAIDataSetInfos, Log, "정렬할 어빌리티 블록이 없습니다");
     }
 }
-#endif
 
+#endif
+#pragma endregion
+
+#pragma region Utility
+void UAIDataSetInfos::ApplyConservativeLearningPreset()
+{
+    for (FAIDataSet& DataSet : AIDataSets)
+    {
+        if (DataSet.AdaptiveBehaviorConfig.bEnableAdaptiveLearning)
+        {
+            // 보수적 학습 설정
+            FAIExperienceWeightConfig& Config = DataSet.AdaptiveBehaviorConfig.ExperienceWeightConfig;
+            Config.MaxWeightChange = 0.15f; // 15% 제한
+            Config.MinSingleChange = 0.005f; // 아주 작은 변화
+            Config.MinCategoryProbability = 0.1f; // 10% 최소 보장
+            Config.EarlyStopThreshold = 40; // 늦은 중단
+            Config.AdaptiveResetPercentage = 0.05f; // 5% 리셋
+
+            // 학습률도 보수적으로
+            FAIRewardCalculator& Reward = DataSet.AdaptiveBehaviorConfig.RewardCalculator;
+            Reward.BaseLearningRate = 0.05f;
+            Reward.LearningDecayFactor = 0.98f;
+
+            UE_LOGFMT(LogAIDataSetInfos, Log,
+                "AI {0}에 보수적 학습 프리셋 적용 완료",
+                *UEnum::GetValueAsString(DataSet.AIType));
+        }
+    }
+
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Blue,
+            TEXT("보수적 학습 프리셋 적용 - 안정적이고 점진적인 적응"));
+    }
+}
+
+void UAIDataSetInfos::ApplyAggressiveLearningPreset()
+{
+    for (FAIDataSet& DataSet : AIDataSets)
+    {
+        if (DataSet.AdaptiveBehaviorConfig.bEnableAdaptiveLearning)
+        {
+            // 공격적 학습 설정
+            FAIExperienceWeightConfig& Config = DataSet.AdaptiveBehaviorConfig.ExperienceWeightConfig;
+            Config.MaxWeightChange = 0.4f; // 40% 제한
+            Config.MinSingleChange = 0.02f; // 큰 변화
+            Config.MinCategoryProbability = 0.03f; // 3% 최소 보장
+            Config.EarlyStopThreshold = 15; // 빠른 중단
+            Config.AdaptiveResetPercentage = 0.2f; // 20% 리셋
+
+            // 학습률도 공격적으로
+            FAIRewardCalculator& Reward = DataSet.AdaptiveBehaviorConfig.RewardCalculator;
+            Reward.BaseLearningRate = 0.12f;
+            Reward.LearningDecayFactor = 0.92f;
+
+            UE_LOGFMT(LogAIDataSetInfos, Log,
+                "AI {0}에 공격적 학습 프리셋 적용 완료",
+                *UEnum::GetValueAsString(DataSet.AIType));
+        }
+    }
+
+    if (GEngine)
+    {
+        GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Orange,
+            TEXT("공격적 학습 프리셋 적용 - 빠르고 대폭적인 적응"));
+    }
+}
 #pragma endregion
