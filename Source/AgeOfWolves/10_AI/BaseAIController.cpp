@@ -1245,5 +1245,4 @@ FGameplayTag ABaseAIController::GetCurrentCharacterStateTag() const
     
     return FGameplayTag(); // 상태가 없을 경우
 }
-
 #pragma endregion

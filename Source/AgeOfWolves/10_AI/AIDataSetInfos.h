@@ -7,6 +7,7 @@
 #include "AIDataSetInfos.generated.h"
 
 DECLARE_LOG_CATEGORY_EXTERN(LogAIDataSetInfos, Log, All)
+DECLARE_LOG_CATEGORY_EXTERN(LogAILearning, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
@@ -283,22 +284,7 @@ public:
 
 public:
     //@특정 행동 카테고리에 대한 초기 선호도 계산
-    float GetInitialActionPreference(const FGameplayTag& ActionCategory) const
-    {
-        if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills"))))
-        {
-            return (Aggressiveness + Agility) * 0.5f; // 균등 가중치
-        }
-        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills"))))
-        {
-            return Aggressiveness * 0.8f + Agility * 0.2f; // 공격성 위주
-        }
-        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge"))))
-        {
-            return Agility * 0.8f + Aggressiveness * 0.2f; // 기민함 위주
-        }
-        return 50.0f; // 기본값
-    }
+    float GetInitialActionPreference(const FGameplayTag& ActionCategory) const;
 };
 
 /**
@@ -312,76 +298,61 @@ struct FAIRewardCalculator
 
 public:
     FAIRewardCalculator()
-        : DamageWeight(1.0f)
-        , DistanceWeight(0.7f)
-        , SuccessWeight(0.8f)
+        : DamageWeight(1.0f)         // 기존 유지 (나중에 제거)
+        , DistanceWeight(0.7f)       // 기존 유지 (나중에 제거)
+        , SuccessWeight(0.8f)        // 기존 유지 (나중에 제거)
         , BaseLearningRate(0.08f)
         , LearningDecayFactor(0.95f)
         , OptimalCombatDistance(300.0f)
+        , FIXED_DAMAGE_WEIGHT(1.0f)
+        , FIXED_DISTANCE_WEIGHT(0.7f)
+        , FIXED_SUCCESS_WEIGHT(0.8f)
+        , FIXED_TOTAL_WEIGHT(2.5f)
     {
     }
 
 public:
-    //@데미지 받음에 대한 가중치 (음의 보상)
-    UPROPERTY(EditAnywhere, Category = "보상 가중치",
-        meta = (ClampMin = "0.1", ClampMax = "2.0", ToolTip = "받은 데미지에 대한 패널티 가중치"))
+    // === 기존 멤버들 (DEPRECATED로 표시) ===
+    UPROPERTY(EditAnywhere, Category = "보상 가중치 (DEPRECATED)",
+        meta = (DeprecationMessage = "고정 가중치로 대체됨"))
     float DamageWeight;
 
-    //@거리 유지에 대한 가중치
-    UPROPERTY(EditAnywhere, Category = "보상 가중치",
-        meta = (ClampMin = "0.1", ClampMax = "2.0", ToolTip = "최적 거리 유지에 대한 보상 가중치"))
+    UPROPERTY(EditAnywhere, Category = "보상 가중치 (DEPRECATED)",
+        meta = (DeprecationMessage = "고정 가중치로 대체됨"))
     float DistanceWeight;
 
-    //@어빌리티 성공에 대한 가중치
-    UPROPERTY(EditAnywhere, Category = "보상 가중치",
-        meta = (ClampMin = "0.1", ClampMax = "2.0", ToolTip = "어빌리티 성공에 대한 보상 가중치"))
+    UPROPERTY(EditAnywhere, Category = "보상 가중치 (DEPRECATED)",
+        meta = (DeprecationMessage = "고정 가중치로 대체됨"))
     float SuccessWeight;
 
-    //@기본 학습률
-    UPROPERTY(EditAnywhere, Category = "학습 파라미터",
-        meta = (ClampMin = "0.01", ClampMax = "0.5", ToolTip = "초기 학습률"))
+    // === 기존 학습 관련 멤버들 (유지) ===
+    UPROPERTY(EditAnywhere, Category = "학습 파라미터")
     float BaseLearningRate;
 
-    //@학습률 감쇠 팩터
-    UPROPERTY(EditAnywhere, Category = "학습 파라미터",
-        meta = (ClampMin = "0.8", ClampMax = "0.99", ToolTip = "시간에 따른 학습률 감소율"))
+    UPROPERTY(EditAnywhere, Category = "학습 파라미터")
     float LearningDecayFactor;
 
-    //@최적 전투 거리
-    UPROPERTY(EditAnywhere, Category = "전투 파라미터",
-        meta = (ClampMin = "100.0", ClampMax = "1000.0", ToolTip = "AI가 선호하는 적과의 거리"))
+    UPROPERTY(EditAnywhere, Category = "전투 파라미터")
     float OptimalCombatDistance;
 
+    // === 새로운 고정 가중치들 ===
+    UPROPERTY(VisibleAnywhere, Category = "고정 보상 가중치")
+    float FIXED_DAMAGE_WEIGHT;
+
+    UPROPERTY(VisibleAnywhere, Category = "고정 보상 가중치")
+    float FIXED_DISTANCE_WEIGHT;
+
+    UPROPERTY(VisibleAnywhere, Category = "고정 보상 가중치")
+    float FIXED_SUCCESS_WEIGHT;
+
+    UPROPERTY(VisibleAnywhere, Category = "고정 보상 가중치")
+    float FIXED_TOTAL_WEIGHT;
+
 public:
-    //@정규화된 가중합 보상 계산
-    float CalculateNormalizedReward(float DamageReceived, float CurrentDistance, bool bAbilitySuccess) const
-    {
-        // 1. 데미지 보상 정규화 (0-100 데미지 → 0~-1)
-        float NormalizedDamage = -FMath::Clamp(DamageReceived / 100.0f, 0.0f, 1.0f);
+    // 기존 함수는 내부적으로 새로운 고정값 사용하도록 수정
+    float CalculateNormalizedReward(float DamageReceived, float CurrentDistance, bool bAbilitySuccess) const;
 
-        // 2. 거리 보상 정규화 (최적거리와의 차이 → -1~1)
-        float DistanceDiff = FMath::Abs(CurrentDistance - OptimalCombatDistance);
-        float MaxAcceptableDistance = OptimalCombatDistance * 2.0f;
-        float NormalizedDistance = FMath::Max(0.0f, 1.0f - (DistanceDiff / MaxAcceptableDistance));
-
-        // 3. 성공 보상 (이진값)
-        float NormalizedSuccess = bAbilitySuccess ? 1.0f : -1.0f;
-
-        // 가중합 계산 및 정규화
-        float TotalWeight = DamageWeight + DistanceWeight + SuccessWeight;
-        float WeightedSum = (NormalizedDamage * DamageWeight) +
-            (NormalizedDistance * DistanceWeight) +
-            (NormalizedSuccess * SuccessWeight);
-
-        return FMath::Clamp(WeightedSum / TotalWeight, -1.0f, 1.0f);
-    }
-
-    //@적응적 학습률 계산
-    float CalculateAdaptiveLearningRate(int32 LearningCount) const
-    {
-        float AdaptiveRate = BaseLearningRate * FMath::Pow(LearningDecayFactor, LearningCount / 10.0f);
-        return FMath::Clamp(AdaptiveRate, 0.01f, 0.15f); // 최소/최대 학습률 제한
-    }
+    float CalculateAdaptiveLearningRate(int32 LearningCount) const;
 };
 
 /**
@@ -431,48 +402,93 @@ public:
 
 public:
     //@경험 가중치 범위 내 클램핑
-    float ClampWeightChange(float CurrentWeight, float InitialWeight, float ProposedChange) const
-    {
-        float NewWeight = CurrentWeight + ProposedChange;
-        float MaxAllowed = InitialWeight + MaxWeightChange;
-        float MinAllowed = InitialWeight - MaxWeightChange;
+    float ClampWeightChange(float CurrentWeight, float InitialWeight, float ProposedChange) const;
 
-        return FMath::Clamp(NewWeight, MinAllowed, MaxAllowed);
-    }
 
     //@단일 변화량 제한
-    float ClampSingleChange(float ProposedChange) const
-    {
-        return FMath::Clamp(ProposedChange, -MinSingleChange, MinSingleChange);
-    }
+    float ClampSingleChange(float ProposedChange) const;
+
 
     //@카테고리 확률 정규화 및 최소값 보장
-    void NormalizeCategoryProbabilities(TArray<float>& Probabilities) const
+    void NormalizeCategoryProbabilities(TArray<float>& Probabilities) const;
+};
+
+/**
+ * @FAIAdaptiveExecutionConfig
+ * 적응형 실행 개수 결정 시스템 설정
+ */
+USTRUCT(BlueprintType)
+struct FAIAdaptiveExecutionConfig
+{
+    GENERATED_BODY()
+
+public:
+    FAIAdaptiveExecutionConfig()
+        : OpeningSkillsMinCount(1)
+        , OpeningSkillsMaxCount(3)
+        , SkillsMinCount(2)
+        , SkillsMaxCount(4)
+        , StrafeOrDodgeMinCount(1)
+        , StrafeOrDodgeMaxCount(2)
+        , PreferenceInfluenceStrength(0.7f)
+        , bBoostExplorationExecution(true)
+        , MinExplorationExecutionCount(2)
     {
-        int32 NumCategories = Probabilities.Num();
-        if (NumCategories == 0) return;
-
-        // 최소 확률 보장
-        for (float& Prob : Probabilities)
-        {
-            Prob = FMath::Max(Prob, MinCategoryProbability);
-        }
-
-        // 정규화
-        float Total = 0.0f;
-        for (float Prob : Probabilities)
-        {
-            Total += Prob;
-        }
-
-        if (Total > 0.0f)
-        {
-            for (float& Prob : Probabilities)
-            {
-                Prob /= Total;
-            }
-        }
     }
+
+public:
+    //@OpeningSkills 블록 실행 개수 설정
+    UPROPERTY(EditAnywhere, Category = "블록별 실행 개수",
+        meta = (ClampMin = "1", ClampMax = "10", ToolTip = "OpeningSkills 블록 최소 실행 개수"))
+    int32 OpeningSkillsMinCount;
+
+    UPROPERTY(EditAnywhere, Category = "블록별 실행 개수",
+        meta = (ClampMin = "1", ClampMax = "10", ToolTip = "OpeningSkills 블록 최대 실행 개수"))
+    int32 OpeningSkillsMaxCount;
+
+    //@Skills 블록 실행 개수 설정
+    UPROPERTY(EditAnywhere, Category = "블록별 실행 개수",
+        meta = (ClampMin = "1", ClampMax = "10", ToolTip = "Skills 블록 최소 실행 개수"))
+    int32 SkillsMinCount;
+
+    UPROPERTY(EditAnywhere, Category = "블록별 실행 개수",
+        meta = (ClampMin = "1", ClampMax = "10", ToolTip = "Skills 블록 최대 실행 개수"))
+    int32 SkillsMaxCount;
+
+    //@StrafeOrDodge 블록 실행 개수 설정
+    UPROPERTY(EditAnywhere, Category = "블록별 실행 개수",
+        meta = (ClampMin = "1", ClampMax = "10", ToolTip = "StrafeOrDodge 블록 최소 실행 개수"))
+    int32 StrafeOrDodgeMinCount;
+
+    UPROPERTY(EditAnywhere, Category = "블록별 실행 개수",
+        meta = (ClampMin = "1", ClampMax = "10", ToolTip = "StrafeOrDodge 블록 최대 실행 개수"))
+    int32 StrafeOrDodgeMaxCount;
+
+    //@선호도 영향 강도 (0.0 = 선호도 무시, 1.0 = 선호도에 전적 의존)
+    UPROPERTY(EditAnywhere, Category = "적응형 실행 제어",
+        meta = (ClampMin = "0.0", ClampMax = "1.0", ToolTip = "선호도가 실행 개수에 미치는 영향 강도"))
+    float PreferenceInfluenceStrength;
+
+    //@탐험 모드 실행 개수 보정 활성화
+    UPROPERTY(EditAnywhere, Category = "적응형 실행 제어",
+        meta = (ToolTip = "탐험 모드에서 최소 실행 개수를 보장할지 여부"))
+    bool bBoostExplorationExecution;
+
+    //@탐험 모드 최소 실행 개수
+    UPROPERTY(EditAnywhere, Category = "적응형 실행 제어",
+        meta = (ClampMin = "1", ClampMax = "5", EditCondition = "bBoostExplorationExecution",
+            ToolTip = "탐험 모드에서 보장할 최소 실행 개수"))
+    int32 MinExplorationExecutionCount;
+
+public:
+    //@특정 블록 카테고리의 최소/최대 실행 개수 반환
+    void GetExecutionCountRange(const FGameplayTag& BlockCategory, int32& OutMinCount, int32& OutMaxCount) const;
+
+    //@선호도 기반 실행 개수 계산
+    int32 CalculateExecutionCountByPreference(const FGameplayTag& BlockCategory, float PreferenceValue, bool bIsExplorationMode = false) const;
+
+    //@설정 유효성 검증
+    bool ValidateSettings() const;
 };
 
 /**
@@ -521,62 +537,13 @@ public:
 
 public:
     //@경험 가중치 업데이트
-    void UpdateExperienceWeight(const FGameplayTag& ActionCategory, float WeightChange, const FAIExperienceWeightConfig& Config, const FAISimplifiedPersonality& InitialPersonality)
-    {
-        float ClampedChange = Config.ClampSingleChange(WeightChange);
-
-        if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills"))))
-        {
-            OpeningSkillsWeight = Config.ClampWeightChange(OpeningSkillsWeight, 0.0f, ClampedChange);
-        }
-        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills"))))
-        {
-            SkillsWeight = Config.ClampWeightChange(SkillsWeight, 0.0f, ClampedChange);
-        }
-        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge"))))
-        {
-            StrafeOrDodgeWeight = Config.ClampWeightChange(StrafeOrDodgeWeight, 0.0f, ClampedChange);
-        }
-
-        LearningCount++;
-    }
-
+    void UpdateExperienceWeight(const FGameplayTag& ActionCategory, float WeightChange, const FAIExperienceWeightConfig& Config, const FAISimplifiedPersonality& InitialPersonality);
 
     //@현재 행동 선호도 계산 (초기 성향 + 경험 가중치)
-    float GetCurrentActionPreference(const FGameplayTag& ActionCategory, const FAISimplifiedPersonality& InitialPersonality) const
-    {
-        float InitialPreference = InitialPersonality.GetInitialActionPreference(ActionCategory);
-        float ExperienceWeight = 0.0f;
-
-        if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills"))))
-        {
-            ExperienceWeight = OpeningSkillsWeight;
-        }
-        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills"))))
-        {
-            ExperienceWeight = SkillsWeight;
-        }
-        else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge"))))
-        {
-            ExperienceWeight = StrafeOrDodgeWeight;
-        }
-
-        return FMath::Clamp(InitialPreference + (ExperienceWeight * 100.0f), 0.0f, 100.0f);
-    }
+    float GetCurrentActionPreference(const FGameplayTag& ActionCategory, const FAISimplifiedPersonality& InitialPersonality) const;
 
     //@적응적 리셋 실행
-    void ApplyAdaptiveReset(const FAIExperienceWeightConfig& Config)
-    {
-        float ResetFactor = 1.0f - Config.AdaptiveResetPercentage;
-
-        OpeningSkillsWeight *= ResetFactor;
-        SkillsWeight *= ResetFactor;
-        StrafeOrDodgeWeight *= ResetFactor;
-
-        bIsOverdrivePrevention = true;
-
-        UE_LOG(LogTemp, Log, TEXT("적응적 리셋 적용 - 가중치가 %f%% 원점으로 이동"), Config.AdaptiveResetPercentage * 100.0f);
-    }
+    void ApplyAdaptiveReset(const FAIExperienceWeightConfig& Config);
 };
 
 /**
@@ -593,6 +560,7 @@ public:
         : bEnableAdaptiveLearning(false)
         , SimplifiedPersonality()
         , RewardCalculator()
+        , ExecutionConfig()
     {
     }
 
@@ -619,6 +587,12 @@ public:
         meta = (EditCondition = "bEnableAdaptiveLearning",
             ToolTip = "경험 가중치 변화의 제한사항과 안전장치 설정"))
     FAIExperienceWeightConfig ExperienceWeightConfig;
+
+    //@적응형 실행 개수 시스템 설정 (새로 추가)
+    UPROPERTY(EditAnywhere, Category = "적응형 실행 제어",
+        meta = (EditCondition = "bEnableAdaptiveLearning",
+            ToolTip = "선호도 기반 어빌리티 실행 개수 결정 시스템"))
+    FAIAdaptiveExecutionConfig ExecutionConfig;
 };
 
 /**
@@ -996,6 +970,8 @@ public:
 
         return FMath::Clamp(Complexity, 0.0f, 10.0f);
     }
+
+
 #pragma endregion
 
 };

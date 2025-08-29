@@ -8,6 +8,539 @@
 #include "BehaviorTree/BehaviorTree.h"
 
 DEFINE_LOG_CATEGORY(LogAIDataSetInfos)
+DEFINE_LOG_CATEGORY(LogAILearning)
+
+//@Structs
+#pragma region FAISimplifiedPersonality
+/**
+ * @brief 특정 행동 카테고리에 대한 초기 선호도를 계산합니다.
+ * @param ActionCategory 행동 카테고리 태그
+ * @return 계산된 초기 선호도 (0.0f ~ 100.0f)
+ */
+    float FAISimplifiedPersonality::GetInitialActionPreference(const FGameplayTag& ActionCategory) const
+{
+    float InitialPreference = 50.0f; // 기본값
+
+    UE_LOG(LogAILearning, VeryVerbose, TEXT("GetInitialActionPreference - 입력 카테고리: %s"), *ActionCategory.ToString());
+    UE_LOG(LogAILearning, VeryVerbose, TEXT("GetInitialActionPreference - 현재 성향 (공격성: %.2f, 기민함: %.2f)"), Aggressiveness, Agility);
+
+    if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills"))))
+    {
+        InitialPreference = (Aggressiveness + Agility) * 0.5f; // 균등 가중치
+        UE_LOG(LogAILearning, Log, TEXT("OpeningSkills 초기 선호도 계산: (%.2f + %.2f) * 0.5 = %.2f"),
+            Aggressiveness, Agility, InitialPreference);
+    }
+    else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills"))))
+    {
+        InitialPreference = Aggressiveness * 0.8f + Agility * 0.2f; // 공격성 위주
+        UE_LOG(LogAILearning, Log, TEXT("Skills 초기 선호도 계산: %.2f * 0.8 + %.2f * 0.2 = %.2f"),
+            Aggressiveness, Agility, InitialPreference);
+    }
+    else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge"))))
+    {
+        InitialPreference = Agility * 0.8f + Aggressiveness * 0.2f; // 기민함 위주
+        UE_LOG(LogAILearning, Log, TEXT("StrafeOrDodge 초기 선호도 계산: %.2f * 0.8 + %.2f * 0.2 = %.2f"),
+            Agility, Aggressiveness, InitialPreference);
+    }
+    else
+    {
+        UE_LOG(LogAILearning, Warning, TEXT("알 수 없는 행동 카테고리 '%s' - 기본값 %.2f 사용"),
+            *ActionCategory.ToString(), InitialPreference);
+    }
+
+    UE_LOG(LogAILearning, VeryVerbose, TEXT("GetInitialActionPreference 결과: %.2f"), InitialPreference);
+    return InitialPreference;
+}
+#pragma endregion
+
+#pragma region FAIRewardCalculator
+/**
+ * @brief 정규화된 가중합 보상을 계산합니다.
+ * @param DamageReceived 받은 데미지
+ * @param CurrentDistance 현재 거리
+ * @param bAbilitySuccess 어빌리티 성공 여부
+ * @return 정규화된 보상값 (-1.0f ~ 1.0f)
+ */
+float FAIRewardCalculator::CalculateNormalizedReward(float DamageReceived, float CurrentDistance, bool bAbilitySuccess) const
+{
+    UE_LOG(LogAILearning, Log, TEXT("표준 보상 계산 시작 - 데미지: %.2f, 거리: %.2f, 성공: %s"),
+        DamageReceived, CurrentDistance, bAbilitySuccess ? TEXT("True") : TEXT("False"));
+
+    // 1. 데미지 보상 정규화 (받은 데미지가 많을수록 음의 보상)
+    float NormalizedDamage = -FMath::Clamp(DamageReceived / 100.0f, 0.0f, 1.0f);
+    UE_LOG(LogAILearning, VeryVerbose, TEXT("데미지 정규화: %.2f → %.3f"), DamageReceived, NormalizedDamage);
+
+    // 2. 거리 보상 정규화 (근접 유형: MinAttackRange에 가까울수록 좋음)
+    float DistanceDiff = FMath::Abs(CurrentDistance - OptimalCombatDistance);
+    float MaxAcceptableDistance = OptimalCombatDistance * 2.0f; // 허용 범위
+    float NormalizedDistance = FMath::Max(0.0f, 1.0f - (DistanceDiff / MaxAcceptableDistance));
+
+    UE_LOG(LogAILearning, Log, TEXT("거리 정규화: 현재=%.2f, 최적=%.2f, 차이=%.2f → %.3f"),
+        CurrentDistance, OptimalCombatDistance, DistanceDiff, NormalizedDistance);
+
+    // 3. 성공 보상 (이진값)
+    float NormalizedSuccess = bAbilitySuccess ? 1.0f : -1.0f;
+    UE_LOG(LogAILearning, VeryVerbose, TEXT("성공 정규화: %s → %.3f"),
+        bAbilitySuccess ? TEXT("Success") : TEXT("Fail"), NormalizedSuccess);
+
+    // === 고정 가중치 사용 (제한사항 준수) ===
+    float WeightedSum = (NormalizedDamage * FIXED_DAMAGE_WEIGHT) +
+        (NormalizedDistance * FIXED_DISTANCE_WEIGHT) +
+        (NormalizedSuccess * FIXED_SUCCESS_WEIGHT);
+
+    float FinalReward = FMath::Clamp(WeightedSum / FIXED_TOTAL_WEIGHT, -1.0f, 1.0f);
+
+    UE_LOG(LogAILearning, Log, TEXT("표준 보상 계산 완료 - 가중합: %.3f, 고정분모: %.3f, 최종보상: %.3f"),
+        WeightedSum, FIXED_TOTAL_WEIGHT, FinalReward);
+
+    if (FinalReward > 0.5f)
+    {
+        UE_LOG(LogAILearning, Log, TEXT("높은 양의 보상 달성! (%.3f)"), FinalReward);
+    }
+    else if (FinalReward < -0.5f)
+    {
+        UE_LOG(LogAILearning, Log, TEXT("높은 음의 보상 발생 (%.3f) - 행동 패턴 조정 필요"), FinalReward);
+    }
+
+    return FinalReward;
+}
+
+/**
+ * @brief 적응적 학습률을 계산합니다.
+ * @param LearningCount 현재 학습 횟수
+ * @return 계산된 학습률
+ */
+float FAIRewardCalculator::CalculateAdaptiveLearningRate(int32 LearningCount) const
+{
+    UE_LOG(LogAILearning, VeryVerbose, TEXT("학습률 계산 - 학습횟수: %d, 기본학습률: %.3f, 감쇠인수: %.3f"),
+        LearningCount, BaseLearningRate, LearningDecayFactor);
+
+    float AdaptiveRate = BaseLearningRate * FMath::Pow(LearningDecayFactor, LearningCount / 10.0f);
+    float ClampedRate = FMath::Clamp(AdaptiveRate, 0.01f, 0.15f);
+
+    if (AdaptiveRate != ClampedRate)
+    {
+        UE_LOG(LogAILearning, Log, TEXT("학습률 클램핑: %.3f → %.3f (최소/최대 제한 적용)"),
+            AdaptiveRate, ClampedRate);
+    }
+
+    UE_LOG(LogAILearning, VeryVerbose, TEXT("적응적 학습률 계산 결과: %.3f"), ClampedRate);
+
+    // 학습률이 매우 낮아졌을 때 경고
+    if (ClampedRate <= 0.02f)
+    {
+        UE_LOG(LogAILearning, Warning, TEXT("학습률이 매우 낮음 (%.3f) - 학습 효과 미미할 수 있음"), ClampedRate);
+    }
+
+    return ClampedRate;
+}
+#pragma endregion
+
+#pragma region FAIExperienceWeightConfig
+/**
+ * @brief 경험 가중치 범위 내에서 변화량을 제한합니다.
+ * @param CurrentWeight 현재 가중치
+ * @param InitialWeight 초기 가중치
+ * @param ProposedChange 제안된 변화량
+ * @return 제한된 새로운 가중치
+ */
+float FAIExperienceWeightConfig::ClampWeightChange(float CurrentWeight, float InitialWeight, float ProposedChange) const
+{
+    UE_LOG(LogAILearning, VeryVerbose, TEXT("가중치 변화 제한 - 현재: %.3f, 초기: %.3f, 제안변화: %.3f"),
+        CurrentWeight, InitialWeight, ProposedChange);
+
+    float NewWeight = CurrentWeight + ProposedChange;
+    float MaxAllowed = InitialWeight + MaxWeightChange;
+    float MinAllowed = InitialWeight - MaxWeightChange;
+
+    float ClampedWeight = FMath::Clamp(NewWeight, MinAllowed, MaxAllowed);
+
+    if (NewWeight != ClampedWeight)
+    {
+        UE_LOG(LogAILearning, Log, TEXT("가중치 제한 적용: %.3f → %.3f (허용범위: %.3f ~ %.3f)"),
+            NewWeight, ClampedWeight, MinAllowed, MaxAllowed);
+    }
+
+    // 극한값에 도달했을 때 경고
+    if (FMath::IsNearlyEqual(ClampedWeight, MaxAllowed, 0.01f))
+    {
+        UE_LOG(LogAILearning, Warning, TEXT("최대 가중치 한계에 도달: %.3f"), ClampedWeight);
+    }
+    else if (FMath::IsNearlyEqual(ClampedWeight, MinAllowed, 0.01f))
+    {
+        UE_LOG(LogAILearning, Warning, TEXT("최소 가중치 한계에 도달: %.3f"), ClampedWeight);
+    }
+
+    return ClampedWeight;
+}
+
+/**
+ * @brief 단일 변화량을 제한합니다.
+ * @param ProposedChange 제안된 변화량
+ * @return 제한된 변화량
+ */
+float FAIExperienceWeightConfig::ClampSingleChange(float ProposedChange) const
+{
+    float ClampedChange = FMath::Clamp(ProposedChange, -MinSingleChange, MinSingleChange);
+
+    if (ProposedChange != ClampedChange)
+    {
+        UE_LOG(LogAILearning, VeryVerbose, TEXT("단일 변화량 제한: %.4f → %.4f"), ProposedChange, ClampedChange);
+    }
+
+    return ClampedChange;
+}
+
+/**
+ * @brief 카테고리 확률을 정규화하고 최소값을 보장합니다.
+ * @param Probabilities 확률 배열 (참조로 수정됨)
+ */
+void FAIExperienceWeightConfig::NormalizeCategoryProbabilities(TArray<float>& Probabilities) const
+{
+    int32 NumCategories = Probabilities.Num();
+    if (NumCategories == 0)
+    {
+        UE_LOG(LogAILearning, Warning, TEXT("확률 정규화: 빈 배열"));
+        return;
+    }
+
+    UE_LOG(LogAILearning, VeryVerbose, TEXT("확률 정규화 시작 - 카테고리 수: %d"), NumCategories);
+
+    // 정규화 전 로그
+    for (int32 i = 0; i < NumCategories; ++i)
+    {
+        UE_LOG(LogAILearning, VeryVerbose, TEXT("정규화 전 확률[%d]: %.3f"), i, Probabilities[i]);
+    }
+
+    // 최소 확률 보장
+    int32 MinProbAppliedCount = 0;
+    for (float& Prob : Probabilities)
+    {
+        if (Prob < MinCategoryProbability)
+        {
+            Prob = MinCategoryProbability;
+            MinProbAppliedCount++;
+        }
+    }
+
+    if (MinProbAppliedCount > 0)
+    {
+        UE_LOG(LogAILearning, Log, TEXT("최소 확률 보장 적용: %d개 카테고리를 %.3f로 조정"),
+            MinProbAppliedCount, MinCategoryProbability);
+    }
+
+    // 정규화
+    float Total = 0.0f;
+    for (float Prob : Probabilities)
+    {
+        Total += Prob;
+    }
+
+    if (Total > 0.0f)
+    {
+        for (float& Prob : Probabilities)
+        {
+            Prob /= Total;
+        }
+
+        UE_LOG(LogAILearning, Log, TEXT("확률 정규화 완료 - 총합: %.3f → 1.000"), Total);
+
+        // 정규화 후 로그
+        for (int32 i = 0; i < NumCategories; ++i)
+        {
+            UE_LOG(LogAILearning, VeryVerbose, TEXT("정규화 후 확률[%d]: %.3f"), i, Probabilities[i]);
+        }
+    }
+    else
+    {
+        UE_LOG(LogAILearning, Error, TEXT("확률 정규화 실패: 총합이 0"));
+    }
+}
+#pragma endregion
+
+#pragma region FAIAdaptiveExecutionConfig
+void FAIAdaptiveExecutionConfig::GetExecutionCountRange(const FGameplayTag& BlockCategory, int32& OutMinCount, int32& OutMaxCount) const
+{
+    UE_LOG(LogAILearning, Log, TEXT("실행 개수 범위 조회 - 카테고리: %s"), *BlockCategory.ToString());
+
+    if (BlockCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills"))))
+    {
+        OutMinCount = OpeningSkillsMinCount;
+        OutMaxCount = OpeningSkillsMaxCount;
+        UE_LOG(LogAILearning, Log, TEXT("OpeningSkills 실행 범위: %d~%d"), OutMinCount, OutMaxCount);
+    }
+    else if (BlockCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills"))))
+    {
+        OutMinCount = SkillsMinCount;
+        OutMaxCount = SkillsMaxCount;
+        UE_LOG(LogAILearning, Log, TEXT("Skills 실행 범위: %d~%d"), OutMinCount, OutMaxCount);
+    }
+    else if (BlockCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge"))))
+    {
+        OutMinCount = StrafeOrDodgeMinCount;
+        OutMaxCount = StrafeOrDodgeMaxCount;
+        UE_LOG(LogAILearning, Log, TEXT("StrafeOrDodge 실행 범위: %d~%d"), OutMinCount, OutMaxCount);
+    }
+    else
+    {
+        // 기본값
+        OutMinCount = 1;
+        OutMaxCount = 2;
+        UE_LOG(LogAILearning, Warning, TEXT("알 수 없는 블록 카테고리: %s, 기본값 적용 (%d~%d)"),
+            *BlockCategory.ToString(), OutMinCount, OutMaxCount);
+    }
+}
+
+int32 FAIAdaptiveExecutionConfig::CalculateExecutionCountByPreference(const FGameplayTag& BlockCategory, float PreferenceValue, bool bIsExplorationMode) const
+{
+    UE_LOG(LogAILearning, Log, TEXT("선호도 기반 실행 개수 계산 시작 - 카테고리: %s, 선호도: %.2f, 탐험모드: %s"),
+        *BlockCategory.ToString(), PreferenceValue, bIsExplorationMode ? TEXT("활성") : TEXT("비활성"));
+
+    int32 MinCount, MaxCount;
+    GetExecutionCountRange(BlockCategory, MinCount, MaxCount);
+
+    // 선호도를 0-1로 정규화
+    float NormalizedPreference = FMath::Clamp(PreferenceValue / 100.0f, 0.0f, 1.0f);
+    UE_LOG(LogAILearning, Log, TEXT("정규화된 선호도: %.3f"), NormalizedPreference);
+
+    // 기본 계산: MinCount + (정규화된선호도 × 범위 × 영향강도)
+    float Range = static_cast<float>(MaxCount - MinCount);
+    float PreferenceAdjustment = NormalizedPreference * Range * PreferenceInfluenceStrength;
+    int32 CalculatedCount = MinCount + FMath::RoundToInt(PreferenceAdjustment);
+
+    UE_LOG(LogAILearning, Log, TEXT("기본 계산 결과: %d (범위: %.1f, 조정값: %.2f, 영향강도: %.2f)"),
+        CalculatedCount, Range, PreferenceAdjustment, PreferenceInfluenceStrength);
+
+    // 탐험 모드 보정
+    if (bIsExplorationMode && bBoostExplorationExecution)
+    {
+        int32 BeforeBoost = CalculatedCount;
+        CalculatedCount = FMath::Max(CalculatedCount, MinExplorationExecutionCount);
+
+        if (BeforeBoost != CalculatedCount)
+        {
+            UE_LOG(LogAILearning, Log, TEXT("탐험 모드 보정 적용: %d → %d (최소 보장: %d)"),
+                BeforeBoost, CalculatedCount, MinExplorationExecutionCount);
+        }
+    }
+
+    // 최종 범위 클램핑
+    int32 FinalCount = FMath::Clamp(CalculatedCount, MinCount, MaxCount);
+
+    if (CalculatedCount != FinalCount)
+    {
+        UE_LOG(LogAILearning, Log, TEXT("범위 클램핑 적용: %d → %d"), CalculatedCount, FinalCount);
+    }
+
+    UE_LOG(LogAILearning, Log, TEXT("최종 실행 개수 결정: %d"), FinalCount);
+    return FinalCount;
+}
+
+bool FAIAdaptiveExecutionConfig::ValidateSettings() const
+{
+    UE_LOG(LogAILearning, Log, TEXT("적응형 실행 설정 유효성 검증 시작"));
+
+    bool bIsValid = true;
+
+    // 최소값이 최대값보다 큰지 검증
+    if (OpeningSkillsMinCount > OpeningSkillsMaxCount)
+    {
+        UE_LOG(LogAILearning, Error, TEXT("OpeningSkills 최소값(%d)이 최대값(%d)보다 큼"),
+            OpeningSkillsMinCount, OpeningSkillsMaxCount);
+        bIsValid = false;
+    }
+
+    if (SkillsMinCount > SkillsMaxCount)
+    {
+        UE_LOG(LogAILearning, Error, TEXT("Skills 최소값(%d)이 최대값(%d)보다 큼"),
+            SkillsMinCount, SkillsMaxCount);
+        bIsValid = false;
+    }
+
+    if (StrafeOrDodgeMinCount > StrafeOrDodgeMaxCount)
+    {
+        UE_LOG(LogAILearning, Error, TEXT("StrafeOrDodge 최소값(%d)이 최대값(%d)보다 큼"),
+            StrafeOrDodgeMinCount, StrafeOrDodgeMaxCount);
+        bIsValid = false;
+    }
+
+    // 모든 최소값이 1 이상인지 검증
+    if (OpeningSkillsMinCount < 1)
+    {
+        UE_LOG(LogAILearning, Error, TEXT("OpeningSkills 최소값(%d)이 1보다 작음"), OpeningSkillsMinCount);
+        bIsValid = false;
+    }
+
+    if (SkillsMinCount < 1)
+    {
+        UE_LOG(LogAILearning, Error, TEXT("Skills 최소값(%d)이 1보다 작음"), SkillsMinCount);
+        bIsValid = false;
+    }
+
+    if (StrafeOrDodgeMinCount < 1)
+    {
+        UE_LOG(LogAILearning, Error, TEXT("StrafeOrDodge 최소값(%d)이 1보다 작음"), StrafeOrDodgeMinCount);
+        bIsValid = false;
+    }
+
+    // 선호도 영향 강도 범위 검증
+    if (PreferenceInfluenceStrength < 0.0f || PreferenceInfluenceStrength > 1.0f)
+    {
+        UE_LOG(LogAILearning, Error, TEXT("선호도 영향 강도(%.2f)가 유효 범위(0.0~1.0)를 벗어남"),
+            PreferenceInfluenceStrength);
+        bIsValid = false;
+    }
+
+    UE_LOG(LogAILearning, Log, TEXT("적응형 실행 설정 유효성 검증 완료: %s"), bIsValid ? TEXT("성공") : TEXT("실패"));
+    return bIsValid;
+}
+#pragma endregion
+
+#pragma region FAIRuntimeLearningState
+/**
+ * @brief 경험 가중치를 업데이트합니다.
+ * @param ActionCategory 행동 카테고리
+ * @param WeightChange 가중치 변화량
+ * @param Config 경험 가중치 설정
+ * @param InitialPersonality 초기 성향
+ */
+void FAIRuntimeLearningState::UpdateExperienceWeight(const FGameplayTag& ActionCategory,
+    float WeightChange,
+    const FAIExperienceWeightConfig& Config,
+    const FAISimplifiedPersonality& InitialPersonality)
+{
+    UE_LOG(LogAILearning, Log, TEXT("경험 가중치 업데이트 시작 - 카테고리: %s, 변화량: %.4f"),
+        *ActionCategory.ToString(), WeightChange);
+
+    float ClampedChange = Config.ClampSingleChange(WeightChange);
+
+    if (WeightChange != ClampedChange)
+    {
+        UE_LOG(LogAILearning, VeryVerbose, TEXT("변화량 클램핑: %.4f → %.4f"), WeightChange, ClampedChange);
+    }
+
+    float OldWeight = 0.0f;
+    float NewWeight = 0.0f;
+    FString CategoryName;
+
+    if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills"))))
+    {
+        OldWeight = OpeningSkillsWeight;
+        OpeningSkillsWeight = Config.ClampWeightChange(OpeningSkillsWeight, 0.0f, ClampedChange);
+        NewWeight = OpeningSkillsWeight;
+        CategoryName = TEXT("OpeningSkills");
+    }
+    else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills"))))
+    {
+        OldWeight = SkillsWeight;
+        SkillsWeight = Config.ClampWeightChange(SkillsWeight, 0.0f, ClampedChange);
+        NewWeight = SkillsWeight;
+        CategoryName = TEXT("Skills");
+    }
+    else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge"))))
+    {
+        OldWeight = StrafeOrDodgeWeight;
+        StrafeOrDodgeWeight = Config.ClampWeightChange(StrafeOrDodgeWeight, 0.0f, ClampedChange);
+        NewWeight = StrafeOrDodgeWeight;
+        CategoryName = TEXT("StrafeOrDodge");
+    }
+    else
+    {
+        UE_LOG(LogAILearning, Warning, TEXT("알 수 없는 행동 카테고리: %s"), *ActionCategory.ToString());
+        return;
+    }
+
+    LearningCount++;
+
+    UE_LOG(LogAILearning, Log, TEXT("%s 가중치 업데이트: %.3f → %.3f (학습횟수: %d)"),
+        *CategoryName, OldWeight, NewWeight, LearningCount);
+
+    // 중요한 변화 감지
+    float WeightDifference = FMath::Abs(NewWeight - OldWeight);
+    if (WeightDifference > 0.1f)
+    {
+        UE_LOG(LogAILearning, Log, TEXT("상당한 가중치 변화 감지: %s 카테고리에서 %.3f 변화"),
+            *CategoryName, WeightDifference);
+    }
+
+    // 학습 마일스톤 로그
+    if (LearningCount % 10 == 0)
+    {
+        UE_LOG(LogAILearning, Log, TEXT("학습 마일스톤: %d회 - 현재 가중치 [Opening: %.3f, Skills: %.3f, Dodge: %.3f]"),
+            LearningCount, OpeningSkillsWeight, SkillsWeight, StrafeOrDodgeWeight);
+    }
+}
+
+/**
+ * @brief 현재 행동 선호도를 계산합니다 (초기 성향 + 경험 가중치).
+ * @param ActionCategory 행동 카테고리
+ * @param InitialPersonality 초기 성향
+ * @return 현재 행동 선호도
+ */
+float FAIRuntimeLearningState::GetCurrentActionPreference(const FGameplayTag& ActionCategory,
+    const FAISimplifiedPersonality& InitialPersonality) const
+{
+    float InitialPreference = InitialPersonality.GetInitialActionPreference(ActionCategory);
+    float ExperienceWeight = 0.0f;
+    FString CategoryName;
+
+    if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills"))))
+    {
+        ExperienceWeight = OpeningSkillsWeight;
+        CategoryName = TEXT("OpeningSkills");
+    }
+    else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills"))))
+    {
+        ExperienceWeight = SkillsWeight;
+        CategoryName = TEXT("Skills");
+    }
+    else if (ActionCategory.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge"))))
+    {
+        ExperienceWeight = StrafeOrDodgeWeight;
+        CategoryName = TEXT("StrafeOrDodge");
+    }
+    else
+    {
+        UE_LOG(LogAILearning, Warning, TEXT("알 수 없는 행동 카테고리: %s"), *ActionCategory.ToString());
+        return InitialPreference;
+    }
+
+    float CurrentPreference = FMath::Clamp(InitialPreference + (ExperienceWeight * 100.0f), 0.0f, 100.0f);
+
+    UE_LOG(LogAILearning, VeryVerbose, TEXT("%s 현재 선호도: 초기=%.2f + 경험=%.3f*100 = %.2f"),
+        *CategoryName, InitialPreference, ExperienceWeight, CurrentPreference);
+
+    return CurrentPreference;
+}
+
+/**
+ * @brief 적응적 리셋을 실행합니다.
+ * @param Config 경험 가중치 설정
+ */
+void FAIRuntimeLearningState::ApplyAdaptiveReset(const FAIExperienceWeightConfig& Config)
+{
+    UE_LOG(LogAILearning, Warning, TEXT("적응적 리셋 시작 - 리셋 비율: %.1f%%"), Config.AdaptiveResetPercentage * 100.0f);
+
+    float ResetFactor = 1.0f - Config.AdaptiveResetPercentage;
+
+    float OldOpeningWeight = OpeningSkillsWeight;
+    float OldSkillsWeight = SkillsWeight;
+    float OldDodgeWeight = StrafeOrDodgeWeight;
+
+    OpeningSkillsWeight *= ResetFactor;
+    SkillsWeight *= ResetFactor;
+    StrafeOrDodgeWeight *= ResetFactor;
+
+    bIsOverdrivePrevention = true;
+
+    UE_LOG(LogAILearning, Warning, TEXT("적응적 리셋 완료 - Opening: %.3f→%.3f, Skills: %.3f→%.3f, Dodge: %.3f→%.3f"),
+        OldOpeningWeight, OpeningSkillsWeight,
+        OldSkillsWeight, SkillsWeight,
+        OldDodgeWeight, StrafeOrDodgeWeight);
+
+    UE_LOG(LogAILearning, Log, TEXT("오버드라이브 방지 모드 활성화"));
+}
+#pragma endregion
 
 //@Default Setting
 #pragma region Default Setting
@@ -382,6 +915,80 @@ FAIDataSetValidationResult UAIDataSetInfos::ValidateAbilityBlocks() const
                 }
             }
         }
+
+        // === 적응형 시스템 블록 유닛 개수 검증 추가 ===
+        if (DataSet.AdaptiveBehaviorConfig.bEnableAdaptiveLearning)
+        {
+            UE_LOG(LogAILearning, Log, TEXT("AI 타입 %s의 적응형 블록 유닛 개수 검증 시작"),
+                *UEnum::GetValueAsString(DataSet.AIType));
+
+            const FAIAdaptiveExecutionConfig& ExecutionConfig = DataSet.AdaptiveBehaviorConfig.ExecutionConfig;
+
+            for (int32 BlockIndex = 0; BlockIndex < CombatSequence.AbilityBlocks.Num(); ++BlockIndex)
+            {
+                const FAIAbilityBlock& Block = CombatSequence.AbilityBlocks[BlockIndex];
+                const FGameplayTag& BlockIdentifier = Block.BlockIdentifier;
+                int32 ActualUnitCount = Block.AbilityBlockUnits.Num();
+
+                int32 RequiredMinCount = 0;
+                FString BlockCategoryName;
+
+                // 블록 카테고리별 필요 최소 개수 확인
+                if (BlockIdentifier.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills"))))
+                {
+                    RequiredMinCount = ExecutionConfig.OpeningSkillsMinCount;
+                    BlockCategoryName = TEXT("OpeningSkills");
+                }
+                else if (BlockIdentifier.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.Skills"))))
+                {
+                    RequiredMinCount = ExecutionConfig.SkillsMinCount;
+                    BlockCategoryName = TEXT("Skills");
+                }
+                else if (BlockIdentifier.MatchesTag(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.StrafeOrDodge"))))
+                {
+                    RequiredMinCount = ExecutionConfig.StrafeOrDodgeMinCount;
+                    BlockCategoryName = TEXT("StrafeOrDodge");
+                }
+                else
+                {
+                    // 알 수 없는 카테고리는 건너뛰기
+                    UE_LOG(LogAILearning, Log, TEXT("알 수 없는 블록 카테고리: %s, 검증 건너뛰기"),
+                        *BlockIdentifier.ToString());
+                    continue;
+                }
+
+                // 유닛 개수 부족 검증
+                if (ActualUnitCount < RequiredMinCount)
+                {
+                    FString ErrorMessage = FString::Printf(
+                        TEXT("적응형 시스템 블록 유닛 부족: AI 타입 %s의 %s 블록[%d]에 %d개 유닛이 있지만, 최소 %d개가 필요함 (블록ID: %s)"),
+                        *UEnum::GetValueAsString(DataSet.AIType),
+                        *BlockCategoryName,
+                        BlockIndex,
+                        ActualUnitCount,
+                        RequiredMinCount,
+                        *BlockIdentifier.ToString()
+                    );
+
+                    UE_LOG(LogAILearning, Error, TEXT("%s"), *ErrorMessage);
+
+                    return FAIDataSetValidationResult(
+                        EAIDataSetValidationError::LogicalInconsistency,
+                        ErrorMessage,
+                        DataSetIndex
+                    );
+                }
+                else
+                {
+                    UE_LOG(LogAILearning, Log, TEXT("%s 블록[%d] 유닛 개수 검증 통과: %d개 (최소 %d개 필요)"),
+                        *BlockCategoryName, BlockIndex, ActualUnitCount, RequiredMinCount);
+                }
+            }
+
+            UE_LOG(LogAILearning, Log, TEXT("AI 타입 %s의 적응형 블록 유닛 개수 검증 완료"),
+                *UEnum::GetValueAsString(DataSet.AIType));
+        }
+
     }
 
     return FAIDataSetValidationResult(); // 성공
@@ -466,164 +1073,157 @@ FAIDataSetValidationResult UAIDataSetInfos::ValidatePersonalityTraits() const
 
 FAIDataSetValidationResult UAIDataSetInfos::ValidateAdaptiveSystemSettings() const
 {
-    for (int32 DataSetIndex = 0; DataSetIndex < AIDataSets.Num(); ++DataSetIndex)
-    {
-        const FAIDataSet& DataSet = AIDataSets[DataSetIndex];
+    UE_LOG(LogAILearning, Log, TEXT("적응형 시스템 설정 전체 검증 시작"));
 
+    for (int32 i = 0; i < AIDataSets.Num(); ++i)
+    {
+        const FAIDataSet& DataSet = AIDataSets[i];
+
+        // 적응형 시스템이 비활성화된 경우 건너뛰기
         if (!DataSet.AdaptiveBehaviorConfig.bEnableAdaptiveLearning)
         {
-            continue; // 적응형 시스템이 비활성화된 AI는 건너뛰기
+            UE_LOG(LogAILearning, Log, TEXT("AI 타입 %s: 적응형 시스템 비활성화, 검증 건너뛰기"),
+                *UEnum::GetValueAsString(DataSet.AIType));
+            continue;
         }
 
-        const FAIRewardCalculator& Calculator = DataSet.AdaptiveBehaviorConfig.RewardCalculator;
-        const FAIExperienceWeightConfig& WeightConfig = DataSet.AdaptiveBehaviorConfig.ExperienceWeightConfig;
-        const FAISimplifiedPersonality& Personality = DataSet.AdaptiveBehaviorConfig.SimplifiedPersonality;
+        UE_LOG(LogAILearning, Log, TEXT("AI 타입 %s의 적응형 시스템 설정 검증 중"),
+            *UEnum::GetValueAsString(DataSet.AIType));
 
-        // === 보상 계산기 검증 ===
-        if (Calculator.BaseLearningRate <= 0.0f || Calculator.BaseLearningRate > 0.5f)
+        const FAIAdaptiveBehaviorConfig& AdaptiveConfig = DataSet.AdaptiveBehaviorConfig;
+
+        // === 기존 적응형 시스템 검증 로직 ===
+
+        // SimplifiedPersonality 검증
+        const FAISimplifiedPersonality& Personality = AdaptiveConfig.SimplifiedPersonality;
+        if (Personality.Aggressiveness < 0.0f || Personality.Aggressiveness > 100.0f ||
+            Personality.Agility < 0.0f || Personality.Agility > 100.0f)
         {
-            return FAIDataSetValidationResult(
-                EAIDataSetValidationError::InvalidPersonalityValue,
-                FString::Printf(TEXT("부적절한 기본 학습률: AI %d (값: %.3f, 권장: 0.01-0.5)"),
-                    DataSetIndex, Calculator.BaseLearningRate),
-                DataSetIndex
+            FString ErrorMessage = FString::Printf(
+                TEXT("AI 타입 %s의 간소화된 성향 값이 유효 범위(0-100)를 벗어남: 공격성=%.1f, 기민함=%.1f"),
+                *UEnum::GetValueAsString(DataSet.AIType), Personality.Aggressiveness, Personality.Agility
             );
+            UE_LOG(LogAILearning, Error, TEXT("%s"), *ErrorMessage);
+            return FAIDataSetValidationResult(EAIDataSetValidationError::InvalidPersonalityValue, ErrorMessage, i);
         }
 
-        if (Calculator.LearningDecayFactor < 0.8f || Calculator.LearningDecayFactor >= 1.0f)
+        // RewardCalculator 검증
+        const FAIRewardCalculator& RewardCalc = AdaptiveConfig.RewardCalculator;
+        if (RewardCalc.BaseLearningRate <= 0.0f || RewardCalc.BaseLearningRate > 1.0f ||
+            RewardCalc.LearningDecayFactor <= 0.0f || RewardCalc.LearningDecayFactor >= 1.0f)
         {
-            return FAIDataSetValidationResult(
-                EAIDataSetValidationError::InvalidPersonalityValue,
-                FString::Printf(TEXT("부적절한 학습률 감쇠 인수: AI %d (값: %.3f, 권장: 0.8-0.99)"),
-                    DataSetIndex, Calculator.LearningDecayFactor),
-                DataSetIndex
+            FString ErrorMessage = FString::Printf(
+                TEXT("AI 타입 %s의 학습률 설정이 유효하지 않음: 기본학습률=%.3f, 감쇠인수=%.3f"),
+                *UEnum::GetValueAsString(DataSet.AIType), RewardCalc.BaseLearningRate, RewardCalc.LearningDecayFactor
             );
+            UE_LOG(LogAILearning, Error, TEXT("%s"), *ErrorMessage);
+            return FAIDataSetValidationResult(EAIDataSetValidationError::InvalidPersonalityValue, ErrorMessage, i);
         }
 
-        if (Calculator.OptimalCombatDistance < 100.0f || Calculator.OptimalCombatDistance > 1000.0f)
+        // ExperienceWeightConfig 검증
+        const FAIExperienceWeightConfig& WeightConfig = AdaptiveConfig.ExperienceWeightConfig;
+        if (WeightConfig.MaxWeightChange <= 0.0f || WeightConfig.MinSingleChange <= 0.0f ||
+            WeightConfig.MinCategoryProbability <= 0.0f || WeightConfig.MinCategoryProbability >= 1.0f)
         {
-            return FAIDataSetValidationResult(
-                EAIDataSetValidationError::InvalidPersonalityValue,
-                FString::Printf(TEXT("부적절한 최적 전투 거리: AI %d (값: %.1f, 권장: 100-1000)"),
-                    DataSetIndex, Calculator.OptimalCombatDistance),
-                DataSetIndex
+            FString ErrorMessage = FString::Printf(
+                TEXT("AI 타입 %s의 경험 가중치 설정이 유효하지 않음"),
+                *UEnum::GetValueAsString(DataSet.AIType)
             );
+            UE_LOG(LogAILearning, Error, TEXT("%s"), *ErrorMessage);
+            return FAIDataSetValidationResult(EAIDataSetValidationError::InvalidPersonalityValue, ErrorMessage, i);
         }
 
-        // === 경험 가중치 설정 검증 ===
-        if (WeightConfig.MaxWeightChange <= 0.0f || WeightConfig.MaxWeightChange > 1.0f)
+        // === ExecutionConfig 검증 추가 ===
+
+        UE_LOG(LogAILearning, Log, TEXT("AI 타입 %s의 적응형 실행 설정 검증 시작"),
+            *UEnum::GetValueAsString(DataSet.AIType));
+
+        const FAIAdaptiveExecutionConfig& ExecutionConfig = AdaptiveConfig.ExecutionConfig;
+
+        // ExecutionConfig 내부 유효성 검증
+        if (!ExecutionConfig.ValidateSettings())
         {
-            return FAIDataSetValidationResult(
-                EAIDataSetValidationError::InvalidPersonalityValue,
-                FString::Printf(TEXT("부적절한 최대 가중치 변화량: AI %d (값: %.3f, 권장: 0.1-0.5)"),
-                    DataSetIndex, WeightConfig.MaxWeightChange),
-                DataSetIndex
+            FString ErrorMessage = FString::Printf(
+                TEXT("AI 타입 %s의 적응형 실행 설정이 유효하지 않음 (내부 검증 실패)"),
+                *UEnum::GetValueAsString(DataSet.AIType)
             );
+            UE_LOG(LogAILearning, Error, TEXT("%s"), *ErrorMessage);
+            return FAIDataSetValidationResult(EAIDataSetValidationError::LogicalInconsistency, ErrorMessage, i);
         }
 
-        if (WeightConfig.MinSingleChange <= 0.0f || WeightConfig.MinSingleChange > 0.1f)
+        // 각 블록별 설정 상세 검증
+        if (ExecutionConfig.OpeningSkillsMinCount > ExecutionConfig.OpeningSkillsMaxCount)
         {
-            return FAIDataSetValidationResult(
-                EAIDataSetValidationError::InvalidPersonalityValue,
-                FString::Printf(TEXT("부적절한 최소 단일 변화량: AI %d (값: %.4f, 권장: 0.005-0.05)"),
-                    DataSetIndex, WeightConfig.MinSingleChange),
-                DataSetIndex
+            FString ErrorMessage = FString::Printf(
+                TEXT("AI 타입 %s의 OpeningSkills 실행 개수 설정 오류: 최소(%d) > 최대(%d)"),
+                *UEnum::GetValueAsString(DataSet.AIType), ExecutionConfig.OpeningSkillsMinCount, ExecutionConfig.OpeningSkillsMaxCount
             );
+            UE_LOG(LogAILearning, Error, TEXT("%s"), *ErrorMessage);
+            return FAIDataSetValidationResult(EAIDataSetValidationError::LogicalInconsistency, ErrorMessage, i);
         }
 
-        if (WeightConfig.MinCategoryProbability <= 0.0f || WeightConfig.MinCategoryProbability > 0.5f)
+        if (ExecutionConfig.SkillsMinCount > ExecutionConfig.SkillsMaxCount)
         {
-            return FAIDataSetValidationResult(
-                EAIDataSetValidationError::InvalidPersonalityValue,
-                FString::Printf(TEXT("부적절한 최소 카테고리 확률: AI %d (값: %.3f, 권장: 0.01-0.2)"),
-                    DataSetIndex, WeightConfig.MinCategoryProbability),
-                DataSetIndex
+            FString ErrorMessage = FString::Printf(
+                TEXT("AI 타입 %s의 Skills 실행 개수 설정 오류: 최소(%d) > 최대(%d)"),
+                *UEnum::GetValueAsString(DataSet.AIType), ExecutionConfig.SkillsMinCount, ExecutionConfig.SkillsMaxCount
             );
+            UE_LOG(LogAILearning, Error, TEXT("%s"), *ErrorMessage);
+            return FAIDataSetValidationResult(EAIDataSetValidationError::LogicalInconsistency, ErrorMessage, i);
         }
 
-        if (WeightConfig.EarlyStopThreshold < 5 || WeightConfig.EarlyStopThreshold > 100)
+        if (ExecutionConfig.StrafeOrDodgeMinCount > ExecutionConfig.StrafeOrDodgeMaxCount)
         {
-            return FAIDataSetValidationResult(
-                EAIDataSetValidationError::InvalidPersonalityValue,
-                FString::Printf(TEXT("부적절한 조기 중단 임계값: AI %d (값: %d, 권장: 10-50)"),
-                    DataSetIndex, WeightConfig.EarlyStopThreshold),
-                DataSetIndex
+            FString ErrorMessage = FString::Printf(
+                TEXT("AI 타입 %s의 StrafeOrDodge 실행 개수 설정 오류: 최소(%d) > 최대(%d)"),
+                *UEnum::GetValueAsString(DataSet.AIType), ExecutionConfig.StrafeOrDodgeMinCount, ExecutionConfig.StrafeOrDodgeMaxCount
             );
+            UE_LOG(LogAILearning, Error, TEXT("%s"), *ErrorMessage);
+            return FAIDataSetValidationResult(EAIDataSetValidationError::LogicalInconsistency, ErrorMessage, i);
         }
 
-        if (WeightConfig.AdaptiveResetPercentage <= 0.0f || WeightConfig.AdaptiveResetPercentage > 0.5f)
+        // 선호도 영향 강도 검증
+        if (ExecutionConfig.PreferenceInfluenceStrength < 0.0f || ExecutionConfig.PreferenceInfluenceStrength > 1.0f)
         {
-            return FAIDataSetValidationResult(
-                EAIDataSetValidationError::InvalidPersonalityValue,
-                FString::Printf(TEXT("부적절한 적응적 리셋 비율: AI %d (값: %.3f, 권장: 0.05-0.3)"),
-                    DataSetIndex, WeightConfig.AdaptiveResetPercentage),
-                DataSetIndex
+            FString ErrorMessage = FString::Printf(
+                TEXT("AI 타입 %s의 선호도 영향 강도(%.2f)가 유효 범위(0.0~1.0)를 벗어남"),
+                *UEnum::GetValueAsString(DataSet.AIType), ExecutionConfig.PreferenceInfluenceStrength
             );
+            UE_LOG(LogAILearning, Error, TEXT("%s"), *ErrorMessage);
+            return FAIDataSetValidationResult(EAIDataSetValidationError::InvalidPersonalityValue, ErrorMessage, i);
         }
 
-        // === 간소화된 성향 검증 ===
-        if (Personality.Aggressiveness < 0.0f || Personality.Aggressiveness > 100.0f)
+        // 게임 밸런스 검증 (경고 수준)
+        int32 MaxPossibleExecution = FMath::Max3(ExecutionConfig.OpeningSkillsMaxCount,
+            ExecutionConfig.SkillsMaxCount,
+            ExecutionConfig.StrafeOrDodgeMaxCount);
+
+        if (MaxPossibleExecution > 6)
         {
-            return FAIDataSetValidationResult(
-                EAIDataSetValidationError::InvalidPersonalityValue,
-                FString::Printf(TEXT("적응형 공격성 값이 유효 범위를 벗어남: AI %d (값: %.2f, 권장: 0-100)"),
-                    DataSetIndex, Personality.Aggressiveness),
-                DataSetIndex
+            UE_LOG(LogAILearning, Warning, TEXT("AI 타입 %s의 최대 실행 개수(%d)가 권장 범위(6개)를 초과 - 게임 밸런스 주의 필요"),
+                *UEnum::GetValueAsString(DataSet.AIType), MaxPossibleExecution);
+        }
+
+        // 탐험 모드 설정 검증
+        if (ExecutionConfig.bBoostExplorationExecution && ExecutionConfig.MinExplorationExecutionCount < 1)
+        {
+            FString ErrorMessage = FString::Printf(
+                TEXT("AI 타입 %s의 탐험 모드 최소 실행 개수(%d)가 1보다 작음"),
+                *UEnum::GetValueAsString(DataSet.AIType), ExecutionConfig.MinExplorationExecutionCount
             );
+            UE_LOG(LogAILearning, Error, TEXT("%s"), *ErrorMessage);
+            return FAIDataSetValidationResult(EAIDataSetValidationError::LogicalInconsistency, ErrorMessage, i);
         }
 
-        if (Personality.Agility < 0.0f || Personality.Agility > 100.0f)
-        {
-            return FAIDataSetValidationResult(
-                EAIDataSetValidationError::InvalidPersonalityValue,
-                FString::Printf(TEXT("적응형 기민함 값이 유효 범위를 벗어남: AI %d (값: %.2f, 권장: 0-100)"),
-                    DataSetIndex, Personality.Agility),
-                DataSetIndex
-            );
-        }
+        UE_LOG(LogAILearning, Log, TEXT("AI 타입 %s의 적응형 실행 설정 검증 완료 - 모든 설정이 유효함"),
+            *UEnum::GetValueAsString(DataSet.AIType));
 
-        // === 보상 가중치 밸런스 확인 (경고) ===
-        float TotalWeight = Calculator.DamageWeight + Calculator.DistanceWeight + Calculator.SuccessWeight;
-        if (TotalWeight < 1.0f || TotalWeight > 6.0f)
-        {
-            UE_LOGFMT(LogAIDataSetInfos, Warning,
-                "AI {0}: 보상 가중치 총합이 권장 범위를 벗어남 (합계: {1}, 권장: 1.0-6.0). 정규화에 영향을 줄 수 있습니다.",
-                DataSetIndex, TotalWeight);
-        }
-
-        // === 성향 조합 경고 ===
-        if (Personality.Aggressiveness > 80.0f && Personality.Agility < 20.0f)
-        {
-            UE_LOGFMT(LogAIDataSetInfos, Warning,
-                "AI {0}: 극도로 공격적이지만 기민함이 낮습니다 (공격성: {1}, 기민함: {2}). 적응 과정에서 불균형이 발생할 수 있습니다.",
-                DataSetIndex, Personality.Aggressiveness, Personality.Agility);
-        }
-        else if (Personality.Agility > 80.0f && Personality.Aggressiveness < 20.0f)
-        {
-            UE_LOGFMT(LogAIDataSetInfos, Warning,
-                "AI {0}: 극도로 기민하지만 공격성이 낮습니다 (기민함: {1}, 공격성: {2}). 소극적인 AI가 될 수 있습니다.",
-                DataSetIndex, Personality.Agility, Personality.Aggressiveness);
-        }
-
-        // === 학습 복잡도 경고 ===
-        float LearningComplexity = EvaluateLearningComplexity(DataSet.AIType);
-        if (LearningComplexity > 7.0f)
-        {
-            UE_LOGFMT(LogAIDataSetInfos, Warning,
-                "AI {0}: 학습 복잡도가 매우 높습니다 (복잡도: {1}/10). 성능 저하나 불안정한 학습이 발생할 수 있습니다.",
-                DataSetIndex, LearningComplexity);
-        }
-
-        // === 학습률과 변화량 조합 검증 ===
-        if (Calculator.BaseLearningRate > 0.1f && WeightConfig.MinSingleChange > 0.02f)
-        {
-            UE_LOGFMT(LogAIDataSetInfos, Warning,
-                "AI {0}: 높은 학습률({1})과 큰 변화량({2})의 조합으로 과도하게 급진적인 학습이 될 수 있습니다.",
-                DataSetIndex, Calculator.BaseLearningRate, WeightConfig.MinSingleChange);
-        }
+        UE_LOG(LogAILearning, Log, TEXT("AI 타입 %s의 적응형 시스템 전체 검증 완료"),
+            *UEnum::GetValueAsString(DataSet.AIType));
     }
 
-    return FAIDataSetValidationResult(); // 검증 성공
+    UE_LOG(LogAILearning, Log, TEXT("적응형 시스템 설정 전체 검증 완료 - 모든 AI 타입 통과"));
+    return FAIDataSetValidationResult(); // 성공
 }
 
 FAIDataSetValidationResult UAIDataSetInfos::ValidateLogicalConsistency() const
