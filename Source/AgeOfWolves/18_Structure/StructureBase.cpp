@@ -10,26 +10,22 @@ DEFINE_LOG_CATEGORY_STATIC(LogStructure, Log, All);
 AStructureBase::AStructureBase()
 {
 
+	USceneComponent* RootSceneComponent = CreateDefaultSubobject<USceneComponent>(TEXT("Root"));
+	RootComponent = RootSceneComponent;
+	
 	StructureMesh = CreateDefaultSubobject<UStaticMeshComponent>(TEXT("StructureMeshComponent"));
 	StructureMesh->SetVisibility(true);
-	RootComponent = StructureMesh;
+	StructureMesh->SetupAttachment(RootComponent);
 
-	//@Box Component
-	StructureBoxComponent = CreateDefaultSubobject<UBoxComponent>(TEXT("BoxComponent"));
-	StructureBoxComponent->SetupAttachment(RootComponent);
-
-	StructureBoxComponent->SetCollisionProfileName(TEXT("OverlapAll"));
-	StructureBoxComponent->SetCollisionResponseToAllChannels(ECR_Overlap);
-	StructureBoxComponent->SetBoxExtent(FVector(500.0f, 500.0f, 500.0f));
 }
 
 void AStructureBase::BeginPlay()
 {
 	Super::BeginPlay();
 
-	//@콜리전 이벤트 바인딩
-	StructureBoxComponent->OnComponentBeginOverlap.AddDynamic(this, &AStructureBase::OnOverlapBegin);
-	StructureBoxComponent->OnComponentEndOverlap.AddDynamic(this, &AStructureBase::OnOverlapEnd);
+	// //@콜리전 이벤트 바인딩
+	// StructureBoxComponent->OnComponentBeginOverlap.AddDynamic(this, &AStructureBase::OnOverlapBegin);
+	// StructureBoxComponent->OnComponentEndOverlap.AddDynamic(this, &AStructureBase::OnOverlapEnd);
 }
 #pragma endregion
 //@Property/Info...etc

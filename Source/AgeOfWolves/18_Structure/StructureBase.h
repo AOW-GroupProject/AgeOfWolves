@@ -66,13 +66,6 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* StructureMesh;
 
-	//@영역 경계 박스
-	UPROPERTY(VisibleAnywhere, Category = "Components")
-	UBoxComponent* StructureBoxComponent;
-
-public:
-	UPROPERTY(EditAnywhere, Category = "Structure | Data")
-	FStructureData StructureData;
 
 public:
 	UPROPERTY(EditAnywhere, Category = "구조물 태그")
