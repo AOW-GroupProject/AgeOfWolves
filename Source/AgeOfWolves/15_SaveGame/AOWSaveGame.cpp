@@ -145,7 +145,7 @@ void UAOWSaveGame::AddCompleteAreaQuest(FGameplayTag AreaTag, const FQuestDataIn
         QuestInfo.RewardItems.Num());
 
     //@ 배열에 추가
-    CompleteAreaQuests.AddUnique(QuestInfo);
+    CompleteAreaQuests.Add(QuestInfo);
 }
 #pragma endregion
 
