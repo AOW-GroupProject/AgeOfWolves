@@ -76,12 +76,11 @@ public:
 public:
 
 	//@ 상호작용 실행
-	virtual void PerformInteraction() override;
-	
-	virtual FGameplayTag GetObjectTag() override
-	{
-		return StructureTag;
-	}
+	virtual void PerformInteraction_Implementation()override;
+	virtual void SetMeshCollision_Implementation(UMeshComponent* MeshComp, ECollisionEnabled::Type NewCollision) override;
+
+	// UFUNCTION(BlueprintCallable, BlueprintPure, Category="Interaction")
+	virtual FGameplayTag GetObjectTag() const override;
 #pragma endregion
 
 //@Delegates

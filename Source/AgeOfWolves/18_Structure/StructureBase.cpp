@@ -31,7 +31,17 @@ void AStructureBase::BeginPlay()
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 
-void AStructureBase::PerformInteraction()
+// void AStructureBase::PerformInteraction()
+// {
+// 	// //이펙트및 효과 노출
+// 	// //..
+// 	//
+// 	//
+// 	// //상호작용 콜백 호출
+// 	// OnStructureInteractionTriggered.Broadcast(this);
+// }
+
+void AStructureBase::PerformInteraction_Implementation()
 {
 	//이펙트및 효과 노출
 	//..
@@ -40,6 +50,31 @@ void AStructureBase::PerformInteraction()
 	//상호작용 콜백 호출
 	OnStructureInteractionTriggered.Broadcast(this);
 }
+
+void AStructureBase::SetMeshCollision_Implementation(UMeshComponent* MeshComp,
+	ECollisionEnabled::Type NewCollision)
+{
+	IInteractionInterface::SetMeshCollision_Implementation(MeshComp, NewCollision);
+
+		if (!MeshComp) return;
+	
+		MeshComp->SetCollisionEnabled(NewCollision);
+	    
+		if (NewCollision == ECollisionEnabled::NoCollision)
+		{
+			MeshComp->SetCollisionProfileName(TEXT("NoCollision"));
+		}
+		else if (NewCollision == ECollisionEnabled::QueryAndPhysics)
+		{
+			MeshComp->SetCollisionProfileName(TEXT("BlockAll"));
+		}
+}
+
+FGameplayTag AStructureBase::GetObjectTag() const
+{
+	return StructureTag;
+}
+
 
 #pragma endregion
 //@Callbacks

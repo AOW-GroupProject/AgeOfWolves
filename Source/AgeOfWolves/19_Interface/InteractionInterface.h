@@ -4,11 +4,13 @@
 
 #include "CoreMinimal.h"
 #include "UObject/Interface.h"
-#include "GameplayTagContainer.h"
+#include "Engine/EngineTypes.h"            // ECollisionEnabled
+#include "Components/PrimitiveComponent.h" // UPrimitiveComponent
+#include "GameplayTagContainer.h"          // FGameplayTag
 #include "InteractionInterface.generated.h"
 
 // This class does not need to be modified.
-UINTERFACE(BlueprintType,NotBlueprintable)
+UINTERFACE(BlueprintType)
 class UInteractionInterface : public UInterface
 {
 	GENERATED_BODY()
@@ -23,9 +25,13 @@ class AGEOFWOLVES_API IInteractionInterface
 
 public:
 
-	UFUNCTION(BlueprintCallable, Category="Interaction")
-	virtual void PerformInteraction() = 0;
-	
-	virtual FGameplayTag GetObjectTag() = 0;
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interaction")
+	void PerformInteraction();
+
+	UFUNCTION(BlueprintCallable, BlueprintNativeEvent, Category="Interaction")
+	void SetMeshCollision(UMeshComponent* MeshComp, ECollisionEnabled::Type NewCollision);
+
+	// UFUNCTION(BlueprintCallable, Category="Interaction")
+	virtual FGameplayTag GetObjectTag() const = 0;
 };
 
