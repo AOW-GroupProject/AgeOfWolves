@@ -54,6 +54,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionActivated, AActor*, Int
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionFailed, AActor*, InteractableActor, const FPotentialInteraction&, FailedInteraction);
 //@상호작용 완료 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionCompleted, AActor*, InteractableActor, const FPotentialInteraction&, CompletedInteraction);
+
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FDamageDealtByActor, AActor* /* Source */, AActor* /* Target */, const FGameplayEventData& /* EventData */)
 #pragma endregion
 
 /**
@@ -232,6 +234,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
 		FInteractionCompleted InteractionCompleted;
+
+public:
+	//@데미지 전달 이벤트
+	FDamageDealtByActor DamageDealtByActor;
 #pragma endregion
 
 //@Callbacks

@@ -141,7 +141,7 @@ class AGEOFWOLVES_API UDynamicCameraComponent : public UActorComponent
 #pragma endregion
 	
 	GENERATED_BODY()
-	//@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UDynamicCameraComponent();
@@ -205,15 +205,15 @@ protected:
 	void InitializeDynamicCameraComp(const AController* Controller);
 #pragma endregion
 
-	//@Delegates
+//@Delegates
 #pragma region Delegates
 #pragma endregion
 
-	//@Callbacks
+//@Callbacks
 #pragma region Callbacks
 #pragma endregion
 
-	//@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 	//@Pawn 캐싱
 	UPROPERTY()

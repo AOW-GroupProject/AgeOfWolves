@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "04_Component/DynamicCameraComponent.h"
 #include "Logging/StructuredLog.h"
 
@@ -169,7 +166,6 @@ void UDynamicCameraComponent::StartTransition()
 		CurrentTransition.TargetSpringArm->GetFName(),
 		CurrentTransition.TransitionDuration);
 }
-
 
 void UDynamicCameraComponent::CompleteCurrentTransition()
 {
@@ -381,6 +377,4 @@ void UDynamicCameraComponent::InitializeDynamicCameraComp(const AController* Con
 			}
 		}
 	}
-
-	
 }
