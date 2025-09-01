@@ -1091,8 +1091,12 @@ void UAIAbilitySequencerComponent::UpdateExperienceWeights(const FGameplayTag& C
     UE_LOG(LogAICombatPattern, Log, TEXT("경험 가중치 업데이트 시작 - 블록: %s"), *CompletedBlockTag.ToString());
 
     // 1. 보상 계산을 위한 데이터 수집
+    // 1-1. 데미지
     float DamageReceived = ExecutionStats.CurrentTurnDamageReceived;
+    float DamageDealt = ExecutionStats.CurrentTurnDamageDealt;
+    // 1-2. 최적 거리
     float CurrentDistance = CalcualteOptimalCombatDistance();
+    // 1-3. 어빌리티 성공률
     bool bAbilitySuccess = CalculateCurrentTurnAbilitySuccess();
 
     UE_LOG(LogAICombatPattern, Log, TEXT("학습 데이터 - 데미지: %.2f, 거리: %.2f, 성공: %s"),
@@ -1100,7 +1104,8 @@ void UAIAbilitySequencerComponent::UpdateExperienceWeights(const FGameplayTag& C
 
     // 2. 정규화된 보상 계산
     float NormalizedReward = CachedAdaptiveBehaviorConfig.RewardCalculator.CalculateNormalizedReward(
-        DamageReceived,
+        DamageReceived,      // 받은 데미지 (음수 처리)
+        DamageDealt,         // 전달 데미지 (양수 처리) - 추가
         CurrentDistance,
         bAbilitySuccess
     );
@@ -2076,13 +2081,20 @@ void UAIAbilitySequencerComponent::ForceStartExitBlock()
 
 void UAIAbilitySequencerComponent::CheckAndApplyOverdrivePrevention()
 {
-    // Overdrive 방지 조건 체크
     bool bShouldApplyReset = false;
+    FString ResetReason;
 
-    // 1. 학습 횟수 기반 체크
-    if (RuntimeLearningState.LearningCount >= CachedAdaptiveBehaviorConfig.ExperienceWeightConfig.EarlyStopThreshold)
+    // === 1. 정기적 회귀 (30회마다 무조건) ===
+    if (RuntimeLearningState.LearningCount > 0 &&
+        RuntimeLearningState.LearningCount % CachedAdaptiveBehaviorConfig.ExperienceWeightConfig.EarlyStopThreshold == 0)
     {
-        // 2. 가중치 변화가 극단적인지 체크
+        bShouldApplyReset = true;
+        ResetReason = FString::Printf(TEXT("정기적 회귀: %d회 달성"), RuntimeLearningState.LearningCount);
+    }
+
+    // === 2. 조기 회귀 (극단적 변화 감지) ===
+    else if (RuntimeLearningState.LearningCount >= 10)
+    {
         float MaxWeightDiff = FMath::Max3(
             FMath::Abs(RuntimeLearningState.OpeningSkillsWeight),
             FMath::Abs(RuntimeLearningState.SkillsWeight),
@@ -2092,21 +2104,20 @@ void UAIAbilitySequencerComponent::CheckAndApplyOverdrivePrevention()
         if (MaxWeightDiff > CachedAdaptiveBehaviorConfig.ExperienceWeightConfig.MaxWeightChange * 0.8f)
         {
             bShouldApplyReset = true;
-            UE_LOG(LogAICombatPattern, Warning, TEXT("극단적 가중치 변화 감지: %.3f - Overdrive 방지 리셋 실행"),
-                MaxWeightDiff);
+            ResetReason = FString::Printf(TEXT("조기 회귀: 극단적 변화 감지 (%.3f)"), MaxWeightDiff);
         }
     }
 
-    // 3. 성과가 지속적으로 하락하는 경우 체크
-    if (ExecutionStats.GetOverallDamagePerformance() < -0.7f && RuntimeLearningState.LearningCount > 20)
+    // === 3. 성과 하락 회귀 ===
+    else if (ExecutionStats.GetOverallDamagePerformance() < -0.7f && RuntimeLearningState.LearningCount > 20)
     {
         bShouldApplyReset = true;
-        UE_LOG(LogAICombatPattern, Warning, TEXT("지속적 성과 하락 감지: %.3f - 적응적 리셋 실행"),
-            ExecutionStats.GetOverallDamagePerformance());
+        ResetReason = TEXT("성과 하락 회귀");
     }
 
     if (bShouldApplyReset)
     {
+        UE_LOG(LogAICombatPattern, Warning, TEXT("%s"), *ResetReason);
         RuntimeLearningState.ApplyAdaptiveReset(CachedAdaptiveBehaviorConfig.ExperienceWeightConfig);
     }
 }
