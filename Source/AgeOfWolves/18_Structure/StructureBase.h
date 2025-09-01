@@ -2,6 +2,7 @@
 
 #include "CoreMinimal.h"
 #include "16_Level/Area.h"
+#include "19_Interface/InteractionInterface.h"
 #include "GameFramework/Actor.h"
 
 #include "StructureBase.generated.h"
@@ -24,6 +25,7 @@ class UStaticMeshComponent;
 #pragma region Delegates
 DECLARE_DELEGATE_OneParam(FOnInteractionBegin, AStructureBase*);
 DECLARE_DELEGATE_OneParam(FOnInteractionEnd, AStructureBase*);
+DECLARE_MULTICAST_DELEGATE_OneParam(FOnInteractionTriggered, AStructureBase*);
 #pragma endregion
 
 /**
@@ -33,9 +35,12 @@ DECLARE_DELEGATE_OneParam(FOnInteractionEnd, AStructureBase*);
  *	구조물 의 base 클래스입니다
  */
 UCLASS()
-class AGEOFWOLVES_API AStructureBase : public AActor
+class AGEOFWOLVES_API AStructureBase : public AActor, public IInteractionInterface
 {
-//@친추 클래스
+
+
+private:
+	//@친추 클래스
 #pragma region Friend Class
 #pragma endregion
 	
@@ -61,20 +66,27 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* StructureMesh;
 
-	//@영역 경계 박스
-	UPROPERTY(VisibleAnywhere, Category = "Components")
-	UBoxComponent* StructureBoxComponent;
 
 public:
-	UPROPERTY(EditAnywhere, Category = "Structure | Data")
-	FStructureData StructureData;
+	UPROPERTY(EditAnywhere, Category = "구조물 태그")
+	FGameplayTag StructureTag;
+
+
+
+public:
+
+	//@ 상호작용 실행
+	virtual void PerformInteraction_Implementation()override;
+	virtual void SetMeshCollision_Implementation(UMeshComponent* MeshComp, ECollisionEnabled::Type NewCollision) override;
+
+	// UFUNCTION(BlueprintCallable, BlueprintPure, Category="Interaction")
+	virtual FGameplayTag GetObjectTag() const override;
 #pragma endregion
 
 //@Delegates
 #pragma region Delegates
 public:
-	FOnInteractionBegin OnStructureInteractionBegin; //상호작용 시작 (닿을 시작시)
-	FOnInteractionEnd OnStructureInteractionEnd; //상호작용 종료 (닿고나서 이탈시) 
+	FOnInteractionTriggered OnStructureInteractionTriggered; //상호작용 발동시
 #pragma endregion
 
 //@Callbacks

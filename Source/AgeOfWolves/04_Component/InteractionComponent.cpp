@@ -6,6 +6,7 @@
 
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "04_Component/ObjectiveDetectionComponent.h"
+#include "19_Interface/InteractionInterface.h"
 
 DEFINE_LOG_CATEGORY(LogInteraction)
 
@@ -149,6 +150,8 @@ void UInteractionComponent::ExternalBindToODComp()
 
     ODComp->ExecutionTargetChanged.AddUFunction(this, "OnExecutionTargetChanged");
     ODComp->AmbushTargetChanged.AddUFunction(this, "OnAmbushTargetChanged");
+
+    ODComp->DetectedStructureChanged.AddUFunction(this, "OnDetectedStructureChanged");
 }
 
 void UInteractionComponent::UnbindExternalBindToODComp()
@@ -302,9 +305,15 @@ void UInteractionComponent::RegisterPotentialInteraction(AActor* TargetActor, EI
         ObjectTag = Character->GetCharacterTag();
     }
 
+    IInteractionInterface* InteractionInterface = Cast<IInteractionInterface>(TargetActor);
+    if (InteractionInterface)
+    {
+        ObjectTag = InteractionInterface->GetObjectTag();
+    }
+    
     if (!ObjectTag.IsValid())
     {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 등록 실패: 액터({1})에서 유효한 캐릭터 태그를 찾을 수 없음",
+        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 등록 실패: 액터({1})에서 유효한 오브젝트 태그를 찾을 수 없음",
             __FUNCDNAME__, *TargetActor->GetName());
         return;
     }
@@ -839,6 +848,33 @@ void UInteractionComponent::OnAmbushTargetChanged(AActor* PotentialAmbushTarget)
 
     UE_LOGFMT(LogInteraction, Log, "{0}: 암살 타겟 처리 완료 - 액터: {1}에 대한 암살 상호작용 등록",
         __FUNCDNAME__, *PotentialAmbushTarget->GetName());
+}
+
+void UInteractionComponent::OnDetectedStructureChanged(AActor* DetectedStructureActor, bool isEnteredDetection)
+{
+
+    //@ 구조물  오브젝트 감지에서 벗어나면 상호작용 제거
+    if (DetectedStructureActor && !isEnteredDetection)
+    {
+        RemovePotentialInteraction(DetectedStructureActor, EInteractionType::Shrine);
+
+        UE_LOGFMT(LogInteraction, Log, " 구조물 감지 초기화 - 모든 구조물  상호작용 제거");
+        return;
+    }
+
+    UE_LOGFMT(LogInteraction, Log, " 구조물 감지 - 액터: {1}",
+         *DetectedStructureActor->GetName());
+
+    //@새로운 처형 타겟 등록
+    RegisterPotentialInteraction(DetectedStructureActor, EInteractionType::Shrine);
+
+    //@다른 구조물 상호작용 정보 제거?
+    //..
+
+    
+    UE_LOGFMT(LogInteraction, Log, "구조물감지 - 액터: {1}에 대한 구조물 감지 상호작용 등록",
+         *DetectedStructureActor->GetName());
+    
 }
 #pragma endregion
 
