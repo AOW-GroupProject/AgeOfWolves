@@ -110,7 +110,7 @@ public:
 
 /*
 *	@FChainActionMapping
-* 
+*
 *	Chain Action 활성화를 위해 필요한 Ability Tag 정보와 Event Tag 정보
 */
 USTRUCT(BlueprintType)
@@ -121,20 +121,57 @@ struct FChainActionMapping
 public:
 	//@체인 액션 실행 모드
 	UPROPERTY(EditDefaultsOnly)
-		EChainActionMode ChainActionMode;
+	EChainActionMode ChainActionMode;
 
 	//@체인 시스템 활성화 중 활성화 요건이 될 입력 태그
 	UPROPERTY(EditDefaultsOnly)
-		FGameplayTag InputTag;
+	FGameplayTag InputTag;
 
 	//@체인 액션 성공 시 호출할 이벤트 태그
 	UPROPERTY(EditDefaultsOnly)
-		FGameplayTag EventTag;
+	FGameplayTag EventTag;
+
+	// 런타임에 설정되는 체인 이벤트 데이터
+	//@이전 어빌리티에서 전달받은 Instigator (공격자/시전자)
+	UPROPERTY()
+		TWeakObjectPtr<AActor> ChainInstigator;
+
+	//@이전 어빌리티에서 전달받은 Target (대상)
+	UPROPERTY()
+		TWeakObjectPtr<AActor> ChainTarget;
+
+	//@이전 어빌리티에서 전달받은 Context Handle (히트 결과 등 컨텍스트 정보)
+	FGameplayEffectContextHandle ChainContextHandle;
 
 public:
-	bool Find (const FGameplayTag& Tag) const
+	FChainActionMapping()
+	{
+		ChainActionMode = EChainActionMode::DelayedActivation;
+		InputTag = FGameplayTag::EmptyTag;
+		EventTag = FGameplayTag::EmptyTag;
+		ChainInstigator = nullptr;
+		ChainTarget = nullptr;
+	}
+
+	bool Find(const FGameplayTag& Tag) const
 	{
 		return Tag.MatchesTagExact(InputTag);
+	}
+
+	// 체인 이벤트 데이터 설정을 위한 헬퍼 함수
+	void SetChainEventData(AActor* Instigator, AActor* Target, const FGameplayEffectContextHandle& ContextHandle)
+	{
+		ChainInstigator = Instigator;
+		ChainTarget = Target;
+		ChainContextHandle = ContextHandle;
+	}
+
+	// 체인 이벤트 데이터 초기화
+	void ClearChainEventData()
+	{
+		ChainInstigator = nullptr;
+		ChainTarget = nullptr;
+		ChainContextHandle = FGameplayEffectContextHandle();
 	}
 };
 
@@ -151,20 +188,55 @@ struct FChainEventMapping
 public:
 	//@체인 액션 실행 모드
 	UPROPERTY(EditDefaultsOnly)
-		EChainActionMode ChainActionMode;
+	EChainActionMode ChainActionMode;
 
 	//@체인 시스템 활성화 중 활성화 요건이 될 이벤트 태그
 	UPROPERTY(EditDefaultsOnly)
-		FGameplayTag RequiredEventTag;
+	FGameplayTag RequiredEventTag;
 
 	//@체인 시스템 조건 만족 시 호출할 이벤트 태그
 	UPROPERTY(EditDefaultsOnly)
-		FGameplayTag EventTagToSend;
+	FGameplayTag EventTagToSend;
+
+	// 런타임에 설정되는 체인 이벤트 데이터
+	//@이전 어빌리티에서 전달받은 Instigator (공격자/시전자)
+	TWeakObjectPtr<AActor> ChainInstigator;
+
+	//@이전 어빌리티에서 전달받은 Target (대상)
+	TWeakObjectPtr<AActor> ChainTarget;
+
+	//@이전 어빌리티에서 전달받은 Context Handle (히트 결과 등 컨텍스트 정보)
+	FGameplayEffectContextHandle ChainContextHandle;
 
 public:
+	FChainEventMapping()
+	{
+		ChainActionMode = EChainActionMode::DelayedActivation;
+		RequiredEventTag = FGameplayTag::EmptyTag;
+		EventTagToSend = FGameplayTag::EmptyTag;
+		ChainInstigator = nullptr;
+		ChainTarget = nullptr;
+	}
+
 	bool Find(const FGameplayTag& Tag) const
 	{
 		return Tag.MatchesTagExact(RequiredEventTag);
+	}
+
+	// 체인 이벤트 데이터 설정을 위한 헬퍼 함수
+	void SetChainEventData(const AActor* Instigator, const AActor* Target, const FGameplayEffectContextHandle& ContextHandle)
+	{
+		ChainInstigator = const_cast<AActor*>(Instigator);
+		ChainTarget = const_cast<AActor*>(Target);
+		ChainContextHandle = ContextHandle;
+	}
+
+	// 체인 이벤트 데이터 초기화
+	void ClearChainEventData()
+	{
+		ChainInstigator = nullptr;
+		ChainTarget = nullptr;
+		ChainContextHandle = FGameplayEffectContextHandle();
 	}
 };
 #pragma endregion
@@ -427,6 +499,45 @@ public:
 			}
 		}
 		return FChainEventMapping();
+	}
+
+public:
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 연쇄 동작")
+	bool SetChainEventData(
+		const FGameplayTag& InputOrEventTag,
+		AActor* Instigator,
+		AActor* Target,
+		const FGameplayEffectContextHandle& ContextHandle
+		)
+	{
+		if (!InputOrEventTag.IsValid())
+		{
+			return false;
+		}
+
+		bool bFound = false;
+
+		// ChainActionMappings에서 찾기
+		for (FChainActionMapping& ChainMapping : ChainActionMappings)
+		{
+			if (ChainMapping.Find(InputOrEventTag))
+			{
+				ChainMapping.SetChainEventData(Instigator, Target, ContextHandle);
+				bFound = true;
+			}
+		}
+
+		// ChainEventMappings에서 찾기
+		for (FChainEventMapping& ChainEventMapping : ChainEventMappings)
+		{
+			if (ChainEventMapping.Find(InputOrEventTag))
+			{
+				ChainEventMapping.SetChainEventData(Instigator, Target, ContextHandle);
+				bFound = true;
+			}
+		}
+
+		return bFound;
 	}
 #pragma endregion
 

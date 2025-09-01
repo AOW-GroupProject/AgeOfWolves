@@ -94,7 +94,7 @@ UAbilityTask_PlayMontageAndWait* UAttackGameplayAbility::PlayMontageWithCallback
 
 void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
 {
-    //@Hit Actor
+    // === 기존 유효성 검사 (그대로) ===
     AActor* HitActor = HitResult.GetActor();
     if (!HitActor)
     {
@@ -102,7 +102,6 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
         return;
     }
 
-    //@Source Actor
     AActor* SourceActor = GetAvatarActorFromActorInfo();
     if (!SourceActor)
     {
@@ -110,7 +109,6 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
         return;
     }
 
-    //@MainEffect 유효성 검사
     auto MainEffectClass = GetApplyGameplayEffectClass();
     if (!MainEffectClass)
     {
@@ -125,7 +123,6 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
         return;
     }
 
-    //@SubEffect는 선택적으로 처리
     UGameplayEffect* SubEffectCDO = nullptr;
     auto SubEffectClass = GetApplySubGameplayEffectClass();
     if (SubEffectClass)
@@ -133,6 +130,7 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
         SubEffectCDO = SubEffectClass.GetDefaultObject();
     }
 
+    // === 기존 데미지 이벤트 전송 (Target에게) ===
     bool bSuccess = UCombatLibrary::SendGameplayEventToTarget(
         FGameplayTag::RequestGameplayTag("EventTag.OnDamaged"),
         HitActor,
@@ -150,15 +148,41 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
         return;
     }
 
-    UE_LOGFMT(LogAttackGA, Log, "데미지 이벤트 전송 완료 - Target: {0}, Instigator: {1}, Impact Location: {2}",
-        HitActor->GetName(), SourceActor->GetName(), HitResult.ImpactPoint.ToString());
+    UE_LOGFMT(LogAttackGA, Log, "데미지 이벤트 전송 완료 - Target: {0}, Instigator: {1}",
+        HitActor->GetName(), SourceActor->GetName());
 
-    //@히트스톱 효과 실행
+    // === 새로운 부분: Source ASC의 데미지 전달 델리게이트 호출 ===
+    if (UBaseAbilitySystemComponent* SourceASC = Cast<UBaseAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+    {
+        // EventData 구성
+        FGameplayEventData DamageDealtEventData;
+        DamageDealtEventData.Instigator = SourceActor;
+        DamageDealtEventData.Target = HitActor;
+        DamageDealtEventData.EventTag = FGameplayTag::RequestGameplayTag("EventTag.OnDamageDealt");
+        DamageDealtEventData.EventMagnitude = 0.0f; // 실제 데미지량은 GE에서 계산됨
+
+        // HitResult를 Context에 추가
+        FGameplayEffectContextHandle ContextHandle = SourceASC->MakeEffectContext();
+        if (FGameplayEffectContext* Context = ContextHandle.Get())
+        {
+            Context->AddHitResult(HitResult);
+        }
+        DamageDealtEventData.ContextHandle = ContextHandle;
+
+        // ASC의 데미지 전달 델리게이트 호출
+        SourceASC->DamageDealtByActor.Broadcast(SourceActor, HitActor, DamageDealtEventData);
+
+        UE_LOGFMT(LogAttackGA, Log, "데미지 전달 델리게이트 호출 완료 - Source: {0}, Target: {1}",
+            *SourceActor->GetName(), *HitActor->GetName());
+    }
+    else
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "데미지 전달 델리게이트 호출 실패 - Source ASC를 찾을 수 없음");
+    }
+
+    // === 기존 효과 처리 (그대로) ===
     ExecuteTimeFX(HitResult, SourceActor);
-
-    //@이팩트 실행
     ExecuteCollisionFX(HitResult, SourceActor);
-
 }
 
 void UAttackGameplayAbility::StartWeaponTrace()

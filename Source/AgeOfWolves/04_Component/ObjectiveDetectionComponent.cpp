@@ -563,7 +563,6 @@ bool UObjectiveDetectionComponent::UpdateBillboardPosition(AActor* TargetActor)
     return true;
 }
 
-
 void UObjectiveDetectionComponent::UpdateBillboardTexture()
 {
     // 현재 상태에 따라 텍스처 결정

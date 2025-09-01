@@ -54,6 +54,8 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionActivated, AActor*, Int
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionFailed, AActor*, InteractableActor, const FPotentialInteraction&, FailedInteraction);
 //@상호작용 완료 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionCompleted, AActor*, InteractableActor, const FPotentialInteraction&, CompletedInteraction);
+
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FDamageDealtByActor, AActor* /* Source */, AActor* /* Target */, const FGameplayEventData& /* EventData */)
 #pragma endregion
 
 /**
@@ -232,6 +234,10 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
 		FInteractionCompleted InteractionCompleted;
+
+public:
+	//@데미지 전달 이벤트
+	FDamageDealtByActor DamageDealtByActor;
 #pragma endregion
 
 //@Callbacks
@@ -297,6 +303,15 @@ public:
 
 public:
 	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM; }
+
+protected:
+	/**
+	 * 체인 관련 이벤트의 Payload를 구성하는 헬퍼 함수
+	 * @param EventTag - 처리할 이벤트 태그
+	 * @param OutEventData - 구성된 이벤트 데이터 (출력)
+	 * @return 체인 관련 이벤트이고 유효한 Payload를 구성했는지 여부
+	 */
+	bool CreateChainEventPayload(const FGameplayTag& EventTag, OUT FGameplayEventData& OutEventData);
 
 public:
 	FORCEINLINE bool IsChainWindowActive() const { return bChainWindowActive; }
