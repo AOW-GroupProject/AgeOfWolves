@@ -13,6 +13,7 @@
 
 #include "Components/CapsuleComponent.h"
 #include "04_Component/LockOnComponent.h"
+#include "Chaos/PBDSuspensionConstraintData.h"
 #include "Components/BillboardComponent.h"
 
 DEFINE_LOG_CATEGORY(LogObjectiveDetection)
@@ -69,6 +70,10 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
         {
             UpdateBillboardComponent(true, false);
         }
+        else if (DetectedStructureActor.IsValid())
+        {
+            UpdateBillboardComponent(true, false);
+        }
         else
         {
             // 모두 없으면 빌보드 숨기기
@@ -90,6 +95,13 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
     {
         UpdateExecutionTargetState();
         LastExecutionCheckTime = CurrentTime;
+    }
+
+    //@ 일정 간격으로 구조물 감지 체크
+    if (CurrentTime - LastExecutionStructureCheckTime >= ExecutionStructureCheckInterval)
+    {
+        UpdateDetectionStructure();
+        LastExecutionStructureCheckTime = CurrentTime;
     }
 }
 
@@ -355,7 +367,7 @@ void UObjectiveDetectionComponent::InitializeODComponent()
     if (!IndicatorBillboardComponent && ControlledPawn.IsValid())
     {
         IndicatorBillboardComponent = NewObject<UBillboardComponent>(ControlledPawn.Get());
-        IndicatorBillboardComponent->SetupAttachment(nullptr);
+        IndicatorBillboardComponent->SetupAttachment(GetOwner()->GetRootComponent());
         IndicatorBillboardComponent->SetMobility(EComponentMobility::Movable);
         IndicatorBillboardComponent->RegisterComponent();
     }
@@ -476,7 +488,11 @@ bool UObjectiveDetectionComponent::UpdateBillboardPosition(AActor* TargetActor)
     // 타겟 메시 및 소켓 확인
     USkeletalMeshComponent* TargetMesh = Cast<USkeletalMeshComponent>(
         TargetActor->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
-    if (!TargetMesh) return false;
+
+    UStaticMeshComponent* TargetStaticMesh = Cast<UStaticMeshComponent>(
+      TargetActor->GetComponentByClass(UStaticMeshComponent::StaticClass()));
+    
+    if (!TargetMesh && !TargetStaticMesh) return false;
 
     // 위치 계산
     FVector SocketLocation = TargetActor->GetActorLocation() + FVector(0.f, 0.f, 40.f);
@@ -571,6 +587,10 @@ void UObjectiveDetectionComponent::UpdateBillboardTexture()
     }
     // 4. 타겟이 없고 AmbushTarget이 있는 경우
     else if (!CurrentTargetAI.IsValid() && AmbushTarget.IsValid())
+    {
+        bShouldUseExecutableIndicator = true;
+    }
+    else if (!CurrentTargetAI.IsValid() && DetectedStructureActor.IsValid())
     {
         bShouldUseExecutableIndicator = true;
     }
@@ -806,6 +826,99 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
         AmbushTargetChanged.Broadcast(AmbushTarget.Get());
     }
 }
+
+void UObjectiveDetectionComponent::UpdateDetectionStructure()
+{
+    FVector OwnerLocation;
+    if (const APlayerController* PC = Cast<APlayerController>(GetOwner()))
+    {
+        if (const APawn* P = PC->GetPawn())
+        {
+            OwnerLocation = P->GetActorLocation();
+        }
+    }
+
+
+    //@ 반각(총각도의 절반)
+    const float HalfAngleDeg = FMath::Max(0.f, DetectionStructureTotalAngleDegrees * 0.5f);
+    const float CosThreshold = FMath::Cos(FMath::DegreesToRadians(HalfAngleDeg));
+    const float DistLimit  = DetectionStructureDistance;
+
+    TArray<AActor*> NewList;
+    NewList.Reserve(BoundAreas.Num());
+
+    
+    for (const FAreaBindingInfo& AreaInfo : BoundAreas)
+    {
+
+        TArray<FStructureData> StructureDatas = AreaInfo.AreaRef.Get()->GetStructureDatas();
+        
+        float LowestDistSq =FLT_MAX;
+        bool HasFound = false;
+        for (const FStructureData& StructureData : StructureDatas)
+        {
+            AActor* Target = StructureData.GetStructureActor();
+            if (!IsValid(Target)) continue;
+
+            //@이전 활성된건지 체크
+            if (!StructureData.bIsActive)
+                continue;
+            
+            //@ 감지 거리 체크
+            const FVector ToOwner = OwnerLocation - Target->GetActorLocation();
+            float DistSq  = FVector::Dist(Target->GetActorLocation(), OwnerLocation);
+            if (DistSq > DistLimit)
+                continue;
+
+            FVector TargetForwardDir = Target->GetActorForwardVector();
+            FVector OwerToTargetDir = ToOwner;
+
+            // if (bIgnoreZ) { TargetForwardDir.Z = 0; OwerToTargetDir.Z = 0; }
+            if (!TargetForwardDir.Normalize() || !OwerToTargetDir.Normalize())
+                continue;
+
+            //@구조물 보는 방향 x각도 이내에 있는지 체크
+            const float CosAngle = FVector::DotProduct(TargetForwardDir, OwerToTargetDir);
+            if (CosAngle < CosThreshold)
+                continue;
+
+            if (DistSq >= LowestDistSq) continue;        //@ 이미 더 가까운 게 있음
+
+            UE_LOGFMT(LogObjectiveDetection, Warning, "구조물 감지됨!!! {0}", Target->GetName());
+            
+            HasFound = true;
+            
+            LowestDistSq = DistSq;
+
+            //@감지된 구조물 액터 캐싱
+            DetectedStructureActor = Target;
+        }
+
+        if (!HasFound)
+        {
+            if (DetectedStructureActor != nullptr)
+            {
+                //@ 이전 감지한 구조물이 범위 밖인지 체크
+                const FVector ToOwner = OwnerLocation - DetectedStructureActor->GetActorLocation();
+                float DistSq  = FVector::Dist(ToOwner, OwnerLocation);
+                if (DistSq > DistLimit)
+                {
+                    //@이전 감지한 구조물 감지 해제됨 이벤트
+                    DetectedStructureChanged.Broadcast(DetectedStructureActor.Get(), false);
+                }
+            }
+
+            //@ 아무것도 못찾았으니 이전 감지된 액터 null
+            DetectedStructureActor = nullptr;
+        }
+        else
+        {
+            //@ 구조물 감지됨 이벤트
+            DetectedStructureChanged.Broadcast(DetectedStructureActor.Get(), true);
+        }
+    }
+}
+
 #pragma endregion
 
 //@Callbacks
@@ -1293,10 +1406,15 @@ AActor* UObjectiveDetectionComponent::DetermineTargetActor()
     {
         return ExecutionTarget.Get();
     }
-    // 3. 매복 가능 타겟이 있으면 마지막 우선순위
+    // 3. 매복 가능 타겟이 있으면 다음 우선순위 
     else if (AmbushTarget.IsValid())
     {
         return AmbushTarget.Get();
+    }
+    //4. 감지된구조물 있으면 마지막 우선순위
+    else if (DetectedStructureActor.IsValid())
+    {
+        return DetectedStructureActor.Get();
     }
 
     return nullptr;
