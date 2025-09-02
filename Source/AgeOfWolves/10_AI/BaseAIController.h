@@ -203,6 +203,11 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FAILockOnStateChanged, bool, AActor*)
 //@타겟 인지 이벤트
 DECLARE_MULTICAST_DELEGATE_ThreeParams(FAIDetectsTarget, bool,  AActor*, AActor*)
 
+//@전투 준비 요청
+DECLARE_DELEGATE_RetVal(bool, FRequestReadyToCombat)
+//@전투 준비 종료 요청
+DECLARE_DELEGATE_RetVal(bool, FRequestFininshReadyToCombat)
+
 //@전투 패턴 활성화 요청
 DECLARE_DELEGATE_RetVal(bool, FRequestStartCombatPattern)
 //@전투 패턴 종료 요청
@@ -418,6 +423,12 @@ public:
 public:
 	//@AI의 타겟 인지 이벤트
 	FAIDetectsTarget AIDetectsTarget;
+
+public:
+	//@전투 준비 요청
+	FRequestReadyToCombat RequestReadyToCombat;
+	//@전투 준비 종료 요청
+	FRequestFininshReadyToCombat RequestFininshReadyToCombat;
 
 public:
 	//@전투 패턴 활성화 요청 이벤트

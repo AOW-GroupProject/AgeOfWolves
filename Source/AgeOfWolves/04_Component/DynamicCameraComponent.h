@@ -150,6 +150,11 @@ public:
 
 	//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
+protected:
+	//@초기화
+	UFUNCTION()
+	void InitializeDynamicCameraComp(const AController* Controller);
+
 public:
 	// 카메라 전환 정보를 큐에 추가하는 함수
 	UFUNCTION()
@@ -198,11 +203,6 @@ protected:
 
 	UPROPERTY()
 	bool bCachedUsePawnControlRotation;
-
-protected:
-	//@초기화
-	UFUNCTION()
-	void InitializeDynamicCameraComp(const AController* Controller);
 #pragma endregion
 
 //@Delegates

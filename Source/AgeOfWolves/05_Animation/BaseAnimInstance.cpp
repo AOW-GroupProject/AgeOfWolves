@@ -8,6 +8,7 @@
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
 #include "AbilitySystemComponent.h"
 #include "07_BlueprintNode/AsyncTaskAttributeChanged.h"
+#include "04_Component/BaseInputComponent.h"
 
 #include "KismetAnimationLibrary.h"
 #include "Kismet/KismetMathLibrary.h"
@@ -136,6 +137,55 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 //@속성/정보...등
 #pragma region Property or Subwidgets or Infos...etc
+void UBaseAnimInstance::HandleBattoujutsuMovementBlock(ECombatType OldCombatType, ECombatType NewCombatType)
+{
+    // InputComponent 참조 획득
+    if (!OwnerCharacterBaseRef.IsValid())
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "OwnerCharacterBaseRef가 유효하지 않습니다.");
+        return;
+    }
+
+    APlayerController* PC = Cast<APlayerController>(OwnerCharacterBaseRef->GetController());
+    if (!PC)
+    {
+        return; // AI Controller일 수 있으므로 경고 없이 리턴
+    }
+
+    auto* InputComp = Cast<UBaseInputComponent>(PC->InputComponent);
+    if (!InputComp)
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "BaseInputComponent를 찾을 수 없습니다.");
+        return;
+    }
+
+    // 발도술 자세로 전환되는 경우
+    if (NewCombatType == ECombatType::BattoujutsuCombat)
+    {
+        InputComp->SetBlockMovementInput(true);
+
+        UE_LOGFMT(LogAnimInstance, Log, "발도술 자세 진입 - 이동 입력 블록 활성화");
+
+        // 현재 이동 중이라면 강제로 Stop 상태로 전환
+        if (MovementState == EMovementState::Cycle_Walk || MovementState == EMovementState::Cycle_Sprint)
+        {
+            UE_LOGFMT(LogAnimInstance, Warning, "발도술 자세 진입으로 인한 강제 정지: {0} -> Idle",
+                *UEnum::GetValueAsString(MovementState));
+
+            LastMovementState = MovementState;
+            MovementState = EMovementState::Idle;
+            OnMovementStateChanged();
+        }
+    }
+    // 발도술 자세에서 벗어나는 경우
+    else if (OldCombatType == ECombatType::BattoujutsuCombat && NewCombatType != ECombatType::BattoujutsuCombat)
+    {
+        InputComp->SetBlockMovementInput(false);
+
+        UE_LOGFMT(LogAnimInstance, Log, "발도술 자세 해제 - 이동 입력 블록 해제");
+    }
+}
+
 // =====================================================
 // 상태 기계 핵심 로직 영역
 // =====================================================
@@ -959,21 +1009,10 @@ void UBaseAnimInstance::OnLockOnStateChanged(bool bIsLockOn, AActor* LockOnTarge
 
 void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
 {
-    /*
-     * Combat State 속성 변화 콜백 함수
-     *
-     * 이 함수는 게임의 상태 전환에서 핵심적인 역할을 합니다.
-     * Combat State가 변경될 때 애니메이션 시스템이 어떻게 반응해야 하는지를 정의합니다.
-     *
-     * 교육적 관점에서 보면, 이는 "이벤트 기반 프로그래밍"의 좋은 예시입니다.
-     * 상태 변경이라는 이벤트가 발생하면, 그에 맞는 애니메이션 로직이 자동으로 실행됩니다.
-     */
-
-     // 이전 Combat Type 저장 - 변경 사항을 추적하기 위함
+    // 이전 Combat Type 저장
     const ECombatType OldCombatType = CombatType;
 
     // 새로운 Combat Type 계산 및 설정
-    // Clamp를 사용하여 유효하지 않은 값으로부터 시스템을 보호합니다
     CombatType = static_cast<ECombatType>(FMath::RoundToInt(FMath::Clamp(NewValue, 0.f,
         static_cast<float>(ECombatType::MAX) - 1)));
 
@@ -982,13 +1021,12 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
         *UEnum::GetValueAsString(CombatType), static_cast<uint8>(CombatType),
         NewValue);
 
-    // NormalCombat(1)에서 GuardCombat(3)으로 변경 시 강제 Idle 전환 처리
-    // 이는 전투 모드 변경 시 안정적인 상태 전환을 보장하기 위함입니다
+    // === 새로 추가: 발도술 자세 이동 블록 처리 ===
+    HandleBattoujutsuMovementBlock(OldCombatType, CombatType);
+
+    // === 기존 로직: NormalCombat에서 GuardCombat으로 변경 시 강제 Idle 전환 처리 ===
     if (OldCombatType == ECombatType::NormalCombat && CombatType == ECombatType::GuardCombat)
     {
-        // Start, Stop 상태에서만 강제 Idle 전환
-        // 이는 이 두 상태가 "전환 상태"이기 때문에 새로운 Combat State에서는
-        // 안정적인 기본 상태(Idle)로 리셋하는 것이 안전합니다
         if (MovementState == EMovementState::Start || MovementState == EMovementState::Stop)
         {
             UE_LOGFMT(LogAnimInstance, Warning, "Combat State Normal->Guard 변경으로 인한 강제 Idle 전환: {0} -> Idle",
@@ -1000,7 +1038,6 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
             return;
         }
 
-        // Cycle 상태는 그대로 유지 - 안정적인 이동 상태이므로 중단할 필요 없음
         if (MovementState == EMovementState::Cycle_Walk || MovementState == EMovementState::Cycle_Sprint)
         {
             UE_LOGFMT(LogAnimInstance, Log, "Combat State Normal->Guard 변경 - Cycle 상태 유지: {0}",
@@ -1008,8 +1045,6 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
         }
     }
 
-    // GuardCombat(3)에서 NormalCombat(1)으로 돌아가는 경우도 로깅
-    // 이는 시스템의 투명성을 위해 모든 상태 변경을 추적합니다
     if (OldCombatType == ECombatType::GuardCombat && CombatType == ECombatType::NormalCombat)
     {
         UE_LOGFMT(LogAnimInstance, Log, "Combat State Guard->Normal 변경, 현재 Movement State: {0}",

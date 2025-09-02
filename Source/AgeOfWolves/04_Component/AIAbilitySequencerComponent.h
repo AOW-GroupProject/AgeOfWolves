@@ -207,6 +207,10 @@ protected:
     void AdvanceToNextUnit();
     void AdvanceToNextBlock();
 
+private:
+    //@Start Block 유닛 실행 헬퍼 함수
+    bool ExecuteStartBlockUnit();
+
 protected:
     //@Exit Block 관련 함수들
     bool StartExitBlock();
@@ -255,6 +259,10 @@ protected:
     FAIAdaptiveBehaviorConfig CachedAdaptiveBehaviorConfig;
 
 protected:
+    //@전투 준비 완료 상태 (Start Block 실행 완료 여부)
+    UPROPERTY()
+        bool bCombatReadyCompleted;
+
     //@현재 활성화 된 블록 유닛의 어빌리티 태그
     UPROPERTY()
     FGameplayTag CurrentActivatingUnitTag;
@@ -341,12 +349,21 @@ public:
 //@Callbacks
 #pragma region Callbacks
 protected:
+    //@전투 준비 요청을 구독하는 콜백
+    UFUNCTION()
+        bool OnRequestReadyToCombat();
+
+    //@전투 준비 종료 요청을 구독하는 콜백
+    UFUNCTION()
+        bool OnRequestFininshReadyToCombat();
+
+protected:
     //@전투 패턴 제어 콜백
     UFUNCTION()
-    bool OnRequestActivateAICombatLoop();
+        bool OnRequestActivateAICombatLoop();
 
     UFUNCTION()
-    bool OnRequestEndCombatPattern();
+        bool OnRequestEndCombatPattern();
 
 protected:
     //@ASC 이벤트 콜백
@@ -471,6 +488,15 @@ public:
     //@상세 로그 설정
     UFUNCTION(BlueprintCallable, Category = "Debug")
     void SetVerboseLogging(bool bEnable) { bEnableVerboseLogging = bEnable; }
+
+public:
+    //@전투 준비 완료 상태 확인
+    UFUNCTION(BlueprintCallable, Category = "AI Combat Pattern")
+    bool IsCombatReadyCompleted() const { return bCombatReadyCompleted; }
+
+    //@전투 준비 완료 상태 설정 (디버깅용)
+    UFUNCTION(BlueprintCallable, Category = "Debug")
+    void SetCombatReadyCompleted(bool bCompleted) { bCombatReadyCompleted = bCompleted; }
 
 public:
     //@시퀀서 검증 함수들 (에디터/디버깅용)
