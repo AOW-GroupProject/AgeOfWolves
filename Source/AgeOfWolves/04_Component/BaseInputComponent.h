@@ -82,6 +82,10 @@ public:
 
 	//@Property/Info...etc
 #pragma region IMC(Input Mapping Context)
+private:
+	// 이동 입력 블록 플래그 (발도술 자세 등에서 사용)
+	bool bBlockMovementInput;
+
 protected:
 	//@Bind IA Template
 	template<typename UserClass, typename PressedFuncType, typename ReleasedFuncType>
@@ -230,6 +234,15 @@ public:
 private:
 	//@PlayerController의 입력 활성화 상태를 체크하는 헬퍼 함수
 	bool IsInputAllowed() const;
+
+public:
+	// 이동 입력 블록 상태 설정
+	UFUNCTION(BlueprintCallable, Category = "Input Control")
+	void SetBlockMovementInput(bool bBlock);
+
+	// 이동 입력 블록 상태 확인
+	UFUNCTION(BlueprintPure, Category = "Input Control")
+	FORCEINLINE bool GetBlockMovementInput() const { return bBlockMovementInput; }
 #pragma endregion
 
 };

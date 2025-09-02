@@ -23,10 +23,11 @@ DEFINE_LOG_CATEGORY(LogInputComponent)
 //@Defualt Setting
 #pragma region Default Setting
 UBaseInputComponent::UBaseInputComponent(const FObjectInitializer& ObjectInitializer)
-	:Super(ObjectInitializer)
+	: Super(ObjectInitializer)
+	, bBlockMovementInput(false) // 추가
 {
 	PrimaryComponentTick.bCanEverTick = false;
-	bWantsInitializeComponent = true;//Initialize Component 활용에 필요 
+	bWantsInitializeComponent = true;
 }
 
 void UBaseInputComponent::OnRegister()
@@ -308,8 +309,15 @@ void UBaseInputComponent::SwapMappings(const FGameplayTag& NewIMCTag)
 #pragma region Callbacks
 void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 {
-	//@입력 허용 상태 체크 - 한 줄 추가
+	// 입력 허용 상태 체크
 	if (!IsInputAllowed()) return;
+
+	// === 새로 추가: 이동 입력 블록 체크 ===
+	if (bBlockMovementInput)
+	{
+		UE_LOGFMT(LogInputComponent, Warning, "이동 입력이 블록되었습니다 (발도술 자세 등)");
+		return;
+	}
 
 	if (CurrentIMCTag == FGameplayTag::RequestGameplayTag(FName("Input.IMC.PlayerOnGround")))
 	{
@@ -317,14 +325,14 @@ void UBaseInputComponent::Input_Move(const FInputActionValue& Value)
 		{
 			if (APawn* Pawn = PC->GetPawn())
 			{
-				// BaseAnimInstance 체크 추가
+				// BaseAnimInstance 체크 (기존 Root Motion 체크 유지)
 				if (USkeletalMeshComponent* MeshComp = Pawn->FindComponentByClass<USkeletalMeshComponent>())
 				{
 					if (UBaseAnimInstance* BaseAnimInstance = Cast<UBaseAnimInstance>(MeshComp->GetAnimInstance()))
 					{
 						if (BaseAnimInstance->GetIsPlayingRootMotionMontageWithFullBodySlot())
 						{
-							return; // 루트 모션 재생 중이면 움직임 입력 무시
+							return;
 						}
 					}
 				}
@@ -498,5 +506,15 @@ bool UBaseInputComponent::IsInputAllowed() const
 	}
 
 	return true;
+}
+
+void UBaseInputComponent::SetBlockMovementInput(bool bBlock)
+{
+	if (bBlockMovementInput == bBlock) return;
+
+	bBlockMovementInput = bBlock;
+
+	UE_LOGFMT(LogInputComponent, Log, "이동 입력 블록 상태 변경: {0}",
+		bBlock ? TEXT("블록됨") : TEXT("허용됨"));
 }
 #pragma endregion
