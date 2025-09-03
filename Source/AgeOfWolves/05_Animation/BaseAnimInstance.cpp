@@ -193,21 +193,40 @@ void UBaseAnimInstance::HandleBattoujutsuMovementBlock(ECombatType OldCombatType
 void UBaseAnimInstance::UpdateMovementStateMachine()
 {
     /*
-     * 상태 기계의 메인 업데이트 함수 (FullBody 시작 시 Idle 전환 추가)
+     * 상태 기계의 메인 업데이트 함수 (LastMovementState 보호 로직 추가)
      */
 
      // === Root Motion 재생 중일 때 특별 처리 (수정됨) ===
     if (bIsPlayingRootMotionMontageWithFullBodySlot)
     {
         // FullBody 몽타주가 시작되면 즉시 Idle 상태로 전환
-        // 이는 공격이나 특수 동작 중에는 이동 상태를 명확히 정리하기 위함
         if (MovementState != EMovementState::Idle)
         {
             UE_LOGFMT(LogAnimInstance, Log, "FullBody 몽타주 재생 중 - 강제 Idle 전환: {0} -> Idle",
                 *UEnum::GetValueAsString(MovementState));
 
-            LastMovementState = MovementState;
+            // === LastMovementState 보호 로직 ===
+            EMovementState PreviousMovementState = MovementState;
             MovementState = EMovementState::Idle;
+
+            // LastMovementState가 이미 Idle이 아닌 경우 (Combat State 변경에서 이미 설정됨)
+            // 해당 값을 보호하고 덮어쓰지 않음
+            if (LastMovementState == EMovementState::Idle)
+            {
+                // LastMovementState가 Idle인 경우에만 이전 상태로 업데이트
+                // (정상적인 Root Motion 시작 케이스)
+                LastMovementState = PreviousMovementState;
+                UE_LOGFMT(LogAnimInstance, Log, "   └─ LastMovementState 업데이트: Idle -> {0} (정상 Root Motion)",
+                    *UEnum::GetValueAsString(LastMovementState));
+            }
+            else
+            {
+                // LastMovementState가 이미 적절한 값으로 설정되어 있음 (Combat State 변경에서)
+                // 보호하고 덮어쓰지 않음
+                UE_LOGFMT(LogAnimInstance, Log, "   └─ LastMovementState 보호: {0} 유지 (Combat State 변경에서 설정됨)",
+                    *UEnum::GetValueAsString(LastMovementState));
+            }
+
             OnMovementStateChanged();
         }
 
