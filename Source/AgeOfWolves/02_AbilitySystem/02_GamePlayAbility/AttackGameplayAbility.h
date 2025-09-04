@@ -12,6 +12,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAttackGA, Log, All);
 #pragma region Forward Declaration
 class ACharacterBase;
 class UAnimMontage;
+class UAT_CompensateDamage;
 #pragma endregion
 
 //@열거형
@@ -57,8 +58,6 @@ enum class ECollisionEffectType : uint8
 	Blood       UMETA(DisplayName = "Blood"),
 	MAX         UMETA(DisplayName = "MAX")
 };
-
-
 #pragma endregion
 
 //@구조체
@@ -215,23 +214,28 @@ public:
 UCLASS()
 class AGEOFWOLVES_API UAttackGameplayAbility : public UBaseGameplayAbility
 {
-	//@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 	friend class UANS_AttackTrace;
+	friend class UANS_CompensateStrongAttack;
 #pragma endregion
 
 	GENERATED_BODY()
 
-	//@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UAttackGameplayAbility(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
+protected:
+	//@어빌리티 종료 시 파훼 태스크 정리
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 #pragma endregion
 
-	//@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
 	//@인덱스 지정 버전 몽타주 재생
@@ -309,6 +313,15 @@ protected:
 	//@현재 몽타주의 FX 설정으로 이펙트 실행
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| FX")
 	void ExecuteCollisionFXForCurrentMontage(const FHitResult& HitResult, AActor* SourceActor, int32 MontageIndex = -1);
+
+protected:
+	//@파훼 태스크 생성 및 활성화
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 파훼")
+	void ActivateCompensationTask(bool bOnlyTriggerOnce = false);
+
+	//@파훼 태스크 정리
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 파훼")
+	void DeactivateCompensationTask();
 
 protected:
 	//@현재 실행 중인 몽타주 인덱스
@@ -412,9 +425,14 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| FX",
 		meta = (EditCondition = "bEnableCollisionFX && FXSettingMode == EFXApplyRange::PerMontage"))
 	TArray<FCollisionFXSetting> MontageFXSettings;
+
+protected:
+	//@파훼 태스크 참조
+	UPROPERTY(Transient)
+	UAT_CompensateDamage* CurrentCompensationTask;
 #pragma endregion
 
-	//@Delegates
+//@Delegates
 #pragma region Delegates
 #pragma endregion
 
@@ -427,7 +445,7 @@ protected:
 	virtual void OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag) override;
 #pragma endregion
 
-	//@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
 	UFUNCTION(BlueprintCallable, Category = "Ability|Getter")
@@ -437,6 +455,15 @@ public:
 	//@소켓 위치와 회전값 가져오기
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| FX")
 	bool GetSocketTransform(FName SocketName, FTransform& OutTransform) const;
+
+protected:
+	//@파훼 태스크 가져오기 (ANS에서 사용)
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 파훼")
+	UAT_CompensateDamage* GetCompensationTask() const;
+
+	//@파훼 태스크 활성화 상태 확인
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 파훼")
+	bool IsCompensationTaskActive() const;
 #pragma endregion
 
 };

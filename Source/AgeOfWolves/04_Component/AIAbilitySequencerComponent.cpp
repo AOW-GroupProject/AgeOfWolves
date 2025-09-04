@@ -1279,7 +1279,7 @@ bool UAIAbilitySequencerComponent::OnRequestReadyToCombat()
     if (bCombatReadyCompleted)
     {
         UE_LOG(LogAICombatPattern, Warning, TEXT("전투 준비가 이미 완료됨"));
-        return false;
+        return true;
     }
 
     // 현재 다른 작업이 실행 중인 경우

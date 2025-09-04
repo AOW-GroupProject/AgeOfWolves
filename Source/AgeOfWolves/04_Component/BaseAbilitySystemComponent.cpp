@@ -561,6 +561,21 @@ int32 UBaseAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, co
 		return 0;
 	}
 
+	//@데미지 이벤트 전처리 (강공격 파훼 등)
+	if (EventTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("EventTag.OnDamaged")))
+	{
+		bool bShouldContinueProcessing = true;
+
+		//@전처리 델리게이트 호출
+		DamageEventPreProcess.Broadcast(EventTag, *Payload, bShouldContinueProcessing);
+
+		if (!bShouldContinueProcessing)
+		{
+			UE_LOGFMT(LogASC, Log, "데미지 이벤트 처리 중단됨 - 파훼 매커니즘에 의해 차단");
+			return 0; // 처리 중단
+		}
+	}
+
 	//@체인 액션 종료 이벤트 처리
 	if (EventTag.MatchesTag(FGameplayTag::RequestGameplayTag("EventTag.OnChainActionFinished")))
 	{

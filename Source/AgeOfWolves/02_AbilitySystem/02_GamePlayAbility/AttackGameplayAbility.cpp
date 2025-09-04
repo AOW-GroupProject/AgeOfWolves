@@ -12,12 +12,17 @@
 #include "07_BlueprintNode/CombatLibrary.h"
 #include "AbilitySystemBlueprintLibrary.h"
 
+#include "02_AbilitySystem/06_AbilityTask/AT_CompensateDamage.h"
+
 DEFINE_LOG_CATEGORY(LogAttackGA)
+
 //@Defualt Setting
 #pragma region Default Setting
 UAttackGameplayAbility::UAttackGameplayAbility(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
 {
+    //@파훼 태스크 초기화
+    CurrentCompensationTask = nullptr;
 }
 
 void UAttackGameplayAbility::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -71,6 +76,18 @@ void UAttackGameplayAbility::PostEditChangeProperty(FPropertyChangedEvent& Prope
             UE_LOG(LogAttackGA, Log, TEXT("HitStop 설정 모드 변경 - 몽타주별 설정 모드로 변경됨, 설정 배열 크기: %d"), MontageCount);
         }
     }
+}
+
+void UAttackGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+    //@파훼 태스크 정리 (부모 클래스 호출 전에 수행)
+    DeactivateCompensationTask();
+
+    UE_LOGFMT(LogAttackGA, Log, "공격 어빌리티 종료 시 파훼 태스크 정리 완료 - 어빌리티: {0}, 취소 여부: {1}",
+        *GetName(), bWasCancelled ? TEXT("취소됨") : TEXT("정상 종료"));
+
+    //@부모 클래스의 EndAbility 호출
+    Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
 }
 #pragma endregion
 
@@ -801,6 +818,52 @@ void UAttackGameplayAbility::ExecuteCollisionFXForCurrentMontage(const FHitResul
     //@이펙트 실행
     ExecuteGameplayCueAtLocation(FXSetting.GetEffectCueTag(), SpawnTransform, SourceActor);
 }
+
+void UAttackGameplayAbility::ActivateCompensationTask(bool bOnlyTriggerOnce)
+{
+    //@기존 태스크 정리
+    if (CurrentCompensationTask && CurrentCompensationTask->IsActive())
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "파훼 태스크 활성화 실패 - 사유: 이미 활성화된 태스크 존재");
+        return;
+    }
+
+    //@새로운 파훼 태스크 생성
+    CurrentCompensationTask = UAT_CompensateDamage::WaitForStrongAttackCompensation(
+        this,
+        FName("CompensationTask"),
+        bOnlyTriggerOnce
+    );
+
+    if (!CurrentCompensationTask)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "파훼 태스크 생성 실패");
+        return;
+    }
+
+    //@태스크 활성화
+    CurrentCompensationTask->ReadyForActivation();
+
+    UE_LOGFMT(LogAttackGA, Log, "파훼 태스크 활성화 완료 - OnlyTriggerOnce: {0}", bOnlyTriggerOnce);
+}
+
+void UAttackGameplayAbility::DeactivateCompensationTask()
+{
+    if (CurrentCompensationTask)
+    {
+        if (CurrentCompensationTask->IsActive())
+        {
+            CurrentCompensationTask->EndTask();
+        }
+        CurrentCompensationTask = nullptr;
+
+        UE_LOGFMT(LogAttackGA, Log, "파훼 태스크 비활성화 완료");
+    }
+    else
+    {
+        UE_LOGFMT(LogAttackGA, Log, "파훼 태스크 비활성화 스킵 - 사유: 활성화된 태스크가 없음");
+    }
+}
 #pragma endregion
 
 //@Callbacks
@@ -860,5 +923,16 @@ bool UAttackGameplayAbility::GetSocketTransform(FName SocketName, FTransform& Ou
     //@소켓 트랜스폼 가져오기
     OutTransform = Mesh->GetSocketTransform(SocketName);
     return true;
+}
+
+UAT_CompensateDamage* UAttackGameplayAbility::GetCompensationTask() const
+{
+    return CurrentCompensationTask;
+}
+
+//@파훼 태스크 활성화 상태 확인
+bool UAttackGameplayAbility::IsCompensationTaskActive() const
+{
+    return CurrentCompensationTask && CurrentCompensationTask->IsActive();
 }
 #pragma endregion
