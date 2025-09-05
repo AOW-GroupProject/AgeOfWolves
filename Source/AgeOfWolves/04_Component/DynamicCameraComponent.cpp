@@ -9,6 +9,8 @@
 
 DEFINE_LOG_CATEGORY(LogDynamicCamera)
 
+//@Defualt Setting
+#pragma region Default Settings
 UDynamicCameraComponent::UDynamicCameraComponent()
 {
 	PrimaryComponentTick.bCanEverTick = true;
@@ -24,6 +26,68 @@ void UDynamicCameraComponent::TickComponent(float DeltaTime, ELevelTick TickType
 	if (bIsTransitioning)
 	{
 		ProcessCurrentTransition(DeltaTime);
+	}
+}
+#pragma endregion
+
+//@Property/Info...etc
+#pragma region Property or Subwidgets or Infos...etc
+void UDynamicCameraComponent::InitializeDynamicCameraComp(const AController* Controller)
+{
+	const auto Owner = GetOwner();
+	if (!Owner)
+	{
+		UE_LOGFMT(LogDynamicCamera, Warning, "Owner Actor가 유효하지 않습니다.");
+		return;
+	}
+
+	PlayerCharacterRef = Cast<APlayerCharacter>(Owner);
+	if (!PlayerCharacterRef.IsValid())
+	{
+		UE_LOGFMT(LogDynamicCamera, Warning, "컴포넌트 초기화 실패: 플레이어 캐릭터가 유효하지 않음");
+		return;
+	}
+
+	CameraComponentRef = PlayerCharacterRef->GetCameraComponent();
+	if (!CameraComponentRef.IsValid())
+	{
+		UE_LOGFMT(LogDynamicCamera, Warning, "컴포넌트 초기화 실패: 카메라가 유효하지 않음");
+		return;
+	}
+	
+
+	// FName에 해당하는 SpringArm이 있는지 유효성 검사 후 SpringArm 매칭
+	if (!CameraAngleNameMap.IsEmpty())
+	{
+		CameraAngleSpringArmMap.Empty();
+
+		TArray<USpringArmComponent*> SpringArmArray;
+		PlayerCharacterRef->GetComponents<USpringArmComponent>(SpringArmArray);
+		
+		for (const TPair<ECameraAngle, FName> CameraAngleSocket : CameraAngleNameMap)
+		{
+			USpringArmComponent* FoundSpringArm = nullptr;
+			
+			for (USpringArmComponent* SpringArm : SpringArmArray)
+			{
+				if (SpringArm && SpringArm->GetFName() == CameraAngleSocket.Value)
+				{
+					FoundSpringArm = SpringArm;
+					break; 
+				}
+			}
+			
+			if (FoundSpringArm)
+			{
+				CameraAngleSpringArmMap.Add(CameraAngleSocket.Key, FoundSpringArm);
+			}
+			else
+			{
+				UE_LOG(LogDynamicCamera, Warning, TEXT("이름에 맞는 SpringArm을 찾을 수 없습니다. ECameraAngle : %s, Name : %s"), 
+					*UEnum::GetValueAsString(CameraAngleSocket.Key), 
+					*CameraAngleSocket.Value.ToString());
+			}
+		}
 	}
 }
 
@@ -277,7 +341,10 @@ float UDynamicCameraComponent::ApplyEaseFunction(float Alpha, EBlendCurve BlendC
 		return Alpha;
 	}
 }
+#pragma endregion
 
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 bool UDynamicCameraComponent::IsAngleValid(ECameraAngle Angle) const
 {
 	if (CameraAngleNameMap.Contains(Angle))
@@ -319,62 +386,4 @@ USpringArmComponent* UDynamicCameraComponent::FindSpringArm(ECameraAngle Angle) 
 	
 	return nullptr;
 }
-
-void UDynamicCameraComponent::InitializeDynamicCameraComp(const AController* Controller)
-{
-	const auto Owner = GetOwner();
-	if (!Owner)
-	{
-		UE_LOGFMT(LogDynamicCamera, Warning, "Owner Actor가 유효하지 않습니다.");
-		return;
-	}
-
-	PlayerCharacterRef = Cast<APlayerCharacter>(Owner);
-	if (!PlayerCharacterRef.IsValid())
-	{
-		UE_LOGFMT(LogDynamicCamera, Warning, "컴포넌트 초기화 실패: 플레이어 캐릭터가 유효하지 않음");
-		return;
-	}
-
-	CameraComponentRef = PlayerCharacterRef->GetCameraComponent();
-	if (!CameraComponentRef.IsValid())
-	{
-		UE_LOGFMT(LogDynamicCamera, Warning, "컴포넌트 초기화 실패: 카메라가 유효하지 않음");
-		return;
-	}
-	
-
-	// FName에 해당하는 SpringArm이 있는지 유효성 검사 후 SpringArm 매칭
-	if (!CameraAngleNameMap.IsEmpty())
-	{
-		CameraAngleSpringArmMap.Empty();
-
-		TArray<USpringArmComponent*> SpringArmArray;
-		PlayerCharacterRef->GetComponents<USpringArmComponent>(SpringArmArray);
-		
-		for (const TPair<ECameraAngle, FName> CameraAngleSocket : CameraAngleNameMap)
-		{
-			USpringArmComponent* FoundSpringArm = nullptr;
-			
-			for (USpringArmComponent* SpringArm : SpringArmArray)
-			{
-				if (SpringArm && SpringArm->GetFName() == CameraAngleSocket.Value)
-				{
-					FoundSpringArm = SpringArm;
-					break; 
-				}
-			}
-			
-			if (FoundSpringArm)
-			{
-				CameraAngleSpringArmMap.Add(CameraAngleSocket.Key, FoundSpringArm);
-			}
-			else
-			{
-				UE_LOG(LogDynamicCamera, Warning, TEXT("이름에 맞는 SpringArm을 찾을 수 없습니다. ECameraAngle : %s, Name : %s"), 
-					*UEnum::GetValueAsString(CameraAngleSocket.Key), 
-					*CameraAngleSocket.Value.ToString());
-			}
-		}
-	}
-}
+#pragma endregion

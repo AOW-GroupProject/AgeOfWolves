@@ -2,9 +2,6 @@
 #include "Logging/StructuredLog.h"
 
 #include "10_AI/BaseAIController.h"
-#include "AbilitySystemComponent.h"
-#include "04_Component/BaseAbilitySystemComponent.h"
-#include "GameplayTagContainer.h"
 
 DEFINE_LOG_CATEGORY(LogBTTask_TryCombatLoop)
 

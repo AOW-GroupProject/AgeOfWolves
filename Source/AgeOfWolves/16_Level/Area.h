@@ -233,7 +233,7 @@ struct FStructureData
     //@실제 레벨에 배치된 구조물 액터에 대한 약한 참조
     //@약한 참조 사용으로 메모리 누수 방지 및 안전한 액터 생명주기 관리
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "액터 참조")
-    TWeakObjectPtr<AActor> StructureActor;
+    TSoftObjectPtr<AActor> StructureActor;
 
     //@기본 생성자 - 모든 필드를 안전한 기본값으로 초기화
     FStructureData()
@@ -572,6 +572,10 @@ public:
     //@영역 우선순위 가져오기
     UFUNCTION(BlueprintCallable, Category = "Area")
     int32 GetAreaPriority() const { return AreaPriority; }
+
+    //@영역 내 모든 AI 정보 목록 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Area")
+    TArray<FStructureData> GetStructureDatas() {return RegisteredStructures;};
 
 public:
     //@영역 내 모든 AI 정보 목록 가져오기

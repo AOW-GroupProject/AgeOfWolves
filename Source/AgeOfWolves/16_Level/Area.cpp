@@ -448,7 +448,8 @@ void AArea::InternalBindToStructure(TWeakObjectPtr<AActor> StructurePtr)
     }
 
     //@내부 바인딩...
-    StructureBase->OnStructureInteractionBegin.BindUObject(this,&AArea::OnStructureInteractionTriggered);
+    // StructureBase->OnStructureInteractionBegin.BindUObject(this,&AArea::OnStructureInteractionTriggered);
+    StructureBase->OnStructureInteractionTriggered.AddUFunction(this, "OnStructureInteractionTriggered");
     
 }
 
@@ -1548,6 +1549,8 @@ void AArea::OnStructureInteractionTriggered(AStructureBase* TriggeredStucture)
 {
     if (!TriggeredStucture)
         return;
+
+    UE_LOGFMT(LogArea, Warning, "구조물 상호작용 발동됨!");
     
     //@구조물의 구조물 ID 찾기
     FGuid StructureID = GetStructureID(TriggeredStucture);
@@ -1560,21 +1563,30 @@ void AArea::OnStructureInteractionTriggered(AStructureBase* TriggeredStucture)
 
     FStructureData Structure = MStructureBindings[StructureID];
 
-    //게임모드에게 상호작용 전달
-    //..
-    if (auto GameMode = Cast<AAgeOfWolvesGameMode>(GetWorld()->GetAuthGameMode()))
-    {
-        if (IsValid(GameMode))
-        {
-            GameMode->HandleFirstStructureActivation(Structure);
-        }
-    }
+
 
     //@  게임모드에게 구조물데이터 전달후, 활성값 true로 전환
     //@ 최초 상호작요이라면 bIsActive 가 false 임 
     if (!Structure.bIsActive)
+    {
         Structure.bIsActive = true;
 
+        //게임모드에게 상호작용 전달
+        if (auto GameMode = Cast<AAgeOfWolvesGameMode>(GetWorld()->GetAuthGameMode()))
+        {
+            if (IsValid(GameMode))
+            {
+                //최초구조물 상호작용 활성
+                GameMode->HandleFirstStructureActivation(Structure);
+            }
+        }
+    }
+    else
+    {
+        //@이미 활성된 구조물!
+        UE_LOGFMT(LogArea, Warning, "이미 구조물 상호작용 발동됨!, UI 오픈처리");
+        
+    }
     //@area가 bIsActive 확인해서 구조물 active하기
     TriggeredStucture->SetStructureActive(Structure.bIsActive);
 }

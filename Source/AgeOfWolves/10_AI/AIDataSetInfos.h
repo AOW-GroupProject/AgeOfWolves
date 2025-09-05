@@ -350,7 +350,7 @@ public:
 
 public:
     // 기존 함수는 내부적으로 새로운 고정값 사용하도록 수정
-    float CalculateNormalizedReward(float DamageReceived, float CurrentDistance, bool bAbilitySuccess) const;
+    float CalculateNormalizedReward(float DamageReceived, float DamageDealt, float CurrentDistance, bool bAbilitySuccess) const;
 
     float CalculateAdaptiveLearningRate(int32 LearningCount) const;
 };
@@ -902,7 +902,11 @@ public:
 public:
     //@적응형 시스템의 이론적 최종 수렴값 예측
     UFUNCTION(BlueprintCallable, Category = "AI 적응형 시스템 분석")
-    TArray<float> PredictLearningConvergence(EAIType AIType, float DamagePerAction, float AverageDistance, float SuccessRate) const
+    TArray<float> PredictLearningConvergence(EAIType AIType,
+        float DamageReceived,    // 받은 데미지
+        float DamageDealt,       // 전달한 데미지  
+        float AverageDistance,
+        float SuccessRate) const
     {
         TArray<float> ConvergenceValues;
 
@@ -916,7 +920,11 @@ public:
         const FAISimplifiedPersonality& Personality = DataSet->AdaptiveBehaviorConfig.SimplifiedPersonality;
 
         // 이론적 보상값 계산
-        float TheoreticalReward = Calculator.CalculateNormalizedReward(DamagePerAction, AverageDistance, SuccessRate > 0.5f);
+        float TheoreticalReward = Calculator.CalculateNormalizedReward(
+            DamageReceived, 
+            DamageDealt, 
+            AverageDistance, 
+            SuccessRate > 0.5f);
 
         // 각 카테고리별 초기 선호도
         float OpeningPref = Personality.GetInitialActionPreference(FGameplayTag::RequestGameplayTag(TEXT("AbilityBlock.OpeningSkills")));

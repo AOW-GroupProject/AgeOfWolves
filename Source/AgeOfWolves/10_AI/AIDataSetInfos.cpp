@@ -61,14 +61,17 @@ DEFINE_LOG_CATEGORY(LogAILearning)
  * @param bAbilitySuccess 어빌리티 성공 여부
  * @return 정규화된 보상값 (-1.0f ~ 1.0f)
  */
-float FAIRewardCalculator::CalculateNormalizedReward(float DamageReceived, float CurrentDistance, bool bAbilitySuccess) const
+float FAIRewardCalculator::CalculateNormalizedReward(float DamageReceived, float DamageDealt, float CurrentDistance, bool bAbilitySuccess) const
 {
     UE_LOG(LogAILearning, Log, TEXT("표준 보상 계산 시작 - 데미지: %.2f, 거리: %.2f, 성공: %s"),
         DamageReceived, CurrentDistance, bAbilitySuccess ? TEXT("True") : TEXT("False"));
 
     // 1. 데미지 보상 정규화 (받은 데미지가 많을수록 음의 보상)
-    float NormalizedDamage = -FMath::Clamp(DamageReceived / 100.0f, 0.0f, 1.0f);
-    UE_LOG(LogAILearning, VeryVerbose, TEXT("데미지 정규화: %.2f → %.3f"), DamageReceived, NormalizedDamage);
+    float NormalizedDamageReceived = -FMath::Clamp(DamageReceived / 100.0f, 0.0f, 1.0f);  // 음수
+    float NormalizedDamageDealt = FMath::Clamp(DamageDealt / 100.0f, 0.0f, 1.0f);        // 양수
+    float CombinedDamageScore = NormalizedDamageReceived + NormalizedDamageDealt;
+
+    UE_LOG(LogAILearning, Log, TEXT("데미지: %.3f"), CombinedDamageScore);
 
     // 2. 거리 보상 정규화 (근접 유형: MinAttackRange에 가까울수록 좋음)
     float DistanceDiff = FMath::Abs(CurrentDistance - OptimalCombatDistance);
@@ -84,7 +87,7 @@ float FAIRewardCalculator::CalculateNormalizedReward(float DamageReceived, float
         bAbilitySuccess ? TEXT("Success") : TEXT("Fail"), NormalizedSuccess);
 
     // === 고정 가중치 사용 (제한사항 준수) ===
-    float WeightedSum = (NormalizedDamage * FIXED_DAMAGE_WEIGHT) +
+    float WeightedSum = (CombinedDamageScore * FIXED_DAMAGE_WEIGHT) +
         (NormalizedDistance * FIXED_DISTANCE_WEIGHT) +
         (NormalizedSuccess * FIXED_SUCCESS_WEIGHT);
 

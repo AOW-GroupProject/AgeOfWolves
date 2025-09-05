@@ -28,6 +28,7 @@ enum class EInteractionType : uint8
     Ambush      UMETA(DisplayName = "암살"),
     ItemPickup  UMETA(DisplayName = "아이템 줍기"),
     Dialogue    UMETA(DisplayName = "대화"),
+    Shrine      UMETA(DisplayName = "제단/성소"),
     MAX,        
 };
 #pragma endregion
@@ -329,6 +330,11 @@ protected:
     //@잠재적 암살 타겟 변경 이벤트 구독
     UFUNCTION()
         void OnAmbushTargetChanged(AActor* PotentialAmbushTarget);
+
+protected:
+    //@구조물 감지 변경 이벤트 수신 콜백
+    UFUNCTION()
+    void OnDetectedStructureChanged(AActor* DetectedStructureActor, bool isEnteredDetection);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

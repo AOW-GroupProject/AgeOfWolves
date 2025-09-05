@@ -139,7 +139,7 @@ bool UAT_MoveToInteractionZone::CalculateSocketTransform()
 		return false;
 	}
 
-	USkeletalMeshComponent* TargetMesh = TargetActor->FindComponentByClass<USkeletalMeshComponent>();
+	UMeshComponent* TargetMesh = TargetActor->FindComponentByClass<UMeshComponent>(); //@ skelMesh, staticMesh 모두 범주되는 UMeshComponent로 찾음
 	if (!TargetMesh || !TargetMesh->DoesSocketExist(SocketName))
 	{
 		UE_LOGFMT(LogAT_InteractionZone, Warning, "Socket '{0}' 찾을 수 없음", *SocketName.ToString());
