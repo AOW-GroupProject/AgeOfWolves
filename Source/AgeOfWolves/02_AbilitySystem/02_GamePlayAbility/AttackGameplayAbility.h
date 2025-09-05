@@ -314,6 +314,8 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| FX")
 	void ExecuteCollisionFXForCurrentMontage(const FHitResult& HitResult, AActor* SourceActor, int32 MontageIndex = -1);
 
+	//==== 강공격 파훼 ====
+
 protected:
 	//@파훼 태스크 생성 및 활성화
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 파훼")
@@ -434,6 +436,9 @@ protected:
 
 //@Delegates
 #pragma region Delegates
+protected:
+	//@강공격 파훼 델리게이트 핸들
+	FDelegateHandle StrongAttackCounteredHandle;
 #pragma endregion
 
 //@Callbacks
@@ -443,6 +448,12 @@ protected:
 	virtual void OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag) override;
 	//@오버라이드
 	virtual void OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag) override;
+
+protected:
+	//@강공격 파훼 성공 콜백
+	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 파훼")
+	void OnStrongAttackCountered(const AActor* Attacker, const AActor* Defender, const FGameplayEventData& EventData);
+	virtual void OnStrongAttackCountered_Implementation(const AActor* Attacker, const AActor* Defender, const FGameplayEventData& EventData);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

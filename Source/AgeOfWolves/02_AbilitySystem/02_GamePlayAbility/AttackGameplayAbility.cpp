@@ -841,6 +841,21 @@ void UAttackGameplayAbility::ActivateCompensationTask(bool bOnlyTriggerOnce)
         return;
     }
 
+    //@강공격 파훼 델리게이트 바인딩
+    StrongAttackCounteredHandle = CurrentCompensationTask->OnStrongAttackCountered.AddUObject(
+        this,
+        &UAttackGameplayAbility::OnStrongAttackCountered
+    );
+
+    if (StrongAttackCounteredHandle.IsValid())
+    {
+        UE_LOGFMT(LogAttackGA, Log, "강공격 파훼 델리게이트 바인딩 성공");
+    }
+    else
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "강공격 파훼 델리게이트 바인딩 실패");
+    }
+
     //@태스크 활성화
     CurrentCompensationTask->ReadyForActivation();
 
@@ -851,6 +866,15 @@ void UAttackGameplayAbility::DeactivateCompensationTask()
 {
     if (CurrentCompensationTask)
     {
+        //@델리게이트 언바인딩
+        if (StrongAttackCounteredHandle.IsValid())
+        {
+            CurrentCompensationTask->OnStrongAttackCountered.Remove(StrongAttackCounteredHandle);
+            StrongAttackCounteredHandle.Reset();
+            UE_LOGFMT(LogAttackGA, Log, "강공격 파훼 델리게이트 언바인딩 완료");
+        }
+
+        //@태스크 종료
         if (CurrentCompensationTask->IsActive())
         {
             CurrentCompensationTask->EndTask();
@@ -884,6 +908,16 @@ void UAttackGameplayAbility::OnChainActionFinished_Implementation(FGameplayTag C
     UE_LOGFMT(LogAttackGA, Log, "체인 액션 종료 이벤트 호출 - Ability: {0} | Event Tag: {1}",
         *GetName(),
         *ChainActionEventTag.ToString());
+}
+
+void UAttackGameplayAbility::OnStrongAttackCountered_Implementation(const AActor* Attacker, const AActor* Defender, const FGameplayEventData& EventData)
+{
+    UE_LOGFMT(LogAttackGA, Log, "강공격 파훼 성공 콜백 호출 - 공격자: {0}, 수비자: {1}",
+        Attacker ? *Attacker->GetName() : TEXT("Unknown"),
+        Defender ? *Defender->GetName() : TEXT("Unknown"));
+
+    // 블루프린트에서 추가 로직을 구현할 수 있도록 기본 구현은 비워둠
+    // 필요시 여기에 기본 C++ 로직 추가 가능
 }
 #pragma endregion
 
