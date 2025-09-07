@@ -58,6 +58,57 @@ enum class ECollisionEffectType : uint8
 	Blood       UMETA(DisplayName = "Blood"),
 	MAX         UMETA(DisplayName = "MAX")
 };
+
+//@처리 유형 식별을 위한 열거형
+UENUM(BlueprintType)
+enum class EProcessingType : uint8
+{
+	None = 0		UMETA(DisplayName = "없음"),
+	Damage			UMETA(DisplayName = "데미지 전달"),
+	Compensation	UMETA(DisplayName = "데미지 파훼")
+};
+
+/*
+*   @FProcessingData
+*
+*   상호 배제 처리를 위한 데이터 구조체
+*/
+struct FProcessingData
+{
+
+public:
+	FProcessingData()
+		: HitResult()
+		, SourceActor(nullptr)
+		, TargetActor(nullptr)
+		, EventData(nullptr)
+	{
+	}
+
+	FProcessingData(const FHitResult& InHitResult, AActor* InSourceActor, AActor* InTargetActor, const FGameplayEventData* InEventData = nullptr)
+		: HitResult(InHitResult)
+		, SourceActor(InSourceActor)
+		, TargetActor(InTargetActor)
+		, EventData(InEventData)
+	{
+	}
+
+public:
+	//@충돌 결과
+	UPROPERTY()
+	FHitResult HitResult;
+
+	//@소스 액터 (공격자 또는 수비자)
+	UPROPERTY()
+	TWeakObjectPtr<AActor> SourceActor;
+
+	//@타겟 액터 (피격자 또는 공격자)
+	UPROPERTY()
+	TWeakObjectPtr<AActor> TargetActor;
+
+	//@이벤트 데이터 (파훼용, 소유권 없음)
+	const FGameplayEventData* EventData;
+};
 #pragma endregion
 
 //@구조체
@@ -326,6 +377,25 @@ protected:
 	void DeactivateCompensationTask();
 
 protected:
+	//@상호 배제 처리 관련 함수들 (새로 추가)
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 동기화")
+	bool TryStartProcessing(EProcessingType ProcessType);
+
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 동기화")
+	void ResetProcessingState();
+
+private:
+	//@처리 실행 함수
+	void ExecuteProcessing(EProcessingType ProcessType, const FProcessingData& ProcessingData);
+
+	//@내부 이벤트 전송 함수들
+	void SendDamageEventInternal(const FProcessingData& ProcessingData);
+	void SendAttackFailedEventInternal(const FProcessingData& ProcessingData);
+
+	//@처리 실행 가능 여부 확인
+	bool CanExecuteProcessing(EProcessingType ProcessType) const;
+
+protected:
 	//@현재 실행 중인 몽타주 인덱스
 	UPROPERTY(BlueprintReadWrite, Category = "어빌리티 | 애니메이션")
 	int32 CurrentMontageIndex = 0;
@@ -432,6 +502,22 @@ protected:
 	//@파훼 태스크 참조
 	UPROPERTY(Transient)
 	UAT_CompensateDamage* CurrentCompensationTask;
+
+private:
+	// === 상호 배제 처리를 위한 동기화 멤버들 (새로 추가) ===
+
+	//@언리얼 엔진 크리티컬 섹션 (std::mutex 대신)
+	mutable FCriticalSection ProcessingCriticalSection;
+
+	//@처리 상태 플래그들
+	std::atomic<bool> bDamageProcessingStarted{ false };
+	std::atomic<bool> bCompensationProcessingStarted{ false };
+	std::atomic<bool> bProcessingCompleted{ false };
+
+
+
+	//@승리한 처리 유형
+	std::atomic<EProcessingType> WinningProcessType{ EProcessingType::None };
 #pragma endregion
 
 //@Delegates
@@ -475,6 +561,12 @@ protected:
 	//@파훼 태스크 활성화 상태 확인
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 파훼")
 	bool IsCompensationTaskActive() const;
+
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 동기화")
+	bool IsProcessingCompleted() const;
+
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 동기화")
+	FString GetProcessingStateDebugString() const;
 #pragma endregion
 
 };

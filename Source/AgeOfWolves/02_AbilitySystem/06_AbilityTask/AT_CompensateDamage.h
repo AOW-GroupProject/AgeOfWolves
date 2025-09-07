@@ -82,6 +82,10 @@ public:
         bool bOnlyTriggerOnce = false
     );
 
+private:
+    //@공격 실패 이벤트 전달
+    bool SendAttackFailedEvent(const FGameplayEventData& OriginalEventData) const;
+
 protected:
     //@모니터링할 이벤트 태그
     FGameplayTag DamageEventTag;
@@ -135,9 +139,6 @@ protected:
 protected:
     //@강공격 여부 확인
     bool IsStrongAttack(const FGameplayEventData& EventData) const;
-
-    //@공격 실패 이벤트 전달
-    bool SendAttackFailedEvent(const FGameplayEventData& OriginalEventData) const;
 
     //@AssetTags 추출 및 검증
     FGameplayTagContainer ExtractAssetTagsFromEventData(const FGameplayEventData& EventData) const;

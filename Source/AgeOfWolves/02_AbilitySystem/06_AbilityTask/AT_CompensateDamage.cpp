@@ -181,6 +181,96 @@ UAT_CompensateDamage* UAT_CompensateDamage::WaitForStrongAttackCompensation(
 
     return MyTask;
 }
+
+bool UAT_CompensateDamage::SendAttackFailedEvent(const FGameplayEventData& OriginalEventData) const
+{
+    if (!OriginalEventData.EventTag.IsValid())
+    {
+        UE_LOGFMT(LogCompensateDamage, Error, "공격 실패 이벤트 전달 실패: OriginalEventData가 유효하지 않음");
+        return false;
+    }
+
+    //@공격자 확인
+    AActor* OriginalAttacker = const_cast<AActor*>(OriginalEventData.Instigator.Get());
+    if (!IsValid(OriginalAttacker))
+    {
+        UE_LOGFMT(LogCompensateDamage, Error, "공격 실패 이벤트 전달 실패: 원본 공격자가 유효하지 않음");
+        return false;
+    }
+
+    //@수비자(현재 Avatar) 확인
+    AActor* Defender = AbilitySystemComponent->GetAvatarActor();
+    if (!IsValid(Defender))
+    {
+        UE_LOGFMT(LogCompensateDamage, Error, "공격 실패 이벤트 전달 실패: 수비자가 유효하지 않음");
+        return false;
+    }
+
+    //@HitResult 생성 (원본 이벤트에서 추출 시도)
+    FHitResult HitResult;
+    if (OriginalEventData.ContextHandle.IsValid())
+    {
+        if (const FHitResult* ContextHitResult = OriginalEventData.ContextHandle.GetHitResult())
+        {
+            HitResult = *ContextHitResult;
+        }
+        else
+        {
+            //@기본 HitResult 생성
+            HitResult.Location = Defender->GetActorLocation();
+            HitResult.ImpactPoint = Defender->GetActorLocation();
+            HitResult.bBlockingHit = true;
+        }
+    }
+    else
+    {
+        //@기본 HitResult 생성
+        HitResult.Location = Defender->GetActorLocation();
+        HitResult.ImpactPoint = Defender->GetActorLocation();
+        HitResult.bBlockingHit = true;
+    }
+
+    //@소유 어빌리티에서 Sub GameplayEffect 가져오기
+    UGameplayEffect* SubEffectCDO = nullptr;
+    if (UBaseGameplayAbility* BaseAbility = Cast<UBaseGameplayAbility>(Ability))
+    {
+        auto SubEffectClass = BaseAbility->GetApplySubGameplayEffectClass();
+        if (SubEffectClass)
+        {
+            SubEffectCDO = SubEffectClass.GetDefaultObject();
+        }
+    }
+
+    UE_LOGFMT(LogCompensateDamage, Log, "공격 실패 이벤트 전달 시작 - Target: {0}, Instigator: {1}, Event: {2}, SubEffect: {3}",
+        *OriginalAttacker->GetName(),
+        *Defender->GetName(),
+        AttackFailedEventTag.ToString(),
+        SubEffectCDO ? *SubEffectCDO->GetName() : TEXT("없음"));
+
+    //@CombatLibrary를 통해 이벤트 전달 (Sub Effect 포함)
+    bool bSuccess = UCombatLibrary::SendGameplayEventToTarget(
+        AttackFailedEventTag,           // EventTag
+        OriginalAttacker,               // TargetActor (원래 공격자)
+        Defender,                       // InstigatorActor (수비자)
+        HitResult,                      // HitResult
+        0.0f,                          // Magnitude (기본값)
+        SubEffectCDO,                  // OptionalObject: Sub Effect (Groggy)
+        nullptr                        // OptionalObject2
+    );
+
+    if (bSuccess)
+    {
+        UE_LOGFMT(LogCompensateDamage, Log, "공격 실패 이벤트 전달 성공 - Target: {0}",
+            *OriginalAttacker->GetName());
+    }
+    else
+    {
+        UE_LOGFMT(LogCompensateDamage, Error, "공격 실패 이벤트 전달 실패 - Target: {0}",
+            *OriginalAttacker->GetName());
+    }
+
+    return bSuccess;
+}
 #pragma endregion
 
 //@Callbacks
@@ -192,16 +282,17 @@ void UAT_CompensateDamage::OnDamageEventPreProcess(
 {
     UE_LOGFMT(LogCompensateDamage, Log, "데미지 이벤트 전처리 - EventTag: {0}", EventTag.ToString());
 
-    if (!EventData.OptionalObject || !IsValid(EventData.OptionalObject))
-    {
-        UE_LOGFMT(LogCompensateDamage, Warning, "EventData.OptionalObject가 유효하지 않음");
-        return;
-    }
-
     //@이미 트리거되었고 한 번만 트리거 설정인 경우 무시
     if (bOnlyTriggerOnce && bHasTriggered)
     {
         UE_LOGFMT(LogCompensateDamage, Log, "이벤트 무시: 이미 트리거됨 (OnlyTriggerOnce=true)");
+        return;
+    }
+
+    //@이벤트 데이터 유효성 검사
+    if (!EventData.OptionalObject || !IsValid(EventData.OptionalObject))
+    {
+        UE_LOGFMT(LogCompensateDamage, Warning, "EventData.OptionalObject가 유효하지 않음");
         return;
     }
 
@@ -219,26 +310,16 @@ void UAT_CompensateDamage::OnDamageEventPreProcess(
         //@데미지 처리 중단 지시
         bShouldContinueProcessing = false;
 
-        //@공격 실패 이벤트 전달
-        bool bEventSentSuccessfully = SendAttackFailedEvent(EventData);
+        //@강공격 파훼 성공 델리게이트 호출 (AttackGameplayAbility에서 처리)
+        OnStrongAttackCountered.Broadcast(
+            EventData.Instigator.Get(),
+            EventData.Target.Get(),
+            EventData
+        );
 
-        if (bEventSentSuccessfully)
-        {
-            //@강공격 파훼 성공 델리게이트 호출
-            OnStrongAttackCountered.Broadcast(
-                EventData.Instigator.Get(),
-                EventData.Target.Get(),
-                EventData
-            );
-
-            UE_LOGFMT(LogCompensateDamage, Log, "강공격 파훼 성공 - Attacker: {0}, Defender: {1}",
-                EventData.Instigator.Get() ? *EventData.Instigator->GetName() : TEXT("Unknown"),
-                EventData.Target.Get() ? *EventData.Target->GetName() : TEXT("Unknown"));
-        }
-        else
-        {
-            UE_LOGFMT(LogCompensateDamage, Warning, "강공격 파훼 실패: 이벤트 전달 실패");
-        }
+        UE_LOGFMT(LogCompensateDamage, Log, "강공격 파훼 성공 - Attacker: {0}, Defender: {1}",
+            EventData.Instigator.Get() ? *EventData.Instigator->GetName() : TEXT("Unknown"),
+            EventData.Target.Get() ? *EventData.Target->GetName() : TEXT("Unknown"));
 
         //@트리거 상태 업데이트
         bHasTriggered = true;
@@ -379,96 +460,6 @@ bool UAT_CompensateDamage::IsStrongAttack(const FGameplayEventData& EventData) c
         AssetTags.ToString(), bHasStrongTag);
 
     return bHasStrongTag;
-}
-
-bool UAT_CompensateDamage::SendAttackFailedEvent(const FGameplayEventData& OriginalEventData) const
-{
-    if (!OriginalEventData.EventTag.IsValid())
-    {
-        UE_LOGFMT(LogCompensateDamage, Error, "공격 실패 이벤트 전달 실패: OriginalEventData가 유효하지 않음");
-        return false;
-    }
-
-    //@공격자 확인
-    AActor* OriginalAttacker = const_cast<AActor*>(OriginalEventData.Instigator.Get());
-    if (!IsValid(OriginalAttacker))
-    {
-        UE_LOGFMT(LogCompensateDamage, Error, "공격 실패 이벤트 전달 실패: 원본 공격자가 유효하지 않음");
-        return false;
-    }
-
-    //@수비자(현재 Avatar) 확인
-    AActor* Defender = AbilitySystemComponent->GetAvatarActor();
-    if (!IsValid(Defender))
-    {
-        UE_LOGFMT(LogCompensateDamage, Error, "공격 실패 이벤트 전달 실패: 수비자가 유효하지 않음");
-        return false;
-    }
-
-    //@HitResult 생성 (원본 이벤트에서 추출 시도)
-    FHitResult HitResult;
-    if (OriginalEventData.ContextHandle.IsValid())
-    {
-        if (const FHitResult* ContextHitResult = OriginalEventData.ContextHandle.GetHitResult())
-        {
-            HitResult = *ContextHitResult;
-        }
-        else
-        {
-            //@기본 HitResult 생성
-            HitResult.Location = Defender->GetActorLocation();
-            HitResult.ImpactPoint = Defender->GetActorLocation();
-            HitResult.bBlockingHit = true;
-        }
-    }
-    else
-    {
-        //@기본 HitResult 생성
-        HitResult.Location = Defender->GetActorLocation();
-        HitResult.ImpactPoint = Defender->GetActorLocation();
-        HitResult.bBlockingHit = true;
-    }
-
-    //@소유 어빌리티에서 Sub GameplayEffect 가져오기
-    UGameplayEffect* SubEffectCDO = nullptr;
-    if (UBaseGameplayAbility* BaseAbility = Cast<UBaseGameplayAbility>(Ability))
-    {
-        auto SubEffectClass = BaseAbility->GetApplySubGameplayEffectClass();
-        if (SubEffectClass)
-        {
-            SubEffectCDO = SubEffectClass.GetDefaultObject();
-        }
-    }
-
-    UE_LOGFMT(LogCompensateDamage, Log, "공격 실패 이벤트 전달 시작 - Target: {0}, Instigator: {1}, Event: {2}, SubEffect: {3}",
-        *OriginalAttacker->GetName(),
-        *Defender->GetName(),
-        AttackFailedEventTag.ToString(),
-        SubEffectCDO ? *SubEffectCDO->GetName() : TEXT("없음"));
-
-    //@CombatLibrary를 통해 이벤트 전달 (Sub Effect 포함)
-    bool bSuccess = UCombatLibrary::SendGameplayEventToTarget(
-        AttackFailedEventTag,           // EventTag
-        OriginalAttacker,               // TargetActor (원래 공격자)
-        Defender,                       // InstigatorActor (수비자)
-        HitResult,                      // HitResult
-        0.0f,                          // Magnitude (기본값)
-        SubEffectCDO,                  // OptionalObject: Sub Effect (Groggy)
-        nullptr                        // OptionalObject2
-    );
-
-    if (bSuccess)
-    {
-        UE_LOGFMT(LogCompensateDamage, Log, "공격 실패 이벤트 전달 성공 - Target: {0}",
-            *OriginalAttacker->GetName());
-    }
-    else
-    {
-        UE_LOGFMT(LogCompensateDamage, Error, "공격 실패 이벤트 전달 실패 - Target: {0}",
-            *OriginalAttacker->GetName());
-    }
-
-    return bSuccess;
 }
 
 FGameplayTagContainer UAT_CompensateDamage::ExtractAssetTagsFromEventData(const FGameplayEventData& EventData) const
