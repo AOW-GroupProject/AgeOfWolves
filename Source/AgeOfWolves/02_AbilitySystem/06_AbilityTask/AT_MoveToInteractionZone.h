@@ -9,6 +9,21 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAT_InteractionZone, Log, All);
 
 DECLARE_DYNAMIC_MULTICAST_DELEGATE(FOnInteractionZoneReached);
 
+#pragma region Structs
+USTRUCT()
+struct FCollisionPawnOverrideBackup
+{
+	GENERATED_BODY()
+
+	//@ 복원 시 컴포넌트를 안전하게 참조하기 위해 WeakPtr 사용
+	TWeakObjectPtr<UPrimitiveComponent> Comp;
+
+	//@ 바꾸기 전 Pawn 채널 응답값
+	UPROPERTY()
+	TEnumAsByte<ECollisionResponse> PrevPawnResponse = ECollisionResponse::ECR_Ignore;
+
+};
+#pragma endregion
 UCLASS()
 class AGEOFWOLVES_API UAT_MoveToInteractionZone : public UAbilityTask
 {
@@ -40,6 +55,9 @@ protected:
 	// 이전 충돌 응답 저장
 	UPROPERTY()
 	TEnumAsByte<ECollisionResponse> PreviousPawnResponse;
+
+	UPROPERTY()
+	TArray<FCollisionPawnOverrideBackup> TargetActorPreviousPawnResponseBackupArray;
 
 protected:
 	UPROPERTY()
