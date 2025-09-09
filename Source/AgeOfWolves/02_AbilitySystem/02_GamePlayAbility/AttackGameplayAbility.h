@@ -514,8 +514,6 @@ private:
 	std::atomic<bool> bCompensationProcessingStarted{ false };
 	std::atomic<bool> bProcessingCompleted{ false };
 
-
-
 	//@승리한 처리 유형
 	std::atomic<EProcessingType> WinningProcessType{ EProcessingType::None };
 #pragma endregion

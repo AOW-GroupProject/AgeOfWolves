@@ -137,54 +137,6 @@ void UBaseAnimInstance::NativeUpdateAnimation(float DeltaSeconds)
 
 //@속성/정보...등
 #pragma region Property or Subwidgets or Infos...etc
-void UBaseAnimInstance::HandleBattoujutsuMovementBlock(ECombatType OldCombatType, ECombatType NewCombatType)
-{
-    // InputComponent 참조 획득
-    if (!OwnerCharacterBaseRef.IsValid())
-    {
-        UE_LOGFMT(LogAnimInstance, Warning, "OwnerCharacterBaseRef가 유효하지 않습니다.");
-        return;
-    }
-
-    APlayerController* PC = Cast<APlayerController>(OwnerCharacterBaseRef->GetController());
-    if (!PC)
-    {
-        return; // AI Controller일 수 있으므로 경고 없이 리턴
-    }
-
-    auto* InputComp = Cast<UBaseInputComponent>(PC->InputComponent);
-    if (!InputComp)
-    {
-        UE_LOGFMT(LogAnimInstance, Warning, "BaseInputComponent를 찾을 수 없습니다.");
-        return;
-    }
-
-    // 발도술 자세로 전환되는 경우
-    if (NewCombatType == ECombatType::BattoujutsuCombat)
-    {
-        InputComp->SetBlockMovementInput(true);
-
-        UE_LOGFMT(LogAnimInstance, Log, "발도술 자세 진입 - 이동 입력 블록 활성화");
-
-        // 현재 이동 중이라면 강제로 Stop 상태로 전환
-        if (MovementState == EMovementState::Cycle_Walk || MovementState == EMovementState::Cycle_Sprint)
-        {
-            UE_LOGFMT(LogAnimInstance, Warning, "발도술 자세 진입으로 인한 강제 정지: {0} -> Idle",
-                *UEnum::GetValueAsString(MovementState));
-
-            LastMovementState = MovementState;
-            MovementState = EMovementState::Idle;
-            OnMovementStateChanged();
-        }
-    }
-    // 발도술 자세에서 벗어나는 경우
-    else if (OldCombatType == ECombatType::BattoujutsuCombat && NewCombatType != ECombatType::BattoujutsuCombat)
-    {
-        InputComp->SetBlockMovementInput(false);
-
-        UE_LOGFMT(LogAnimInstance, Log, "발도술 자세 해제 - 이동 입력 블록 해제");
-    }
-}
 
 // =====================================================
 // 상태 기계 핵심 로직 영역
@@ -695,7 +647,7 @@ bool UBaseAnimInstance::CanTransitionToStop()
 
     if (!bCanStopInThisCombatState)
     {
-        UE_LOGFMT(LogAnimInstance, VeryVerbose, "정지 조건 차단: Combat State = {0} ({1})",
+        UE_LOGFMT(LogAnimInstance, Log, "정지 조건 차단: Combat State = {0} ({1})",
             static_cast<int32>(CombatType),
             *UEnum::GetValueAsString(CombatType));
         return false;
@@ -725,7 +677,7 @@ bool UBaseAnimInstance::CanTransitionToStop()
             // 더 엄격한 임계값 적용 - 정말로 멈추려는 의도일 때만 Stop
             bHasStrongMovementInput = CurrentAcceleration.SizeSquared() > (StopConditionThreshold * StopConditionThreshold);
 
-            UE_LOGFMT(LogAnimInstance, VeryVerbose, "Stop 조건 체크 - Acceleration: {0}, SizeSquared: {1}, Threshold: {2}, HasStrongInput: {3}, bShouldMove: {4}",
+            UE_LOGFMT(LogAnimInstance, Log, "Stop 조건 체크 - Acceleration: {0}, SizeSquared: {1}, Threshold: {2}, HasStrongInput: {3}, bShouldMove: {4}",
                 CurrentAcceleration.ToString(),
                 CurrentAcceleration.SizeSquared(),
                 StopConditionThreshold * StopConditionThreshold,
@@ -776,7 +728,7 @@ bool UBaseAnimInstance::CanTransitionFromStopToIdle()
     // 여기서는 가장 엄격한 임계값 사용
     bool bIsReallyIdle = CurrentAcceleration.SizeSquared() < (IdleTransitionThreshold * IdleTransitionThreshold);
 
-    UE_LOGFMT(LogAnimInstance, VeryVerbose, "Stop->Idle 체크 - Acceleration: {0}, SizeSquared: {1}, Threshold: {2}, IsReallyIdle: {3}",
+    UE_LOGFMT(LogAnimInstance, Log, "Stop->Idle 체크 - Acceleration: {0}, SizeSquared: {1}, Threshold: {2}, IsReallyIdle: {3}",
         CurrentAcceleration.ToString(),
         CurrentAcceleration.SizeSquared(),
         IdleTransitionThreshold * IdleTransitionThreshold,
@@ -998,6 +950,107 @@ void UBaseAnimInstance::ListenToCombatStateAttributeChange()
     }
 }
 #pragma endregion
+
+void UBaseAnimInstance::HandleBattoujutsuMovementBlock(ECombatType OldCombatType, ECombatType NewCombatType)
+{
+    // InputComponent 참조 획득
+    if (!OwnerCharacterBaseRef.IsValid())
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "OwnerCharacterBaseRef가 유효하지 않습니다.");
+        return;
+    }
+
+    APlayerController* PC = Cast<APlayerController>(OwnerCharacterBaseRef->GetController());
+    if (!PC)
+    {
+        return; // AI Controller일 수 있으므로 경고 없이 리턴
+    }
+
+    auto* InputComp = Cast<UBaseInputComponent>(PC->InputComponent);
+    if (!InputComp)
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "BaseInputComponent를 찾을 수 없습니다.");
+        return;
+    }
+
+    // 발도술 자세로 전환되는 경우
+    if (NewCombatType == ECombatType::BattoujutsuCombat)
+    {
+        InputComp->SetBlockMovementInput(true);
+
+        UE_LOGFMT(LogAnimInstance, Log, "발도술 자세 진입 - 이동 입력 블록 활성화");
+
+        // 현재 이동 중이라면 강제로 Stop 상태로 전환
+        if (MovementState == EMovementState::Cycle_Walk || MovementState == EMovementState::Cycle_Sprint)
+        {
+            UE_LOGFMT(LogAnimInstance, Warning, "발도술 자세 진입으로 인한 강제 정지: {0} -> Idle",
+                *UEnum::GetValueAsString(MovementState));
+
+            LastMovementState = MovementState;
+            MovementState = EMovementState::Idle;
+            OnMovementStateChanged();
+        }
+    }
+    // 발도술 자세에서 벗어나는 경우
+    else if (OldCombatType == ECombatType::BattoujutsuCombat && NewCombatType != ECombatType::BattoujutsuCombat)
+    {
+        InputComp->SetBlockMovementInput(false);
+
+        UE_LOGFMT(LogAnimInstance, Log, "발도술 자세 해제 - 이동 입력 블록 해제");
+    }
+}
+
+void UBaseAnimInstance::HandleSayaSocketChange(ECombatType OldCombatType, ECombatType NewCombatType)
+{
+    /*
+     * Combat State 변경 시 Saya 소켓 변경 처리
+     * Guard(2) -> Normal(1) 변경 시에만 소켓 변경을 수행합니다.
+     */
+
+     // Guard Combat(2) -> Normal Combat(1) 변경 시에만 처리
+    if (OldCombatType != ECombatType::BattoujutsuCombat || NewCombatType != ECombatType::NormalCombat)
+    {
+        UE_LOGFMT(LogAnimInstance, Log, "Saya 소켓 변경 조건 불일치: {0}({1}) -> {2}({3}) (Battou->NormalCombat가 아님)",
+            *UEnum::GetValueAsString(OldCombatType), static_cast<uint8>(OldCombatType),
+            *UEnum::GetValueAsString(NewCombatType), static_cast<uint8>(NewCombatType));
+        return;
+    }
+
+    // OwnerCharacterBaseRef 유효성 확인
+    if (!OwnerCharacterBaseRef.IsValid())
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "Saya 소켓 변경 실패: OwnerCharacterBaseRef가 유효하지 않습니다.");
+        return;
+    }
+
+    // SayaMesh 컴포넌트 참조 획득
+    auto* SayaMesh = OwnerCharacterBaseRef->GetSayaMesh();
+    if (!SayaMesh)
+    {
+        UE_LOGFMT(LogAnimInstance, Warning, "Saya 소켓 변경 실패: SayaMesh 컴포넌트를 찾을 수 없습니다.");
+        return;
+    }
+
+    // 현재 소켓 확인 (디버깅용)
+    FName CurrentSocket = SayaMesh->GetAttachSocketName();
+    UE_LOGFMT(LogAnimInstance, Log, "Saya 소켓 변경 시작: 현재 소켓 = {0}", *CurrentSocket.ToString());
+
+    // Saya를 "FullWeapon" 소켓으로 이동
+    bool bAttachSuccess = SayaMesh->AttachToComponent(
+        OwnerCharacterBaseRef->GetMesh(),
+        FAttachmentTransformRules::SnapToTargetNotIncludingScale,
+        FName("FullWeapon")
+    );
+
+    if (bAttachSuccess)
+    {
+        UE_LOGFMT(LogAnimInstance, Log, "✅ Saya 소켓 변경 성공: {0} -> FullWeapon", *CurrentSocket.ToString());
+    }
+    else
+    {
+        UE_LOGFMT(LogAnimInstance, Error, "❌ Saya 소켓 변경 실패: {0} -> FullWeapon", *CurrentSocket.ToString());
+    }
+}
 #pragma endregion
 
 // =====================================================
@@ -1040,7 +1093,10 @@ void UBaseAnimInstance::OnCombatStateAttributeValueChanged(FGameplayAttribute At
         *UEnum::GetValueAsString(CombatType), static_cast<uint8>(CombatType),
         NewValue);
 
-    // === 새로 추가: 발도술 자세 이동 블록 처리 ===
+    // === 새로 추가: Saya 소켓 변경 처리 ===
+    HandleSayaSocketChange(OldCombatType, CombatType);
+
+    // === 기존: 발도술 자세 이동 블록 처리 ===
     HandleBattoujutsuMovementBlock(OldCombatType, CombatType);
 
     // === 기존 로직: NormalCombat에서 GuardCombat으로 변경 시 강제 Idle 전환 처리 ===
@@ -1193,7 +1249,6 @@ void UBaseAnimInstance::MontageEnded(UAnimMontage* Montage, bool bInterrupted)
         *Montage->GetName(),
         bIsFullBody ? TEXT("FullBody") : TEXT("UpperBody"));
 }
-
 #pragma endregion
 
 // =====================================================
@@ -1230,7 +1285,7 @@ bool UBaseAnimInstance::HasMovementInput() const
     // 개선: 더 관대한 임계값 사용
     bool bHasAcceleration = Acceleration.SizeSquared() > (MovementInputThreshold * MovementInputThreshold);
 
-    UE_LOGFMT(LogAnimInstance, VeryVerbose, "HasMovementInput - Acceleration: {0}, SizeSquared: {1}, Threshold: {2}, HasAccel: {3}, ShouldMove: {4}",
+    UE_LOGFMT(LogAnimInstance, Log, "HasMovementInput - Acceleration: {0}, SizeSquared: {1}, Threshold: {2}, HasAccel: {3}, ShouldMove: {4}",
         Acceleration.ToString(),
         Acceleration.SizeSquared(),
         MovementInputThreshold * MovementInputThreshold,
