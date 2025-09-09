@@ -457,6 +457,9 @@ void UBaseAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& In
 
 	if (InputTag.IsValid())
 	{
+		// 체인 종료가 필요한 어빌리티들을 수집
+		TArray<FGameplayTag> ChainAbilitiesToEnd;
+
 		for (const FGameplayAbilitySpec& AbilitySpec : ActivatableAbilities.Items)
 		{
 			if (AbilitySpec.Ability && (AbilitySpec.DynamicAbilityTags.HasTagExact(InputTag)))
@@ -465,9 +468,35 @@ void UBaseAbilitySystemComponent::AbilityInputTagReleased(const FGameplayTag& In
 					AbilitySpec.Ability->GetName(),
 					InputTag.ToString());
 
+				// WhileInputActive 정책인지 확인
+				const UBaseGameplayAbility* BaseAbilityCDO = Cast<UBaseGameplayAbility>(AbilitySpec.Ability);
+				if (BaseAbilityCDO && BaseAbilityCDO->GetActivationPolicy() == EAbilityActivationPolicy::WhileInputActive)
+				{
+					UE_LOGFMT(LogASC, Log, "WhileInputActive 어빌리티 감지 - 체인 종료 대상 추가: {0}",
+						AbilitySpec.Ability->GetName());
+
+					// 해당 어빌리티의 태그들 중 체인과 관련된 것들을 찾아서 종료 목록에 추가
+					for (const FGameplayTag& AbilityTag : AbilitySpec.Ability->AbilityTags)
+					{
+						// 활성화된 체인에서 해당 어빌리티가 있는지 확인
+						if (ActiveChainActions.Contains(AbilityTag) || ActiveChainEvents.Contains(AbilityTag))
+						{
+							ChainAbilitiesToEnd.AddUnique(AbilityTag);
+							UE_LOGFMT(LogASC, Log, "체인 종료 예정 어빌리티 태그: {0}", AbilityTag.ToString());
+						}
+					}
+				}
+
 				InputReleasedSpecHandles.AddUnique(AbilitySpec.Handle);
 				InputHeldSpecHandles.Remove(AbilitySpec.Handle);
 			}
+		}
+
+		// 수집된 어빌리티들의 체인 종료
+		for (const FGameplayTag& AbilityTag : ChainAbilitiesToEnd)
+		{
+			UE_LOGFMT(LogASC, Log, "WhileInputActive 어빌리티 입력 해제로 인한 체인 종료: {0}", AbilityTag.ToString());
+			EndChainWindow(AbilityTag);
 		}
 	}
 }
@@ -559,6 +588,21 @@ int32 UBaseAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, co
 	{
 		UE_LOGFMT(LogASC, Warning, "유효하지 않은 Event Tag: {0}", *EventTag.ToString());
 		return 0;
+	}
+
+	//@데미지 이벤트 전처리 (강공격 파훼 등)
+	if (EventTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("EventTag.OnDamaged")))
+	{
+		bool bShouldContinueProcessing = true;
+
+		//@전처리 델리게이트 호출
+		DamageEventPreProcess.Broadcast(EventTag, *Payload, bShouldContinueProcessing);
+
+		if (!bShouldContinueProcessing)
+		{
+			UE_LOGFMT(LogASC, Log, "데미지 이벤트 처리 중단됨 - 파훼 매커니즘에 의해 차단");
+			return 0; // 처리 중단
+		}
 	}
 
 	//@체인 액션 종료 이벤트 처리
