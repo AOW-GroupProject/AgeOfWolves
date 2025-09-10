@@ -6,6 +6,7 @@
 
 #include "00_GameInstance/AOWGameInstance.h"
 #include "14_Subsystem/AIManagerSubsystem.h"
+#include "04_Component/BaseAbilitySystemComponent.h"
 
 #include "Kismet/GameplayStatics.h"
 
@@ -33,11 +34,10 @@ float UArmorGameplayAbility::CalculateEvasionProbability(float AgilityValue)
     UE_LOGFMT(LogArmorGA, Log, "기본 회피 확률 계산 - 기민함: {0}, 확률: {1}%",
         AgilityValue, EvasionChance * 100.0f);
 
-    //return FMath::Clamp(EvasionChance, 0.0f, 1.0f);
-    return 1.f;
+    return FMath::Clamp(EvasionChance, 0.0f, 1.0f);
 }
 
-void UArmorGameplayAbility::SendRandomEvasionEvent()
+void UArmorGameplayAbility::SendRandomEvasionEvent(const FGameplayEventData& OriginalEventData)
 {
     //@회피 이벤트 태그 목록
     TArray<FString> EvasionEventTags = {
@@ -52,12 +52,11 @@ void UArmorGameplayAbility::SendRandomEvasionEvent()
 
     UE_LOGFMT(LogArmorGA, Log, "랜덤 회피 이벤트 선택 - 태그: {0}", RandomEvasionTag.ToString());
 
-    //@선택된 이벤트 전송
-    FGameplayEventData EmptyGameplayEvent;
-    HandleEvasionGameplayEvent(RandomEvasionTag, EmptyGameplayEvent);
+    //@선택된 이벤트 전송 (원본 이벤트 데이터 포함)
+    HandleEvasionGameplayEvent(RandomEvasionTag, OriginalEventData);
 }
 
-void UArmorGameplayAbility::HandleEvasionGameplayEvent(const FGameplayTag& EventTag, const FGameplayEventData& EventData)
+void UArmorGameplayAbility::HandleEvasionGameplayEvent(const FGameplayTag& EventTag, const FGameplayEventData& OriginalEventData)
 {
     //@ASC 가져오기
     UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
@@ -67,14 +66,103 @@ void UArmorGameplayAbility::HandleEvasionGameplayEvent(const FGameplayTag& Event
         return;
     }
 
-    //@이벤트 데이터 복사 및 태그 설정
-    FGameplayEventData EvasionEventData = EventData;
+    //@회피 이벤트 데이터 구성 (원본 데이터 기반)
+    FGameplayEventData EvasionEventData = OriginalEventData;
     EvasionEventData.EventTag = EventTag;
 
     //@이벤트 전송
     ASC->HandleGameplayEvent(EventTag, &EvasionEventData);
 
-    UE_LOGFMT(LogArmorGA, Log, "회피 이벤트 전송 완료 - 태그: {0}", EventTag.ToString());
+    UE_LOGFMT(LogArmorGA, Log, "회피 이벤트 전송 완료 - 태그: {0}, 원본 공격자: {1}",
+        EventTag.ToString(),
+        OriginalEventData.Instigator.Get() ? *OriginalEventData.Instigator->GetName() : TEXT("None"));
+}
+#pragma endregion
+
+#pragma region Callbacks
+void UArmorGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+    Super::OnGiveAbility(ActorInfo, Spec);
+
+    UE_LOGFMT(LogArmorGA, Log, "ArmorGameplayAbility 부여됨 - DamageEventPreProcess 바인딩 시작");
+
+    //@BaseASC 가져오기
+    UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(ActorInfo->AbilitySystemComponent.Get());
+    if (!BaseASC)
+    {
+        UE_LOGFMT(LogArmorGA, Error, "DamageEventPreProcess 바인딩 실패: BaseAbilitySystemComponent 캐스팅 실패");
+        return;
+    }
+
+    //@DamageEventPreProcess 델리게이트에 바인딩
+    FDamageEventPreProcess& PreProcessDelegate = BaseASC->GetDamageEventPreProcess();
+    DamagePreProcessHandle = PreProcessDelegate.AddUObject(
+        this,
+        &UArmorGameplayAbility::OnDamageEventPreProcess
+    );
+
+    if (DamagePreProcessHandle.IsValid())
+    {
+        UE_LOGFMT(LogArmorGA, Log, "DamageEventPreProcess 바인딩 성공");
+    }
+    else
+    {
+        UE_LOGFMT(LogArmorGA, Error, "DamageEventPreProcess 바인딩 실패");
+    }
+}
+
+void UArmorGameplayAbility::OnRemoveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
+{
+    UE_LOGFMT(LogArmorGA, Log, "ArmorGameplayAbility 제거됨 - DamageEventPreProcess 언바인딩 시작");
+
+    //@바인딩 해제
+    if (DamagePreProcessHandle.IsValid())
+    {
+        UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(ActorInfo->AbilitySystemComponent.Get());
+        if (BaseASC)
+        {
+            FDamageEventPreProcess& PreProcessDelegate = BaseASC->GetDamageEventPreProcess();
+            PreProcessDelegate.Remove(DamagePreProcessHandle);
+            DamagePreProcessHandle.Reset();
+
+            UE_LOGFMT(LogArmorGA, Log, "DamageEventPreProcess 언바인딩 완료");
+        }
+    }
+
+    Super::OnRemoveAbility(ActorInfo, Spec);
+}
+
+void UArmorGameplayAbility::OnDamageEventPreProcess(const FGameplayTag& EventTag, const FGameplayEventData& EventData, bool& bShouldContinueProcessing)
+{
+    UE_LOGFMT(LogArmorGA, Log, "데미지 이벤트 전처리 - EventTag: {0}", EventTag.ToString());
+
+    //@OnDamaged 이벤트만 처리
+    if (!EventTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("EventTag.OnDamaged")))
+    {
+        UE_LOGFMT(LogArmorGA, Log, "이벤트 무시 - 처리 대상이 아닌 태그: {0}", EventTag.ToString());
+        return;
+    }
+
+    //@회피 여부 확인
+    bool bEvaded = ShouldEvade(EventData);
+
+    if (bEvaded)
+    {
+        //@회피 성공 - 데미지 처리 중단
+        bShouldContinueProcessing &= false;
+
+        UE_LOGFMT(LogArmorGA, Log, "회피 성공 - 데미지 처리 차단, 회피 이벤트 발생");
+
+        //@회피 이벤트 처리
+        SendRandomEvasionEvent(EventData);
+    }
+    else
+    {
+        //@회피 실패 - 정상 데미지 처리 계속
+        bShouldContinueProcessing &= true;
+
+        UE_LOGFMT(LogArmorGA, Log, "회피 실패 - 정상 데미지 처리 진행");
+    }
 }
 #pragma endregion
 
@@ -145,7 +233,7 @@ float UArmorGameplayAbility::GetAgilityValueFromAI() const
     }
 }
 
-bool UArmorGameplayAbility::ShouldEvade()
+bool UArmorGameplayAbility::ShouldEvade(const FGameplayEventData& EventData)
 {
     //@기민함 수치 가져오기
     float AgilityValue = GetAgilityValueFromAI();
@@ -160,14 +248,7 @@ bool UArmorGameplayAbility::ShouldEvade()
     UE_LOGFMT(LogArmorGA, Log, "회피 확률 계산 - 기민함: {0}, 확률: {1}%, 랜덤값: {2}, 결과: {3}",
         AgilityValue, EvasionChance * 100.0f, RandomValue, bEvade ? TEXT("회피") : TEXT("피격"));
 
-    //@회피 성공 시 자동으로 회피 이벤트 처리
-    if (bEvade)
-    {
-        UE_LOGFMT(LogArmorGA, Log, "회피 성공 - 회피 이벤트 자동 처리 시작");
-        SendRandomEvasionEvent();
-    }
-
-    return bEvade;
+    return true;
 }
 
 ACharacterBase* UArmorGameplayAbility::GetCharacterFromActorInfo() const
