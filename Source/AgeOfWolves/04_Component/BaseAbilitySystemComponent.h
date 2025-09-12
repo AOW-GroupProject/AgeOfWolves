@@ -10,8 +10,8 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 
-//@전방 선언
-#pragma region Forward Declaration
+//@전방 선언#pragma region Forward Declaration
+
 class UANS_AllowChainAction;
 class UBaseAttributeSet;
 class ABaseAIController;

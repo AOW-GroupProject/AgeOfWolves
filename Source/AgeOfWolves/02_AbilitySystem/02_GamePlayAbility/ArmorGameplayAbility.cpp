@@ -79,12 +79,20 @@ void UArmorGameplayAbility::HandleEvasionGameplayEvent(const FGameplayTag& Event
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
 void UArmorGameplayAbility::OnGiveAbility(const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilitySpec& Spec)
 {
     Super::OnGiveAbility(ActorInfo, Spec);
 
     UE_LOGFMT(LogArmorGA, Log, "ArmorGameplayAbility 부여됨 - DamageEventPreProcess 바인딩 시작");
+
+    // 회피 기능이 비활성화되어 있으면 바인딩하지 않음 - 성능 최적화
+    if (!EvasionEnabled)
+    {
+        UE_LOGFMT(LogArmorGA, Log, "ArmorGameplayAbility 부여됨 - 회피 기능 비활성화로 바인딩 생략");
+        return;
+    }
 
     //@BaseASC 가져오기
     UBaseAbilitySystemComponent* BaseASC = Cast<UBaseAbilitySystemComponent>(ActorInfo->AbilitySystemComponent.Get());
@@ -115,6 +123,13 @@ void UArmorGameplayAbility::OnRemoveAbility(const FGameplayAbilityActorInfo* Act
 {
     UE_LOGFMT(LogArmorGA, Log, "ArmorGameplayAbility 제거됨 - DamageEventPreProcess 언바인딩 시작");
 
+    // 회피 기능이 활성화되어 있고 바인딩이 유효한 경우에만 언바인딩
+    if (!EvasionEnabled || !DamagePreProcessHandle.IsValid())
+    {
+        Super::OnRemoveAbility(ActorInfo, Spec);
+        return;
+    }
+
     //@바인딩 해제
     if (DamagePreProcessHandle.IsValid())
     {
@@ -136,32 +151,30 @@ void UArmorGameplayAbility::OnDamageEventPreProcess(const FGameplayTag& EventTag
 {
     UE_LOGFMT(LogArmorGA, Log, "데미지 이벤트 전처리 - EventTag: {0}", EventTag.ToString());
 
-    //@OnDamaged 이벤트만 처리
+    // OnDamaged 이벤트만 처리
     if (!EventTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("EventTag.OnDamaged")))
     {
         UE_LOGFMT(LogArmorGA, Log, "이벤트 무시 - 처리 대상이 아닌 태그: {0}", EventTag.ToString());
         return;
     }
 
-    //@회피 여부 확인
+    // 회피 여부 확인
     bool bEvaded = ShouldEvade(EventData);
 
     if (bEvaded)
     {
-        //@회피 성공 - 데미지 처리 중단
-        bShouldContinueProcessing &= false;
+        // 회피 성공 - 데미지 처리 중단
+        bShouldContinueProcessing = false;
 
         UE_LOGFMT(LogArmorGA, Log, "회피 성공 - 데미지 처리 차단, 회피 이벤트 발생");
 
-        //@회피 이벤트 처리
+        // 회피 이벤트 처리
         SendRandomEvasionEvent(EventData);
     }
     else
     {
-        //@회피 실패 - 정상 데미지 처리 계속
-        bShouldContinueProcessing &= true;
-
-        UE_LOGFMT(LogArmorGA, Log, "회피 실패 - 정상 데미지 처리 진행");
+        // 회피 실패 - bShouldContinueProcessing을 건드리지 않음 (다른 시스템의 성공 결과 존중)
+        UE_LOGFMT(LogArmorGA, Log, "회피 실패 - 다른 방어 시스템 결과 존중");
     }
 }
 #pragma endregion
@@ -248,7 +261,7 @@ bool UArmorGameplayAbility::ShouldEvade(const FGameplayEventData& EventData)
     UE_LOGFMT(LogArmorGA, Log, "회피 확률 계산 - 기민함: {0}, 확률: {1}%, 랜덤값: {2}, 결과: {3}",
         AgilityValue, EvasionChance * 100.0f, RandomValue, bEvade ? TEXT("회피") : TEXT("피격"));
 
-    return true;
+    return bEvade;
 }
 
 ACharacterBase* UArmorGameplayAbility::GetCharacterFromActorInfo() const

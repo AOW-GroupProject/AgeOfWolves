@@ -581,7 +581,7 @@ void UBaseAbilitySystemComponent::ApplyAbilityBlockAndCancelTags(const FGameplay
 
 int32 UBaseAbilitySystemComponent::HandleGameplayEvent(FGameplayTag EventTag, const FGameplayEventData* Payload)
 {
-	UE_LOGFMT(LogASC, Log, "GameplayEvent 처리 시작 - EventTag: {0}", *EventTag.ToString());
+	UE_LOGFMT(LogASC, Log, "{0}: GameplayEvent 처리 시작 - EventTag: {1}",GetAvatarActor()->GetName(), *EventTag.ToString());
 
 	//@Event Tag 유효성 검사
 	if (!FGameplayTag::RequestGameplayTag(EventTag.GetTagName()).IsValid())
