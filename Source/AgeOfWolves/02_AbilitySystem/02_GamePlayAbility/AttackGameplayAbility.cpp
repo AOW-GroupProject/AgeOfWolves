@@ -12,12 +12,21 @@
 #include "07_BlueprintNode/CombatLibrary.h"
 #include "AbilitySystemBlueprintLibrary.h"
 
+#include "02_AbilitySystem/06_AbilityTask/AT_CompensateDamage.h"
+
 DEFINE_LOG_CATEGORY(LogAttackGA)
+
 //@Defualt Setting
 #pragma region Default Setting
 UAttackGameplayAbility::UAttackGameplayAbility(const FObjectInitializer& ObjectInitializer)
-    :Super(ObjectInitializer)
+    : Super(ObjectInitializer)
+    , bDamageProcessingStarted(false)
+    , bCompensationProcessingStarted(false)
+    , bProcessingCompleted(false)
+    , WinningProcessType(EProcessingType::None)
 {
+    //@파훼 태스크 초기화
+    CurrentCompensationTask = nullptr;
 }
 
 void UAttackGameplayAbility::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
@@ -72,6 +81,21 @@ void UAttackGameplayAbility::PostEditChangeProperty(FPropertyChangedEvent& Prope
         }
     }
 }
+
+void UAttackGameplayAbility::EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled)
+{
+    //@파훼 태스크 정리 (부모 클래스 호출 전에 수행)
+    DeactivateCompensationTask();
+
+    //@처리 상태 리셋 (새로 추가)
+    ResetProcessingState();
+
+    UE_LOGFMT(LogAttackGA, Log, "공격 어빌리티 종료 시 파훼 태스크 정리 및 상태 리셋 완료 - 어빌리티: {0}, 취소 여부: {1}",
+        *GetName(), bWasCancelled ? TEXT("취소됨") : TEXT("정상 종료"));
+
+    //@부모 클래스의 EndAbility 호출
+    Super::EndAbility(Handle, ActorInfo, ActivationInfo, bReplicateEndAbility, bWasCancelled);
+}
 #pragma endregion
 
 //@Property/Info...etc
@@ -94,7 +118,7 @@ UAbilityTask_PlayMontageAndWait* UAttackGameplayAbility::PlayMontageWithCallback
 
 void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
 {
-    // === 기존 유효성 검사 (그대로) ===
+    //@기본 유효성 검사
     AActor* HitActor = HitResult.GetActor();
     if (!HitActor)
     {
@@ -109,86 +133,47 @@ void UAttackGameplayAbility::SendDamageEvent(const FHitResult& HitResult)
         return;
     }
 
-    auto MainEffectClass = GetApplyGameplayEffectClass();
-    if (!MainEffectClass)
+    //@파훼 태스크 활성화 여부에 따른 분기 처리
+    if (IsCompensationTaskActive())
     {
-        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEvent 실패 - 메인 GameplayEffect 클래스가 유효하지 않음");
-        return;
-    }
+        UE_LOGFMT(LogAttackGA, Log, "파훼 태스크 활성화됨 - 상호 배제 로직 사용");
 
-    auto MainEffectCDO = MainEffectClass.GetDefaultObject();
-    if (!MainEffectCDO)
-    {
-        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEvent 실패 - 메인 GameplayEffect CDO가 유효하지 않음");
-        return;
-    }
-
-    UGameplayEffect* SubEffectCDO = nullptr;
-    auto SubEffectClass = GetApplySubGameplayEffectClass();
-    if (SubEffectClass)
-    {
-        SubEffectCDO = SubEffectClass.GetDefaultObject();
-    }
-
-    // === 기존 데미지 이벤트 전송 (Target에게) ===
-    bool bSuccess = UCombatLibrary::SendGameplayEventToTarget(
-        FGameplayTag::RequestGameplayTag("EventTag.OnDamaged"),
-        HitActor,
-        SourceActor,
-        HitResult,
-        0.0f,
-        MainEffectCDO,
-        SubEffectCDO
-    );
-
-    if (!bSuccess)
-    {
-        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEvent 실패 - Target: {0}, 사유: 이벤트 전송 실패",
-            HitActor->GetName());
-        return;
-    }
-
-    UE_LOGFMT(LogAttackGA, Log, "데미지 이벤트 전송 완료 - Target: {0}, Instigator: {1}",
-        HitActor->GetName(), SourceActor->GetName());
-
-    // === 새로운 부분: Source ASC의 데미지 전달 델리게이트 호출 ===
-    if (UBaseAbilitySystemComponent* SourceASC = Cast<UBaseAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
-    {
-        // EventData 구성
-        FGameplayEventData DamageDealtEventData;
-        DamageDealtEventData.Instigator = SourceActor;
-        DamageDealtEventData.Target = HitActor;
-        DamageDealtEventData.EventTag = FGameplayTag::RequestGameplayTag("EventTag.OnDamageDealt");
-        DamageDealtEventData.EventMagnitude = 0.0f; // 실제 데미지량은 GE에서 계산됨
-
-        // HitResult를 Context에 추가
-        FGameplayEffectContextHandle ContextHandle = SourceASC->MakeEffectContext();
-        if (FGameplayEffectContext* Context = ContextHandle.Get())
+        //@상호 배제 처리 - 데미지 처리 시작 시도
+        if (!TryStartProcessing(EProcessingType::Damage))
         {
-            Context->AddHitResult(HitResult);
+            UE_LOGFMT(LogAttackGA, Warning, "SendDamageEvent 실패 - 사유: 파훼 처리가 먼저 실행됨 또는 이미 처리 완료");
+            UE_LOGFMT(LogAttackGA, Log, "현재 처리 상태: {0}", *GetProcessingStateDebugString());
+            return;
         }
-        DamageDealtEventData.ContextHandle = ContextHandle;
 
-        // ASC의 데미지 전달 델리게이트 호출
-        SourceASC->DamageDealtByActor.Broadcast(SourceActor, HitActor, DamageDealtEventData);
+        //@처리 데이터 구성
+        FProcessingData ProcessingData(HitResult, SourceActor, HitActor);
 
-        UE_LOGFMT(LogAttackGA, Log, "데미지 전달 델리게이트 호출 완료 - Source: {0}, Target: {1}",
-            *SourceActor->GetName(), *HitActor->GetName());
+        //@처리 실행
+        ExecuteProcessing(EProcessingType::Damage, ProcessingData);
     }
     else
     {
-        UE_LOGFMT(LogAttackGA, Warning, "데미지 전달 델리게이트 호출 실패 - Source ASC를 찾을 수 없음");
-    }
+        UE_LOGFMT(LogAttackGA, Log, "파훼 태스크 비활성화됨 - 직접 데미지 처리");
 
-    // === 기존 효과 처리 (그대로) ===
-    ExecuteTimeFX(HitResult, SourceActor);
-    ExecuteCollisionFX(HitResult, SourceActor);
+        //@파훼 태스크가 없으므로 직접 데미지 처리
+        FProcessingData ProcessingData(HitResult, SourceActor, HitActor);
+        SendDamageEventInternal(ProcessingData);
+    }
 }
 
 void UAttackGameplayAbility::StartWeaponTrace()
 {
     // SCOPE_LOCK은 범위를 벗어날 때 자동으로 잠금 해제
     FScopeLock ScopeLock(&TraceStateLock);
+
+    // === 새로 추가: 처리 완료 상태 확인 ===
+    if (IsProcessingCompleted())
+    {
+        UE_LOGFMT(LogAttackGA, Log, "트레이스 시작 중단 - 사유: 이미 처리 완료됨 (승리 유형: {0})",
+            static_cast<uint8>(WinningProcessType.load()));
+        return;
+    }
 
     if (bIsTracing)
     {
@@ -206,6 +191,13 @@ void UAttackGameplayAbility::StartWeaponTrace()
 void UAttackGameplayAbility::ProcessWeaponTrace()
 {
     FScopeLock ScopeLock(&TraceStateLock);
+
+    if (IsProcessingCompleted())
+    {
+        UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 처리 중단 - 사유: 이미 처리 완료됨 (승리 유형: {0})",
+            static_cast<uint8>(WinningProcessType.load()));
+        return;
+    }
 
     // 1. 트레이스 상태 확인
     if (!bIsTracing)
@@ -469,7 +461,17 @@ void UAttackGameplayAbility::EndWeaponTrace()
     int32 ClearedCount = ActorsToIgnore.Num();
     ActorsToIgnore.Empty();
 
-    UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 종료 - 제거된 무시 대상 수: {0}", ClearedCount);
+    // === 추가: 처리 완료 상태에 따른 로그 구분 ===
+    if (IsProcessingCompleted())
+    {
+        UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 종료 (처리 완료됨) - 제거된 무시 대상 수: {0}, 승리 유형: {1}",
+            ClearedCount, static_cast<uint8>(WinningProcessType.load()));
+    }
+    else
+    {
+        UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 종료 (정상 종료) - 제거된 무시 대상 수: {0}", ClearedCount);
+    }
+
 }
 
 void UAttackGameplayAbility::PerformLineTrace(const FVector& Start, const FVector& End,
@@ -801,6 +803,339 @@ void UAttackGameplayAbility::ExecuteCollisionFXForCurrentMontage(const FHitResul
     //@이펙트 실행
     ExecuteGameplayCueAtLocation(FXSetting.GetEffectCueTag(), SpawnTransform, SourceActor);
 }
+
+void UAttackGameplayAbility::ActivateCompensationTask(bool bOnlyTriggerOnce)
+{
+    //@기존 태스크 정리
+    if (CurrentCompensationTask && CurrentCompensationTask->IsActive())
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "파훼 태스크 활성화 실패 - 사유: 이미 활성화된 태스크 존재");
+        return;
+    }
+
+    //@새로운 파훼 태스크 생성
+    CurrentCompensationTask = UAT_CompensateDamage::WaitForStrongAttackCompensation(
+        this,
+        FName("CompensationTask"),
+        bOnlyTriggerOnce
+    );
+
+    if (!CurrentCompensationTask)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "파훼 태스크 생성 실패");
+        return;
+    }
+
+    //@강공격 파훼 델리게이트 바인딩
+    StrongAttackCounteredHandle = CurrentCompensationTask->OnStrongAttackCountered.AddUObject(
+        this,
+        &UAttackGameplayAbility::OnStrongAttackCountered
+    );
+
+    if (StrongAttackCounteredHandle.IsValid())
+    {
+        UE_LOGFMT(LogAttackGA, Log, "강공격 파훼 델리게이트 바인딩 성공");
+    }
+    else
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "강공격 파훼 델리게이트 바인딩 실패");
+    }
+
+    //@태스크 활성화
+    CurrentCompensationTask->ReadyForActivation();
+
+    UE_LOGFMT(LogAttackGA, Log, "파훼 태스크 활성화 완료 - OnlyTriggerOnce: {0}", bOnlyTriggerOnce);
+}
+
+void UAttackGameplayAbility::DeactivateCompensationTask()
+{
+    if (CurrentCompensationTask)
+    {
+        //@델리게이트 언바인딩
+        if (StrongAttackCounteredHandle.IsValid())
+        {
+            CurrentCompensationTask->OnStrongAttackCountered.Remove(StrongAttackCounteredHandle);
+            StrongAttackCounteredHandle.Reset();
+            UE_LOGFMT(LogAttackGA, Log, "강공격 파훼 델리게이트 언바인딩 완료");
+        }
+
+        //@태스크 종료
+        if (CurrentCompensationTask->IsActive())
+        {
+            CurrentCompensationTask->EndTask();
+        }
+        CurrentCompensationTask = nullptr;
+
+        UE_LOGFMT(LogAttackGA, Log, "파훼 태스크 비활성화 완료");
+    }
+    else
+    {
+        UE_LOGFMT(LogAttackGA, Log, "파훼 태스크 비활성화 스킵 - 사유: 활성화된 태스크가 없음");
+    }
+}
+
+bool UAttackGameplayAbility::TryStartProcessing(EProcessingType ProcessType)
+{
+    //@언리얼 엔진 크리티컬 섹션 락 획득 (FScopeLock 사용)
+    FScopeLock Lock(&ProcessingCriticalSection);
+
+    //@이미 처리가 완료된 상태인지 확인
+    if (bProcessingCompleted.load())
+    {
+        UE_LOGFMT(LogAttackGA, Log, "처리 시작 실패 - 사유: 이미 처리 완료됨, 현재 승리 유형: {0}",
+            static_cast<uint8>(WinningProcessType.load()));
+        return false;
+    }
+
+    //@처리 유형에 따른 상태 확인 및 설정
+    switch (ProcessType)
+    {
+    case EProcessingType::Damage:
+    {
+        //@이미 파훼 처리가 시작된 경우
+        if (bCompensationProcessingStarted.load())
+        {
+            UE_LOGFMT(LogAttackGA, Log, "데미지 처리 시작 실패 - 사유: 파훼 처리가 먼저 시작됨");
+            return false;
+        }
+
+        //@데미지 처리 시작 플래그 설정
+        bDamageProcessingStarted.store(true);
+        WinningProcessType.store(EProcessingType::Damage);
+
+        UE_LOGFMT(LogAttackGA, Log, "데미지 처리 시작 성공 - 어빌리티: {0}", *GetName());
+        break;
+    }
+    case EProcessingType::Compensation:
+    {
+        //@이미 데미지 처리가 시작된 경우
+        if (bDamageProcessingStarted.load())
+        {
+            UE_LOGFMT(LogAttackGA, Log, "파훼 처리 시작 실패 - 사유: 데미지 처리가 먼저 시작됨");
+            return false;
+        }
+
+        //@파훼 처리 시작 플래그 설정
+        bCompensationProcessingStarted.store(true);
+        WinningProcessType.store(EProcessingType::Compensation);
+
+        UE_LOGFMT(LogAttackGA, Log, "파훼 처리 시작 성공 - 어빌리티: {0}", *GetName());
+        break;
+    }
+    default:
+        UE_LOGFMT(LogAttackGA, Error, "처리 시작 실패 - 사유: 알 수 없는 처리 유형: {0}",
+            static_cast<uint8>(ProcessType));
+        return false;
+    }
+
+    return true;
+}
+
+void UAttackGameplayAbility::ResetProcessingState()
+{
+    //@언리얼 엔진 크리티컬 섹션 락 획득
+    FScopeLock Lock(&ProcessingCriticalSection);
+
+    UE_LOGFMT(LogAttackGA, Log, "처리 상태 리셋 시작 - 이전 승리 유형: {0}",
+        static_cast<uint8>(WinningProcessType.load()));
+
+    //@모든 플래그 리셋
+    bDamageProcessingStarted.store(false);
+    bCompensationProcessingStarted.store(false);
+    bProcessingCompleted.store(false);
+    WinningProcessType.store(EProcessingType::None);
+
+    UE_LOGFMT(LogAttackGA, Log, "처리 상태 리셋 완료");
+}
+
+void UAttackGameplayAbility::ExecuteProcessing(EProcessingType ProcessType, const FProcessingData& ProcessingData)
+{
+    //@크리티컬 섹션 내에서 처리 실행
+    FScopeLock Lock(&ProcessingCriticalSection);
+
+    //@처리 실행 가능 여부 확인
+    if (!CanExecuteProcessing(ProcessType))
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "처리 실행 실패 - 처리 유형: {0}, 현재 상태: {1}",
+            static_cast<uint8>(ProcessType), *GetProcessingStateDebugString());
+        return;
+    }
+
+    //@처리 유형에 따른 이벤트 전송
+    switch (ProcessType)
+    {
+    case EProcessingType::Damage:
+        UE_LOGFMT(LogAttackGA, Log, "데미지 이벤트 처리 실행 시작");
+        SendDamageEventInternal(ProcessingData);
+        break;
+
+    case EProcessingType::Compensation:
+        UE_LOGFMT(LogAttackGA, Log, "파훼 이벤트 처리 실행 시작");
+        SendAttackFailedEventInternal(ProcessingData);
+        break;
+
+    default:
+        UE_LOGFMT(LogAttackGA, Error, "처리 실행 실패 - 알 수 없는 처리 유형: {0}",
+            static_cast<uint8>(ProcessType));
+        return;
+    }
+
+    //@처리 완료 플래그 설정
+    bProcessingCompleted.store(true);
+
+    UE_LOGFMT(LogAttackGA, Log, "처리 실행 완료 - 처리 유형: {0}, 최종 상태: {1}",
+        static_cast<uint8>(ProcessType), *GetProcessingStateDebugString());
+}
+
+void UAttackGameplayAbility::SendDamageEventInternal(const FProcessingData& ProcessingData)
+{
+    //@데이터 유효성 검사
+    if (!ProcessingData.SourceActor.IsValid() || !ProcessingData.TargetActor.IsValid())
+    {
+        UE_LOGFMT(LogAttackGA, Error, "SendDamageEventInternal 실패 - 사유: Source 또는 Target Actor가 유효하지 않음");
+        return;
+    }
+
+    AActor* SourceActor = ProcessingData.SourceActor.Get();
+    AActor* HitActor = ProcessingData.TargetActor.Get();
+
+    //@GameplayEffect 가져오기
+    auto MainEffectClass = GetApplyGameplayEffectClass();
+    if (!MainEffectClass)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEventInternal 실패 - 메인 GameplayEffect 클래스가 유효하지 않음");
+        return;
+    }
+
+    auto MainEffectCDO = MainEffectClass.GetDefaultObject();
+    if (!MainEffectCDO)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEventInternal 실패 - 메인 GameplayEffect CDO가 유효하지 않음");
+        return;
+    }
+
+    UGameplayEffect* SubEffectCDO = nullptr;
+    auto SubEffectClass = GetApplySubGameplayEffectClass();
+    if (SubEffectClass)
+    {
+        SubEffectCDO = SubEffectClass.GetDefaultObject();
+    }
+
+    //@데미지 이벤트 전송
+    bool bSuccess = UCombatLibrary::SendGameplayEventToTarget(
+        FGameplayTag::RequestGameplayTag("EventTag.OnDamaged"),
+        HitActor,
+        SourceActor,
+        ProcessingData.HitResult,
+        0.0f,
+        MainEffectCDO,
+        SubEffectCDO
+    );
+
+    if (!bSuccess)
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "SendDamageEventInternal 실패 - Target: {0}, 사유: 이벤트 전송 실패",
+            HitActor->GetName());
+        return;
+    }
+
+    UE_LOGFMT(LogAttackGA, Log, "데미지 이벤트 전송 완료 - Target: {0}, Instigator: {1}",
+        HitActor->GetName(), SourceActor->GetName());
+
+    //@Source ASC의 데미지 전달 델리게이트 호출
+    if (UBaseAbilitySystemComponent* SourceASC = Cast<UBaseAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
+    {
+        FGameplayEventData DamageDealtEventData;
+        DamageDealtEventData.Instigator = SourceActor;
+        DamageDealtEventData.Target = HitActor;
+        DamageDealtEventData.EventTag = FGameplayTag::RequestGameplayTag("EventTag.OnDamageDealt");
+        DamageDealtEventData.EventMagnitude = 0.0f;
+
+        FGameplayEffectContextHandle ContextHandle = SourceASC->MakeEffectContext();
+        if (FGameplayEffectContext* Context = ContextHandle.Get())
+        {
+            Context->AddHitResult(ProcessingData.HitResult);
+        }
+        DamageDealtEventData.ContextHandle = ContextHandle;
+
+        SourceASC->DamageDealtByActor.Broadcast(SourceActor, HitActor, DamageDealtEventData);
+
+        UE_LOGFMT(LogAttackGA, Log, "데미지 전달 델리게이트 호출 완료 - Source: {0}, Target: {1}",
+            *SourceActor->GetName(), *HitActor->GetName());
+    }
+
+    //@기존 효과 처리
+    ExecuteTimeFX(ProcessingData.HitResult, SourceActor);
+    ExecuteCollisionFX(ProcessingData.HitResult, SourceActor);
+}
+
+void UAttackGameplayAbility::SendAttackFailedEventInternal(const FProcessingData& ProcessingData)
+{
+    //@데이터 유효성 검사
+    if (!ProcessingData.SourceActor.IsValid() || !ProcessingData.TargetActor.IsValid())
+    {
+        UE_LOGFMT(LogAttackGA, Error, "SendAttackFailedEventInternal 실패 - 사유: Source 또는 Target Actor가 유효하지 않음");
+        return;
+    }
+
+    AActor* Defender = ProcessingData.SourceActor.Get();  // 수비자
+    AActor* Attacker = ProcessingData.TargetActor.Get();  // 공격자
+
+    //@Sub GameplayEffect 가져오기 (그로기 효과 등)
+    UGameplayEffect* SubEffectCDO = nullptr;
+    auto SubEffectClass = GetApplySubGameplayEffectClass();
+    if (SubEffectClass)
+    {
+        SubEffectCDO = SubEffectClass.GetDefaultObject();
+        UE_LOGFMT(LogAttackGA, Log, "Sub GameplayEffect 설정됨: {0}", *SubEffectCDO->GetName());
+    }
+
+    //@공격 실패 이벤트 전송 (공격자에게 역으로 전달)
+    bool bSuccess = UCombatLibrary::SendGameplayEventToTarget(
+        FGameplayTag::RequestGameplayTag("EventTag.OnAttackFailed"),
+        Attacker,        // TargetActor (원래 공격자)
+        Defender,        // InstigatorActor (수비자)
+        ProcessingData.HitResult,  // HitResult
+        0.0f,           // Magnitude (기본값)
+        SubEffectCDO,   // OptionalObject: Sub Effect (그로기 등)
+        nullptr         // OptionalObject2
+    );
+
+    if (bSuccess)
+    {
+        UE_LOGFMT(LogAttackGA, Log, "공격 실패 이벤트 전송 성공 - Target: {0}, Sub Effect: {1}",
+            *Attacker->GetName(),
+            SubEffectCDO ? *SubEffectCDO->GetName() : TEXT("없음"));
+    }
+    else
+    {
+        UE_LOGFMT(LogAttackGA, Error, "공격 실패 이벤트 전송 실패 - Target: {0}",
+            *Attacker->GetName());
+    }
+}
+
+bool UAttackGameplayAbility::CanExecuteProcessing(EProcessingType ProcessType) const
+{
+    //@처리 완료 상태 확인
+    if (bProcessingCompleted.load())
+    {
+        return false;
+    }
+
+    //@해당 처리 유형이 시작되었는지 확인
+    switch (ProcessType)
+    {
+    case EProcessingType::Damage:
+        return bDamageProcessingStarted.load() && WinningProcessType.load() == EProcessingType::Damage;
+
+    case EProcessingType::Compensation:
+        return bCompensationProcessingStarted.load() && WinningProcessType.load() == EProcessingType::Compensation;
+
+    default:
+        return false;
+    }
+}
+
 #pragma endregion
 
 //@Callbacks
@@ -821,6 +1156,70 @@ void UAttackGameplayAbility::OnChainActionFinished_Implementation(FGameplayTag C
     UE_LOGFMT(LogAttackGA, Log, "체인 액션 종료 이벤트 호출 - Ability: {0} | Event Tag: {1}",
         *GetName(),
         *ChainActionEventTag.ToString());
+}
+
+void UAttackGameplayAbility::OnStrongAttackCountered_Implementation(const AActor* Attacker, const AActor* Defender, const FGameplayEventData& EventData)
+{
+    UE_LOGFMT(LogAttackGA, Log, "강공격 파훼 성공 콜백 호출 - 공격자: {0}, 수비자: {1}",
+        Attacker ? *Attacker->GetName() : TEXT("Unknown"),
+        Defender ? *Defender->GetName() : TEXT("Unknown"));
+
+    // === 새로 추가: 처리 완료 상태 확인 ===
+    if (IsProcessingCompleted())
+    {
+        UE_LOGFMT(LogAttackGA, Log, "강공격 파훼 처리 중단 - 사유: 이미 처리 완료됨 (승리 유형: {0})",
+            static_cast<uint8>(WinningProcessType.load()));
+        UE_LOGFMT(LogAttackGA, Log, "현재 처리 상태: {0}", *GetProcessingStateDebugString());
+        return;
+    }
+
+    //@기본 유효성 검사
+    if (!IsValid(Attacker) || !IsValid(Defender))
+    {
+        UE_LOGFMT(LogAttackGA, Error, "OnStrongAttackCountered 실패: 공격자 또는 수비자가 유효하지 않음");
+        return;
+    }
+
+    //@상호 배제 처리 - 파훼 처리 시작 시도
+    if (!TryStartProcessing(EProcessingType::Compensation))
+    {
+        UE_LOGFMT(LogAttackGA, Warning, "OnStrongAttackCountered 실패 - 사유: 데미지 처리가 먼저 실행됨 또는 이미 처리 완료");
+        UE_LOGFMT(LogAttackGA, Log, "현재 처리 상태: {0}", *GetProcessingStateDebugString());
+        return;
+    }
+
+    //@HitResult 구성 (원본 이벤트에서 추출 시도)
+    FHitResult HitResult;
+    if (EventData.ContextHandle.IsValid())
+    {
+        if (const FHitResult* ContextHitResult = EventData.ContextHandle.GetHitResult())
+        {
+            HitResult = *ContextHitResult;
+            UE_LOGFMT(LogAttackGA, Log, "원본 HitResult 사용 - Impact Point: {0}", *HitResult.ImpactPoint.ToString());
+        }
+        else
+        {
+            HitResult.Location = Defender->GetActorLocation();
+            HitResult.ImpactPoint = Defender->GetActorLocation();
+            HitResult.bBlockingHit = true;
+            UE_LOGFMT(LogAttackGA, Log, "기본 HitResult 생성 - Location: {0}", *HitResult.Location.ToString());
+        }
+    }
+    else
+    {
+        HitResult.Location = Defender->GetActorLocation();
+        HitResult.ImpactPoint = Defender->GetActorLocation();
+        HitResult.bBlockingHit = true;
+        UE_LOGFMT(LogAttackGA, Log, "Context 없어 기본 HitResult 생성 - Location: {0}", *HitResult.Location.ToString());
+    }
+
+    //@처리 데이터 구성 (수비자가 Source, 공격자가 Target)
+    FProcessingData ProcessingData(HitResult, const_cast<AActor*>(Defender), const_cast<AActor*>(Attacker), &EventData);
+
+    //@처리 실행
+    ExecuteProcessing(EProcessingType::Compensation, ProcessingData);
+
+    //@블루프린트에서 추가 커스텀 로직을 구현할 수 있도록 함
 }
 #pragma endregion
 
@@ -861,4 +1260,30 @@ bool UAttackGameplayAbility::GetSocketTransform(FName SocketName, FTransform& Ou
     OutTransform = Mesh->GetSocketTransform(SocketName);
     return true;
 }
+
+UAT_CompensateDamage* UAttackGameplayAbility::GetCompensationTask() const
+{
+    return CurrentCompensationTask;
+}
+
+//@파훼 태스크 활성화 상태 확인
+bool UAttackGameplayAbility::IsCompensationTaskActive() const
+{
+    return CurrentCompensationTask && CurrentCompensationTask->IsActive();
+}
+
+bool UAttackGameplayAbility::IsProcessingCompleted() const
+{
+    return bProcessingCompleted.load();
+}
+
+FString UAttackGameplayAbility::GetProcessingStateDebugString() const
+{
+    return FString::Printf(TEXT("Damage: %s, Compensation: %s, Completed: %s, Winner: %d"),
+        bDamageProcessingStarted.load() ? TEXT("true") : TEXT("false"),
+        bCompensationProcessingStarted.load() ? TEXT("true") : TEXT("false"),
+        bProcessingCompleted.load() ? TEXT("true") : TEXT("false"),
+        static_cast<uint8>(WinningProcessType.load()));
+}
+
 #pragma endregion

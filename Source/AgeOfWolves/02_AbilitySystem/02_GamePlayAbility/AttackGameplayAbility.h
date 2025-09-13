@@ -12,6 +12,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAttackGA, Log, All);
 #pragma region Forward Declaration
 class ACharacterBase;
 class UAnimMontage;
+class UAT_CompensateDamage;
 #pragma endregion
 
 //@열거형
@@ -58,7 +59,56 @@ enum class ECollisionEffectType : uint8
 	MAX         UMETA(DisplayName = "MAX")
 };
 
+//@처리 유형 식별을 위한 열거형
+UENUM(BlueprintType)
+enum class EProcessingType : uint8
+{
+	None = 0		UMETA(DisplayName = "없음"),
+	Damage			UMETA(DisplayName = "데미지 전달"),
+	Compensation	UMETA(DisplayName = "데미지 파훼")
+};
 
+/*
+*   @FProcessingData
+*
+*   상호 배제 처리를 위한 데이터 구조체
+*/
+struct FProcessingData
+{
+
+public:
+	FProcessingData()
+		: HitResult()
+		, SourceActor(nullptr)
+		, TargetActor(nullptr)
+		, EventData(nullptr)
+	{
+	}
+
+	FProcessingData(const FHitResult& InHitResult, AActor* InSourceActor, AActor* InTargetActor, const FGameplayEventData* InEventData = nullptr)
+		: HitResult(InHitResult)
+		, SourceActor(InSourceActor)
+		, TargetActor(InTargetActor)
+		, EventData(InEventData)
+	{
+	}
+
+public:
+	//@충돌 결과
+	UPROPERTY()
+	FHitResult HitResult;
+
+	//@소스 액터 (공격자 또는 수비자)
+	UPROPERTY()
+	TWeakObjectPtr<AActor> SourceActor;
+
+	//@타겟 액터 (피격자 또는 공격자)
+	UPROPERTY()
+	TWeakObjectPtr<AActor> TargetActor;
+
+	//@이벤트 데이터 (파훼용, 소유권 없음)
+	const FGameplayEventData* EventData;
+};
 #pragma endregion
 
 //@구조체
@@ -215,23 +265,28 @@ public:
 UCLASS()
 class AGEOFWOLVES_API UAttackGameplayAbility : public UBaseGameplayAbility
 {
-	//@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 	friend class UANS_AttackTrace;
+	friend class UANS_CompensateStrongAttack;
 #pragma endregion
 
 	GENERATED_BODY()
 
-	//@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UAttackGameplayAbility(const FObjectInitializer& ObjectInitializer);
 
 protected:
 	virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+
+protected:
+	//@어빌리티 종료 시 파훼 태스크 정리
+	virtual void EndAbility(const FGameplayAbilitySpecHandle Handle, const FGameplayAbilityActorInfo* ActorInfo, const FGameplayAbilityActivationInfo ActivationInfo, bool bReplicateEndAbility, bool bWasCancelled) override;
 #pragma endregion
 
-	//@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
 	//@인덱스 지정 버전 몽타주 재생
@@ -309,6 +364,36 @@ protected:
 	//@현재 몽타주의 FX 설정으로 이펙트 실행
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| FX")
 	void ExecuteCollisionFXForCurrentMontage(const FHitResult& HitResult, AActor* SourceActor, int32 MontageIndex = -1);
+
+	//==== 강공격 파훼 ====
+
+protected:
+	//@파훼 태스크 생성 및 활성화
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 파훼")
+	void ActivateCompensationTask(bool bOnlyTriggerOnce = false);
+
+	//@파훼 태스크 정리
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 파훼")
+	void DeactivateCompensationTask();
+
+protected:
+	//@상호 배제 처리 관련 함수들 (새로 추가)
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 동기화")
+	bool TryStartProcessing(EProcessingType ProcessType);
+
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 동기화")
+	void ResetProcessingState();
+
+private:
+	//@처리 실행 함수
+	void ExecuteProcessing(EProcessingType ProcessType, const FProcessingData& ProcessingData);
+
+	//@내부 이벤트 전송 함수들
+	void SendDamageEventInternal(const FProcessingData& ProcessingData);
+	void SendAttackFailedEventInternal(const FProcessingData& ProcessingData);
+
+	//@처리 실행 가능 여부 확인
+	bool CanExecuteProcessing(EProcessingType ProcessType) const;
 
 protected:
 	//@현재 실행 중인 몽타주 인덱스
@@ -412,10 +497,32 @@ protected:
 	UPROPERTY(EditDefaultsOnly, Category = "어빌리티 | 충돌| 연출| FX",
 		meta = (EditCondition = "bEnableCollisionFX && FXSettingMode == EFXApplyRange::PerMontage"))
 	TArray<FCollisionFXSetting> MontageFXSettings;
+
+protected:
+	//@파훼 태스크 참조
+	UPROPERTY(Transient)
+	UAT_CompensateDamage* CurrentCompensationTask;
+
+private:
+	// === 상호 배제 처리를 위한 동기화 멤버들 (새로 추가) ===
+
+	//@언리얼 엔진 크리티컬 섹션 (std::mutex 대신)
+	mutable FCriticalSection ProcessingCriticalSection;
+
+	//@처리 상태 플래그들
+	std::atomic<bool> bDamageProcessingStarted{ false };
+	std::atomic<bool> bCompensationProcessingStarted{ false };
+	std::atomic<bool> bProcessingCompleted{ false };
+
+	//@승리한 처리 유형
+	std::atomic<EProcessingType> WinningProcessType{ EProcessingType::None };
 #pragma endregion
 
-	//@Delegates
+//@Delegates
 #pragma region Delegates
+protected:
+	//@강공격 파훼 델리게이트 핸들
+	FDelegateHandle StrongAttackCounteredHandle;
 #pragma endregion
 
 //@Callbacks
@@ -425,9 +532,15 @@ protected:
 	virtual void OnChainActionActivated_Implementation(FGameplayTag ChainActionEventTag) override;
 	//@오버라이드
 	virtual void OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag) override;
+
+protected:
+	//@강공격 파훼 성공 콜백
+	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 파훼")
+	void OnStrongAttackCountered(const AActor* Attacker, const AActor* Defender, const FGameplayEventData& EventData);
+	virtual void OnStrongAttackCountered_Implementation(const AActor* Attacker, const AActor* Defender, const FGameplayEventData& EventData);
 #pragma endregion
 
-	//@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
 	UFUNCTION(BlueprintCallable, Category = "Ability|Getter")
@@ -437,6 +550,21 @@ public:
 	//@소켓 위치와 회전값 가져오기
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 충돌| 연출| FX")
 	bool GetSocketTransform(FName SocketName, FTransform& OutTransform) const;
+
+protected:
+	//@파훼 태스크 가져오기 (ANS에서 사용)
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 파훼")
+	UAT_CompensateDamage* GetCompensationTask() const;
+
+	//@파훼 태스크 활성화 상태 확인
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 파훼")
+	bool IsCompensationTaskActive() const;
+
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 동기화")
+	bool IsProcessingCompleted() const;
+
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 동기화")
+	FString GetProcessingStateDebugString() const;
 #pragma endregion
 
 };

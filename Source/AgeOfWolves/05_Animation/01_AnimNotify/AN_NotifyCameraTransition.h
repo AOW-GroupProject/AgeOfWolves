@@ -29,7 +29,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAN_NotifyCameraTransition, Log, All)
 /**
  *	@UAN_NotifyCameraTransition
  * 
- *	Camera 앵글의 전환 데이터를 알립니다.
+ *	Camera 전환 데이터를 알립니다.
  */
 UCLASS()
 class AGEOFWOLVES_API UAN_NotifyCameraTransition : public UAnimNotify

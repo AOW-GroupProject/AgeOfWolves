@@ -148,6 +148,12 @@ protected:
     virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
     virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;
 
+#if WITH_EDITOR
+public:
+    //@에디터에서 프로퍼티 변경 시 호출
+    virtual void PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent) override;
+#endif
+
 protected:
     //@내부 바인딩
 
@@ -203,6 +209,37 @@ protected:
 protected:
     UPROPERTY()
         UBillboardComponent* IndicatorBillboardComponent;
+
+protected:
+    //@인디케이터 표시 활성화 여부 (마스터 스위치)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
+        meta = (DisplayName = "Enable Indicator Display"))
+    bool bEnableIndicatorDisplay = true;
+
+    //@LockOn 인디케이터 표시 여부
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
+        meta = (EditCondition = "bEnableIndicatorDisplay", DisplayName = "Show LockOn Indicator"))
+    bool bShowLockOnIndicator = true;
+
+    //@처형 가능 인디케이터 표시 여부
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
+        meta = (EditCondition = "bEnableIndicatorDisplay", DisplayName = "Show Execution Indicator"))
+    bool bShowExecutionIndicator = true;
+
+    //@매복 암살 인디케이터 표시 여부
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
+        meta = (EditCondition = "bEnableIndicatorDisplay", DisplayName = "Show Ambush Indicator"))
+    bool bShowAmbushIndicator = true;
+
+    //@구조물 감지 인디케이터 표시 여부
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
+        meta = (EditCondition = "bEnableIndicatorDisplay", DisplayName = "Show Structure Indicator"))
+    bool bShowStructureIndicator = true;
+
+    //@디버그 모드 (모든 인디케이터 표시)
+    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
+        meta = (EditCondition = "bEnableIndicatorDisplay", DisplayName = "Debug Mode - Show All"))
+    bool bDebugMode = false;
 
 protected:
     // LockOn 인디케이터 텍스처
@@ -441,6 +478,11 @@ protected:
 protected:
     // 인디케이터 텍스처 변경
     void SetIndicatorTexture(UTexture2D* NewTexture);
+
+protected:
+    //@특정 타겟에 대한 인디케이터 표시 여부 확인
+    bool ShouldShowIndicatorForTarget(AActor* TargetActor) const;
+
 #pragma endregion
 
 };
