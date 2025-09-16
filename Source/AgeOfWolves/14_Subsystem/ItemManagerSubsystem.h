@@ -74,6 +74,9 @@ private:
     //@Material Item 정보를 담은 Data Table
     UPROPERTY()
         TObjectPtr<UDataTable> MaterialItemTable = nullptr;
+    //@Spec Up Item 정보를 담은 Data Table
+    UPROPERTY()
+        TObjectPtr<UDataTable> SpecUpItemTable = nullptr;
 
 public:
     //@Default Item 들을 반환합니다.(아이템 갯수, 아이템 클래스)
@@ -95,6 +98,9 @@ public:
         case EItemType::Material:
             TargetTable = MaterialItemTable;
             break;
+        case EItemType::SpecUp:
+            TargetTable = SpecUpItemTable;
+            break;
         default:
             UE_LOG(LogItemManager, Warning, TEXT("불분명한 ItemType입니다."));
             return nullptr;
@@ -114,6 +120,44 @@ public:
         }
 
         return RowData;
+    }
+
+    template<typename StructType>
+   const StructType* GetItemInformationByItemTag(const FGameplayTag& ItemTag) const
+    {
+        if (!ToolItemTable || !EquipmentItemTable || !MaterialItemTable || !SpecUpItemTable)
+        {
+            UE_LOG(LogItemManager, Warning, TEXT("Item Data Table을 찾지 못했습니다."));
+            return nullptr;
+        }
+
+        // 모든 아이템 테이블 순회 후 Row 찾기
+        const StructType* ToolItemRowData = ToolItemTable->FindRow<StructType>(ItemTag.GetTagName(), TEXT(""));
+        if (ToolItemRowData)
+        {
+            return ToolItemRowData;
+        }
+        
+        const StructType* EquipmentItemRowData = EquipmentItemTable->FindRow<StructType>(ItemTag.GetTagName(), TEXT(""));
+        if (EquipmentItemRowData)
+        {
+            return EquipmentItemRowData;
+        }
+        
+        const StructType* MaterialItemRowData = MaterialItemTable->FindRow<StructType>(ItemTag.GetTagName(), TEXT(""));
+        if (MaterialItemRowData)
+        {
+            return MaterialItemRowData;
+        }
+        
+        const StructType* SpecUpItemRowData = SpecUpItemTable->FindRow<StructType>(ItemTag.GetTagName(), TEXT(""));
+        if (SpecUpItemRowData)
+        {
+            return SpecUpItemRowData;
+        }
+        
+        UE_LOG(LogItemManager, Warning, TEXT("해당 ItemTag %s 에 대응되는 Data table이 존재하지 않습니다."), *ItemTag.ToString());
+        return nullptr;
     }
 #pragma endregion
 

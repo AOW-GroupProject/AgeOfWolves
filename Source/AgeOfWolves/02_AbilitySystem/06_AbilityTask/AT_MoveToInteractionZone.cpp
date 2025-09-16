@@ -101,6 +101,7 @@ void UAT_MoveToInteractionZone::SetupCollisionResponse()
 		return;
 	}
 
+	//@ 상호작용 아바타가 pawn에 대해 충돌을 Overlap으로 지정
 	UCapsuleComponent* CapsuleComp = AvatarActor->FindComponentByClass<UCapsuleComponent>();
 	if (!CapsuleComp)
 	{
@@ -109,6 +110,32 @@ void UAT_MoveToInteractionZone::SetupCollisionResponse()
 
 	PreviousPawnResponse = CapsuleComp->GetCollisionResponseToChannel(ECC_Pawn);
 	CapsuleComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+
+	//@ 상호작용 대상도 pawn에대해 충돌을 Overlap으로 지정
+
+	AActor* TargetActorRef = TargetActor.Get();
+	
+	if (!TargetActorRef) return;
+
+	TArray<UPrimitiveComponent*> Comps;
+	TargetActorRef->GetComponents<UPrimitiveComponent>(Comps);
+
+	for (UPrimitiveComponent* Comp : Comps)
+	{
+		if (!Comp) continue;
+
+		ECollisionResponse PreviousResponse = Comp->GetCollisionResponseToChannel(ECC_Pawn);
+		
+		// Pawn 채널만 Overlap으로 변경
+		Comp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+
+		FCollisionPawnOverrideBackup Backup;
+		Backup.Comp = Comp;
+		Backup.PrevPawnResponse = PreviousResponse;
+
+		
+		TargetActorPreviousPawnResponseBackupArray.Add(Backup);
+	}
 
 	UE_LOGFMT(LogAT_InteractionZone, Log, "충돌 응답 변경: Block -> Overlap");
 }
@@ -121,6 +148,7 @@ void UAT_MoveToInteractionZone::RestoreCollisionResponse()
 		return;
 	}
 
+	//@ 상호작용 아바타가 충돌타입 복원
 	UCapsuleComponent* CapsuleComp = AvatarActor->FindComponentByClass<UCapsuleComponent>();
 	if (!CapsuleComp)
 	{
@@ -129,6 +157,17 @@ void UAT_MoveToInteractionZone::RestoreCollisionResponse()
 
 	CapsuleComp->SetCollisionResponseToChannel(ECC_Pawn, PreviousPawnResponse);
 
+	//@ 상호작용 대상  충돌타입 복원
+	for (const FCollisionPawnOverrideBackup& Backup : TargetActorPreviousPawnResponseBackupArray)
+	{
+		if (!Backup.Comp.IsValid()) continue;
+
+		UPrimitiveComponent* Comp = Backup.Comp.Get();
+		Comp->SetCollisionResponseToChannel(ECC_Pawn, Backup.PrevPawnResponse);
+	}
+
+	TargetActorPreviousPawnResponseBackupArray.Empty();
+	
 	UE_LOGFMT(LogAT_InteractionZone, Log, "충돌 응답 복원: Overlap -> Block");
 }
 
@@ -139,7 +178,7 @@ bool UAT_MoveToInteractionZone::CalculateSocketTransform()
 		return false;
 	}
 
-	USkeletalMeshComponent* TargetMesh = TargetActor->FindComponentByClass<USkeletalMeshComponent>();
+	UMeshComponent* TargetMesh = TargetActor->FindComponentByClass<UMeshComponent>(); //@ skelMesh, staticMesh 모두 범주되는 UMeshComponent로 찾음
 	if (!TargetMesh || !TargetMesh->DoesSocketExist(SocketName))
 	{
 		UE_LOGFMT(LogAT_InteractionZone, Warning, "Socket '{0}' 찾을 수 없음", *SocketName.ToString());

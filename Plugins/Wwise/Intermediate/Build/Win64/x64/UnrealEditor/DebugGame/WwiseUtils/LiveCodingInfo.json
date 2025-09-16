@@ -1,0 +1,11 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.WwiseUtils.cpp.obj": [
+			"WwiseUnrealHelper.cpp.obj",
+			"Global.cpp.obj",
+			"Memory.cpp.obj",
+			"NamedEvents.cpp.obj"
+		]
+	}
+}

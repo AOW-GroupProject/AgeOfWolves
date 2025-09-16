@@ -50,7 +50,11 @@ class AGEOFWOLVES_API UBTTask_TryChangeAIState : public UBTTask_BlackboardBase
 public:
 	UBTTask_TryChangeAIState(const FObjectInitializer& ObjectInitializer);
 
+protected:
 	virtual EBTNodeResult::Type ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory) override;
+
+protected:
+	virtual FString GetStaticDescription() const override;
 #pragma endregion
 
 //@Property/Info...etc

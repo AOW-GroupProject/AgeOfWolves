@@ -1,0 +1,34 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.WwiseSoundEngine.cpp.obj": [
+			"SoundEngine.cpp.obj",
+			"WwiseAssertHook.cpp.obj",
+			"WwiseSoundEngineModule.cpp.obj",
+			"WwiseSoundEngineUtils.cpp.obj",
+			"LinuxAArch64API_2023_1.cpp.obj",
+			"WindowsAPI_2023_1.cpp.obj",
+			"WAAPI_2023_1.cpp.obj",
+			"WwiseCommAPI_2023_1.cpp.obj",
+			"WwiseMemoryMgrAPI_2023_1.cpp.obj",
+			"WwiseMonitorAPI_2023_1.cpp.obj",
+			"WwiseMusicEngineAPI_2023_1.cpp.obj",
+			"WwiseSoundEngineAPI_2023_1.cpp.obj",
+			"WwiseSpatialAudioAPI_2023_1.cpp.obj",
+			"WwiseStreamMgrAPI_2023_1.cpp.obj",
+			"SoundEngine_2023_1.cpp.obj",
+			"WwiseSoundEngine_2023_1.cpp.obj",
+			"WAAPI_Null.cpp.obj",
+			"WwiseCommAPI_Null.cpp.obj",
+			"WwiseMemoryMgrAPI_Null.cpp.obj",
+			"WwiseMonitorAPI_Null.cpp.obj",
+			"WwiseMusicEngineAPI_Null.cpp.obj",
+			"WwiseSoundEngineAPI_Null.cpp.obj",
+			"WwiseSpatialAudioAPI_Null.cpp.obj",
+			"WwiseStreamMgrAPI_Null.cpp.obj",
+			"DefineNullBridges.cpp.obj",
+			"SoundEngine_Null.cpp.obj",
+			"WwiseSoundEngine_Null.cpp.obj"
+		]
+	}
+}

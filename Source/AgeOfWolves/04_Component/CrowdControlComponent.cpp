@@ -2,6 +2,7 @@
 #include "Logging/StructuredLog.h"
 
 #include "16_Level/Area.h"
+#include "BehaviorTree/BlackboardComponent.h"
 
 DEFINE_LOG_CATEGORY(LogCrowdCtrl)
 
@@ -149,68 +150,77 @@ void UCrowdControlComponent::InitializeCrowdControlComp(TArray<FAIGroupInfo> AIG
 #pragma region Property or Subwidgets or Infos...etc
 void UCrowdControlComponent::ProcessInfoQueue()
 {
-    //@Empty?
+    // 큐가 비어있으면 처리할 것이 없으므로 조기 반환
     if (GroupInfoQueue.IsEmpty())
     {
         return;
     }
 
-    //@Current Time
+    // 현재 시간을 가져와서 만료된 정보들을 정리
     float CurrentTime = GetWorld() ? GetWorld()->GetTimeSeconds() : 0.0f;
     CleanupExpiredProcessedInfoIDs(CurrentTime);
 
     int32 ProcessedCount = 0;
     FSharingInfoQuery Query;
 
+    // 큐에서 정보를 하나씩 꺼내서 처리 (최대 처리량 제한 적용)
     while (!GroupInfoQueue.IsEmpty() && ProcessedCount < MaxInfosToProcess)
     {
-        //@Dequeue
         GroupInfoQueue.Dequeue(Query);
         ProcessedCount++;
 
-        //@유효 시간 체크
+        // 정보의 유효성을 먼저 검사
         if (!ShouldProcessInfo(Query.Info))
         {
+            UE_LOGFMT(LogCrowdCtrl, Warning, "유효하지 않은 정보 건너뜀: 발신자={0}, InfoTag={1}",
+                Query.SenderAI ? *Query.SenderAI->GetName() : TEXT("Unknown"),
+                *Query.Info.InfoTag.ToString());
             continue;
         }
 
-        //@이미 처리한 정보에 추가
+        // 중복 처리 방지를 위해 처리된 정보 목록에 추가
         ProcessedInfoIDs.Add(Query.Info.InfoID, CurrentTime);
 
-        //@사망 정보 특별 처리
-        if (Query.Info.StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
+        // InfoTag의 계층 구조를 분석하여 적절한 처리 함수로 라우팅
+        FString InfoTagString = Query.Info.InfoTag.ToString();
+
+        if (InfoTagString.StartsWith(TEXT("InfoToShare.Simple")))
         {
-            ProcessDeadStateInfo(Query.SenderAI, Query.Recipients, Query.Info);
+            // 단순 정보 전달: 복잡한 로직 없이 그대로 전달
+            ProcessSimpleInfo(Query.SenderAI, Query.Recipients, Query.Info);
         }
+        else if (InfoTagString.StartsWith(TEXT("InfoToShare.CrowdControl")))
+        {
+            // 군중제어 처리: AI 행동 변경을 위한 복잡한 로직 적용
+            ProcessCrowdControllInfo(Query.SenderAI, Query.Recipients, Query.Info);
+        }
+        else
+        {
+            // 예상치 못한 태그 계층구조가 들어온 경우 경고 로그 출력
+            UE_LOGFMT(LogCrowdCtrl, Warning, "지원하지 않는 InfoTag 계층 구조: {0} (발신자: {1})",
+                *InfoTagString, Query.SenderAI ? *Query.SenderAI->GetName() : TEXT("Unknown"));
+        }
+    }
+
+    // 처리 완료 후 통계 로그 (디버깅용)
+    if (ProcessedCount > 0)
+    {
+        UE_LOGFMT(LogCrowdCtrl, Log, "정보 처리 완료: {0}개 처리됨", ProcessedCount);
     }
 }
 
-void UCrowdControlComponent::ProcessDeadStateInfo(AActor* SenderAI, const TArray<TWeakObjectPtr<AActor>>& Recipients, const FSharingInfoWithGroup& InfoData)
+void UCrowdControlComponent::ProcessSimpleInfo(AActor* SenderAI, const TArray<TWeakObjectPtr<AActor>>& Recipients, const FSharingInfoWithGroup& InfoData)
 {
-    //@유효성 검사
     if (!SenderAI)
     {
-        UE_LOGFMT(LogCrowdCtrl, Warning, "사망 정보 처리 실패: 유효하지 않은 발신자");
+        UE_LOGFMT(LogCrowdCtrl, Warning, "단순 정보 처리 실패: 유효하지 않은 발신자");
         return;
     }
 
-    UE_LOGFMT(LogCrowdCtrl, Log, "사망 정보 처리: 발신자={0}, 수신자 수={1}, 상태={2}",
-        *SenderAI->GetName(), Recipients.Num(), *InfoData.StateTag.ToString());
+    UE_LOGFMT(LogCrowdCtrl, Log, "단순 정보 처리: 발신자={0}, 수신자 수={1}, 상태={2}",
+        *SenderAI->GetName(), Recipients.Num(), *InfoData.InfoTag.ToString());
 
-    //@처형된 경우 공포 태그로 변환
-    FSharingInfoWithGroup ModifiedInfo = InfoData;
-    bool bIsExecution = InfoData.StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead.Executed"));
-
-    if (bIsExecution)
-    {
-        ModifiedInfo.ResultTag = FGameplayTag::RequestGameplayTag("CrowdControl.Threatened");
-        ModifiedInfo.Priority += 2; // 우선순위 상향
-
-        UE_LOGFMT(LogCrowdCtrl, Log, "요청 내용: 태그={0}, 우선순위={1}",
-            *ModifiedInfo.ResultTag.ToString(), ModifiedInfo.Priority);
-    }
-
-    //@Recipients 순회하며 정보 전달
+    // 단순 정보는 수정 없이 그대로 전달
     int32 SuccessCount = 0;
     for (const TWeakObjectPtr<AActor>& RecipientPtr : Recipients)
     {
@@ -226,21 +236,90 @@ void UCrowdControlComponent::ProcessDeadStateInfo(AActor* SenderAI, const TArray
             continue;
         }
 
-        //@Base AI Controller
         ABaseAIController* AIController = Cast<ABaseAIController>(RecipientPawn->GetController());
         if (AIController)
         {
-            //@정보 수신 (처형인 경우 변환된 정보 전달)
-            AIController->ReceiveInfoFromGroup(SenderAI, bIsExecution ? ModifiedInfo : InfoData);
+            AIController->ReceiveInfoFromGroup(SenderAI, InfoData);
             SuccessCount++;
         }
     }
 
-    UE_LOGFMT(LogCrowdCtrl, Log, "사망 정보 처리 완료: 발신자={0}, 성공한 수신자={1}/{2}, 요청={3}",
-        *SenderAI->GetName(), SuccessCount, Recipients.Num(),
-        bIsExecution ? *ModifiedInfo.ResultTag.ToString() : *InfoData.ResultTag.ToString());
+    UE_LOGFMT(LogCrowdCtrl, Log, "단순 정보 처리 완료: 발신자={0}, 성공한 수신자={1}/{2}",
+        *SenderAI->GetName(), SuccessCount, Recipients.Num());
 }
 
+void UCrowdControlComponent::ProcessCrowdControllInfo(AActor* SenderAI, const TArray<TWeakObjectPtr<AActor>>& Recipients, const FSharingInfoWithGroup& InfoData)
+{
+    if (!SenderAI)
+    {
+        UE_LOGFMT(LogCrowdCtrl, Warning, "군중제어 처리, 유효하지 않은 발신자");
+        return;
+    }
+
+    APawn* SenderPawn = Cast<APawn>(SenderAI);
+    if (!SenderPawn)
+        return;
+
+    ABaseAIController* SenderAIController = Cast<ABaseAIController>(SenderPawn->GetController());
+    if (!SenderAIController)
+        return;
+
+    FSharingInfoWithGroup ModifiedInfo = InfoData;
+
+    // 처형된 경우 공포 태그로 변환 (기존 ProcessDeadStateInfo에서 이동)
+    bool bIsExecution = InfoData.InfoTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("InfoToShare.CrowdControl.AIExecuted"));
+    if (bIsExecution)
+    {
+        ModifiedInfo.ResultTag = FGameplayTag::RequestGameplayTag("CrowdControl.Threatened");
+        ModifiedInfo.Priority += 2;
+
+        UE_LOGFMT(LogCrowdCtrl, Log, "요청 내용: 태그={0}, 우선순위={1}",
+            *ModifiedInfo.ResultTag.ToString(), ModifiedInfo.Priority);
+    }
+
+    // CoverFire 요청 처리
+    bool bIsCoverFireRequest = InfoData.InfoTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("InfoToShare.CrowdControl.CoverFireRequested"));
+    if (bIsCoverFireRequest)
+    {
+        AActor* CurrentTarget = Cast<AActor>(SenderAIController->GetBlackboardComponent()->GetValueAsObject("TargetActor"));
+        bool bCurrentlyHasContact = SenderAIController->GetBlackboardComponent()->GetValueAsBool("Contact");
+
+        if (CurrentTarget && bCurrentlyHasContact)
+        {
+            ModifiedInfo.ResultTag = FGameplayTag::RequestGameplayTag("CrowdControl.CoverFireRequested");
+            ModifiedInfo.OptionalObject = CurrentTarget;
+
+            UE_LOGFMT(LogCrowdCtrl, Log, "요청 내용: 태그={0}, 우선순위={1}",
+                *ModifiedInfo.ResultTag.ToString(), ModifiedInfo.Priority);
+        }
+    }
+
+    int32 SuccessCount = 0;
+    for (const TWeakObjectPtr<AActor>& RecipientPtr : Recipients)
+    {
+        if (!RecipientPtr.IsValid())
+        {
+            continue;
+        }
+
+        AActor* Recipient = RecipientPtr.Get();
+        APawn* RecipientPawn = Cast<APawn>(Recipient);
+        if (!RecipientPawn)
+        {
+            continue;
+        }
+
+        ABaseAIController* AIController = Cast<ABaseAIController>(RecipientPawn->GetController());
+        if (AIController)
+        {
+            AIController->ReceiveInfoFromGroup(SenderAI, ModifiedInfo);
+            SuccessCount++;
+        }
+    }
+
+    UE_LOGFMT(LogCrowdCtrl, Log, "군중제어 처리 완료: 발신자={0}, 성공한 수신자={1}/{2}, 요청={3}",
+        *SenderAI->GetName(), SuccessCount, Recipients.Num(), *ModifiedInfo.ResultTag.ToString());
+}
 void UCrowdControlComponent::CleanupExpiredProcessedInfoIDs(float CurrentTime)
 {
 
@@ -281,7 +360,7 @@ void UCrowdControlComponent::GroupToShareInfoNotified(AActor* AI, FSharingInfoWi
     }
 
     //@State Tag
-    if (!SharingInfo.StateTag.IsValid())
+    if (!SharingInfo.InfoTag.IsValid())
     {
         UE_LOGFMT(LogCrowdCtrl, Warning, "그룹 정보 수신 실패: AI {0}에서 유효하지 않은 상태 태그", *AI->GetName());
         return;
@@ -328,7 +407,7 @@ void UCrowdControlComponent::GroupToShareInfoNotified(AActor* AI, FSharingInfoWi
 
     UE_LOGFMT(LogCrowdCtrl, Log, "그룹 정보 수신: AI={0}, 상태={1}, 공유유형={2}, 우선순위={3}, 대상 수={4}, ID={5}",
         *AI->GetName(),
-        *SharingInfo.StateTag.ToString(),
+        *SharingInfo.InfoTag.ToString(),
         *UEnum::GetValueAsString(SharingInfo.SharingType),
         SharingInfo.Priority,
         Query.Recipients.Num(),

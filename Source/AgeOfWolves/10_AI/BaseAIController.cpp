@@ -23,6 +23,7 @@
 
 #include "15_SaveGame/AOWSaveGame.h"
 #include "00_GameInstance/AOWGameInstance.h"
+#include "GameFramework/CharacterMovementComponent.h"
 #include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogBaseAIC)
@@ -149,42 +150,115 @@ void ABaseAIController::OnPossess(APawn* InPawn)
 
 void ABaseAIController::UpdateControlRotation(float DeltaTime, bool bUpdatePawn)
 {
+    // 부모 클래스의 기본 업데이트를 먼저 호출 (bUpdatePawn은 false로 설정)
     Super::UpdateControlRotation(DeltaTime, false);
 
+    // 소유한 폰이 유효한지 확인
     APawn* const AgentPawn = GetPawn();
-    if (!AgentPawn) return;
-
-    //@BB의 타겟 액터 확인
-    AActor* TargetActor = nullptr;
-    if (BBComponent)
+    if (!AgentPawn)
     {
-        TargetActor = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+        return;
     }
 
-    //@타겟이 없으면 회전 업데이트 하지 않음
-    if (!TargetActor) return;
+    // 회전 업데이트가 필요하지 않은 경우 조기 반환
+    if (CurrentUpdateControlRotationType == EAIUpdateControlRotationType::None)
+    {
+        return;
+    }
 
-    //@현재 위치와 회전
+    // === 공통 변수 선언 ===
     FVector Start = AgentPawn->GetActorLocation();
     FRotator CurrentRotation = GetControlRotation();
+    FVector TargetLocation = FVector::ZeroVector;
+    float RotationSpeed = SmootRotationSpeed; // 기본값은 멤버 변수 사용
+    bool bShouldCheckCompletion = false; // 회전 완료 체크가 필요한지 여부
 
-    //@타겟을 향한 회전 계산 (GetFocalPoint 대신 직접 타겟 위치 사용)
-    TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, TargetActor->GetActorLocation());
+    // === 회전 타입에 따른 타겟 위치 및 설정 결정 ===
+    switch (CurrentUpdateControlRotationType)
+    {
+    case EAIUpdateControlRotationType::TargetActor:
+    {
+        // 블랙보드에서 타겟 액터 가져오기
+        AActor* TargetActor = nullptr;
+        if (BBComponent)
+        {
+            TargetActor = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+        }
 
-    //@Yaw만 사용
+        // 타겟 액터가 유효하지 않으면 회전 중단
+        if (!TargetActor)
+        {
+            CurrentUpdateControlRotationType = EAIUpdateControlRotationType::None;
+            return;
+        }
+
+        TargetLocation = TargetActor->GetActorLocation();
+        // TargetActor 회전은 기본 SmootRotationSpeed 사용
+        // bShouldCheckCompletion은 false (연속적인 추적)
+        break;
+    }
+
+    case EAIUpdateControlRotationType::TargetLocation:
+    {
+        TargetLocation = TargetLocationForUpdateRotation;
+        RotationSpeed = 10.f; // 위치 기반 회전은 더 빠른 속도 사용
+        bShouldCheckCompletion = true; // 완료 체크 필요
+        break;
+    }
+
+    default:
+    {
+        // 예상치 못한 타입이면 None으로 설정하고 반환
+        CurrentUpdateControlRotationType = EAIUpdateControlRotationType::None;
+        return;
+    }
+    }
+
+    // 타겟을 향한 회전 계산 (LookAt 회전 계산)
+    TargetRotation = UKismetMathLibrary::FindLookAtRotation(Start, TargetLocation);
+
+    // Pitch와 Roll은 0으로 설정 (Yaw만 사용하여 수평 회전만)
     TargetRotation.Pitch = 0.0f;
     TargetRotation.Roll = 0.0f;
 
-    //@보간된 최종 회전 계산
+    // 현재 회전에서 목표 회전으로 부드럽게 보간
     FRotator FinalRotation = UKismetMathLibrary::RInterpTo(
         CurrentRotation,
         TargetRotation,
         DeltaTime,
-        SmootRotationSpeed
+        RotationSpeed
     );
 
-    //@컨트롤러 회전 설정
+    // 계산된 회전을 컨트롤러에 적용
     SetControlRotation(FinalRotation);
+
+    // === 회전 완료 체크 (TargetLocation 타입에서만) ===
+    if (bShouldCheckCompletion)
+    {
+        // Yaw 각도 차이를 계산 (절댓값으로)
+        float YawDiff = FMath::Abs(FMath::FindDeltaAngleDegrees(CurrentRotation.Yaw, TargetRotation.Yaw));
+
+        // 10도 이내로 가까워지면 회전 완료로 간주
+        if (YawDiff < 10.f)
+        {
+            // 회전 완료, 타입을 None으로 변경
+            CurrentUpdateControlRotationType = EAIUpdateControlRotationType::None;
+
+            UE_LOGFMT(LogBaseAIC, Log,
+                "위치 기반 회전 완료 | 각도 차이: {0}도, 목표 위치: {1}",
+                YawDiff, *TargetLocationForUpdateRotation.ToString());
+        }
+        else
+        {
+            // 디버깅용 로그 (개발 중에만 활성화)
+            UE_LOGFMT(LogBaseAIC, VeryVerbose,
+                "위치 기반 회전 진행 중 | 각도 차이: {0}도, 목표: {1}, 현재: {2}, 최종: {3}",
+                YawDiff,
+                *TargetLocationForUpdateRotation.ToString(),
+                *CurrentRotation.ToString(),
+                *FinalRotation.ToString());
+        }
+    }
 }
 
 void ABaseAIController::ExternalBindToAnimInstance(APawn* InPawn)
@@ -258,6 +332,10 @@ void ABaseAIController::InternalBindingToASC()
 
     //@내부 바인딩
     AbilitySystemComponent->CharacterStateEventOnGameplay.AddUFunction(this, "OnCharacterStateEventOnGameplay");
+
+    AbilitySystemComponent->GenericGameplayEventCallbacks.FindOrAdd(FGameplayTag::RequestGameplayTag("EventTag.OnDamaged"))
+    .AddUObject(this, &ABaseAIController::OnDamagedEventOnGamePlay);
+    
 
     UE_LOGFMT(LogBaseAIC, Log, "캐릭터 상태 이벤트 콜백이 성공적으로 바인딩되었습니다");
 }
@@ -485,6 +563,7 @@ void ABaseAIController::LoadAbilitySystemFromSaveGame(UAOWSaveGame* SaveGame)
 
 void ABaseAIController::ChangeAgentAIState(EAIState InStateType)
 {
+    AIState = InStateType;
 }
 
 void ABaseAIController::HandleCharacterStateEvent(const FGameplayTag& CharacterStateTag)
@@ -503,8 +582,13 @@ void ABaseAIController::HandleCharacterStateEvent(const FGameplayTag& CharacterS
         {
             UE_LOGFMT(LogBaseAIC, Log, "캐릭터가 처형되었습니다. 그룹에 정보 전송을 시작합니다.");
 
-            //@처형 정보를 높은 우선순위로 그룹에 공유
-            ShareInfoToGroup(CharacterStateTag, EAISharingInfoType::All, 10);
+            // 공유 정보 태그 추출/InfoToShare.CrowdControl/Simple
+            FGameplayTag InfoTag = FGameplayTag::RequestGameplayTag("InfoToShare.CrowdControl.AIExecuted");
+            if (InfoTag.IsValid())
+            {
+                //@타겟 감지를 다른 AI에게 공유하도록 정보 공유
+                ShareInfoToGroup(InfoTag, EAISharingInfoType::All, 10);
+            }
         }
 
         //@캐릭터 죽음 처리 (모든 사망 케이스에 공통)
@@ -610,10 +694,11 @@ void ABaseAIController::UnbindTargetActorStateEvents(AActor* OldTarget)
 }
 
 bool ABaseAIController::ShareInfoToGroup(
-    const FGameplayTag& StateTag,
+    const FGameplayTag& InfoTag,  // 매개변수명 변경
     EAISharingInfoType SharingType,
     int32 Priority,
-    float ValidTime)
+    float ValidTime,
+    AActor* OptionalObject)
 {
     // 소유한 Pawn이 있는지 확인
     AActor* ControlledActor = GetPawn();
@@ -623,26 +708,43 @@ bool ABaseAIController::ShareInfoToGroup(
         return false;
     }
 
-    //@FSharingInfoWithGroup
+    // InfoTag 유효성 검증 - 태그 계층 구조 확인
+    if (!InfoTag.IsValid())
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "정보 공유 실패: 유효하지 않은 InfoTag");
+        return false;
+    }
+
+    // 태그가 올바른 계층 구조를 따르는지 확인
+    // 예상 형태: "InfoShare.Simple.~", "InfoShare.CrowdControl.~" 등
+    FString InfoTagString = InfoTag.ToString();
+    if (!InfoTagString.StartsWith(TEXT("InfoToShare.")))
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "정보 공유 실패: Info0Tag는 'InfoToShare.'로 시작해야 합니다. 현재: {0}", *InfoTagString);
+        return false;
+    }
+
+    //@FSharingInfoWithGroup 생성 (ResultTag는 설정하지 않음)
     FSharingInfoWithGroup SharingInfo;
     SharingInfo.InfoID = FGuid::NewGuid();
     SharingInfo.SharingType = SharingType;
-    SharingInfo.StateTag = StateTag;
+    SharingInfo.InfoTag = InfoTag;  // StateTag 대신 InfoTag 설정
     SharingInfo.Priority = Priority;
     SharingInfo.ValidTime = ValidTime;
+    SharingInfo.OptionalObject = OptionalObject;
 
     //@그룹과 공유할 정보 전달 이벤트
     SendInfoToBelongingGroup.Broadcast(ControlledActor, SharingInfo);
 
-    UE_LOGFMT(LogBaseAIC, Log, "그룹 정보 공유 완료. 정보 ID: {0}, 상태: {1}, 우선순위: {2}",
-        *SharingInfo.InfoID.ToString(), *StateTag.ToString(), Priority);
+    UE_LOGFMT(LogBaseAIC, Log, "그룹 정보 공유 요청 완료. 정보 ID: {0}, InfoTag: {1}, 우선순위: {2}",
+        *SharingInfo.InfoID.ToString(), *InfoTag.ToString(), Priority);
 
     return true;
 }
 
 void ABaseAIController::ReceiveInfoFromGroup(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo)
 {
-    if (!IsValid(SenderAI) || !SharingInfo.StateTag.IsValid())
+    if (!IsValid(SenderAI) || !SharingInfo.InfoTag.IsValid())
     {
         UE_LOGFMT(LogBaseAIC, Warning, "그룹 정보 수신 실패: 유효하지 않은 발신자 또는 상태 태그");
         return;
@@ -658,28 +760,51 @@ void ABaseAIController::ReceiveInfoFromGroup(AActor* SenderAI, const FSharingInf
     //@전달 받은 공유 정보 처리
     ProcessReceivedGroupInfo(SenderAI, SharingInfo);
 
-    UE_LOGFMT(LogBaseAIC, Log, "그룹원 사망 정보 수신: 발신자={0}, 요청={1}",
+    UE_LOGFMT(LogBaseAIC, Log, "그룹원  정보 수신: 발신자={0}, 요청={1}",
         *SenderAI->GetName(), *SharingInfo.ResultTag.ToString());
 
 }
 
 void ABaseAIController::ProcessReceivedGroupInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo)
 {
-    //@유효성 검사
-    if (!IsValid(SenderAI) || !SharingInfo.StateTag.IsValid())
+    if (!IsValid(SenderAI) || !SharingInfo.ResultTag.IsValid())
     {
         UE_LOGFMT(LogBaseAIC, Warning, "정보 처리 실패: 유효하지 않은 발신자 또는 상태 태그");
         return;
     }
 
+    //@단순 정보 처리
+    if (SharingInfo.ResultTag.MatchesTag(FGameplayTag::RequestGameplayTag("Simple")))
+    {
+        ProcessSimpleInfo(SenderAI, SharingInfo);
+    }
     //@군중 제어 관련 태그 처리
-    if (SharingInfo.ResultTag.MatchesTag(FGameplayTag::RequestGameplayTag("CrowdControl")))
+    else if (SharingInfo.ResultTag.MatchesTag(FGameplayTag::RequestGameplayTag("CrowdControl")))
     {
         ProcessCrowdControlInfo(SenderAI, SharingInfo);
     }
 
     UE_LOGFMT(LogBaseAIC, Log, "그룹 정보 처리 완료 | 발신자: {0}, 태그: {1}, 우선순위: {2}",
         *SenderAI->GetName(), *SharingInfo.ResultTag.ToString(), SharingInfo.Priority);
+}
+
+void ABaseAIController::ProcessSimpleInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo)
+{
+    if (!SharingInfo.ResultTag.IsValid())
+    {
+        return;
+    }
+
+    const FGameplayTag LostTargetTag = FGameplayTag::RequestGameplayTag("Simple.LostTargetActor");
+
+    if (SharingInfo.ResultTag.MatchesTagExact(LostTargetTag))
+    {
+        bPlayerInCurrentArea = false;
+        UE_LOGFMT(LogBaseAIC, Log, "Player Area 이탈 정보 수신 - bPlayerInCurrentArea=false 설정");
+    }
+
+    UE_LOGFMT(LogBaseAIC, Log, "단순 정보 처리 완료 | 발신자: {0}, 태그: {1}",
+        SenderAI ? *SenderAI->GetName() : TEXT("System"), *SharingInfo.ResultTag.ToString());
 }
 
 void ABaseAIController::ProcessCrowdControlInfo(AActor* SenderAI, const FSharingInfoWithGroup& SharingInfo)
@@ -689,28 +814,43 @@ void ABaseAIController::ProcessCrowdControlInfo(AActor* SenderAI, const FSharing
         return;
     }
 
-    //@CrowdControl.Threatened : 대상에 대한 '공포' 반응
-    if (SharingInfo.ResultTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("CrowdControl.Threatened")))
+    const FGameplayTag ThreatenedTag     = FGameplayTag::RequestGameplayTag("CrowdControl.Threatened");    //@ 대상에 대한 '공포' 반응
+    const FGameplayTag CoverFireReqTag   = FGameplayTag::RequestGameplayTag("CrowdControl.CoverFireRequested");  //@  CoverFire요청 반응
+
+    const FGameplayTag& ResultTag = SharingInfo.ResultTag;
+
+    //@ CrowdControl.Threatened : 전투 중 상태만 이벤트 발생
+    if (ResultTag.MatchesTagExact(ThreatenedTag))
     {
-        //@현재 전투 중인지 확인
         AActor* CurrentTarget = nullptr;
         if (BBComponent)
         {
             CurrentTarget = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
         }
 
-        //@타겟이 있는 경우만 이벤트 발생
         if (!IsValid(CurrentTarget))
         {
             return;
         }
 
-        //@군중 제어 발생 이벤트 호출
-        CrowdControlEventTriggered.ExecuteIfBound(SharingInfo.ResultTag);
+        CrowdControlEventTriggered.ExecuteIfBound(ResultTag);
 
         UE_LOGFMT(LogBaseAIC, Log, "위협 상태에서 전투 중 - 군중 제어 이벤트 발생 | 타겟: {0}, 우선순위: {1}",
             *CurrentTarget->GetName(), SharingInfo.Priority);
     }
+    //@ CrowdControl.CoverFireRequested : CoverFire요청 반응
+    else if (ResultTag.MatchesTagExact(CoverFireReqTag))
+    {
+        // 블랙보드 값들을 업데이트합니다
+        BBComponent->SetValueAsBool("Contact", true);
+        BBComponent->SetValueAsObject("TargetActor", SharingInfo.OptionalObject);
+        
+        CrowdControlEventTriggered.ExecuteIfBound(ResultTag);
+
+        UE_LOGFMT(LogBaseAIC, Log, "CoverFire요청 반응 - 군중 제어 이벤트 발생 | 타겟: {0}",
+    *SharingInfo.OptionalObject->GetName());
+    }
+
 
     UE_LOGFMT(LogBaseAIC, Log, "군중 제어 이벤트 발생 | 발신자: {0}, 군중 제어 요청: {1}, 우선순위: {2}",
         *SenderAI->GetName(), *SharingInfo.ResultTag.ToString(), SharingInfo.Priority);
@@ -721,12 +861,10 @@ void ABaseAIController::ProcessCrowdControlInfo(AActor* SenderAI, const FSharing
 #pragma region Callbacks
 void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
 {
-    //@Perception 주체
+    // ========== 1단계: 기본 유효성 검사 ==========
     ACharacterBase* OwningCharacter = Cast<ACharacterBase>(GetPawn());
-    //@Perception 대상
     ACharacterBase* SensedCharacter = Cast<ACharacterBase>(Actor);
 
-    //@Owning Character, Sensed Character
     if (!OwningCharacter || !SensedCharacter)
     {
         UE_LOGFMT(LogBaseAIC, Warning, "AI 퍼셉션 실패: 소유 캐릭터({0}), 감지된 캐릭터({1})",
@@ -735,7 +873,7 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
         return;
     }
 
-    //@팀 체크
+    // ========== 2단계: 팀 관계 확인 ==========
     ETeamAttitude::Type Attitude = GetTeamAttitudeTowards(*SensedCharacter);
     if (Attitude != ETeamAttitude::Hostile)
     {
@@ -745,31 +883,111 @@ void ABaseAIController::OnPerception(AActor* Actor, FAIStimulus Stimulus)
         return;
     }
 
-    UE_LOGFMT(LogBaseAIC, Log, "{0} 캐릭터 감지!", SensedCharacter->GetName());
+    // ========== 3단계: 현재 블랙보드 상태 확인 ==========
+    if (!BBComponent)
+    {
+        UE_LOGFMT(LogBaseAIC, Warning, "블랙보드 컴포넌트가 유효하지 않습니다");
+        return;
+    }
 
-    //@FAIStimulus
+    AActor* CurrentTarget = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+    bool bCurrentlyHasContact = BBComponent->GetValueAsBool("Contact");
+
+    // ========== 4단계: 감지 상태에 따른 분기 처리 ==========
     if (Stimulus.WasSuccessfullySensed())
     {
-        BBComponent->SetValueAsBool("Contact", Stimulus.WasSuccessfullySensed());
-        BBComponent->SetValueAsObject("TargetActor", Actor);
-        BBComponent->SetValueAsVector("MoveToLocation", Stimulus.StimulusLocation);
+        // ===== 4-1: 감지 성공 케이스 처리 =====
+        UE_LOGFMT(LogBaseAIC, Log, "{0} 캐릭터 감지 성공!", SensedCharacter->GetName());
 
-        //@Target Actor의 상태 변화 이벤트에 바인딩 수행
-        BindTargetActorStateEvents(Actor);
-
-        //@타겟 인지 성공 이벤트
-        if (!!AgentPawnRef.IsValid())
+        if (!CurrentTarget || CurrentTarget == Actor)
         {
-            AIDetectsTarget.Broadcast(true, AgentPawnRef.Get(), Actor);
+            BBComponent->SetValueAsBool("Contact", true);
+            BBComponent->SetValueAsObject("TargetActor", Actor);
+            BBComponent->SetValueAsVector("MoveToLocation", Stimulus.StimulusLocation);
+
+            if (CurrentTarget != Actor)
+            {
+                if (CurrentTarget)
+                {
+                    UnbindTargetActorStateEvents(CurrentTarget);
+                    UE_LOGFMT(LogBaseAIC, Log, "기존 타겟 {0}의 이벤트 바인딩 해제", *CurrentTarget->GetName());
+                }
+
+                BindTargetActorStateEvents(Actor);
+                UE_LOGFMT(LogBaseAIC, Log, "새로운 타겟 {0}에 이벤트 바인딩 완료", *Actor->GetName());
+            }
+
+            if (AgentPawnRef.IsValid())
+            {
+                AIDetectsTarget.Broadcast(true, AgentPawnRef.Get(), Actor);
+            }
+
+            FGameplayTag InfoTag = FGameplayTag::RequestGameplayTag("InfoToShare.CrowdControl.CoverFireRequested");
+            if (InfoTag.IsValid())
+            {
+                ShareInfoToGroup(InfoTag, EAISharingInfoType::All, 1, 5.f, Actor);
+            }
+
+            AILockOnStateChanged.Broadcast(true, Actor);
+
+            UE_LOGFMT(LogBaseAIC, Log, "타겟 설정 완료: Contact=true, TargetActor={0}", *Actor->GetName());
         }
         else
         {
-            UE_LOGFMT(LogBaseAIC, Warning, "유효하지 않음!");
+            UE_LOGFMT(LogBaseAIC, Log, "다른 타겟({0})이 이미 설정되어 있어 새로운 타겟({1}) 무시",
+                *CurrentTarget->GetName(), *Actor->GetName());
         }
-
-        //@Lock On 이벤트 호출
-        AILockOnStateChanged.Broadcast(true, Actor);
     }
+    else
+    {
+        // ===== 4-2: 감지 실패 케이스 처리 (조건부 타겟 해제) =====
+        UE_LOGFMT(LogBaseAIC, Log, "{0} 캐릭터 감지 소실!", SensedCharacter->GetName());
+
+        if (CurrentTarget == Actor)
+        {
+            UE_LOGFMT(LogBaseAIC, Log, "현재 타겟 {0}에 대한 감지 소실 - 조건부 타겟 해제 검사", *Actor->GetName());
+
+            // Player가 Area에서 벗어났고 + 시야에서도 사라진 경우에만 해제
+            if (!bPlayerInCurrentArea)
+            {
+                BBComponent->SetValueAsBool("Contact", false);
+                BBComponent->SetValueAsObject("TargetActor", nullptr);
+
+                UnbindTargetActorStateEvents(Actor);
+
+                if (AgentPawnRef.IsValid())
+                {
+                    AIDetectsTarget.Broadcast(false, AgentPawnRef.Get(), Actor);
+                }
+
+                AILockOnStateChanged.Broadcast(false, nullptr);
+
+                UE_LOGFMT(LogBaseAIC, Log, "Player Area 이탈 + 시야 소실로 타겟 해제: Contact=false, TargetActor=nullptr");
+            }
+            else
+            {
+                UE_LOGFMT(LogBaseAIC, Log, "Player가 Area 내에 있으므로 타겟 유지");
+            }
+        }
+        else if (CurrentTarget)
+        {
+            UE_LOGFMT(LogBaseAIC, Log, "감지 소실된 액터({0})가 현재 타겟({1})과 다름 - 블랙보드 상태 유지",
+                *Actor->GetName(), *CurrentTarget->GetName());
+        }
+        else
+        {
+            UE_LOGFMT(LogBaseAIC, Log, "타겟이 설정되지 않은 상태에서 {0}의 감지 소실 - 처리 불필요", *Actor->GetName());
+        }
+    }
+
+    // ========== 5단계: 최종 상태 로그 출력 ==========
+    AActor* FinalTarget = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+    bool bFinalContact = BBComponent->GetValueAsBool("Contact");
+
+    UE_LOGFMT(LogBaseAIC, Log, "OnPerception 처리 완료 | Contact: {0}, TargetActor: {1}, StimulusType: {2}",
+        bFinalContact ? TEXT("true") : TEXT("false"),
+        FinalTarget ? FinalTarget->GetName() : TEXT("None"),
+        Stimulus.WasSuccessfullySensed() ? TEXT("Detected") : TEXT("Lost"));
 }
 
 void ABaseAIController::OnTargetPerceptionLost(AActor* Actor)
@@ -778,17 +996,46 @@ void ABaseAIController::OnTargetPerceptionLost(AActor* Actor)
 
     UE_LOGFMT(LogBaseAIC, Log, "타겟 {0}에 대한 인지가 소실되었습니다.", *Actor->GetName());
 
-    //@타겟 인지 성공 이벤트
-    if (!!AgentPawnRef.IsValid())
+    // 현재 블랙보드의 TargetActor와 인지를 잃은 Actor가 동일한지 확인
+    if (BBComponent)
+    {
+        AActor* CurrentTarget = Cast<AActor>(BBComponent->GetValueAsObject("TargetActor"));
+
+        // 인지를 잃은 Actor가 현재 타겟과 동일한 경우에만 블랙보드 초기화
+        if (CurrentTarget == Actor)
+        {
+            // Contact 상태를 false로 설정
+            BBComponent->SetValueAsBool("Contact", false);
+
+            // TargetActor를 nullptr로 설정
+            BBComponent->SetValueAsObject("TargetActor", nullptr);
+
+            // 이동 목표 위치도 초기화
+            BBComponent->ClearValue("MoveToLocation");
+
+            // 타겟 액터의 상태 이벤트 바인딩 해제
+            UnbindTargetActorStateEvents(Actor);
+
+            UE_LOGFMT(LogBaseAIC, Log, "블랙보드 값 초기화 완료: Contact=false, TargetActor=nullptr");
+        }
+        else
+        {
+            UE_LOGFMT(LogBaseAIC, Log, "인지 소실된 액터({0})가 현재 타겟({1})과 다름 - 블랙보드 유지",
+                *Actor->GetName(),
+                CurrentTarget ? *CurrentTarget->GetName() : TEXT("None"));
+        }
+    }
+
+    // 타겟 인지 소실 이벤트 브로드캐스트
+    if (AgentPawnRef.IsValid())
     {
         AIDetectsTarget.Broadcast(false, AgentPawnRef.Get(), Actor);
     }
-     
-    //@Lock On 상태 변경 이벤트 호출
+
+    // Lock On 상태 변경 이벤트 호출
     AILockOnStateChanged.Broadcast(false, nullptr);
 
     UE_LOGFMT(LogBaseAIC, Log, "AI가 {0}을(를) 놓쳐 Lock On 상태 해제", *Actor->GetName());
-
 }
 
 void ABaseAIController::OnAttributeValueChanged(const FOnAttributeChangeData& Data)
@@ -847,6 +1094,42 @@ void ABaseAIController::OnCharacterStateEventOnGameplay(AActor* Actor, const FGa
     UE_LOGFMT(LogBaseAIC, Log,
         "AI 캐릭터 상태 이벤트 처리 | 태그: {0}",
         CharacterStateTag.GetTagName().ToString());
+}
+
+void ABaseAIController::OnDamagedEventOnGamePlay(const FGameplayEventData* Payload)
+{
+    if (!Payload) return;
+
+    //@AI State가 Idle 이면
+    if (AIState == EAIState::Idle)
+    {
+        APawn* const AgentPawn = GetPawn();
+        if (!AgentPawn) return; 
+
+        ACharacter* MyCharacter = Cast<ACharacter>(AgentPawn);
+        if (!MyCharacter) return;
+
+
+        //@ 히트 지점으로 돌아볼수 있게 위치 캐싱
+        TargetLocationForUpdateRotation = Payload->ContextHandle.GetHitResult()->ImpactPoint;
+        //@ Tick에서 회전할수 있게 타입 설정
+        CurrentUpdateControlRotationType = EAIUpdateControlRotationType::TargetLocation;
+
+        //@ControllRotation 할것이기에 제어 플레그 true
+        UCharacterMovementComponent* CharacterMovementComp = MyCharacter->GetCharacterMovement();
+        if (CharacterMovementComp)
+        {
+            CharacterMovementComp->bUseControllerDesiredRotation = true;
+            CharacterMovementComp->bOrientRotationToMovement = false;
+        }
+        
+        UE_LOG(LogBaseAIC, Log, TEXT("OnDamagedEventOnGamePlay [AI] OnDamaged 이벤트 수신 => impactPoint : %s")
+            , *TargetLocationForUpdateRotation.ToString());
+    }
+    else
+    {
+        UE_LOG(LogBaseAIC, Log, TEXT("OnDamagedEventOnGamePlay [AI] OnDamaged 이벤트 수신 하였지만 AIState가 Idle 아님"));
+    }
 }
 
 bool ABaseAIController::OnCombatPatternExitComplete()
@@ -928,5 +1211,38 @@ ETeamAttitude::Type ABaseAIController::GetTeamAttitudeTowards(const AActor& Othe
     return GetGenericTeamId() == OtherTeamAgent->GetGenericTeamId()
         ? ETeamAttitude::Friendly
         : ETeamAttitude::Hostile;
+}
+
+FGameplayTag ABaseAIController::GetCurrentCharacterStateTag() const
+{
+    if (!AbilitySystemComponent)
+    {
+        return FGameplayTag(); // Invalid
+    }
+
+    FGameplayEffectQuery Query; // 전체 매칭용 Query
+    TArray<FActiveGameplayEffectHandle> Handles = AbilitySystemComponent->GetActiveEffects(Query);
+
+    for (const FActiveGameplayEffectHandle& Handle : Handles)
+    {
+        const FActiveGameplayEffect* ActiveEffect = AbilitySystemComponent->GetActiveGameplayEffect(Handle);
+        if (!ActiveEffect || !ActiveEffect->Spec.Def)
+        {
+            continue;
+        }
+
+        const FGameplayTagContainer& AssetTags = ActiveEffect->Spec.Def->InheritableGameplayEffectTags.Added;
+
+        for (const FGameplayTag& Tag : AssetTags)
+        {
+            if (Tag.MatchesTag(FGameplayTag::RequestGameplayTag("State")))
+            {
+                UE_LOGFMT(LogASC, Log, "현재 적용된 상태 태그: {0}", Tag.ToString());
+                return Tag;
+            }
+        }
+    }
+    
+    return FGameplayTag(); // 상태가 없을 경우
 }
 #pragma endregion

@@ -10,11 +10,12 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 
-//@전방 선언
-#pragma region Forward Declaration
+//@전방 선언#pragma region Forward Declaration
+
 class UANS_AllowChainAction;
 class UBaseAttributeSet;
 class ABaseAIController;
+class APlayerStateBase;
 
 struct FDeathInformation;
 #pragma endregion
@@ -53,6 +54,15 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionActivated, AActor*, Int
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionFailed, AActor*, InteractableActor, const FPotentialInteraction&, FailedInteraction);
 //@상호작용 완료 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionCompleted, AActor*, InteractableActor, const FPotentialInteraction&, CompletedInteraction);
+
+//@데미지 전달 알림 이벤트
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FDamageDealtByActor, AActor* /* Source */, AActor* /* Target */, const FGameplayEventData& /* EventData */)
+
+//@데미지 이벤트 전처리 델리게이트 (강공격 파훼용)
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FDamageEventPreProcess,
+	const FGameplayTag&, /* EventTag */
+	const FGameplayEventData&, /* EventData */
+	bool& /* bShouldContinueProcessing */);
 #pragma endregion
 
 /**
@@ -84,6 +94,7 @@ protected:
 
 protected:
 	//@외부 바인딩
+	void ExternalBindToPlayerState(APlayerStateBase* PlayerState);
 	void ExternalBindToAIAbilitySequencer(ABaseAIController* BaseAIC);
 	void ExternalBindToAIController(ABaseAIController* BaseAIC);
 	void ExternalBindToInteractionComp(AController* Controller);
@@ -230,6 +241,14 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
 		FInteractionCompleted InteractionCompleted;
+
+public:
+	//@데미지 전달 이벤트
+	FDamageDealtByActor DamageDealtByActor;
+
+protected:
+	//@데미지 이벤트 전처리 델리게이트
+	FDamageEventPreProcess DamageEventPreProcess;
 #pragma endregion
 
 //@Callbacks
@@ -265,6 +284,16 @@ private:
 	//@Game State 리스폰 완료 콜백 함수
 	UFUNCTION()
 	void OnPlayerRespawnCompleted(APlayerController* RespawnedPlayerController);
+
+private:
+	//@어빌리티 등록 요청 이벤트
+	UFUNCTION()
+		void OnRequestGrantAbilities(const TArray<TSubclassOf<UBaseGameplayAbility>>& Abilities, const FGameplayTag& ItemTag, bool bAllowDuplicate);
+	UFUNCTION()
+		void OnRequestActivateAbilities(const TArray<TSubclassOf<UBaseGameplayAbility>>& Abilities, const FGameplayTag& ItemTag, bool bForceActivate);
+	//@이팩트 적용 요청 이벤트
+	UFUNCTION()
+		void OnRequestApplyEffects(const TArray<TSubclassOf<UGameplayEffect>>& Effects, const FGameplayTag& ItemTag, bool bAllowDuplicate);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -286,6 +315,15 @@ public:
 public:
 	FORCEINLINE void SetAbilityTagRelationshipMapping(UAbilityTagRelationshipMapping* ATRM) { AbilityTagRelationshipMapping = ATRM; }
 
+protected:
+	/**
+	 * 체인 관련 이벤트의 Payload를 구성하는 헬퍼 함수
+	 * @param EventTag - 처리할 이벤트 태그
+	 * @param OutEventData - 구성된 이벤트 데이터 (출력)
+	 * @return 체인 관련 이벤트이고 유효한 Payload를 구성했는지 여부
+	 */
+	bool CreateChainEventPayload(const FGameplayTag& EventTag, OUT FGameplayEventData& OutEventData);
+
 public:
 	FORCEINLINE bool IsChainWindowActive() const { return bChainWindowActive; }
 
@@ -296,6 +334,10 @@ public:
 
 private:
 	FString CleanStateTagName(const FString& OriginalTagName);
+
+public:
+	//@데미지 이벤트 전처리 이벤트
+	FORCEINLINE FDamageEventPreProcess& GetDamageEventPreProcess() { return DamageEventPreProcess; }
 #pragma endregion
 
 };

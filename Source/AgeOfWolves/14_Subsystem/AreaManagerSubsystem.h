@@ -1,14 +1,18 @@
 #pragma once
 
 #include "CoreMinimal.h"
+#include "GameplayTagContainer.h"
 #include "Subsystems/GameInstanceSubsystem.h"
 
 #include "AreaManagerSubsystem.generated.h"
 
 //@전방 선언
 #pragma region Forward Declaration
+struct FAreaQuestDataSet;
 class AArea;
 struct FAIGroupInfo;
+class UAreaQuestDataInfos;
+struct FAreaAIInfo;
 #pragma endregion
 
 //@열거형
@@ -41,6 +45,8 @@ class AGEOFWOLVES_API UAreaManagerSubsystem : public UGameInstanceSubsystem
 #pragma region Default Setting
 public:
     //@초기화
+    UAreaManagerSubsystem();
+    
     virtual void Initialize(FSubsystemCollectionBase& Collection) override;
     virtual void Deinitialize() override;
 #pragma endregion
@@ -59,6 +65,10 @@ private:
     //@등록된 Area 맵
     UPROPERTY()
     TMap<FGuid, AArea*> RegisteredAreas;
+
+    //@AreaQuest 정보 참조
+    UPROPERTY()
+    TObjectPtr<UAreaQuestDataInfos> AreaQuestDataInfos;
 #pragma endregion
 
 //@Delegates
@@ -88,6 +98,18 @@ public:
 
     UFUNCTION(BlueprintCallable, Category = "Area|AI")
     AActor* GetPatrolPathForGroup(const FGuid& GroupID) const;
+
+    //@Area의 살아있는 AI 정보만 가져오기
+    UFUNCTION(BlueprintCallable, Category = "Area|AI")
+    TArray<FAreaAIInfo> GetAreaAliveAIInfos(const FGuid& AreaID) const;
+
+    //@ Area의 QuestData 제공
+    UFUNCTION(BlueprintCallable, Category = "Area|Quest")
+    FAreaQuestDataSet GetAreaQuestDataSet(FGameplayTag AreaTag) const;
+
+    //@ AreaQuestDataInfos 제공
+    UFUNCTION(BlueprintCallable, Category = "Area|Quest")
+    const UAreaQuestDataInfos* GetAreaQuestDataInfos() const;
 #pragma endregion
 
 };
