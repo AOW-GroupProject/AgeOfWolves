@@ -1,0 +1,12 @@
+/NOLOGO
+/errorReport:prompt
+/MACHINE:x64
+/SUBSYSTEM:WINDOWS
+/DEF
+/NAME:"UnrealEditor-WwiseFileHandler.dll"
+/IGNORE:4221
+/NODEFAULTLIB
+"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Engine\SharedPCH.Engine.ShadowErrors.InclOrderUnreal5_1.h.obj"
+"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseFileHandler\Module.WwiseFileHandler.cpp.obj"
+"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseFileHandler\Default.rc2.res"
+/OUT:"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseFileHandler\UnrealEditor-WwiseFileHandler.lib"
