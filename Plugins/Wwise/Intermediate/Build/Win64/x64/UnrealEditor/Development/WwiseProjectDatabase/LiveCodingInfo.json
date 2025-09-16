@@ -2,6 +2,9 @@
 	"RemapUnityFiles": 
 	{
 		"Module.WwiseProjectDatabase.cpp.obj": [
+			"WwiseDatabaseIdentifiers.gen.cpp.obj",
+			"WwiseProjectDatabase.init.gen.cpp.obj",
+			"WwiseRefType.gen.cpp.obj",
 			"WwiseMetadataAcousticTexture.cpp.obj",
 			"WwiseMetadataActionEntries.cpp.obj",
 			"WwiseMetadataBasicReference.cpp.obj",
@@ -70,10 +73,7 @@
 			"WwiseGeneratedFiles.cpp.obj",
 			"WwiseProjectDatabase.cpp.obj",
 			"WwiseProjectDatabaseImpl.cpp.obj",
-			"WwiseProjectDatabaseModuleImpl.cpp.obj",
-			"WwiseDatabaseIdentifiers.gen.cpp.obj",
-			"WwiseProjectDatabase.init.gen.cpp.obj",
-			"WwiseRefType.gen.cpp.obj"
+			"WwiseProjectDatabaseModuleImpl.cpp.obj"
 		]
 	}
 }

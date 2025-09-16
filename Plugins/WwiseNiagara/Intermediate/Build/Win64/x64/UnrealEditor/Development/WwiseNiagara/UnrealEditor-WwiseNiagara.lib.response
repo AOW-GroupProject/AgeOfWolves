@@ -8,7 +8,5 @@
 /NODEFAULTLIB
 "F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Engine\SharedPCH.Engine.ShadowErrors.InclOrderUnreal5_1.h.obj"
 "F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\WwiseNiagara\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseNiagara\Module.WwiseNiagara.cpp.obj"
-"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\WwiseNiagara\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseNiagara\NiagaraDataInterfaceWwiseEvent.gen.cpp.obj"
-"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\WwiseNiagara\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseNiagara\WwiseNiagara.init.gen.cpp.obj"
 "F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\WwiseNiagara\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseNiagara\Default.rc2.res"
 /OUT:"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\WwiseNiagara\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseNiagara\UnrealEditor-WwiseNiagara.lib"
