@@ -246,6 +246,20 @@ protected:
 	void ListenToCombatStateAttributeChange();
 
 protected:
+	/*
+	 * 발도술 자세 전환 시 이동 블록 처리
+	 * Combat State 변경 시 호출되어 이동 입력을 제어합니다.
+	 */
+	void HandleBattoujutsuMovementBlock(ECombatType OldCombatType, ECombatType NewCombatType);
+
+protected:
+	/*
+		* Combat State 변경 시 Saya 소켓 변경 처리
+		* Guard(2) -> Normal(1) 변경 시 Saya를 "Saya" -> "FullWeapon" 소켓으로 이동
+		*/
+	void HandleSayaSocketChange(ECombatType OldCombatType, ECombatType NewCombatType);
+
+protected:
 	// === 상태 기계 관련 변수들 ===
 
 	/*

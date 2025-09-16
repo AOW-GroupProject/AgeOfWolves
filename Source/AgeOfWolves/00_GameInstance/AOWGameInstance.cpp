@@ -1,8 +1,13 @@
 #include "AOWGameInstance.h"
 #include "Logging/StructuredLog.h"
-#include "Kismet/GameplayStatics.h"
+
+#include "14_Subsystem/LevelManagerSubsystem.h"
 
 #include "15_SaveGame/AOWSaveGame.h"
+#include "16_Level/AreaQuestDataInfos.h"
+#include "17_GameMode/AOWGameState.h"
+
+#include "Kismet/GameplayStatics.h"
 
 DEFINE_LOG_CATEGORY(LogGameInstance)
  //UE_LOGFMT(LogGameInstance, Log, "");
@@ -37,13 +42,18 @@ void UAOWGameInstance::Init()
         UE_LOGFMT(LogGameInstance, Log, "세이브 파일이 존재하지 않음 - 새 인스턴스 생성");
         SaveGameInstance = CreateNewSaveGameInstance();
     }
-
     //@Loading
     {
         FCoreUObjectDelegates::PreLoadMap.AddUObject(this, &UAOWGameInstance::PreLoadMapEvent);
         FCoreUObjectDelegates::PostLoadMapWithWorld.AddUObject(this, &UAOWGameInstance::PostLoadMapEvent);
         UE_LOGFMT(LogGameInstance, Log, "로딩 이벤트 델리게이트 바인딩 완료");
     }
+}
+
+void UAOWGameInstance::StartGameInstance()
+{
+    Super::StartGameInstance();
+
 }
 
 void UAOWGameInstance::Shutdown()
@@ -80,6 +90,13 @@ bool UAOWGameInstance::DoesSaveGameExist()
     UE_LOGFMT(LogGameInstance, Log, "세이브 파일 존재 여부 확인 - 파일명: {0}, 인덱스: {1}, 결과: {2}",
         SaveFileName, SaveIndex, bExists ? TEXT("존재") : TEXT("없음"));
     return bExists;
+}
+
+bool UAOWGameInstance::SaveCompleteAreaQuest(FGameplayTag AreaTag, const FQuestDataInfo& QuestData)
+{
+    SaveGameInstance->AddCompleteAreaQuest(AreaTag, QuestData);
+    
+    return false;
 }
 
 UAOWSaveGame* UAOWGameInstance::GetSaveGameInstance()

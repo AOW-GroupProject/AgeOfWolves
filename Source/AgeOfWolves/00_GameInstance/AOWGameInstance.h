@@ -11,6 +11,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogGameInstance, Log, All);
 //@전방 선언
 #pragma region Forward Declaration
 class UAOWSaveGame;
+struct FQuestDataInfo;
 #pragma endregion
 
 //@열거형
@@ -41,7 +42,9 @@ public:
 
 public:
 	virtual void Init() override;
+	virtual void StartGameInstance() override;
 	virtual void Shutdown() override;
+
 #pragma endregion
 
 #pragma region Save File
@@ -51,6 +54,8 @@ protected:
 public:
 	bool DoesSaveGameExist();
 
+	UFUNCTION()
+	bool SaveCompleteAreaQuest(FGameplayTag AreaTag, const FQuestDataInfo& QuestData);
 private:
 	//@Save 파일 인스턴스
 	TObjectPtr<UAOWSaveGame> SaveGameInstance = nullptr;

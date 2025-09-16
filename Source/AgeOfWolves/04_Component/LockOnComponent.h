@@ -70,7 +70,7 @@ protected:
 
     //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
-protected:
+public:
     void StartLockOn();
     void CancelLockOn();
 

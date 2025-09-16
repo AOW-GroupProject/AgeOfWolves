@@ -39,6 +39,8 @@ void ABasePlayerController::PostInitializeComponents()
 {
 	Super::PostInitializeComponents();
     
+    //@외부 바인딩...
+
     //@바인딩
     if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
     {
@@ -109,23 +111,8 @@ void ABasePlayerController::PostProcessInput(const float DeltaTime, const bool b
 	Super::PostProcessInput(DeltaTime, bGamePaused);
 }
 
-void ABasePlayerController::InternalBindToPlayerState()
-{
-    if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
-    {
-        PS->NotifyPlayerDeathEvent.AddUFunction(this, "OnPlayerDeath");
-        PS->NotifyPlayerRevivalEvent.AddUFunction(this, "OnPlayerRevival");
-    }
-    
-    UE_LOGFMT(LogBasePC, Log, "Player State Death 이벤트 바인딩 완료");
-}
-
-
 void ABasePlayerController::InitializePlayerController()
 {
-    //@내부 바인딩...
-    InternalBindToPlayerState();
-
     //@Input Mode 설정
     SetupInputModeOnBeginPlay();
 
@@ -187,154 +174,10 @@ void ABasePlayerController::SetupViewportClientOnBeginPlay()
     ViewportClient->SetMouseLockMode(EMouseLockMode::LockAlways);
     ViewportClient->SetMouseCaptureMode(EMouseCaptureMode::CapturePermanently);
 }
-
-void ABasePlayerController::HandleCharacterDeath()
-{
-    UE_LOGFMT(LogBasePC, Warning, "캐릭터 사망 - 리스폰 시퀀스 시작");
-
-    DisableInput(this);
-    bRespawnCompleted = false; // 플래그 초기화
-
-    //@죽음 화면 표시 및 시퀀스 시작
-    if (UIComponent)
-    {
-        // UIComponent->ShowDeathScreen();
-        UE_LOGFMT(LogBasePC, Log, "죽음 화면 UI 표시");
-    }
-
-    //@시퀀스 시작
-    CurrentRespawnState = ERespawnState::DeathScreen;
-    GetWorldTimerManager().SetTimer(RespawnSequenceTimer, this, &ABasePlayerController::ProcessRespawnSequence, 3.0f, false);
-}
-
-
-void ABasePlayerController::ProcessRespawnSequence()
-{
-    switch (CurrentRespawnState)
-    {
-        case ERespawnState::DeathScreen:
-        {
-            //@로딩 화면으로 전환
-            if (UIComponent)
-            {
-                // UIComponent->HideDeathScreen();
-                // UIComponent->ShowLoadingScreen();
-                UE_LOGFMT(LogBasePC, Log, "로딩 화면 표시");
-            }
-
-            CurrentRespawnState = ERespawnState::LoadingScreen;
-            GetWorldTimerManager().SetTimer(RespawnSequenceTimer, this, &ABasePlayerController::ProcessRespawnSequence, 0.5f, false);
-            break;
-        }
-
-        case ERespawnState::LoadingScreen:
-        {
-            //@리스폰 실행
-            UE_LOGFMT(LogBasePC, Log, "리스폰 작업 실행");
-
-            if (auto GameMode = Cast<AAgeOfWolvesGameMode>(GetWorld()->GetAuthGameMode()))
-            {
-                if (IsValid(GameMode))
-                {
-                    GameMode->HandlePlayerDeath(this);
-                }
-            }
-
-            CurrentRespawnState = ERespawnState::Respawning;
-
-            //@만약 이미 리스폰이 완료되었다면 바로 게임 재개
-            if (bRespawnCompleted)
-            {
-                GetWorldTimerManager().SetTimer(RespawnSequenceTimer, this, &ABasePlayerController::ProcessRespawnSequence, 1.0f, false);
-            }
-            //@아니면 GameState 이벤트 대기
-            break;
-        }
-
-        case ERespawnState::Respawning:
-        {
-            //@게임 재개
-            if (UIComponent)
-            {
-                // UIComponent->HideLoadingScreen();
-                UE_LOGFMT(LogBasePC, Log, "로딩 화면 제거");
-            }
-
-            EnableInput(this);
-            CurrentRespawnState = ERespawnState::Complete;
-
-            UE_LOGFMT(LogBasePC, Log, "리스폰 시퀀스 완료");
-            break;
-        }
-    }
-}
-
-void ABasePlayerController::HandleCharacterRevive()
-{
-    //@이 함수는 더 이상 GameState에서 직접 호출되지 않음
-    //@ASC의 부활 어빌리티 완료 후 호출됨
-    UE_LOGFMT(LogBasePC, Warning, "ASC 부활 어빌리티 완료 - UI 정리 시작");
-
-    //@로딩 화면 제거
-    if (UIComponent)
-    {
-        // UIComponent->HideLoadingScreen();
-        UE_LOGFMT(LogBasePC, Log, "로딩 화면 제거");
-    }
-
-    //@몇 초 후 입력 활성화
-    FTimerHandle InputEnableTimer;
-    GetWorldTimerManager().SetTimer(
-        InputEnableTimer,
-        [this]()
-        {
-            EnableInput(this);
-            CurrentRespawnState = ERespawnState::Complete;
-            UE_LOGFMT(LogBasePC, Log, "입력 활성화 - 리스폰 시퀀스 완료");
-        },
-        2.0f, // 2초 후 입력 활성화
-        false
-    );
-}
-
 #pragma endregion
 
 //@Callbacks
 #pragma region Callbacks
-void ABasePlayerController::OnPlayerDeath(APlayerStateBase* DeadPlayerState)
-{
-    if (APlayerStateBase* PS = GetPlayerState<APlayerStateBase>())
-    {
-        if (PS == DeadPlayerState)
-        {
-            HandleCharacterDeath();
-            return;
-        }
-    }
-}
-
-void ABasePlayerController::OnPlayerRevival(APlayerStateBase* RespawnPlayerState)
-{
-    //@기본 유효성 검증
-    if (!IsValid(RespawnPlayerState))
-    {
-        UE_LOGFMT(LogBasePC, Warning, "리스폰 콜백 실패: 유효하지 않은 Player State");
-        return;
-    }
-
-    //@자신의 리스폰인지 확인
-    if (RespawnPlayerState->GetOwner() != this)
-    {
-        UE_LOGFMT(LogBasePC, Log, "다른 플레이어 리스폰 완료 확인: {0}", GetNameSafe(RespawnPlayerState->GetOwner()));
-        return;
-    }
-
-    UE_LOGFMT(LogBasePC, Log, "자신의 리스폰 완료 확인: {0}", GetNameSafe(this));
-
-    //@부활 작업
-    HandleCharacterRevive();
-
-}
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)

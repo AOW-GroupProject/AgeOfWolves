@@ -2,16 +2,14 @@
 #include "Logging/StructuredLog.h"
 
 #include "10_AI/BaseAIController.h"
-#include "AbilitySystemComponent.h"
-#include "04_Component/BaseAbilitySystemComponent.h"
-#include "GameplayTagContainer.h"
 
 DEFINE_LOG_CATEGORY(LogBTTask_TryCombatLoop)
 
 UBTTask_TryCombatLoop::UBTTask_TryCombatLoop(const FObjectInitializer& ObjectInitializer)
 {
 	bCreateNodeInstance = true;
-	NodeName = "Running Combat Loop";
+
+	NodeName = TEXT("전투 시퀀스 수행");
 }
 
 EBTNodeResult::Type UBTTask_TryCombatLoop::ExecuteTask(UBehaviorTreeComponent& OwnerComp, uint8* NodeMemory)

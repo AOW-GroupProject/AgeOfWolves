@@ -12,6 +12,9 @@
 #include "08_UI/02_Menu/01_InventoryUI/InventoryUI.h"
 #include "08_UI/02_Menu/01_InventoryUI/ItemSlots.h"
 
+#include "16_Level/AreaQuestDataInfos.h"
+#include "17_GameMode/AOWGameState.h"
+
 DEFINE_LOG_CATEGORY(LogInventory)
 // UE_LOGFMT(LogInventory, Log, "");
 
@@ -167,7 +170,6 @@ void UInventoryComponent::ExternalBindToInputComponent(const AController* Contro
 
 void UInventoryComponent::ExternalBindToInventoryUI()
 {
-
     //@World
     UWorld* World = GetWorld();
     if (!World)
@@ -211,23 +213,69 @@ void UInventoryComponent::ExternalBindToInventoryUI()
     for (uint8 i = 0; i < static_cast<uint8>(EItemType::MAX); ++i)
     {
         EItemType ItemType = static_cast<EItemType>(i);
-        UItemSlots* ItemSlots = InventoryUI->GetItemSlotsByType(ItemType);
 
+        if (ItemType == EItemType::SpecUp)
+        {
+            UE_LOGFMT(LogInventory, Log,
+                "SpecUp 타입은 즉시 소모되는 아이템이므로 UI 바인딩을 건너뜁니다.");
+            continue;
+        }
+
+        UItemSlots* ItemSlots = InventoryUI->GetItemSlotsByType(ItemType);
         if (ItemSlots)
         {
             ItemSlots->ItemUsed.AddUObject(this, &UInventoryComponent::StartUseItem);
             ItemSlots->ItemLeft.AddUObject(this, &UInventoryComponent::LeaveItem);
             ItemSlots->ItemDiscarded.AddUObject(this, &UInventoryComponent::DiscardItem);
 
-            UE_LOGFMT(LogInventory, Log, "{0}: {1} 타입의 ItemSlots에 이벤트가 성공적으로 바인딩되었습니다.", __FUNCTION__, *UEnum::GetValueAsString(ItemType));
+            UE_LOGFMT(LogInventory, Log,
+                "{0} 타입의 ItemSlots에 이벤트가 성공적으로 바인딩되었습니다.",
+                *UEnum::GetValueAsString(ItemType));
         }
         else
         {
-            UE_LOGFMT(LogInventory, Warning, "{0}: {1} 타입의 ItemSlots를 찾을 수 없습니다.", __FUNCTION__, *UEnum::GetValueAsString(ItemType));
+            UE_LOGFMT(LogInventory, Warning,
+                "{0} 타입의 ItemSlots를 찾을 수 없어 이벤트 바인딩을 건너뜁니다.",
+                *UEnum::GetValueAsString(ItemType));
         }
     }
 
     UE_LOGFMT(LogInventory, Log, "{0}: InventoryUI에 성공적으로 바인딩되었습니다.", __FUNCTION__);
+}
+
+void UInventoryComponent::ExternalBindToGameState()
+{
+    UE_LOGFMT(LogInventory, Log, "Game State 이벤트 바인딩 시작");
+
+    //@World 
+    UWorld* World = GetWorld();
+    if (!IsValid(World))
+    {
+        UE_LOGFMT(LogInventory, Error, "{0}: World is null", __FUNCTION__);
+        return;
+    }
+
+    //@GameState
+    AGameStateBase* GameStateBase = World->GetGameState();
+    if (!IsValid(GameStateBase))
+    {
+        UE_LOGFMT(LogInventory, Warning, "{0}: GameState를 가져오는 데 실패했습니다.", __FUNCTION__);
+        return;
+    }
+
+    //@AOWGameState
+    AAOWGameState* AOWGameState = Cast<AAOWGameState>(GameStateBase);
+    if (!IsValid(AOWGameState))
+    {
+        UE_LOGFMT(LogInventory, Warning, "{0}: AOWGameState를 가져오는 데 실패했습니다.", __FUNCTION__);
+        return;
+    }
+
+    //@외부 바인딩
+
+    AOWGameState->OnQuestCompleted.AddUFunction(this, "OnQuestCompleted");
+
+    UE_LOGFMT(LogInventory, Log, "{0}: AOWGameState 에 성공적으로 바인딩되었습니다.", __FUNCTION__);
 }
 
 void UInventoryComponent::InternalBindToItem(AItem* Item, FGuid UniqueItemID)
@@ -255,14 +303,15 @@ void UInventoryComponent::InitializeInventory(const AController* Controller)
 #pragma endregion
 
 //@Property/Info...etc
-#pragma region Inventory
+#pragma region Property/Info...etc
 void UInventoryComponent::LoadInventory()
 {
     UE_LOGFMT(LogInventory, Warning, "Inventory의 Load 작업을 시작합니다 : {0}", __FUNCTION__);
 
     //@외부 바인딩
     ExternalBindToInventoryUI();
-
+    ExternalBindToGameState();
+    
     //@GameInstance
     if (const auto& GameInstance = Cast<UAOWGameInstance>(UGameplayStatics::GetGameInstance(this)))
     {
@@ -511,6 +560,24 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
         DisableItem(AlreadySpawnedItem);
     }
 
+    //@SpecUp 아이템 즉시 활성화 처리 - 새로 추가된 부분
+    if (ItemInfo->ItemType == EItemType::SpecUp)
+    {
+        UE_LOGFMT(LogInventory, Log, "{0}: SpecUp 아이템이 감지되어 즉시 활성화를 시작합니다.",
+            ItemInfo->ItemTag.ToString());
+
+        //@Start Use Item
+        for (int32 i = 0; i < Num; ++i)
+        {
+            StartUseItem(NewID, 1);
+        }
+
+        UE_LOGFMT(LogInventory, Log, "{0}: SpecUp 아이템 {1}개가 즉시 활성화되어 소모되었습니다.",
+            ItemInfo->ItemTag.ToString(), Num);
+
+        return NewID;
+    }
+
     //@Quick Slots
     if (ItemInfo->bObssessedToQuickSlots
         && ItemInfo->bConsumable
@@ -533,6 +600,20 @@ FGuid UInventoryComponent::AddNewItem(TSubclassOf<AItem> BlueprintItemClass, int
 
 void UInventoryComponent::AddExistingItem(const FGuid& ItemId, const FItemInformation& ItemInfo, int32 Num)
 {
+    //@SpecUp 아이템은 기존 아이템과 합치지 않고 개별 활성화
+    if (ItemInfo.ItemType == EItemType::SpecUp)
+    {
+        UE_LOGFMT(LogInventory, Log, "{0}: SpecUp 아이템은 누적되지 않으므로 개별 활성화를 처리합니다.",
+            ItemInfo.ItemTag.ToString());
+
+        //@Start Use Item
+        for (int32 i = 0; i < Num; ++i)
+        {
+            StartUseItem(ItemId, 1);
+        }
+        return;
+    }
+
     //@Existing FInventory Item
     if (!Inventory.Contains(ItemId))
     {
@@ -680,7 +761,7 @@ void UInventoryComponent::StartUseItem(const FGuid& UniqueItemID, int32 ItemCoun
     }
 
     //@Try Activate
-    if (!Item->TryActivateItem())
+    if (!Item->TryActivateItem(GetWorld()->GetGameInstance()))
     {
         UE_LOGFMT(LogInventory, Warning, "아이템 {0} 사용 실패.", InventoryItem->GetItemTag().ToString());
         return;
@@ -942,6 +1023,62 @@ void UInventoryComponent::OnUIInputTriggered(const FGameplayTag& InputTag)
         //@Start Use Item
         StartUseItem(ItemID, 1);
         return;
+    }
+}
+
+void UInventoryComponent::OnQuestCompleted(const FQuestDataInfo& QuestData)
+{
+    UE_LOGFMT(LogInventory, Warning, "OnQuestCompleted 실행");
+    
+    //@ QuestData의 QuestTag 유효성 검사
+    if (!QuestData.QuestTag.IsValid())
+    {
+        UE_LOGFMT(LogInventory, Warning, "OnQuestCompleted 실패: QuestTag가 유효하지 않습니다.");
+        return;
+    }
+
+    //@ 보상이 있는지 확인
+    if (!QuestData.bHasReward)
+    {
+        UE_LOGFMT(LogInventory, Log, "퀘스트 {0}에는 보상이 없습니다.", *QuestData.QuestTag.ToString());
+        return;
+    }
+
+    //@ 보상 아이템이 있는지 확인
+    if (QuestData.RewardItems.Num() == 0)
+    {
+        UE_LOGFMT(LogInventory, Warning, "퀘스트 {0}에 보상 아이템이 없습니다.", *QuestData.QuestTag.ToString());
+        return;
+    }
+
+    //@ 퀘스트의 보상 아이템 처리
+    for (int32 i = 0; i < QuestData.RewardItems.Num(); ++i)
+    {
+        const FQuestRewardItem& RewardItem = QuestData.RewardItems[i];
+        
+            if (!RewardItem.RewardItemTag.IsValid())
+        {
+            UE_LOGFMT(LogInventory, Warning, "보상 아이템 Tag가 유효하지 않습니다. Quest: {0}, Reward Index: {1}", 
+                *QuestData.QuestTag.ToString(), i);
+            continue;
+        }
+
+        //@ ItemManager에서 Tag를 통해 데이터 테이블에 등록된 Item을 가져옴
+        const FItemInformation* ItemInfo = CachedItemManager->GetItemInformationByItemTag<FItemInformation>(RewardItem.RewardItemTag);
+        if (!ItemInfo)
+        {
+            UE_LOGFMT(LogInventory, Error, "ItemInformation을 가져올 수 없습니다.");
+            return;
+        }
+
+        //@ 아이템 추가
+        AddItem(CachedItemManager.Get(), ItemInfo->ItemClass, RewardItem.Quantity);
+
+        UE_LOGFMT(LogInventory, Warning, 
+            "보상 아이템이 인벤토리에 추가되었습니다. Quest: {0}, Item: {1}, Quantity: {2}", 
+            *QuestData.QuestTag.ToString(), 
+            *ItemInfo->ItemClass->GetName(), 
+            RewardItem.Quantity);
     }
 }
 #pragma endregion

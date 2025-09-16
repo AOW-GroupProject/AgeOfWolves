@@ -6,6 +6,7 @@
 DEFINE_LOG_CATEGORY(LogItem)
 // UE_LOGFMT(LogItem, Warning, "");
 
+//@Defualt Setting
 #pragma region Default Setting
 AItem::AItem(const FObjectInitializer& ObjectInitializer)
 	:Super(ObjectInitializer)
@@ -61,10 +62,9 @@ void AItem::InitializeItem()
 }
 #pragma endregion
 
-#pragma region Item
-bool AItem::TryActivateItem_Implementation()
+#pragma region Property or Subwidgets or Infos...etc
+bool AItem::TryActivateItem_Implementation(UGameInstance* GameInstance)
 {
-
 	UE_LOGFMT(LogItem, Log, "Item 활성화 시작!");
 
 	//@활성화 종료 이벤트
@@ -74,11 +74,15 @@ bool AItem::TryActivateItem_Implementation()
 }
 #pragma endregion
 
+//@Callbacks
 #pragma region Callbacks
-
 void AItem::OnItemRemovedFromInventory()
 {
 	UE_LOGFMT(LogItem, Log, "{0}이 Iventory에서 제거되었습니다.", GetName());
 
 }
+#pragma endregion
+
+//@Utility(Setter, Getter,...etc)
+#pragma region Utility
 #pragma endregion

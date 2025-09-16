@@ -46,7 +46,16 @@ void UItemManagerSubsystem::Initialize(FSubsystemCollectionBase& Collection)
     {
         UE_LOGFMT(LogItemManager, Error, "Material Item 데이터 테이블 로드 실패");
     }
-
+    //@Spec Up Data Table
+    SpecUpItemTable = LoadObject<UDataTable>(nullptr, TEXT("/Game/Blueprints/09_Item/DT_SpecUpItem"));
+    if (SpecUpItemTable)
+    {
+        UE_LOGFMT(LogItemManager, Log, "Spec Up Item 관련 정보 로드 성공");
+    }
+    else
+    {
+        UE_LOGFMT(LogItemManager, Error, "Spec Up Item 데이터 테이블 로드 실패");
+    }
 }
 
 TArray<TPair<int32, TSubclassOf<AItem>>> UItemManagerSubsystem::GetAllDefaultItems()
@@ -54,7 +63,7 @@ TArray<TPair<int32, TSubclassOf<AItem>>> UItemManagerSubsystem::GetAllDefaultIte
     TArray<TPair<int32, TSubclassOf<AItem>>> AllItems;
 
     //@Data Tables
-    if (!ToolItemTable || !EquipmentItemTable || !MaterialItemTable)
+    if (!ToolItemTable || !EquipmentItemTable || !MaterialItemTable || !SpecUpItemTable)
     {
         UE_LOGFMT(LogItemManager, Error, "Item Data Table을 찾지 못했습니다.");
         return AllItems;
@@ -65,6 +74,7 @@ TArray<TPair<int32, TSubclassOf<AItem>>> UItemManagerSubsystem::GetAllDefaultIte
     //TArray<FName> EquipmentRowNames = EquipmentItemTable->GetRowNames();
     //@TODO: Material Item 관련 Data Table 작성 이후, 아래 주석 해제
     TArray<FName> MaterialRowNames = MaterialItemTable->GetRowNames();
+    TArray<FName> SpecUpRowNames = SpecUpItemTable->GetRowNames();
     if (ToolRowNames.Num() == 0 /*|| EquipmentRowNames.Num() == 0 || MaterialRowNames.Num() == 0*/)
     {
         UE_LOGFMT(LogItemManager, Warning, "Item 데이터 테이블이 비어있습니다!");
@@ -111,6 +121,24 @@ TArray<TPair<int32, TSubclassOf<AItem>>> UItemManagerSubsystem::GetAllDefaultIte
         for (const FName& RowName : MaterialRowNames)
         {
             FMaterialItemInformation* ItemInfo = MaterialItemTable->FindRow<FMaterialItemInformation>(RowName, TEXT(""));
+            if (!ItemInfo)
+            {
+                UE_LOGFMT(LogItemManager, Error, "Failed to find item information for row: {0}", *RowName.ToString());
+                continue;
+            }
+            if (!ItemInfo->bDefault)
+            {
+                continue;
+            }
+            int32 ItemCount = FMath::Min(ItemInfo->DefaultGivenStack, ItemInfo->MaxStack);
+            AllItems.Add(TPair<int32, TSubclassOf<AItem>>(ItemCount, ItemInfo->ItemClass));
+        }
+    }
+    //@Default SpecUp Items
+    {
+        for (const FName& RowName : SpecUpRowNames)
+        {
+            FSpecUpItemInformation* ItemInfo = SpecUpItemTable->FindRow<FSpecUpItemInformation>(RowName, TEXT(""));
             if (!ItemInfo)
             {
                 UE_LOGFMT(LogItemManager, Error, "Failed to find item information for row: {0}", *RowName.ToString());

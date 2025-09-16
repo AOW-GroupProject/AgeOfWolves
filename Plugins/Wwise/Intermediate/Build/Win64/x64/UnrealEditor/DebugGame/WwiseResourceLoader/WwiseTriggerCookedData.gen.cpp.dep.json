@@ -1,0 +1,16 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseresourceloader\\uht\\wwisetriggercookeddata.gen.cpp",
+        "ProvidedModule": "",
+        "PCH": "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\intermediate\\build\\win64\\x64\\ageofwolveseditor\\debuggame\\engine\\sharedpch.engine.nonoptimized.shadowerrors.inclorderunreal5_1.h.pch",
+        "Includes": [
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\x64\\unrealeditor\\debuggame\\wwiseresourceloader\\definitions.wwiseresourceloader.h",
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseresourceloader\\public\\wwise\\cookeddata\\wwisetriggercookeddata.h",
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseutils\\public\\wwiseunrealdefines.h",
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseresourceloader\\uht\\wwisetriggercookeddata.generated.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}

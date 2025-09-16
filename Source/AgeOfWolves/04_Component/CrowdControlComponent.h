@@ -89,12 +89,15 @@ public:
 //@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 protected:
-    //@정보 처리
+    //@정보 처리 메인 함수
     UFUNCTION()
-        void ProcessInfoQueue();
+    void ProcessInfoQueue();
 
-    //@전달 받은 상태 정보 별 처리
-    void ProcessDeadStateInfo(AActor* SenderAI, const TArray<TWeakObjectPtr<AActor>>& Recipients, const FSharingInfoWithGroup& InfoData);
+    //@단순 정보 공유 처리 (기존 ProcessDeadStateInfo에서 이름 변경)
+    void ProcessSimpleInfo(AActor* SenderAI, const TArray<TWeakObjectPtr<AActor>>& Recipients, const FSharingInfoWithGroup& InfoData);
+
+    //@군중제어 관련 모든 정보 처리 (사망, CoverFire, Threatened 등 통합)
+    void ProcessCrowdControllInfo(AActor* SenderAI, const TArray<TWeakObjectPtr<AActor>>& Recipients, const FSharingInfoWithGroup& InfoData);
 
 protected:
     //@만료된 처리 정보 ID 제거

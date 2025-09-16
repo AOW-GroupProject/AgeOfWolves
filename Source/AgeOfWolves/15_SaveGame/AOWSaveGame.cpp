@@ -3,6 +3,7 @@
 
 #include "Kismet/GameplayStatics.h"
 #include "02_AbilitySystem/01_AttributeSet/BaseAttributeSet.h"
+#include "14_Subsystem/AreaManagerSubsystem.h"
 
 DEFINE_LOG_CATEGORY(LogSaveGame)
 // UE_LOGFMT(LogSaveGame, Log, "");
@@ -103,6 +104,48 @@ void UAOWSaveGame::AddCharacterStateToHistory(
     //{
     //    CharacterStateEventToCache.Broadcast(StateInfo);
     //}
+}
+
+void UAOWSaveGame::AddCompleteAreaQuest(FGameplayTag AreaTag, const FQuestDataInfo& QuestData)
+{
+    //@ 기본 유효성 검사
+    if (!QuestData.QuestTag.IsValid())
+    {
+        UE_LOGFMT(LogSaveGame, Warning, "AddCompleteAreaQuest 실패: QuestTag가 유효하지 않습니다.");
+        return;
+    }
+
+    //@ AreaTag 검사
+    if (!AreaTag.IsValid())
+    {
+        UE_LOGFMT(LogSaveGame, Warning, "AddCompleteAreaQuest 실패: AreaTag가 유효하지 않습니다.");
+        return;
+    }
+
+    //@ QuestInfo 초기화
+    FAreaQuestSaveInfo QuestInfo;
+    QuestInfo.AreaTag = AreaTag;
+    QuestInfo.QuestType = QuestData.QuestType;
+    QuestInfo.QuestTag = QuestData.QuestTag;
+    QuestInfo.QuestStatus = QuestData.QuestStatus;
+    QuestInfo.bHasReward = QuestData.bHasReward;
+    if (QuestData.bHasReward)
+    {
+        QuestInfo.RewardItems = QuestData.RewardItems;
+    }
+
+    FString StatusString = UEnum::GetValueAsString(QuestInfo.QuestStatus);
+
+    UE_LOGFMT(LogSaveGame, Log,
+        "완료 퀘스트 기록 | AreaTag: {0}, QuestType: {1}, QuestTag: {2}, Status: {3}, RewardCount: {4}",
+        *QuestInfo.AreaTag.ToString(),
+        static_cast<int32>(QuestInfo.QuestType),
+        *QuestInfo.QuestTag.ToString(),
+        *StatusString,
+        QuestInfo.RewardItems.Num());
+
+    //@ 배열에 추가
+    CompleteAreaQuests.Add(QuestInfo);
 }
 #pragma endregion
 
