@@ -6,7 +6,7 @@
         "PCH": "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\intermediate\\build\\win64\\x64\\ageofwolveseditor\\debuggame\\engine\\sharedpch.engine.nonoptimized.shadowerrors.inclorderunreal5_1.h.pch",
         "Includes": [
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwiseniagara\\intermediate\\build\\win64\\x64\\unrealeditor\\debuggame\\wwiseniagara\\definitions.wwiseniagara.h",
-            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwiseniagara\\source\\wwiseniagara\\private\\wwise\\niagara\\niagaradatainterfacewwiseevent.cpp",
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwiseniagara\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseniagara\\uht\\niagaradatainterfacewwiseevent.gen.cpp",
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwiseniagara\\source\\wwiseniagara\\public\\wwise\\niagara\\niagaradatainterfacewwiseevent.h",
             "f:\\ue_5.2\\engine\\plugins\\fx\\niagara\\source\\niagara\\public\\niagaracommon.h",
             "f:\\ue_5.2\\engine\\source\\runtime\\engine\\classes\\particles\\particleperfstats.h",
@@ -343,6 +343,8 @@
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseutils\\public\\wwiseweakobjectptrsetkeyfuncs.h",
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseutils\\public\\wwiseunrealhelper.h",
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwiseniagara\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseniagara\\uht\\niagaradatainterfacewwiseevent.generated.h",
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwiseniagara\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseniagara\\uht\\wwiseniagara.init.gen.cpp",
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwiseniagara\\source\\wwiseniagara\\private\\wwise\\niagara\\niagaradatainterfacewwiseevent.cpp",
             "f:\\ue_5.2\\engine\\source\\runtime\\engine\\classes\\components\\audiocomponent.h",
             "f:\\ue_5.2\\engine\\source\\runtime\\engine\\public\\audio\\soundparametercontrollerinterface.h",
             "f:\\ue_5.2\\engine\\intermediate\\build\\win64\\unrealeditor\\inc\\engine\\uht\\soundparametercontrollerinterface.generated.h",
