@@ -10,8 +10,8 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 
-//@전방 선언
-#pragma region Forward Declaration
+//@전방 선언#pragma region Forward Declaration
+
 class UANS_AllowChainAction;
 class UBaseAttributeSet;
 class ABaseAIController;
@@ -54,6 +54,15 @@ DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionActivated, AActor*, Int
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionFailed, AActor*, InteractableActor, const FPotentialInteraction&, FailedInteraction);
 //@상호작용 완료 이벤트
 DECLARE_DYNAMIC_MULTICAST_DELEGATE_TwoParams(FInteractionCompleted, AActor*, InteractableActor, const FPotentialInteraction&, CompletedInteraction);
+
+//@데미지 전달 알림 이벤트
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FDamageDealtByActor, AActor* /* Source */, AActor* /* Target */, const FGameplayEventData& /* EventData */)
+
+//@데미지 이벤트 전처리 델리게이트 (강공격 파훼용)
+DECLARE_MULTICAST_DELEGATE_ThreeParams(FDamageEventPreProcess,
+	const FGameplayTag&, /* EventTag */
+	const FGameplayEventData&, /* EventData */
+	bool& /* bShouldContinueProcessing */);
 #pragma endregion
 
 /**
@@ -232,6 +241,14 @@ public:
 
 	UPROPERTY(BlueprintAssignable, Category = "Interaction System")
 		FInteractionCompleted InteractionCompleted;
+
+public:
+	//@데미지 전달 이벤트
+	FDamageDealtByActor DamageDealtByActor;
+
+protected:
+	//@데미지 이벤트 전처리 델리게이트
+	FDamageEventPreProcess DamageEventPreProcess;
 #pragma endregion
 
 //@Callbacks
@@ -317,6 +334,10 @@ public:
 
 private:
 	FString CleanStateTagName(const FString& OriginalTagName);
+
+public:
+	//@데미지 이벤트 전처리 이벤트
+	FORCEINLINE FDamageEventPreProcess& GetDamageEventPreProcess() { return DamageEventPreProcess; }
 #pragma endregion
 
 };

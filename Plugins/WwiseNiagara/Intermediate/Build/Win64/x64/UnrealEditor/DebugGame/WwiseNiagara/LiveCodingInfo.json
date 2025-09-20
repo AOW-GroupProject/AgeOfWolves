@@ -1,0 +1,12 @@
+{
+	"RemapUnityFiles": 
+	{
+		"Module.WwiseNiagara.cpp.obj": [
+			"NiagaraDataInterfaceWwiseEvent.gen.cpp.obj",
+			"WwiseNiagara.init.gen.cpp.obj",
+			"NiagaraDataInterfaceWwiseEvent.cpp.obj",
+			"Niagara.cpp.obj",
+			"WwiseNiagaraModuleImpl.cpp.obj"
+		]
+	}
+}

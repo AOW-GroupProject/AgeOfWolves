@@ -108,10 +108,17 @@ public:
 		UMotionWarpingComponent* GetMotionWarpingComponent() const { return MotionWarpComponent; }
 
 public:
-	FORCEINLINE UStaticMeshComponent* GetWeaponMesh() { return KatanaMesh; }
-	FORCEINLINE UStaticMeshComponent* GetSayaMesh() { return SayaMesh; }
-	FORCEINLINE UStaticMeshComponent* GetFullWeaponMesh() { return FullMesh; }
-	FORCEINLINE UNiagaraComponent* GetSkeletalFXComponent() { return SkeletalFXComponent; }
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE UStaticMeshComponent* GetWeaponMesh() { return KatanaMesh; }
+
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE UStaticMeshComponent* GetSayaMesh() { return SayaMesh; }
+
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE UStaticMeshComponent* GetFullWeaponMesh() { return FullMesh; }
+
+	UFUNCTION(BlueprintCallable)
+		FORCEINLINE UNiagaraComponent* GetSkeletalFXComponent() { return SkeletalFXComponent; }
 
 public:
 	virtual class UAbilitySystemComponent* GetAbilitySystemComponent() const override;

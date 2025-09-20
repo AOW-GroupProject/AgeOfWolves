@@ -1,0 +1,17 @@
+{
+    "Version": "1.2",
+    "Data": {
+        "Source": "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseresourceloader\\uht\\wwiseobjectinfolibrary.gen.cpp",
+        "ProvidedModule": "",
+        "PCH": "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\intermediate\\build\\win64\\x64\\ageofwolveseditor\\development\\engine\\sharedpch.engine.shadowerrors.inclorderunreal5_1.h.pch",
+        "Includes": [
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\wwiseresourceloader\\definitions.wwiseresourceloader.h",
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseresourceloader\\private\\wwise\\info\\wwiseobjectinfolibrary.h",
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseresourceloader\\public\\wwise\\info\\wwiseobjectinfo.h",
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseresourceloader\\uht\\wwiseobjectinfo.generated.h",
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseresourceloader\\uht\\wwiseobjectinfolibrary.generated.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}
