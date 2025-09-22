@@ -1,4 +1,4 @@
-﻿#include "BaseAttributeSet.h"
+#include "BaseAttributeSet.h"
 #include "Logging/StructuredLog.h"
 
 #include "04_Component/BaseAbilitySystemComponent.h"

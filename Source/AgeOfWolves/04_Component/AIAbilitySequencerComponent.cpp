@@ -16,8 +16,6 @@
 DEFINE_LOG_CATEGORY(LogAICombatPattern);
 
 #pragma region Statistics
-// AIAbilitySequencerComponent.cpp에 추가
-
 float FSequencerStatistics::GetSuccessRate() const
 {
     float SuccessRate = TotalAbilitiesExecuted > 0 ?
@@ -1275,11 +1273,11 @@ bool UAIAbilitySequencerComponent::OnRequestReadyToCombat()
 {
     UE_LOG(LogAICombatPattern, Log, TEXT("전투 준비 요청 수신"));
 
-    // 이미 전투 준비가 완료된 경우
+    // 이미 전투 준비가 완료된 경우 → 전투 루프로 자동 전환
     if (bCombatReadyCompleted)
     {
-        UE_LOG(LogAICombatPattern, Warning, TEXT("전투 준비가 이미 완료됨"));
-        return true;
+        UE_LOG(LogAICombatPattern, Log, TEXT("전투 준비가 이미 완료됨 - 전투 루프로 자동 전환"));
+        return OnRequestActivateAICombatLoop();
     }
 
     // 현재 다른 작업이 실행 중인 경우

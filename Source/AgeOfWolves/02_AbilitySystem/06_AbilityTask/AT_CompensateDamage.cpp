@@ -282,35 +282,35 @@ void UAT_CompensateDamage::OnDamageEventPreProcess(
 {
     UE_LOGFMT(LogCompensateDamage, Log, "데미지 이벤트 전처리 - EventTag: {0}", EventTag.ToString());
 
-    //@이미 트리거되었고 한 번만 트리거 설정인 경우 무시
+    // 이미 트리거되었고 한 번만 트리거 설정인 경우 무시
     if (bOnlyTriggerOnce && bHasTriggered)
     {
         UE_LOGFMT(LogCompensateDamage, Log, "이벤트 무시: 이미 트리거됨 (OnlyTriggerOnce=true)");
         return;
     }
 
-    //@이벤트 데이터 유효성 검사
+    // 이벤트 데이터 유효성 검사
     if (!EventData.OptionalObject || !IsValid(EventData.OptionalObject))
     {
         UE_LOGFMT(LogCompensateDamage, Warning, "EventData.OptionalObject가 유효하지 않음");
         return;
     }
 
-    //@이벤트 데이터 로그
+    // 이벤트 데이터 로그
     FString EventInfo = GetEventDataInfoString(EventData);
     UE_LOGFMT(LogCompensateDamage, Log, "이벤트 데이터 정보: {0}", EventInfo);
 
-    //@강공격 여부 확인
+    // 강공격 여부 확인
     bool bIsStrongAttack = IsStrongAttack(EventData);
 
     if (bIsStrongAttack)
     {
         UE_LOGFMT(LogCompensateDamage, Log, "강공격 감지됨 - 파훼 매커니즘 활성화");
 
-        //@데미지 처리 중단 지시
+        // 강공격 파훼 성공 - 데미지 처리 중단
         bShouldContinueProcessing = false;
 
-        //@강공격 파훼 성공 델리게이트 호출 (AttackGameplayAbility에서 처리)
+        // 강공격 파훼 성공 델리게이트 호출
         OnStrongAttackCountered.Broadcast(
             EventData.Instigator.Get(),
             EventData.Target.Get(),
@@ -321,15 +321,14 @@ void UAT_CompensateDamage::OnDamageEventPreProcess(
             EventData.Instigator.Get() ? *EventData.Instigator->GetName() : TEXT("Unknown"),
             EventData.Target.Get() ? *EventData.Target->GetName() : TEXT("Unknown"));
 
-        //@트리거 상태 업데이트
+        // 트리거 상태 업데이트
         bHasTriggered = true;
 
-        //@한 번만 트리거 설정인 경우 태스크 종료
+        // 한 번만 트리거 설정인 경우 태스크 종료
         if (bOnlyTriggerOnce)
         {
             UE_LOGFMT(LogCompensateDamage, Log, "OnlyTriggerOnce 설정으로 태스크 종료");
 
-            //@다음 프레임에 종료
             GetWorld()->GetTimerManager().SetTimerForNextTick([this]()
                 {
                     EndTask();
@@ -338,17 +337,15 @@ void UAT_CompensateDamage::OnDamageEventPreProcess(
     }
     else
     {
-        UE_LOGFMT(LogCompensateDamage, Log, "일반 공격 감지됨 - 정상 데미지 처리 계속");
+        // 일반 공격 - bShouldContinueProcessing을 건드리지 않음 (다른 시스템의 성공 결과 존중)
+        UE_LOGFMT(LogCompensateDamage, Log, "일반 공격 감지됨 - 다른 방어 시스템 결과 존중");
 
-        //@일반 데미지 처리 델리게이트 호출
+        // 일반 데미지 처리 델리게이트 호출
         OnNormalDamageProcessed.Broadcast(
             EventData.Instigator.Get(),
             EventData.Target.Get(),
             EventData
         );
-
-        //@처리 계속 진행
-        bShouldContinueProcessing = true;
     }
 }
 

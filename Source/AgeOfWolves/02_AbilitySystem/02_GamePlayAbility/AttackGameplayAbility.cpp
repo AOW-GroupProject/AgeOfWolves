@@ -167,6 +167,14 @@ void UAttackGameplayAbility::StartWeaponTrace()
     // SCOPE_LOCK은 범위를 벗어날 때 자동으로 잠금 해제
     FScopeLock ScopeLock(&TraceStateLock);
 
+    // === 새로 추가: 처리 완료 상태 확인 ===
+    if (IsProcessingCompleted())
+    {
+        UE_LOGFMT(LogAttackGA, Log, "트레이스 시작 중단 - 사유: 이미 처리 완료됨 (승리 유형: {0})",
+            static_cast<uint8>(WinningProcessType.load()));
+        return;
+    }
+
     if (bIsTracing)
     {
         UE_LOGFMT(LogAttackGA, Warning, "트레이스 시작 실패 - 사유: 이미 트레이스가 진행 중");
@@ -183,6 +191,13 @@ void UAttackGameplayAbility::StartWeaponTrace()
 void UAttackGameplayAbility::ProcessWeaponTrace()
 {
     FScopeLock ScopeLock(&TraceStateLock);
+
+    if (IsProcessingCompleted())
+    {
+        UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 처리 중단 - 사유: 이미 처리 완료됨 (승리 유형: {0})",
+            static_cast<uint8>(WinningProcessType.load()));
+        return;
+    }
 
     // 1. 트레이스 상태 확인
     if (!bIsTracing)
@@ -446,7 +461,17 @@ void UAttackGameplayAbility::EndWeaponTrace()
     int32 ClearedCount = ActorsToIgnore.Num();
     ActorsToIgnore.Empty();
 
-    UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 종료 - 제거된 무시 대상 수: {0}", ClearedCount);
+    // === 추가: 처리 완료 상태에 따른 로그 구분 ===
+    if (IsProcessingCompleted())
+    {
+        UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 종료 (처리 완료됨) - 제거된 무시 대상 수: {0}, 승리 유형: {1}",
+            ClearedCount, static_cast<uint8>(WinningProcessType.load()));
+    }
+    else
+    {
+        UE_LOGFMT(LogAttackGA, Log, "무기 트레이스 종료 (정상 종료) - 제거된 무시 대상 수: {0}", ClearedCount);
+    }
+
 }
 
 void UAttackGameplayAbility::PerformLineTrace(const FVector& Start, const FVector& End,
@@ -1138,6 +1163,15 @@ void UAttackGameplayAbility::OnStrongAttackCountered_Implementation(const AActor
     UE_LOGFMT(LogAttackGA, Log, "강공격 파훼 성공 콜백 호출 - 공격자: {0}, 수비자: {1}",
         Attacker ? *Attacker->GetName() : TEXT("Unknown"),
         Defender ? *Defender->GetName() : TEXT("Unknown"));
+
+    // === 새로 추가: 처리 완료 상태 확인 ===
+    if (IsProcessingCompleted())
+    {
+        UE_LOGFMT(LogAttackGA, Log, "강공격 파훼 처리 중단 - 사유: 이미 처리 완료됨 (승리 유형: {0})",
+            static_cast<uint8>(WinningProcessType.load()));
+        UE_LOGFMT(LogAttackGA, Log, "현재 처리 상태: {0}", *GetProcessingStateDebugString());
+        return;
+    }
 
     //@기본 유효성 검사
     if (!IsValid(Attacker) || !IsValid(Defender))

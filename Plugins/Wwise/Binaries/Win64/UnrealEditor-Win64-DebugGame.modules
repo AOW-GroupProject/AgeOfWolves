@@ -1,0 +1,23 @@
+{
+	"BuildId": "25360045",
+	"Modules": 
+	{
+		"AkAudio": "UnrealEditor-AkAudio-Win64-DebugGame.dll",
+		"AkAudioMixer": "UnrealEditor-AkAudioMixer-Win64-DebugGame.dll",
+		"AudiokineticTools": "UnrealEditor-AudiokineticTools-Win64-DebugGame.dll",
+		"Wwise": "UnrealEditor-Wwise-Win64-DebugGame.dll",
+		"WwiseConcurrency": "UnrealEditor-WwiseConcurrency-Win64-DebugGame.dll",
+		"WwiseEngineUtils": "UnrealEditor-WwiseEngineUtils-Win64-DebugGame.dll",
+		"WwiseFileHandler": "UnrealEditor-WwiseFileHandler-Win64-DebugGame.dll",
+		"WwiseObjectUtils": "UnrealEditor-WwiseObjectUtils-Win64-DebugGame.dll",
+		"WwiseObstructionOcclusion": "UnrealEditor-WwiseObstructionOcclusion-Win64-DebugGame.dll",
+		"WwiseProcessing": "UnrealEditor-WwiseProcessing-Win64-DebugGame.dll",
+		"WwiseProjectDatabase": "UnrealEditor-WwiseProjectDatabase-Win64-DebugGame.dll",
+		"WwiseReconcile": "UnrealEditor-WwiseReconcile-Win64-DebugGame.dll",
+		"WwiseResourceCooker": "UnrealEditor-WwiseResourceCooker-Win64-DebugGame.dll",
+		"WwiseResourceLoader": "UnrealEditor-WwiseResourceLoader-Win64-DebugGame.dll",
+		"WwiseSimpleExternalSource": "UnrealEditor-WwiseSimpleExternalSource-Win64-DebugGame.dll",
+		"WwiseSoundEngine": "UnrealEditor-WwiseSoundEngine-Win64-DebugGame.dll",
+		"WwiseUtils": "UnrealEditor-WwiseUtils-Win64-DebugGame.dll"
+	}
+}
