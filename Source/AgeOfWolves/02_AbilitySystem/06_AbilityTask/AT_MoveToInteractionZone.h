@@ -57,6 +57,9 @@ protected:
 	TEnumAsByte<ECollisionResponse> PreviousPawnResponse;
 
 	UPROPERTY()
+	TEnumAsByte<ECollisionResponse> PreviousWorldDynamicResponse;
+
+	UPROPERTY()
 	TArray<FCollisionPawnOverrideBackup> TargetActorPreviousPawnResponseBackupArray;
 
 protected:
