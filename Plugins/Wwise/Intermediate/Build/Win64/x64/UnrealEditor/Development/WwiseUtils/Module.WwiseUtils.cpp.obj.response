@@ -1,24 +1,24 @@
-F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Module.WwiseUtils.cpp
+D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Module.WwiseUtils.cpp
 /I .
-/I F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Source\WwiseUtils\Private
-/I F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Source
-/I F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Source\WwiseUtils\Public
+/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseUtils\Private
+/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source
+/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseUtils\Public
 /I Runtime\TraceLog\Public
 /I Runtime\Core\Public
 /I Runtime
 /external:W0
 /external:I ThirdParty\mimalloc\include
-/external:I "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.43.34808\INCLUDE"
-/external:I "C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\ucrt"
-/external:I "C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\shared"
-/external:I "C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\um"
-/external:I "C:\Program Files (x86)\Windows Kits\10\include\10.0.22621.0\winrt"
-/FI"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Core\SharedPCH.Core.ShadowErrors.InclOrderUnreal5_1.h"
-/FI"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Definitions.WwiseUtils.h"
-/Yu"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Core\SharedPCH.Core.ShadowErrors.InclOrderUnreal5_1.h"
-/Fp"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Core\SharedPCH.Core.ShadowErrors.InclOrderUnreal5_1.h.pch"
-/Fo"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Module.WwiseUtils.cpp.obj"
-/sourceDependencies F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Module.WwiseUtils.cpp.dep.json
+/external:I "C:\Program Files\Microsoft Visual Studio\2022\Community\VC\Tools\MSVC\14.34.31933\INCLUDE"
+/external:I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\ucrt"
+/external:I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\shared"
+/external:I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\um"
+/external:I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\winrt"
+/FI"D:\AgeofWolves_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Core\SharedPCH.Core.ShadowErrors.InclOrderUnreal5_1.h"
+/FI"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Definitions.WwiseUtils.h"
+/Yu"D:\AgeofWolves_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Core\SharedPCH.Core.ShadowErrors.InclOrderUnreal5_1.h"
+/Fp"D:\AgeofWolves_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Core\SharedPCH.Core.ShadowErrors.InclOrderUnreal5_1.h.pch"
+/Fo"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Module.WwiseUtils.cpp.obj"
+/sourceDependencies D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Module.WwiseUtils.cpp.dep.json
 /Zc:inline
 /nologo
 /Oi
@@ -26,7 +26,7 @@ F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Inter
 /c
 /Gw
 /Gy
-/Zm2000
+/Zm1000
 /wd4819
 /Zc:hiddenFriend
 /Zc:__cplusplus
