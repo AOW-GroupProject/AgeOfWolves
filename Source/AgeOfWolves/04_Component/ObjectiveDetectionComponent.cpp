@@ -933,9 +933,6 @@ void UObjectiveDetectionComponent::UpdateDetectionStructure()
             AActor* Target = StructureData.GetStructureActor();
             if (!IsValid(Target)) continue;
 
-            //@이전 활성된건지 체크
-            if (!StructureData.bIsActive)
-                continue;
             
             //@ 감지 거리 체크
             const FVector ToOwner = OwnerLocation - Target->GetActorLocation();

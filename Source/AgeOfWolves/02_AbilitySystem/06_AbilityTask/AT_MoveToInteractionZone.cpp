@@ -109,7 +109,9 @@ void UAT_MoveToInteractionZone::SetupCollisionResponse()
 	}
 
 	PreviousPawnResponse = CapsuleComp->GetCollisionResponseToChannel(ECC_Pawn);
+	PreviousWorldDynamicResponse = CapsuleComp->GetCollisionResponseToChannel(ECC_WorldDynamic);
 	CapsuleComp->SetCollisionResponseToChannel(ECC_Pawn, ECR_Overlap);
+	CapsuleComp->SetCollisionResponseToChannel(ECC_WorldDynamic, ECR_Overlap);
 
 	//@ 상호작용 대상도 pawn에대해 충돌을 Overlap으로 지정
 
@@ -156,6 +158,7 @@ void UAT_MoveToInteractionZone::RestoreCollisionResponse()
 	}
 
 	CapsuleComp->SetCollisionResponseToChannel(ECC_Pawn, PreviousPawnResponse);
+	CapsuleComp->SetCollisionResponseToChannel(ECC_WorldDynamic, PreviousWorldDynamicResponse);
 
 	//@ 상호작용 대상  충돌타입 복원
 	for (const FCollisionPawnOverrideBackup& Backup : TargetActorPreviousPawnResponseBackupArray)
