@@ -17,7 +17,7 @@ void EmptyLinkFunctionForGeneratedCodeWwiseResourceLoader_init() {}
 				nullptr,
 				0,
 				PKG_CompiledIn | 0x00000000,
-				0x2E9AA92F,
+				0xD758A59C,
 				0x17A97EB6,
 				METADATA_PARAMS(nullptr, 0)
 			};
@@ -25,5 +25,5 @@ void EmptyLinkFunctionForGeneratedCodeWwiseResourceLoader_init() {}
 		}
 		return Z_Registration_Info_UPackage__Script_WwiseResourceLoader.OuterSingleton;
 	}
-	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_WwiseResourceLoader(Z_Construct_UPackage__Script_WwiseResourceLoader, TEXT("/Script/WwiseResourceLoader"), Z_Registration_Info_UPackage__Script_WwiseResourceLoader, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0x2E9AA92F, 0x17A97EB6));
+	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_WwiseResourceLoader(Z_Construct_UPackage__Script_WwiseResourceLoader, TEXT("/Script/WwiseResourceLoader"), Z_Registration_Info_UPackage__Script_WwiseResourceLoader, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0xD758A59C, 0x17A97EB6));
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

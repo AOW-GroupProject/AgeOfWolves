@@ -1,7 +1,7 @@
-F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Classes\AssetManagement\AkMigrationCommandlet.h
-F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Classes\Factories\AkJsonFactory.h
-F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Classes\AssetManagement\GenerateSoundBanksCommandlet.h
-F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Classes\Factories\ActorFactoryAkAmbientSound.h
-F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Public\AkAssetFactories.h
-F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Private\AssetManagement\StaticPluginWriter.h
-F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Private\WwiseBrowser\WwiseBrowserHelpers.h
+D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Classes\Factories\ActorFactoryAkAmbientSound.h
+D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Classes\Factories\AkJsonFactory.h
+D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Classes\AssetManagement\AkMigrationCommandlet.h
+D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Classes\AssetManagement\GenerateSoundBanksCommandlet.h
+D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Public\AkAssetFactories.h
+D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Private\AssetManagement\StaticPluginWriter.h
+D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\AudiokineticTools\Private\WwiseBrowser\WwiseBrowserHelpers.h
