@@ -320,7 +320,7 @@ void AArea::InternalBindToPlayer(TWeakObjectPtr<APlayerCharacter> Player)
             *AreaID.ToString(), *Player->GetName());
         return;
     }
-
+    
     //@ASC 인터페이스 확인
     if (!Player->GetClass()->ImplementsInterface(UAbilitySystemInterface::StaticClass()))
     {
