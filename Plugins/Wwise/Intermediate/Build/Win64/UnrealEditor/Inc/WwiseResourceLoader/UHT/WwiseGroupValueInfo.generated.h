@@ -14,7 +14,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #endif
 #define WWISERESOURCELOADER_WwiseGroupValueInfo_generated_h
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_Info_WwiseGroupValueInfo_h_27_GENERATED_BODY \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_Info_WwiseGroupValueInfo_h_27_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FWwiseGroupValueInfo_Statics; \
 	static class UScriptStruct* StaticStruct(); \
 	typedef FWwiseObjectInfo Super;
@@ -23,7 +23,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 template<> WWISERESOURCELOADER_API UScriptStruct* StaticStruct<struct FWwiseGroupValueInfo>();
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_Info_WwiseGroupValueInfo_h
+#define CURRENT_FILE_ID FID_AOW_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_Info_WwiseGroupValueInfo_h
 
 
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
