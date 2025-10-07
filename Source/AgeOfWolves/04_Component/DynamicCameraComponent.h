@@ -88,6 +88,18 @@ struct FCameraTransitionInfo
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	EBlendCurve BlendCurve = EBlendCurve::EaseInOut;
 
+	//@ FOV 변경 여부
+	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	bool bShouldChangeFOV = false;
+
+	//@ 전환 시점의 FOV 값
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bShouldChangeFOV"), meta = (ClampMin = "5.0", ClampMax = "170.0", UIMin = "5.0", UIMax = "170.0"))
+	float StartFOV = 90.0f;
+
+	//@ 전환 목표 FOV 값
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bShouldChangeFOV"), meta = (ClampMin = "5.0", ClampMax = "170.0", UIMin = "5.0", UIMax = "170.0"))
+	float EndFOV = 90.0f;
+	
 	//@ 목표 상태 도달 후 복원 여부
 	UPROPERTY(EditAnywhere, BlueprintReadWrite)
 	bool bShouldRestoreAfterDuration = false;
@@ -101,7 +113,7 @@ struct FCameraTransitionInfo
 	float RestoreDelay = 0.0f;
 
 	//@ 복원 시 전환에 사용할 보간 곡선
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bShouldRestoreAfterDuration"))
 	EBlendCurve RestoreBlendCurve = EBlendCurve::EaseIn;
 	
 	//@ 전환 요청 시 작업 우선 순위, 미구현
@@ -113,8 +125,12 @@ struct FCameraTransitionInfo
 	bool bInterruptible = true;
 
 	//@ 취소 처리 정책
-	UPROPERTY(EditAnywhere, BlueprintReadWrite)
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bInterruptible"))
 	ECameraFallbackPolicy FallbackPolicy = ECameraFallbackPolicy::SnapToDefault;
+
+	//@ 취소 지속 시간
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, meta = (EditCondition = "bInterruptible"), meta = (ClampMin = "0.1", ClampMax = "10.0", UIMin = "0.1", UIMax = "10.0"))
+	float InterruptDuration = 1.0f;
 };
 
 USTRUCT(BlueprintType)
@@ -138,6 +154,18 @@ struct FCurrentCameraTransitionInfo
 	UPROPERTY()
 	EBlendCurve BlendCurve = EBlendCurve::EaseInOut;
 
+	//@ FOV 변경 여부
+	UPROPERTY()
+	bool bShouldChangeFOV = false;
+
+	//@ 전환 시점의 FOV 값
+	UPROPERTY()
+	float StartFOV = 90.0f;
+
+	//@ 전환 목표 FOV 값
+	UPROPERTY()
+	float EndFOV = 90.0f;
+	
 	//@ 복원 여부
 	UPROPERTY()
 	bool bShouldRestore = false;
@@ -177,6 +205,10 @@ struct FCurrentCameraTransitionInfo
 	//@ 취소 처리 정책
 	UPROPERTY()
 	ECameraFallbackPolicy FallbackPolicy = ECameraFallbackPolicy::SnapToDefault;
+
+	//@ 취소 지속 시간
+	UPROPERTY()
+	float InterruptDuration = 1.0f;
 };
 #pragma endregion
 
@@ -228,6 +260,9 @@ protected:
 
 	//@ 작업큐 진행상태 체크 Flag
 	bool bIsTransitioning = false;
+
+	//@ 인터럽트 처리 중 체크 Flag
+	bool bIsInterrupting = false;
 
 	//@  카메라 전환 시작 
 	void StartTransition();

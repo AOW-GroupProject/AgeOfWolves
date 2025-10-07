@@ -1,0 +1,12 @@
+/NOLOGO
+/errorReport:prompt
+/MACHINE:x64
+/SUBSYSTEM:WINDOWS
+/DEF
+/NAME:"UnrealEditor-WwiseObjectUtils.dll"
+/IGNORE:4221
+/NODEFAULTLIB
+"D:\AgeofWolves_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\CoreUObject\SharedPCH.CoreUObject.ShadowErrors.InclOrderUnreal5_1.h.obj"
+"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseObjectUtils\Module.WwiseObjectUtils.cpp.obj"
+"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseObjectUtils\Default.rc2.res"
+/OUT:"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseObjectUtils\UnrealEditor-WwiseObjectUtils.lib"

@@ -44,6 +44,9 @@ AArea::AArea()
     //@Area Tag - 빈 태그로 초기화
     AreaTag = FGameplayTag();
 
+    //@Area ID 발급
+    AreaID = FGuid::NewGuid();
+    
     //@초기화
     MAIGroups.Empty();
     MPlayerBindings.Empty();
@@ -317,7 +320,7 @@ void AArea::InternalBindToPlayer(TWeakObjectPtr<APlayerCharacter> Player)
             *AreaID.ToString(), *Player->GetName());
         return;
     }
-
+    
     //@ASC 인터페이스 확인
     if (!Player->GetClass()->ImplementsInterface(UAbilitySystemInterface::StaticClass()))
     {
