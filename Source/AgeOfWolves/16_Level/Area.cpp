@@ -451,7 +451,6 @@ void AArea::InternalBindToStructure(TWeakObjectPtr<AActor> StructurePtr)
     }
 
     //@내부 바인딩...
-    // StructureBase->OnStructureInteractionBegin.BindUObject(this,&AArea::OnStructureInteractionTriggered);
     StructureBase->OnStructureInteractionTriggered.AddUFunction(this, "OnStructureInteractionTriggered");
     
 }
@@ -1573,6 +1572,8 @@ void AArea::OnStructureInteractionTriggered(AStructureBase* TriggeredStucture)
     if (!Structure.bIsActive)
     {
         Structure.bIsActive = true;
+        
+        UE_LOGFMT(LogArea, Warning, "구조물 최초 상호작용! 활성화됨!!");
 
         //게임모드에게 상호작용 전달
         if (auto GameMode = Cast<AAgeOfWolvesGameMode>(GetWorld()->GetAuthGameMode()))
@@ -1588,7 +1589,6 @@ void AArea::OnStructureInteractionTriggered(AStructureBase* TriggeredStucture)
     {
         //@이미 활성된 구조물!
         UE_LOGFMT(LogArea, Warning, "이미 구조물 상호작용 발동됨!, UI 오픈처리");
-        
     }
     //@area가 bIsActive 확인해서 구조물 active하기
     TriggeredStucture->SetStructureActive(Structure.bIsActive);

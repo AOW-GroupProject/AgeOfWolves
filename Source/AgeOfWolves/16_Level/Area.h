@@ -453,10 +453,6 @@ protected:
     TMap<FGuid, FAIGroupInfo> MAIGroups;
 
 protected:
-    UPROPERTY(EditAnywhere, Category = "Area | 구조물")
-    FStructureData StructureData;
-
-protected:
     //@영역 내 플레이어 정보
     UPROPERTY()
     TMap<TWeakObjectPtr<APlayerCharacter>, FPlayerBindingInfo> MPlayerBindings;
