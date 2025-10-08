@@ -14,7 +14,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #endif
 #define AKAUDIO_MovieSceneAkAudioEventTemplate_generated_h
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Private_MovieSceneAkAudioEventTemplate_h_32_GENERATED_BODY \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Private_MovieSceneAkAudioEventTemplate_h_32_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FMovieSceneAkAudioEventTemplate_Statics; \
 	static class UScriptStruct* StaticStruct(); \
 	typedef FMovieSceneEvalTemplate Super;
@@ -23,7 +23,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 template<> AKAUDIO_API UScriptStruct* StaticStruct<struct FMovieSceneAkAudioEventTemplate>();
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Private_MovieSceneAkAudioEventTemplate_h
+#define CURRENT_FILE_ID FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Private_MovieSceneAkAudioEventTemplate_h
 
 
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

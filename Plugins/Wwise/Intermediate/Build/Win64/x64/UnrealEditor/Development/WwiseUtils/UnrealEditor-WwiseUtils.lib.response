@@ -6,7 +6,7 @@
 /NAME:"UnrealEditor-WwiseUtils.dll"
 /IGNORE:4221
 /NODEFAULTLIB
-"D:\AgeofWolves_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Core\SharedPCH.Core.ShadowErrors.InclOrderUnreal5_1.h.obj"
-"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Module.WwiseUtils.cpp.obj"
-"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Default.rc2.res"
-/OUT:"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\UnrealEditor-WwiseUtils.lib"
+"E:\AOW\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Core\SharedPCH.Core.ShadowErrors.InclOrderUnreal5_1.h.obj"
+"E:\AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Module.WwiseUtils.cpp.obj"
+"E:\AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Default.rc2.res"
+/OUT:"E:\AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\UnrealEditor-WwiseUtils.lib"

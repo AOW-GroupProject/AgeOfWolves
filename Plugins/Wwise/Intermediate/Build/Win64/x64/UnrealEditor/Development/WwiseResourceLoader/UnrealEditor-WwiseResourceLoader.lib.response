@@ -6,8 +6,8 @@
 /NAME:"UnrealEditor-WwiseResourceLoader.dll"
 /IGNORE:4221
 /NODEFAULTLIB
-"D:\AgeofWolves_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Engine\SharedPCH.Engine.ShadowErrors.InclOrderUnreal5_1.h.obj"
-"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseResourceLoader\Module.WwiseResourceLoader.1_of_2.cpp.obj"
-"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseResourceLoader\Module.WwiseResourceLoader.2_of_2.cpp.obj"
-"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseResourceLoader\Default.rc2.res"
-/OUT:"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseResourceLoader\UnrealEditor-WwiseResourceLoader.lib"
+"E:\AOW\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Engine\SharedPCH.Engine.ShadowErrors.InclOrderUnreal5_1.h.obj"
+"E:\AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseResourceLoader\Module.WwiseResourceLoader.1_of_2.cpp.obj"
+"E:\AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseResourceLoader\Module.WwiseResourceLoader.2_of_2.cpp.obj"
+"E:\AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseResourceLoader\Default.rc2.res"
+/OUT:"E:\AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseResourceLoader\UnrealEditor-WwiseResourceLoader.lib"

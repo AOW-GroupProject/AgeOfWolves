@@ -17,7 +17,7 @@ void EmptyLinkFunctionForGeneratedCodeWwiseSimpleExternalSource_init() {}
 				nullptr,
 				0,
 				PKG_CompiledIn | 0x00000000,
-				0xB25A214A,
+				0x8A040D9B,
 				0xE648566B,
 				METADATA_PARAMS(nullptr, 0)
 			};
@@ -25,5 +25,5 @@ void EmptyLinkFunctionForGeneratedCodeWwiseSimpleExternalSource_init() {}
 		}
 		return Z_Registration_Info_UPackage__Script_WwiseSimpleExternalSource.OuterSingleton;
 	}
-	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_WwiseSimpleExternalSource(Z_Construct_UPackage__Script_WwiseSimpleExternalSource, TEXT("/Script/WwiseSimpleExternalSource"), Z_Registration_Info_UPackage__Script_WwiseSimpleExternalSource, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0xB25A214A, 0xE648566B));
+	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_WwiseSimpleExternalSource(Z_Construct_UPackage__Script_WwiseSimpleExternalSource, TEXT("/Script/WwiseSimpleExternalSource"), Z_Registration_Info_UPackage__Script_WwiseSimpleExternalSource, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0x8A040D9B, 0xE648566B));
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

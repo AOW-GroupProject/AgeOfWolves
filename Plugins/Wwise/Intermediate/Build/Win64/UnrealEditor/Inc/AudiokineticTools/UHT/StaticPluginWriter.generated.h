@@ -14,7 +14,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #endif
 #define AUDIOKINETICTOOLS_StaticPluginWriter_generated_h
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Private_AssetManagement_StaticPluginWriter_h_27_GENERATED_BODY \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Private_AssetManagement_StaticPluginWriter_h_27_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FAkPluginInfo_Statics; \
 	AUDIOKINETICTOOLS_API static class UScriptStruct* StaticStruct();
 
@@ -22,7 +22,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 template<> AUDIOKINETICTOOLS_API UScriptStruct* StaticStruct<struct FAkPluginInfo>();
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Private_AssetManagement_StaticPluginWriter_h
+#define CURRENT_FILE_ID FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Private_AssetManagement_StaticPluginWriter_h
 
 
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

@@ -116,15 +116,15 @@ void EmptyLinkFunctionForGeneratedCodeAkTrigger() {}
 	DEFINE_VTABLE_PTR_HELPER_CTOR(UAkTrigger);
 	UAkTrigger::~UAkTrigger() {}
 	IMPLEMENT_FSTRUCTUREDARCHIVE_SERIALIZER(UAkTrigger)
-	struct Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkTrigger_h_Statics
+	struct Z_CompiledInDeferFile_FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkTrigger_h_Statics
 	{
 		static const FClassRegisterCompiledInInfo ClassInfo[];
 	};
-	const FClassRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkTrigger_h_Statics::ClassInfo[] = {
+	const FClassRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkTrigger_h_Statics::ClassInfo[] = {
 		{ Z_Construct_UClass_UAkTrigger, UAkTrigger::StaticClass, TEXT("UAkTrigger"), &Z_Registration_Info_UClass_UAkTrigger, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UAkTrigger), 3727324183U) },
 	};
-	static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkTrigger_h_223197934(TEXT("/Script/AkAudio"),
-		Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkTrigger_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkTrigger_h_Statics::ClassInfo),
+	static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkTrigger_h_223197934(TEXT("/Script/AkAudio"),
+		Z_CompiledInDeferFile_FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkTrigger_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkTrigger_h_Statics::ClassInfo),
 		nullptr, 0,
 		nullptr, 0);
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

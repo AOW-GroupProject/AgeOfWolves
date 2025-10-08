@@ -14,7 +14,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #endif
 #define WWISEFILEHANDLER_WwiseMediaCookedData_generated_h
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_WwiseFileHandler_Public_Wwise_CookedData_WwiseMediaCookedData_h_26_GENERATED_BODY \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_WwiseFileHandler_Public_Wwise_CookedData_WwiseMediaCookedData_h_26_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FWwiseMediaCookedData_Statics; \
 	static class UScriptStruct* StaticStruct();
 
@@ -22,7 +22,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 template<> WWISEFILEHANDLER_API UScriptStruct* StaticStruct<struct FWwiseMediaCookedData>();
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_WwiseFileHandler_Public_Wwise_CookedData_WwiseMediaCookedData_h
+#define CURRENT_FILE_ID FID_AOW_AgeOfWolves_Plugins_Wwise_Source_WwiseFileHandler_Public_Wwise_CookedData_WwiseMediaCookedData_h
 
 
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

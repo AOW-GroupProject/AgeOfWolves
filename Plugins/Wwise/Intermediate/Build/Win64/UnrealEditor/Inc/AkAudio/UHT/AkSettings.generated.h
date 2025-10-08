@@ -14,14 +14,14 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #endif
 #define AKAUDIO_AkSettings_generated_h
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_64_GENERATED_BODY \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_64_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FAkGeometrySurfacePropertiesToMap_Statics; \
 	AKAUDIO_API static class UScriptStruct* StaticStruct();
 
 
 template<> AKAUDIO_API UScriptStruct* StaticStruct<struct FAkGeometrySurfacePropertiesToMap>();
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_93_GENERATED_BODY \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_93_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FWwiseGeometrySurfacePropertiesRow_Statics; \
 	AKAUDIO_API static class UScriptStruct* StaticStruct(); \
 	typedef FTableRowBase Super;
@@ -29,7 +29,7 @@ template<> AKAUDIO_API UScriptStruct* StaticStruct<struct FAkGeometrySurfaceProp
 
 template<> AKAUDIO_API UScriptStruct* StaticStruct<struct FWwiseGeometrySurfacePropertiesRow>();
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_121_GENERATED_BODY \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_121_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FWwiseDecayAuxBusRow_Statics; \
 	AKAUDIO_API static class UScriptStruct* StaticStruct(); \
 	typedef FTableRowBase Super;
@@ -37,18 +37,18 @@ template<> AKAUDIO_API UScriptStruct* StaticStruct<struct FWwiseGeometrySurfaceP
 
 template<> AKAUDIO_API UScriptStruct* StaticStruct<struct FWwiseDecayAuxBusRow>();
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_143_GENERATED_BODY \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_143_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FAkAcousticTextureParams_Statics; \
 	AKAUDIO_API static class UScriptStruct* StaticStruct();
 
 
 template<> AKAUDIO_API UScriptStruct* StaticStruct<struct FAkAcousticTextureParams>();
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_SPARSE_DATA
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_RPC_WRAPPERS
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_RPC_WRAPPERS_NO_PURE_DECLS
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_ACCESSORS
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_INCLASS_NO_PURE_DECLS \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_SPARSE_DATA
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_RPC_WRAPPERS
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_RPC_WRAPPERS_NO_PURE_DECLS
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_ACCESSORS
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_INCLASS_NO_PURE_DECLS \
 private: \
 	static void StaticRegisterNativesUAkSettings(); \
 	friend struct Z_Construct_UClass_UAkSettings_Statics; \
@@ -59,7 +59,7 @@ public: \
 
 
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_INCLASS \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_INCLASS \
 private: \
 	static void StaticRegisterNativesUAkSettings(); \
 	friend struct Z_Construct_UClass_UAkSettings_Statics; \
@@ -70,7 +70,7 @@ public: \
 
 
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_STANDARD_CONSTRUCTORS \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_STANDARD_CONSTRUCTORS \
 	/** Standard constructor, called after all reflected properties have been initialized */ \
 	NO_API UAkSettings(const FObjectInitializer& ObjectInitializer = FObjectInitializer::Get()); \
 	DEFINE_DEFAULT_OBJECT_INITIALIZER_CONSTRUCTOR_CALL(UAkSettings) \
@@ -83,7 +83,7 @@ private: \
 public:
 
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_ENHANCED_CONSTRUCTORS \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_ENHANCED_CONSTRUCTORS \
 private: \
 	/** Private move- and copy-constructors, should never be used */ \
 	NO_API UAkSettings(UAkSettings&&); \
@@ -94,27 +94,27 @@ public: \
 	DEFINE_DEFAULT_OBJECT_INITIALIZER_CONSTRUCTOR_CALL(UAkSettings)
 
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_165_PROLOG
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_GENERATED_BODY_LEGACY \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_165_PROLOG
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_GENERATED_BODY_LEGACY \
 PRAGMA_DISABLE_DEPRECATION_WARNINGS \
 public: \
-	FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_SPARSE_DATA \
-	FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_RPC_WRAPPERS \
-	FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_ACCESSORS \
-	FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_INCLASS \
-	FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_STANDARD_CONSTRUCTORS \
+	FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_SPARSE_DATA \
+	FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_RPC_WRAPPERS \
+	FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_ACCESSORS \
+	FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_INCLASS \
+	FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_STANDARD_CONSTRUCTORS \
 public: \
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_GENERATED_BODY \
+#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_GENERATED_BODY \
 PRAGMA_DISABLE_DEPRECATION_WARNINGS \
 public: \
-	FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_SPARSE_DATA \
-	FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_RPC_WRAPPERS_NO_PURE_DECLS \
-	FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_ACCESSORS \
-	FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_INCLASS_NO_PURE_DECLS \
-	FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_ENHANCED_CONSTRUCTORS \
+	FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_SPARSE_DATA \
+	FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_RPC_WRAPPERS_NO_PURE_DECLS \
+	FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_ACCESSORS \
+	FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_INCLASS_NO_PURE_DECLS \
+	FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h_168_ENHANCED_CONSTRUCTORS \
 private: \
 PRAGMA_ENABLE_DEPRECATION_WARNINGS
 
@@ -122,7 +122,7 @@ PRAGMA_ENABLE_DEPRECATION_WARNINGS
 template<> AKAUDIO_API UClass* StaticClass<class UAkSettings>();
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h
+#define CURRENT_FILE_ID FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkSettings_h
 
 
 #define FOREACH_ENUM_EAKCOLLISIONCHANNEL(op) \
