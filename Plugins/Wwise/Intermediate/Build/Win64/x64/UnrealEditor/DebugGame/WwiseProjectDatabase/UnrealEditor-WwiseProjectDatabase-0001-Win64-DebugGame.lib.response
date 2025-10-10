@@ -1,0 +1,15 @@
+/NOLOGO
+/errorReport:prompt
+/MACHINE:x64
+/SUBSYSTEM:WINDOWS
+/DEF
+/NAME:"UnrealEditor-WwiseProjectDatabase-0001-Win64-DebugGame.dll"
+/IGNORE:4221
+/NODEFAULTLIB
+"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\DebugGame\UnrealEd\SharedPCH.UnrealEd.NonOptimized.ShadowErrors.InclOrderUnreal5_1.h.obj"
+"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\DebugGame\WwiseProjectDatabase\Module.WwiseProjectDatabase.cpp.obj"
+"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\DebugGame\WwiseProjectDatabase\WwiseRefType.gen.cpp.obj"
+"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\DebugGame\WwiseProjectDatabase\WwiseDatabaseIdentifiers.gen.cpp.obj"
+"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\DebugGame\WwiseProjectDatabase\WwiseProjectDatabase.init.gen.cpp.obj"
+"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\DebugGame\WwiseProjectDatabase\Default.rc2.res"
+/OUT:"F:\Unreal_Projects\Group_Project\[2024-02]GP_AOW\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\DebugGame\WwiseProjectDatabase\UnrealEditor-WwiseProjectDatabase-0001-Win64-DebugGame.lib"

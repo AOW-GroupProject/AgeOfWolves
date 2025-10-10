@@ -14,7 +14,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #endif
 #define AKAUDIO_AkReverbDescriptor_generated_h
 
-#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkReverbDescriptor_h_37_GENERATED_BODY \
+#define FID_Unreal_Projects_Group_Project__2024_02_GP_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkReverbDescriptor_h_37_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FAkReverbDescriptor_Statics; \
 	static class UScriptStruct* StaticStruct();
 
@@ -22,7 +22,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 template<> AKAUDIO_API UScriptStruct* StaticStruct<struct FAkReverbDescriptor>();
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkReverbDescriptor_h
+#define CURRENT_FILE_ID FID_Unreal_Projects_Group_Project__2024_02_GP_AOW_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_AkReverbDescriptor_h
 
 
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

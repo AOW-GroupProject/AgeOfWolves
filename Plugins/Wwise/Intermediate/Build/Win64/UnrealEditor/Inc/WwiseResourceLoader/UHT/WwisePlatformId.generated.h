@@ -14,7 +14,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #endif
 #define WWISERESOURCELOADER_WwisePlatformId_generated_h
 
-#define FID_AOW_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_WwisePlatformId_h_25_GENERATED_BODY \
+#define FID_Unreal_Projects_Group_Project__2024_02_GP_AOW_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_WwisePlatformId_h_25_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FWwisePlatformId_Statics; \
 	static class UScriptStruct* StaticStruct();
 
@@ -22,7 +22,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 template<> WWISERESOURCELOADER_API UScriptStruct* StaticStruct<struct FWwisePlatformId>();
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_AOW_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_WwisePlatformId_h
+#define CURRENT_FILE_ID FID_Unreal_Projects_Group_Project__2024_02_GP_AOW_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_WwisePlatformId_h
 
 
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

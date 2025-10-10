@@ -6,9 +6,6 @@
         "PCH": "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\intermediate\\build\\win64\\x64\\ageofwolveseditor\\debuggame\\unrealed\\sharedpch.unrealed.nonoptimized.shadowerrors.inclorderunreal5_1.h.pch",
         "Includes": [
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\x64\\unrealeditor\\debuggame\\wwiseresourcecooker\\definitions.wwiseresourcecooker.h",
-            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseresourcecooker\\uht\\wwiseresourcecooker.init.gen.cpp",
-            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseresourcecooker\\uht\\wwiseresourcecookermodule.gen.cpp",
-            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseresourcecooker\\public\\wwise\\wwiseresourcecookermodule.h",
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseresourcecooker\\private\\wwise\\stats\\resourcecooker.cpp",
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseresourcecooker\\public\\wwise\\stats\\resourcecooker.h",
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseresourcecooker\\private\\wwise\\wwiseresourcecooker.cpp",
@@ -374,6 +371,7 @@
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseutils\\public\\wwise\\stats\\memory.h",
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseresourceloader\\uht\\wwiseresourceloaderimpl.generated.h",
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseprojectdatabase\\public\\wwise\\wwiseprojectdatabasemodule.h",
+            "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseresourcecooker\\public\\wwise\\wwiseresourcecookermodule.h",
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseresourceloader\\public\\wwise\\cookeddata\\wwiseaudiodevicesharesetcookeddata.h",
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\unrealeditor\\inc\\wwiseresourceloader\\uht\\wwiseaudiodevicesharesetcookeddata.generated.h",
             "f:\\unreal_projects\\group_project\\[2024-02]gp_aow\\ageofwolves\\plugins\\wwise\\source\\wwiseresourcecooker\\private\\wwise\\wwisecookingcache.h",

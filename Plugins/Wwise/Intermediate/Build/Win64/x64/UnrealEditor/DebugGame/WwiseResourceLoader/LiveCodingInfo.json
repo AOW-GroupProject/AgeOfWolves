@@ -2,6 +2,7 @@
 	"RemapUnityFiles": 
 	{
 		"Module.WwiseResourceLoader.1_of_2.cpp.obj": [
+			"WwiseAcousticTextureCookedData.cpp.obj",
 			"WwiseAcousticTextureCookedData.gen.cpp.obj",
 			"WwiseAudioDeviceShareSetCookedData.gen.cpp.obj",
 			"WwiseAuxBusCookedData.gen.cpp.obj",
@@ -19,9 +20,7 @@
 			"WwiseLocalizedShareSetCookedData.gen.cpp.obj",
 			"WwiseLocalizedSoundBankCookedData.gen.cpp.obj",
 			"WwiseObjectInfo.gen.cpp.obj",
-			"WwiseObjectInfoLibrary.gen.cpp.obj"
-		],
-		"Module.WwiseResourceLoader.2_of_2.cpp.obj": [
+			"WwiseObjectInfoLibrary.gen.cpp.obj",
 			"WwisePlatformId.gen.cpp.obj",
 			"WwiseResourceLoader.init.gen.cpp.obj",
 			"WwiseResourceLoaderImpl.gen.cpp.obj",
@@ -30,8 +29,9 @@
 			"WwiseSharedPlatformId.gen.cpp.obj",
 			"WwiseShareSetCookedData.gen.cpp.obj",
 			"WwiseSwitchContainerLeafCookedData.gen.cpp.obj",
-			"WwiseTriggerCookedData.gen.cpp.obj",
-			"WwiseAcousticTextureCookedData.cpp.obj",
+			"WwiseTriggerCookedData.gen.cpp.obj"
+		],
+		"Module.WwiseResourceLoader.2_of_2.cpp.obj": [
 			"WwiseAudioDeviceShareSetCookedData.cpp.obj",
 			"WwiseAuxBusCookedData.cpp.obj",
 			"WwiseEventCookedData.cpp.obj",

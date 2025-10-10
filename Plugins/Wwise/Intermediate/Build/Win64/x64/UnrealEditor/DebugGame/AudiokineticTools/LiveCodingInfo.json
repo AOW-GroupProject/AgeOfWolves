@@ -2,14 +2,6 @@
 	"RemapUnityFiles": 
 	{
 		"Module.AudiokineticTools.cpp.obj": [
-			"ActorFactoryAkAmbientSound.gen.cpp.obj",
-			"AkAssetFactories.gen.cpp.obj",
-			"AkJsonFactory.gen.cpp.obj",
-			"AkMigrationCommandlet.gen.cpp.obj",
-			"AudiokineticTools.init.gen.cpp.obj",
-			"GenerateSoundBanksCommandlet.gen.cpp.obj",
-			"StaticPluginWriter.gen.cpp.obj",
-			"WwiseBrowserHelpers.gen.cpp.obj",
 			"AkAudioBankGenerationHelpers.cpp.obj",
 			"AkAssetDatabase.cpp.obj",
 			"AkAssetMigrationHelper.cpp.obj",
@@ -60,7 +52,15 @@
 			"WwiseStatusColumn.cpp.obj",
 			"WwiseUEAssetStatusColumn.cpp.obj",
 			"AcousticTextureParamLookup.cpp.obj",
-			"WwiseSoundBankInfoCache.cpp.obj"
+			"WwiseSoundBankInfoCache.cpp.obj",
+			"ActorFactoryAkAmbientSound.gen.cpp.obj",
+			"AkAssetFactories.gen.cpp.obj",
+			"AkJsonFactory.gen.cpp.obj",
+			"AkMigrationCommandlet.gen.cpp.obj",
+			"AudiokineticTools.init.gen.cpp.obj",
+			"GenerateSoundBanksCommandlet.gen.cpp.obj",
+			"StaticPluginWriter.gen.cpp.obj",
+			"WwiseBrowserHelpers.gen.cpp.obj"
 		]
 	}
 }
