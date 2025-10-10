@@ -92,6 +92,8 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 		// 현재 ManaStack 클램핑
 		SetManaStack(FMath::Clamp(GetManaStack(), 0.f, GetMaxManaStack()));
 
+		UE_LOGFMT(LogAttributeSet, Log, "마나 스택 현재 수치: {0}", GetManaStack());
+
 		// MaxManaStack에 도달했는지 확인
 		if (GetManaStack() >= GetMaxManaStack())
 		{
