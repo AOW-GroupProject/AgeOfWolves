@@ -1021,7 +1021,7 @@ void UAttackGameplayAbility::SendDamageEventInternal(const FProcessingData& Proc
         SubEffectCDO = SubEffectClass.GetDefaultObject();
     }
 
-    //@데미지 이벤트 전송
+    //@데미지 이벤트 전송 (Target에게)
     bool bSuccess = UCombatLibrary::SendGameplayEventToTarget(
         FGameplayTag::RequestGameplayTag("EventTag.OnDamaged"),
         HitActor,
@@ -1042,9 +1042,10 @@ void UAttackGameplayAbility::SendDamageEventInternal(const FProcessingData& Proc
     UE_LOGFMT(LogAttackGA, Log, "데미지 이벤트 전송 완료 - Target: {0}, Instigator: {1}",
         HitActor->GetName(), SourceActor->GetName());
 
-    //@Source ASC의 데미지 전달 델리게이트 호출
+    //@Source ASC의 데미지 전달 이벤트 처리
     if (UBaseAbilitySystemComponent* SourceASC = Cast<UBaseAbilitySystemComponent>(GetAbilitySystemComponentFromActorInfo()))
     {
+        //@이벤트 데이터 구성
         FGameplayEventData DamageDealtEventData;
         DamageDealtEventData.Instigator = SourceActor;
         DamageDealtEventData.Target = HitActor;
@@ -1058,9 +1059,19 @@ void UAttackGameplayAbility::SendDamageEventInternal(const FProcessingData& Proc
         }
         DamageDealtEventData.ContextHandle = ContextHandle;
 
+        //@델리게이트 호출
         SourceASC->DamageDealtByActor.Broadcast(SourceActor, HitActor, DamageDealtEventData);
 
         UE_LOGFMT(LogAttackGA, Log, "데미지 전달 델리게이트 호출 완료 - Source: {0}, Target: {1}",
+            *SourceActor->GetName(), *HitActor->GetName());
+
+        //@✅ 추가: HandleGameplayEvent 호출
+        SourceASC->HandleGameplayEvent(
+            FGameplayTag::RequestGameplayTag("EventTag.OnDamageDealt"),
+            &DamageDealtEventData
+        );
+
+        UE_LOGFMT(LogAttackGA, Log, "데미지 전달 GameplayEvent 처리 완료 - EventTag: EventTag.OnDamageDealt, Source: {0}, Target: {1}",
             *SourceActor->GetName(), *HitActor->GetName());
     }
 

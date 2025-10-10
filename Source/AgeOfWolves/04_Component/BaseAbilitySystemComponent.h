@@ -10,8 +10,8 @@
 
 DECLARE_LOG_CATEGORY_EXTERN(LogASC, Log, All);
 
-//@전방 선언#pragma region Forward Declaration
-
+//@전방 선언
+#pragma region Forward Declaration
 class UANS_AllowChainAction;
 class UBaseAttributeSet;
 class ABaseAIController;
@@ -77,6 +77,7 @@ class AGEOFWOLVES_API UBaseAbilitySystemComponent : public UAbilitySystemCompone
 //@친추 클래스
 #pragma region Friend Class
 	friend class UBaseGameplayAbility;
+	friend class UAttackGameplayAbility;
 	friend class UANS_AllowChainAction;
 	friend class ABaseAIController;
 	friend class APlayerStateBase;
