@@ -318,7 +318,6 @@ void AAgeOfWolvesGameMode::NotifyQuestCompleteViaGameState(FGameplayTag AreaTag,
     UE_LOGFMT(LogAOWGameMode, Log, "Game State를 통한 퀘스트 완료 알림 호출 완료");
 }
 
-
 bool AAgeOfWolvesGameMode::PerformPlayerTeleport(APawn* PlayerPawn, const FTransform& TargetTransform)
 {
     if (!IsValid(PlayerPawn))
@@ -594,7 +593,6 @@ void AAgeOfWolvesGameMode::OnLevelTransitionCompleted(const FGameplayTag& Comple
         UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 완료 델리게이트 바인딩 해제 완료");
     }
 }
-
 #pragma endregion
 
 //@유틸리티
