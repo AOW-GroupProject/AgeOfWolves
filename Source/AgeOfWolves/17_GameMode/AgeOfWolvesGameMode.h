@@ -76,11 +76,21 @@ private:
     void StartLevelTransition(const FGameplayTag& TargetLevelTag);
 
 private:
-    // 로딩 UI 표시 (UIManager 직접 호출)
+    //@로딩 UI 표시 (UIManager 직접 호출)
     void ShowLoadingUI();
 
-    // 로딩 UI 숨김 (UIManager 직접 호출)
+    //@로딩 UI 숨김 (UIManager 직접 호출)
     void HideLoadingUI();
+
+private:
+    //@WolfStatue 상호작용 UI 표시
+    void ShowWolfStatueInteractionUI();
+
+    //@WolfStatue 상호작용 UI 숨기기
+    void HideWolfStatueInteractionUI();
+
+    //@WolfStatue UI가 자동으로 숨겨진 후 호출될 타이머 핸들
+    FTimerHandle WolfStatueUITimerHandle;
 
 public:
     // 퀘스트 완료 확인
