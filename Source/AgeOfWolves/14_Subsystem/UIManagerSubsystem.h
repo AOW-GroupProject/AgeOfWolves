@@ -104,10 +104,6 @@ public:
 	UUIManagerSubsystem();
 
 protected:
-	//@외부 바인딩 - GameState와의 이벤트 연결
-	//void ExternalBindinToGameState();
-
-protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize()override;
 #pragma endregion
@@ -161,8 +157,6 @@ private:
 
 	//@Promise가 완료된(최소 시간이 경과한) UI의 pending 요청을 처리
 	void ProcessPendingHideRequestIfExists(const FGameplayTag& UITag);
-
-
 
 	//@UI 관련 Promise 및 시간 정보를 정리
 	void CleanupUITimeTrackingInfo(const FGameplayTag& UITag);
