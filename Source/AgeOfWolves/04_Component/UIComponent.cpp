@@ -697,7 +697,6 @@ bool UUIComponent::UpdateSingleIndicatorPosition(UUserWidget* Indicator, AActor*
 		return false;
 	}
 
-	//@PlayerController 가져오기
 	APlayerController* PC = Cast<APlayerController>(GetOwner());
 	if (!PC)
 	{
@@ -722,78 +721,98 @@ bool UUIComponent::UpdateSingleIndicatorPosition(UUserWidget* Indicator, AActor*
 
 	FString TagString = IndicatorTag.ToString();
 
-	//@타겟의 3D 월드 위치 계산
+	// ============================================
+	// 1. 타겟의 3D 월드 위치 계산
+	// ============================================
 	FVector TargetWorldLocation;
 	if (!GetIndicatorWorldPosition(IndicatorTag, Target, TargetWorldLocation))
 	{
 		return false;
 	}
 
-	//@3D 월드 좌표 → 2D 스크린 좌표 변환
-	FVector2D ScreenPosition;
-	bool bIsOnScreen = PC->ProjectWorldLocationToScreen(TargetWorldLocation, ScreenPosition, true);
+	// ============================================
+	// 2. 3D → 2D 투영
+	// ============================================
+	FVector2D BaseScreenPosition;
+	bool bIsOnScreen = PC->ProjectWorldLocationToScreen(TargetWorldLocation, BaseScreenPosition, true);
 
-	//@화면 밖이면 숨김 처리
+	//@화면 밖 처리
 	if (!bIsOnScreen && bHideIndicatorWhenOffScreen)
 	{
 		if (Indicator->GetVisibility() != ESlateVisibility::Collapsed)
 		{
 			Indicator->SetVisibility(ESlateVisibility::Collapsed);
+			//@캐시 제거
+			LastIndicatorScreenPositions.Remove(IndicatorTag);
 		}
 		return false;
 	}
 
-	//@✅ Structure는 2D 화면 좌표에서 오프셋 적용 (화면 기준 오른쪽)
-	if (TagString.Contains(TEXT("StatueInteractionUI")))
-	{
-		ScreenPosition += StructureScreenOffset;
-		UE_LOGFMT(LogUI, Verbose, "Structure 2D 오프셋 적용 후: ({0}, {1})",
-			ScreenPosition.X, ScreenPosition.Y);
-	}
-
-	//@화면 안이면 표시
+	//@화면 안 처리
 	if (Indicator->GetVisibility() == ESlateVisibility::Collapsed)
 	{
 		Indicator->SetVisibility(ESlateVisibility::HitTestInvisible);
 	}
 
-	//@현재 위치 가져오기
-	FVector2D CurrentPosition = Indicator->GetCachedGeometry().GetAbsolutePosition();
+	// ============================================
+	// 3. 2D 픽셀 오프셋 적용
+	// ============================================
+	FVector2D TargetScreenPosition = BaseScreenPosition;
 
-	//@✅ DeadZone & SoftZone 적용
-	FVector2D PositionDelta = ScreenPosition - CurrentPosition;
-	float Distance = PositionDelta.Size();
+	//@공통 오프셋 (모든 Indicator)
+	TargetScreenPosition.X += CommonScreenOffsetRight;
+	TargetScreenPosition.Y += CommonScreenOffsetUp;
 
-	FVector2D NewPosition;
+	//@타입별 추가 오프셋 & 보간 속도 결정
+	float InterpolationSpeed = GeneralInterpolationSpeed;
 
-	// DeadZone: 거리가 너무 작으면 이동 안 함
-	if (Distance < IndicatorDeadZone)
+	if (TagString.Contains(TEXT("LockOn")))
 	{
-		NewPosition = CurrentPosition;  // 현재 위치 유지
-		// 로그 생략 (너무 많이 찍힘)
+		TargetScreenPosition.X += LockOnScreenOffsetRight;
+		TargetScreenPosition.Y += LockOnScreenOffsetUp;
+		InterpolationSpeed = LockOnInterpolationSpeed;  // 빠르게
 	}
-	// SoftZone: 거리가 작으면 느리게 이동
-	else if (Distance < IndicatorSoftZone)
+	else if (TagString.Contains(TEXT("StatueInteractionUI")))
 	{
-		float SlowSpeed = IndicatorInterpolationSpeed * SoftZoneSpeedMultiplier;
-		NewPosition.X = FMath::FInterpTo(CurrentPosition.X, ScreenPosition.X, DeltaTime, SlowSpeed);
-		NewPosition.Y = FMath::FInterpTo(CurrentPosition.Y, ScreenPosition.Y, DeltaTime, SlowSpeed);
-
-		UE_LOGFMT(LogUI, VeryVerbose, "SoftZone 보간 (거리: {0}): {1} → {2}",
-			Distance, *CurrentPosition.ToString(), *NewPosition.ToString());
+		TargetScreenPosition.X += StructureScreenOffsetRight;
+		TargetScreenPosition.Y += StructureScreenOffsetUp;
+		InterpolationSpeed = StructureInterpolationSpeed;  // 느리게
 	}
-	// 일반: 거리가 크면 정상 속도로 이동
+
+	// ============================================
+	// 4. 보간 적용 (선택적)
+	// ============================================
+	FVector2D FinalScreenPosition;
+
+	if (bUseInterpolation)
+	{
+		//@이전 위치 가져오기
+		FVector2D* LastPosition = LastIndicatorScreenPositions.Find(IndicatorTag);
+
+		if (LastPosition)
+		{
+			//@보간 적용
+			FinalScreenPosition = FMath::Vector2DInterpTo(*LastPosition, TargetScreenPosition, DeltaTime, InterpolationSpeed);
+		}
+		else
+		{
+			//@첫 프레임: 즉시 이동
+			FinalScreenPosition = TargetScreenPosition;
+		}
+
+		//@위치 캐싱
+		LastIndicatorScreenPositions.Add(IndicatorTag, FinalScreenPosition);
+	}
 	else
 	{
-		NewPosition.X = FMath::FInterpTo(CurrentPosition.X, ScreenPosition.X, DeltaTime, IndicatorInterpolationSpeed);
-		NewPosition.Y = FMath::FInterpTo(CurrentPosition.Y, ScreenPosition.Y, DeltaTime, IndicatorInterpolationSpeed);
-
-		UE_LOGFMT(LogUI, VeryVerbose, "일반 보간 (거리: {0}): {1} → {2}",
-			Distance, *CurrentPosition.ToString(), *NewPosition.ToString());
+		//@보간 없이 즉시 이동
+		FinalScreenPosition = TargetScreenPosition;
 	}
 
-	//@위치 설정
-	Indicator->SetPositionInViewport(NewPosition, false);
+	// ============================================
+	// 5. 위치 설정
+	// ============================================
+	Indicator->SetPositionInViewport(FinalScreenPosition, false);
 
 	return true;
 }
@@ -1101,61 +1120,30 @@ bool UUIComponent::GetIndicatorWorldPosition(const FGameplayTag& IndicatorTag, A
 	}
 
 	FString TagString = IndicatorTag.ToString();
+	FVector BaseLocation = Target->GetActorLocation();
 
 	// ============================================
-	// 1. LockOn Indicator - Spine 소켓 위치
+	// 1. LockOn Indicator
 	// ============================================
 	if (TagString.Contains(TEXT("LockOn")))
 	{
-		USkeletalMeshComponent* SkeletalMesh = Target->FindComponentByClass<USkeletalMeshComponent>();
-		if (!SkeletalMesh)
-		{
-			UE_LOGFMT(LogUI, Warning, "LockOn 타겟에 SkeletalMeshComponent가 없음: {0}", *Target->GetName());
-			OutWorldPosition = Target->GetActorLocation();
-			OutWorldPosition.Z += GeneralIndicatorHeightOffset;
-			return true;
-		}
-
-		if (SkeletalMesh->DoesSocketExist(LockOnTargetSocketName))
-		{
-			OutWorldPosition = SkeletalMesh->GetSocketLocation(LockOnTargetSocketName);
-			OutWorldPosition += LockOnSocketOffset;
-			return true;
-		}
-		else if (SkeletalMesh->DoesSocketExist(FName("spine_02")))
-		{
-			OutWorldPosition = SkeletalMesh->GetSocketLocation(FName("spine_02"));
-			OutWorldPosition += LockOnSocketOffset;
-			return true;
-		}
-		else
-		{
-			UE_LOGFMT(LogUI, Warning, "Spine 소켓을 찾을 수 없음: {0}", *Target->GetName());
-			OutWorldPosition = Target->GetActorLocation();
-			OutWorldPosition.Z += GeneralIndicatorHeightOffset;
-			return true;
-		}
+		OutWorldPosition = BaseLocation + FVector(0, 0, LockOnHeightOffset);
+		return true;
 	}
-
 	// ============================================
-	// 2. Structure Indicator - ✅ 수정: 중심점만 반환 (2D 오프셋은 나중에)
+	// 2. Structure Indicator
 	// ============================================
 	else if (TagString.Contains(TEXT("StatueInteractionUI")))
 	{
-		OutWorldPosition = Target->GetActorLocation();
-		OutWorldPosition.Z += StructureHeightOffset;  // 높이만 3D에서 적용
-
-		UE_LOGFMT(LogUI, Verbose, "Structure 3D 중심: {0}", *OutWorldPosition.ToString());
+		OutWorldPosition = BaseLocation + FVector(0, 0, StructureWorldHeightOffset);
 		return true;
 	}
-
 	// ============================================
-	// 3. 기타 Indicator
+	// 3. 기타 Indicator (Execution, Ambush 등)
 	// ============================================
 	else
 	{
-		OutWorldPosition = Target->GetActorLocation();
-		OutWorldPosition.Z += GeneralIndicatorHeightOffset;
+		OutWorldPosition = BaseLocation + FVector(0, 0, GeneralIndicatorHeightOffset);
 		return true;
 	}
 }
