@@ -14,6 +14,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUI, Log, All)
 class UUserWidget;
 class UUIManagerSubsystem;
 class UBaseInputComponent;
+class UObjectiveDetectionComponent;
 #pragma endregion
 
 //@열거형
@@ -75,12 +76,15 @@ protected:
 	virtual void InitializeComponent() override;
 	virtual void DestroyComponent(bool bPromoteChildren = false) override;
 	virtual void BeginPlay() override;
+	virtual void TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction) override;  // ✅ 추가
 	virtual void EndPlay(const EEndPlayReason::Type EndPlayReason) override;
 	//~ End of UActorComponent Interface
 
 private:
 	//@외부 바인딩
 	void ExternalBindingToInputComponent(const APlayerController* PlayerController);
+	//@OD Component 바인딩 - 동일
+	void ExternalBindingToODComponent(const APlayerController* PlayerController);
 
 private:
 	//@내부 바인딩
@@ -117,8 +121,8 @@ protected:
 	void SetupHUDUI(UUserWidget* NewWidget);
 	//@Menu UI
 	void SetupMenuUI(UUserWidget* NewWidget);
-	//@Interaction UI
-	void SetupInteractionUI(const FGameplayTag& UITag, UUserWidget* NewWidget);
+	//@Indicator UI - 동일
+	void SetupIndicatorUI(const FGameplayTag& UITag, UUserWidget* NewWidget);
 
 protected:
 	//@Widget을 화면에 나타냅니다.
@@ -133,15 +137,100 @@ protected:
 		void HideAllUI(EUICategory UICategory);
 
 protected:
+	//@활성 인디케이터 업데이트 - 동일
+	void UpdateActiveIndicator();
+
+	//@인디케이터 표시/숨김 헬퍼 - 새로 추가
+	void ShowIndicatorWidget(UUserWidget* Widget);
+	void HideIndicatorWidget(UUserWidget* Widget);
+	void HideAllIndicators();
+
+	//@Indicator 위치 업데이트 (Tick에서 호출)
+	void UpdateIndicatorPositions(float DeltaTime);
+
+	//@개별 Indicator 위치 업데이트
+	bool UpdateSingleIndicatorPosition(UUserWidget* Indicator, AActor* Target, float DeltaTime);
+
+protected:
 	//@HUD
     UPROPERTY()
         TObjectPtr<UUserWidget> HUDUI;
+
+protected:
 	//@Menu
 	UPROPERTY()
 		TObjectPtr<UUserWidget> MenuUI;
-	//@Interaction
+
+protected:
+	//@Indicator
 	UPROPERTY()
-		TMap<FGameplayTag, UUserWidget*> MInteractionUIs;
+		TMap<FGameplayTag, UUserWidget*> MIndicatorUIs;
+	//@각 인디케이터의 현재 타겟 추적
+	UPROPERTY()
+		TMap<FGameplayTag, TWeakObjectPtr<AActor>> IndicatorTargets;
+
+protected:
+	//@Indicator 설정 - 동일
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI | Indicator Settings")
+	bool bEnableIndicators = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Indicator Settings",
+		meta = (EditCondition = "bEnableIndicators", DisplayName = "Show LockOn Indicator"))
+	bool bShowLockOnIndicator = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Indicator Settings",
+		meta = (EditCondition = "bEnableIndicators", DisplayName = "Show Execution Indicator"))
+	bool bShowExecutionIndicator = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Indicator Settings",
+		meta = (EditCondition = "bEnableIndicators", DisplayName = "Show Ambush Indicator"))
+	bool bShowAmbushIndicator = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Indicator Settings",
+		meta = (EditCondition = "bEnableIndicators", DisplayName = "Show Structure Indicator"))
+	bool bShowStructureIndicator = true;
+
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "UI|Indicator Settings",
+		meta = (EditCondition = "bEnableIndicators", DisplayName = "Debug Mode - Show All"))
+	bool bDebugMode = false;
+
+protected:
+	//@LockOn Indicator 설정
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn")
+	FName LockOnTargetSocketName = FName("spine_03");
+
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn")
+	FVector LockOnSocketOffset = FVector::ZeroVector;
+
+	//@Structure Indicator 설정 - ✅ 수정: 2D 오프셋으로 변경
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure")
+	FVector2D StructureScreenOffset = FVector2D(80.0f, -30.0f);  // X=오른쪽, Y=위(-는 위)
+
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure")
+	float StructureHeightOffset = 80.0f;  // 3D 높이만 적용
+
+	//@일반 Indicator 설정
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|General")
+	float GeneralIndicatorHeightOffset = 80.0f;
+
+	//@보간 설정 - ✅ 추가
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation")
+	float IndicatorInterpolationSpeed = 15.0f;
+
+	//@DeadZone: 이 거리(픽셀) 이하의 변화는 무시
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation", meta = (ClampMin = "0", ClampMax = "20"))
+	float IndicatorDeadZone = 5.0f;
+
+	//@SoftZone: 이 거리(픽셀) 이하는 느리게 보간
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation", meta = (ClampMin = "0", ClampMax = "50"))
+	float IndicatorSoftZone = 20.0f;
+
+	//@SoftZone 내에서의 보간 속도 감소율
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation", meta = (ClampMin = "0.1", ClampMax = "1.0"))
+	float SoftZoneSpeedMultiplier = 0.3f;
+
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings")
+	bool bHideIndicatorWhenOffScreen = true;
 #pragma endregion
 
 //@Delegates
@@ -189,6 +278,20 @@ protected:
 	//@Menu UI 키 입력을 통한 Menu UI 닫기 요청 이벤트 구독
 	UFUNCTION()
 		void OnRequestCloseMenuUI();
+
+protected:
+	//@OD Component 이벤트 콜백들
+	UFUNCTION()
+	void OnCurrentTargetChanged(const AActor* NewTarget);
+
+	UFUNCTION()
+	void OnExecutionTargetChanged(const AActor* NewTarget);
+
+	UFUNCTION()
+	void OnAmbushTargetChanged(const AActor* NewTarget);
+
+	UFUNCTION()
+	void OnStructureDetected(const AActor* Structure, bool bDetected);
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -204,6 +307,21 @@ public:
 	//@UI Category 관련 UI들을 모두 반환합니다.
 	UFUNCTION(BlueprintCallable, Category = "UI")
 		TArray<UUserWidget*> GetCategoryUIs(EUICategory UICategory) const;
+
+public:
+	//@Indicator 관련 유틸리티 - 수정
+	UFUNCTION(BlueprintCallable, Category = "UI|Indicator")
+	UUserWidget* GetIndicatorByTag(const FGameplayTag& IndicatorTag) const;
+
+	//@Type 이름으로 Indicator 찾기 (예: "LockOn" -> UI.Indicator.LockOn)
+	UUserWidget* GetIndicatorByType(const FString& TypeName) const;
+
+	//@특정 인디케이터의 현재 타겟 가져오기 - 새로 추가
+	UFUNCTION(BlueprintCallable, Category = "UI|Indicator")
+	AActor* GetIndicatorTarget(const FGameplayTag& IndicatorTag) const;
+
+	UFUNCTION(BlueprintCallable, Category = "UI|Indicator")
+	bool GetIndicatorWorldPosition(const FGameplayTag& IndicatorTag, AActor* Target, FVector& OutWorldPosition);
 #pragma endregion
 
 };
