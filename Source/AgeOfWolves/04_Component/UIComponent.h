@@ -276,7 +276,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure",
 		meta = (ToolTip = "Structure 추가 위쪽 오프셋 (픽셀, 음수=위)"))
-	float StructureScreenOffsetUp = 0.0f;
+	float StructureScreenOffsetUp = 50.0f;
 #pragma endregion
 
 //@Delegates

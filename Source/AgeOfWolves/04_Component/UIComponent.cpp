@@ -748,48 +748,44 @@ bool UUIComponent::UpdateSingleIndicatorPosition(UUserWidget* Indicator, AActor*
 	// ============================================
 	// 2. 3D → 2D 투영
 	// ============================================
-	FVector2D BaseScreenPosition;
-	bool bIsOnScreen = PC->ProjectWorldLocationToScreen(TargetWorldLocation, BaseScreenPosition, true);
-
-	//@화면 밖 처리
-	if (!bIsOnScreen && bHideIndicatorWhenOffScreen)
-	{
-		if (Indicator->GetVisibility() != ESlateVisibility::Collapsed)
-		{
-			Indicator->SetVisibility(ESlateVisibility::Collapsed);
-			//@캐시 제거
-			LastIndicatorScreenPositions.Remove(IndicatorTag);
-		}
-		return false;
-	}
-
-	//@화면 안 처리
-	if (Indicator->GetVisibility() == ESlateVisibility::Collapsed)
-	{
-		Indicator->SetVisibility(ESlateVisibility::HitTestInvisible);
-	}
-
-	// ============================================
-	// 3. 2D 픽셀 오프셋 적용
-	// ============================================
-	FVector2D TargetScreenPosition = BaseScreenPosition;
-
-	//@공통 오프셋 (모든 Indicator)
-	TargetScreenPosition.X += CommonScreenOffsetRight;
-	TargetScreenPosition.Y += CommonScreenOffsetUp;
-
 	//@타입별 추가 오프셋 & 보간 속도 결정
 	float InterpolationSpeed = GeneralInterpolationSpeed;
 
+	// 2D 투영 후
+	FVector2D BaseScreenPosition;
+	bool bIsOnScreen = PC->ProjectWorldLocationToScreen(TargetWorldLocation, BaseScreenPosition, true);
+
+	// ============================================
+	// 화면 위치 기반 오프셋 보정 (새로 추가)
+	// ============================================
+	int32 ViewportSizeX, ViewportSizeY;
+	PC->GetViewportSize(ViewportSizeX, ViewportSizeY);
+
+	// 화면 중심으로부터의 정규화된 거리 계산 (-1 ~ 1)
+	float NormalizedX = (BaseScreenPosition.X - (ViewportSizeX * 0.5f)) / (ViewportSizeX * 0.5f);
+
+	// 가장자리로 갈수록 오프셋 감소 (0.3 ~ 1.0 범위)
+	float OffsetMultiplier = 1.0f - (FMath::Abs(NormalizedX) * 0.7f);
+
+	// ============================================
+	// 3. 2D 픽셀 오프셋 적용 (수정됨)
+	// ============================================
+	FVector2D TargetScreenPosition = BaseScreenPosition;
+
+	// 보정된 오프셋 적용
+	TargetScreenPosition.X += CommonScreenOffsetRight * OffsetMultiplier;
+	TargetScreenPosition.Y += CommonScreenOffsetUp;
+
+	// 타입별 추가 오프셋도 동일하게 보정
 	if (TagString.Contains(TEXT("LockOn")))
 	{
-		TargetScreenPosition.X += LockOnScreenOffsetRight;
+		TargetScreenPosition.X += LockOnScreenOffsetRight * OffsetMultiplier;
 		TargetScreenPosition.Y += LockOnScreenOffsetUp;
 		InterpolationSpeed = LockOnInterpolationSpeed;
 	}
 	else if (TagString.Contains(TEXT("StatueInteractionUI")))
 	{
-		TargetScreenPosition.X += StructureScreenOffsetRight;
+		TargetScreenPosition.X += StructureScreenOffsetRight * OffsetMultiplier;
 		TargetScreenPosition.Y += StructureScreenOffsetUp;
 		InterpolationSpeed = StructureInterpolationSpeed;
 	}
