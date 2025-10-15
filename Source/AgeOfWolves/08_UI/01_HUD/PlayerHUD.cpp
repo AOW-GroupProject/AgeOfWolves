@@ -7,6 +7,7 @@
 #include "08_UI/01_HUD/HUD_StatusUI.h"
 #include "08_UI/01_HUD/HUD_QuickSlotsUI.h"
 #include "08_UI/01_HUD/HUD_HPToolItemDotGauge.h"
+#include "08_UI/01_HUD/HUD_ManaStackUI.h"
 
 #include "04_Component/UIComponent.h"
 
@@ -20,6 +21,7 @@ UPlayerHUD::UPlayerHUD(const FObjectInitializer& ObjectInitializer)
     StatusUIRef = nullptr;
     QuickSlotUIRef = nullptr;
     HPToolItemDotGaugeRef = nullptr;
+    ManaStackUIRef = nullptr;
 }
 
 void UPlayerHUD::NativeOnInitialized()
@@ -117,6 +119,8 @@ void UPlayerHUD::InitializePlayerHUD()
     CreateQuickSlotUI();
     //@HP Potion Dot Gauge 생성
     CreateHPToolItemDotGauge();
+    //@Mana Stack UI 생성 
+    CreateManaStackUI();
 
     RequestStartInitByHUD.Broadcast();
 }
@@ -236,6 +240,34 @@ void UPlayerHUD::CreateHPToolItemDotGauge()
     HPToolItemDotGaugeRef = HPToolItemDotGauge;
 
     UE_LOGFMT(LogHUD, Log, "HPToolItemDotGauge가 성공적으로 생성되고 HPToolItemDotGaugeOverlay에 추가되었습니다.");
+}
+
+void UPlayerHUD::CreateManaStackUI()
+{
+    //@Mana Stack UI Blueprint class, Mana Stack UI Overlay 체크
+    if (!ensureMsgf(ManaStackUIClass && ManaStackUIOverlay, TEXT("ManaStackUIClass 또는 ManaStackUIOverlay가 유효하지 않습니다.")))
+    {
+        return;
+    }
+
+    //@Mana Stack UI 생성
+    UHUD_ManaStackUI* ManaStackUI = CreateWidget<UHUD_ManaStackUI>(this, ManaStackUIClass);
+    if (!IsValid(ManaStackUI))
+    {
+        UE_LOGFMT(LogHUD, Error, "ManaStackUI 위젯 생성에 실패했습니다.");
+        return;
+    }
+
+    //@Alignment 설정
+    if (UOverlaySlot* OverlaySlot = ManaStackUIOverlay->AddChildToOverlay(ManaStackUI))
+    {
+        OverlaySlot->SetHorizontalAlignment(HAlign_Fill);
+        OverlaySlot->SetVerticalAlignment(VAlign_Fill);
+    }
+
+    ManaStackUIRef = ManaStackUI;
+
+    UE_LOGFMT(LogHUD, Log, "ManaStackUI가 성공적으로 생성되고 ManaStackUIOverlay에 추가되었습니다.");
 }
 #pragma endregion
 

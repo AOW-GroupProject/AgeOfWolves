@@ -57,9 +57,13 @@ void UUIManagerSubsystem::Deinitialize()
         }
     }
 
-    // 모든 맵을 완전히 비워줍니다
+    // 기존 맵 정리
     UIMinimumTimePromises.Empty();
-    UIMinimumTimeFutures.Empty(); // 새로 추가
+    UIMinimumTimeFutures.Empty();
+
+    //@Indicator 정리 추가
+    ActiveIndicatorWidgets.Empty();
+    ActiveIndicatorTypes.Empty();
 
     Super::Deinitialize();
 }
@@ -549,6 +553,90 @@ void UUIManagerSubsystem::CleanupUITimeTrackingInfo(const FGameplayTag& UITag)
             bHadFuture ? TEXT("제거됨") : TEXT("없음"));
     }
 }
+
+bool UUIManagerSubsystem::ShowIndicatorUI(EIndicatorType IndicatorType, AActor* TargetActor)
+{
+    if (IndicatorType == EIndicatorType::None)
+    {
+        UE_LOGFMT(LogUIManager, Warning, "None 타입의 Indicator는 표시할 수 없습니다");
+        return false;
+    }
+
+    if (!IsValid(TargetActor))
+    {
+        UE_LOGFMT(LogUIManager, Warning, "유효하지 않은 타겟 Actor로 Indicator 표시 시도");
+        return false;
+    }
+
+    UE_LOGFMT(LogUIManager, Log, "Indicator UI 표시 요청: Type={0}, Target={1}",
+        static_cast<int32>(IndicatorType), *TargetActor->GetName());
+
+    //@Indicator Widget 가져오기 또는 생성
+    UUserWidget* IndicatorWidget = GetOrCreateIndicatorWidget(IndicatorType);
+    if (!IndicatorWidget)
+    {
+        UE_LOGFMT(LogUIManager, Error, "Indicator Widget 생성 실패: Type={0}", static_cast<int32>(IndicatorType));
+        return false;
+    }
+
+    //@타겟 설정
+    if (!SetIndicatorTarget(IndicatorWidget, TargetActor))
+    {
+        UE_LOGFMT(LogUIManager, Warning, "Indicator 타겟 설정 실패");
+        return false;
+    }
+
+    //@표시
+    IndicatorWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+    ActiveIndicatorTypes.Add(IndicatorType);
+
+    UE_LOGFMT(LogUIManager, Log, "Indicator UI 표시 완료: Type={0}", static_cast<int32>(IndicatorType));
+    return true;
+}
+
+bool UUIManagerSubsystem::HideIndicatorUI(EIndicatorType IndicatorType)
+{
+    if (IndicatorType == EIndicatorType::None)
+    {
+        return false;
+    }
+
+    UE_LOGFMT(LogUIManager, Log, "Indicator UI 숨김 요청: Type={0}", static_cast<int32>(IndicatorType));
+
+    //@활성 Indicator 찾기
+    TObjectPtr<UUserWidget>* FoundWidget = ActiveIndicatorWidgets.Find(IndicatorType);
+    if (!FoundWidget || !IsValid(*FoundWidget))
+    {
+        UE_LOGFMT(LogUIManager, Warning, "숨기려는 Indicator를 찾을 수 없습니다: Type={0}", static_cast<int32>(IndicatorType));
+        return false;
+    }
+
+    //@숨김
+    (*FoundWidget)->SetVisibility(ESlateVisibility::Collapsed);
+    ActiveIndicatorTypes.Remove(IndicatorType);
+
+    UE_LOGFMT(LogUIManager, Log, "Indicator UI 숨김 완료: Type={0}", static_cast<int32>(IndicatorType));
+    return true;
+}
+
+void UUIManagerSubsystem::HideAllIndicatorUIs()
+{
+    UE_LOGFMT(LogUIManager, Log, "모든 Indicator UI 숨김 시작 - 총 {0}개", ActiveIndicatorWidgets.Num());
+
+    int32 HiddenCount = 0;
+    for (auto& Pair : ActiveIndicatorWidgets)
+    {
+        if (IsValid(Pair.Value))
+        {
+            Pair.Value->SetVisibility(ESlateVisibility::Collapsed);
+            HiddenCount++;
+        }
+    }
+
+    ActiveIndicatorTypes.Empty();
+
+    UE_LOGFMT(LogUIManager, Log, "모든 Indicator UI 숨김 완료 - {0}개 처리됨", HiddenCount);
+}
 #pragma endregion
 
 //@Callbacks
@@ -799,5 +887,122 @@ void UUIManagerSubsystem::PrintMinimumDisplayTimeDebugInfo() const
     }
 
     UE_LOGFMT(LogUIManager, Log, "=== 디버그 정보 끝 ===");
+}
+
+bool UUIManagerSubsystem::IsIndicatorUIVisible(EIndicatorType IndicatorType) const
+{
+    return ActiveIndicatorTypes.Contains(IndicatorType);
+}
+
+FGameplayTag UUIManagerSubsystem::GetIndicatorUITag(EIndicatorType IndicatorType) const
+{
+    switch (IndicatorType)
+    {
+    case EIndicatorType::LockOn:
+        return FGameplayTag::RequestGameplayTag("UI.Indicator.LockOn");
+    case EIndicatorType::Execution:
+        return FGameplayTag::RequestGameplayTag("UI.Indicator.Execution");
+    case EIndicatorType::Ambush:
+        return FGameplayTag::RequestGameplayTag("UI.Indicator.Ambush");
+    case EIndicatorType::Structure:
+        return FGameplayTag::RequestGameplayTag("UI.Indicator.Structure");
+    default:
+        UE_LOGFMT(LogUIManager, Warning, "유효하지 않은 IndicatorType: {0}", static_cast<int32>(IndicatorType));
+        return FGameplayTag();
+    }
+}
+
+UUserWidget* UUIManagerSubsystem::GetOrCreateIndicatorWidget(EIndicatorType IndicatorType)
+{
+    //@이미 생성된 위젯이 있는지 확인
+    if (TObjectPtr<UUserWidget>* ExistingWidget = ActiveIndicatorWidgets.Find(IndicatorType))
+    {
+        if (IsValid(*ExistingWidget))
+        {
+            UE_LOGFMT(LogUIManager, VeryVerbose, "기존 Indicator Widget 재사용: Type={0}", static_cast<int32>(IndicatorType));
+            return *ExistingWidget;
+        }
+    }
+
+    //@UITag 가져오기
+    FGameplayTag UITag = GetIndicatorUITag(IndicatorType);
+    if (!UITag.IsValid())
+    {
+        UE_LOGFMT(LogUIManager, Error, "유효하지 않은 UITag: Type={0}", static_cast<int32>(IndicatorType));
+        return nullptr;
+    }
+
+    //@UI 정보 가져오기
+    const FUIInformation* UIInfo = GetUIInformation(EUICategory::Indicator, UITag);
+    if (!UIInfo)
+    {
+        UE_LOGFMT(LogUIManager, Error, "Indicator UI 정보를 찾을 수 없습니다: Tag={0}", *UITag.ToString());
+        return nullptr;
+    }
+
+    //@생성 가능 여부 확인
+    if (!CanCreateUICurrently())
+    {
+        UE_LOGFMT(LogUIManager, Warning, "현재 UI 생성 불가능한 상태");
+        return nullptr;
+    }
+
+    //@Widget 생성
+    UWorld* World = GetWorld();
+    APlayerController* PC = World ? World->GetFirstPlayerController() : nullptr;
+    if (!PC)
+    {
+        UE_LOGFMT(LogUIManager, Error, "PlayerController를 찾을 수 없어 Indicator 생성 실패");
+        return nullptr;
+    }
+
+    UUserWidget* NewWidget = CreateWidget<UUserWidget>(PC, UIInfo->UIClass);
+    if (!NewWidget)
+    {
+        UE_LOGFMT(LogUIManager, Error, "Indicator Widget 생성 실패: Type={0}", static_cast<int32>(IndicatorType));
+        return nullptr;
+    }
+
+    //@Viewport에 추가 (초기 숨김 상태)
+    NewWidget->AddToViewport();
+    NewWidget->SetVisibility(ESlateVisibility::Collapsed);
+
+    //@캐시에 저장
+    ActiveIndicatorWidgets.Add(IndicatorType, NewWidget);
+
+    UE_LOGFMT(LogUIManager, Log, "Indicator Widget 생성 및 캐싱 완료: Type={0}", static_cast<int32>(IndicatorType));
+    return NewWidget;
+}
+
+bool UUIManagerSubsystem::SetIndicatorTarget(UUserWidget* IndicatorWidget, AActor* TargetActor)
+{
+    if (!IsValid(IndicatorWidget) || !IsValid(TargetActor))
+    {
+        return false;
+    }
+
+    //@Blueprint Interface 호출 (나중에 IndicatorWidget에서 구현)
+    //@임시로 함수 호출 방식 제안
+
+    // 옵션 1: Blueprint Event 호출 (권장)
+    // IndicatorWidget에 "SetTargetActor" 이벤트 구현 필요
+    UFunction* SetTargetFunc = IndicatorWidget->FindFunction(FName("SetTargetActor"));
+    if (SetTargetFunc)
+    {
+        struct FSetTargetParams
+        {
+            AActor* Target;
+        };
+
+        FSetTargetParams Params;
+        Params.Target = TargetActor;
+
+        IndicatorWidget->ProcessEvent(SetTargetFunc, &Params);
+        UE_LOGFMT(LogUIManager, VeryVerbose, "Indicator 타겟 설정 완료: {0}", *TargetActor->GetName());
+        return true;
+    }
+
+    UE_LOGFMT(LogUIManager, Warning, "Indicator Widget에 SetTargetActor 함수가 없습니다");
+    return false;
 }
 #pragma endregion

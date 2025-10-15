@@ -52,6 +52,7 @@ enum class EUICategory : uint8
     Menu		UMETA(DisplayName = "Menu"),
     Interaction	UMETA(DisplayName = "Interaction"),
     System		UMETA(DisplayName = "System"),
+    Indicator	UMETA(DisplayName = "Indicator"),  // 새로 추가
     MAX,
 };
 
@@ -204,6 +205,10 @@ protected:
     UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI | System")
     TArray<FUIInformation> SystemUIInformations;
 
+    //@Indicator UI Informations (새로 추가)
+    UPROPERTY(EditDefaultsOnly, BlueprintReadOnly, Category = "UI | Indicator")
+    TArray<FUIInformation> IndicatorUIInformations;
+
 #if WITH_EDITOR
     //@Manual validation functions
     UFUNCTION(CallInEditor, Category = "UI Validation")
@@ -220,6 +225,9 @@ protected:
 
     UFUNCTION(CallInEditor, Category = "UI Validation")
     void ValidateSystemUIOnly();
+
+    UFUNCTION(CallInEditor, Category = "UI Validation")
+    void ValidateIndicatorUIOnly();
 #endif
 
 };

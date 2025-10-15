@@ -14,8 +14,6 @@ DECLARE_LOG_CATEGORY_EXTERN(LogObjectiveDetection, Log, All)
 class ABaseAIController;
 class APlayerController;
 class UCapsuleComponent;
-class UBillboardComponent;
-class UTexture2D;
 #pragma endregion
 
 //@열거형
@@ -188,14 +186,6 @@ protected:
     void CleanupInvalidReferences();
 
 protected:
-    //@Billboard 컴포넌트 업데이트 (위치, 회전, 가시성)
-    void UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly = false);
-
-    bool UpdateBillboardPosition(AActor* TargetActor);
-
-    void UpdateBillboardTexture();
-
-protected:
     //@등을 노출하고 있는 AI 정보 업데이트
     void UpdateAIBackExposureState();
 
@@ -206,65 +196,6 @@ protected:
     //@구조물 감지 체크 업데이트
     void UpdateDetectionStructure();
 
-protected:
-    UPROPERTY()
-        UBillboardComponent* IndicatorBillboardComponent;
-
-protected:
-    //@인디케이터 표시 활성화 여부 (마스터 스위치)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
-        meta = (DisplayName = "Enable Indicator Display"))
-    bool bEnableIndicatorDisplay = true;
-
-    //@LockOn 인디케이터 표시 여부
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
-        meta = (EditCondition = "bEnableIndicatorDisplay", DisplayName = "Show LockOn Indicator"))
-    bool bShowLockOnIndicator = true;
-
-    //@처형 가능 인디케이터 표시 여부
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
-        meta = (EditCondition = "bEnableIndicatorDisplay", DisplayName = "Show Execution Indicator"))
-    bool bShowExecutionIndicator = true;
-
-    //@매복 암살 인디케이터 표시 여부
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
-        meta = (EditCondition = "bEnableIndicatorDisplay", DisplayName = "Show Ambush Indicator"))
-    bool bShowAmbushIndicator = true;
-
-    //@구조물 감지 인디케이터 표시 여부
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
-        meta = (EditCondition = "bEnableIndicatorDisplay", DisplayName = "Show Structure Indicator"))
-    bool bShowStructureIndicator = true;
-
-    //@디버그 모드 (모든 인디케이터 표시)
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Indicator Settings",
-        meta = (EditCondition = "bEnableIndicatorDisplay", DisplayName = "Debug Mode - Show All"))
-    bool bDebugMode = false;
-
-protected:
-    // LockOn 인디케이터 텍스처
-    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
-        TSoftObjectPtr<UTexture2D> LockOnIndicator;
-
-    // Executable(처형 가능) 인디케이터 텍스처
-    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
-        TSoftObjectPtr<UTexture2D> ExecutableIndicator;
-
-    //@텍스처 크기 스케일, 기본 0.05 스케일
-    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
-        float TextureScale = 0.05f;
-
-    //@빌보드 전방 오프셋 (타겟으로부터 얼마나 앞에 표시할지)
-    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
-        float BillboardForwardOffset = 100.0f;
-
-    //@빌보드 보간 속도, 기본 30
-    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
-        float BillboardInterpolationSpeed = 10.f;
-
-    //@데드존 거리 (유닛)
-    UPROPERTY(EditAnywhere, Category = "Objective Detection|Visuals")
-        float BillboardDeadZone = 5.0f;
 protected:
     //@바인딩된 Area 배열
     UPROPERTY()
@@ -340,7 +271,6 @@ protected:
 
     //@구조물 마지막 체크 시간
     float LastExecutionStructureCheckTime = 0.0f;
-    
 #pragma endregion
 
 //@Delegates
@@ -362,6 +292,11 @@ public:
 public:
     //@Area 바인딩 이벤트
     FPlyaerBoundToArea PlyaerBoundToArea;
+
+public:
+    //@현재 타겟 변경 이벤트 (LockOn) - 새로 추가
+    DECLARE_MULTICAST_DELEGATE_OneParam(FCurrentTargetChanged, const AActor*);
+    FCurrentTargetChanged CurrentTargetChanged;
 #pragma endregion
 
 //@Callbacks
@@ -467,22 +402,11 @@ protected:
     }
 
 protected:
-    AActor* DetermineTargetActor();
-
     //@현재 타겟 액터 설정
     void SetCurrentTargetAI(AActor* NewTargetActor);
 
     //@현재 타겟 액터 가져오기
     AActor* GetCurrentTargetAI() const;
-
-protected:
-    // 인디케이터 텍스처 변경
-    void SetIndicatorTexture(UTexture2D* NewTexture);
-
-protected:
-    //@특정 타겟에 대한 인디케이터 표시 여부 확인
-    bool ShouldShowIndicatorForTarget(AActor* TargetActor) const;
-
 #pragma endregion
 
 };
