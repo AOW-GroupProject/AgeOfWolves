@@ -268,15 +268,15 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure",
 		meta = (ToolTip = "구조물 3D 중심 높이 오프셋 (cm)"))
-	float StructureWorldHeightOffset = 50.0f;
+	float StructureWorldHeightOffset = 0.0f;
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure",
 		meta = (ToolTip = "Structure 추가 오른쪽 오프셋 (픽셀)"))
-	float StructureScreenOffsetRight = 150.0f;
+	float StructureScreenOffsetRight = 0.0f;
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure",
 		meta = (ToolTip = "Structure 추가 위쪽 오프셋 (픽셀, 음수=위)"))
-	float StructureScreenOffsetUp = -80.0f;
+	float StructureScreenOffsetUp = 0.0f;
 #pragma endregion
 
 //@Delegates

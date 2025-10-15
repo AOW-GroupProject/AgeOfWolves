@@ -263,7 +263,7 @@ protected:
 
     //@ 구조물 감지 총 각도(좌/우 합). 30이면 반각=15° 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Structure", meta=(ClampMin="0.0", ClampMax="180.0"))
-    float DetectionStructureTotalAngleDegrees = 60.f;
+    float DetectionStructureTotalAngleDegrees = 30.f;
     
     //@구조물 체크 간격 (seconds)
     UPROPERTY(EditAnywhere, Category = "Objective Detection|Structure")

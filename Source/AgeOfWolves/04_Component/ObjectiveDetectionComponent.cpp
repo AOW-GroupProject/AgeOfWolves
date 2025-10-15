@@ -603,7 +603,6 @@ void UObjectiveDetectionComponent::UpdateDetectionStructure()
         }
     }
 
-
     //@ 반각(총각도의 절반)
     const float HalfAngleDeg = FMath::Max(0.f, DetectionStructureTotalAngleDegrees * 0.5f);
     const float CosThreshold = FMath::Cos(FMath::DegreesToRadians(HalfAngleDeg));

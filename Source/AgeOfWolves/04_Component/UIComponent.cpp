@@ -642,6 +642,21 @@ void UUIComponent::ShowIndicatorWidget(UUserWidget* Widget)
 		return;
 	}
 
+	//@✅ 가시성 활성화 전에 위치 먼저 설정
+	for (const auto& Pair : MIndicatorUIs)
+	{
+		if (Pair.Value == Widget)
+		{
+			AActor* Target = GetIndicatorTarget(Pair.Key);
+			if (Target)
+			{
+				//@DeltaTime 0으로 전달하여 즉시 위치 설정 (보간 없이)
+				UpdateSingleIndicatorPosition(Widget, Target, 0.0f);
+			}
+			break;
+		}
+	}
+
 	Widget->SetVisibility(ESlateVisibility::HitTestInvisible);
 
 	UE_LOGFMT(LogUI, Verbose, "Indicator 표시됨");
@@ -770,13 +785,13 @@ bool UUIComponent::UpdateSingleIndicatorPosition(UUserWidget* Indicator, AActor*
 	{
 		TargetScreenPosition.X += LockOnScreenOffsetRight;
 		TargetScreenPosition.Y += LockOnScreenOffsetUp;
-		InterpolationSpeed = LockOnInterpolationSpeed;  // 빠르게
+		InterpolationSpeed = LockOnInterpolationSpeed;
 	}
 	else if (TagString.Contains(TEXT("StatueInteractionUI")))
 	{
 		TargetScreenPosition.X += StructureScreenOffsetRight;
 		TargetScreenPosition.Y += StructureScreenOffsetUp;
-		InterpolationSpeed = StructureInterpolationSpeed;  // 느리게
+		InterpolationSpeed = StructureInterpolationSpeed;
 	}
 
 	// ============================================
@@ -784,7 +799,22 @@ bool UUIComponent::UpdateSingleIndicatorPosition(UUserWidget* Indicator, AActor*
 	// ============================================
 	FVector2D FinalScreenPosition;
 
-	if (bUseInterpolation)
+	//@✅ DeltaTime이 0이면 즉시 이동 (ShowIndicatorWidget에서 호출 시)
+	if (DeltaTime <= 0.0f)
+	{
+		FinalScreenPosition = TargetScreenPosition;
+		//@캐시에 바로 저장
+		LastIndicatorScreenPositions.Add(IndicatorTag, FinalScreenPosition);
+	}
+	//@✅ StatueInteractionUI는 보간 없이 항상 즉시 이동 (엄격한 중앙 위치)
+	else if (TagString.Contains(TEXT("StatueInteractionUI")))
+	{
+		FinalScreenPosition = TargetScreenPosition;
+		//@캐시 업데이트
+		LastIndicatorScreenPositions.Add(IndicatorTag, FinalScreenPosition);
+	}
+	//@나머지 Indicator는 보간 적용
+	else if (bUseInterpolation)
 	{
 		//@이전 위치 가져오기
 		FVector2D* LastPosition = LastIndicatorScreenPositions.Find(IndicatorTag);
@@ -1135,7 +1165,10 @@ bool UUIComponent::GetIndicatorWorldPosition(const FGameplayTag& IndicatorTag, A
 	// ============================================
 	else if (TagString.Contains(TEXT("StatueInteractionUI")))
 	{
-		OutWorldPosition = BaseLocation + FVector(0, 0, StructureWorldHeightOffset);
+		//@액터의 시각적 중심 (바운딩 박스 중심)
+		FVector Origin, BoxExtent;
+		Target->GetActorBounds(false, Origin, BoxExtent);
+		OutWorldPosition = Origin;
 		return true;
 	}
 	// ============================================
