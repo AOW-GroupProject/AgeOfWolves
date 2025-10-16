@@ -258,7 +258,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn",
 		meta = (ToolTip = "LockOn 추가 위쪽 오프셋 (픽셀)"))
-	float LockOnScreenOffsetUp = 25.0f;
+	float LockOnScreenOffsetUp = 0.0f;
 
 protected:
 	//@=== Structure Indicator 설정 ===

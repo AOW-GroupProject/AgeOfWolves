@@ -765,7 +765,7 @@ bool UUIComponent::UpdateSingleIndicatorPosition(UUserWidget* Indicator, AActor*
 	float NormalizedX = (BaseScreenPosition.X - (ViewportSizeX * 0.5f)) / (ViewportSizeX * 0.5f);
 
 	// 가장자리로 갈수록 오프셋 감소 (0.3 ~ 1.0 범위)
-	float OffsetMultiplier = 1.0f - (FMath::Abs(NormalizedX) * 0.7f);
+	float OffsetMultiplier = 1.0f + (NormalizedX * 0.7f);
 
 	// ============================================
 	// 3. 2D 픽셀 오프셋 적용 (수정됨)
