@@ -1211,7 +1211,6 @@ bool UUIComponent::GetIndicatorWorldPosition(const FGameplayTag& IndicatorTag, A
 				0.0f
 			);
 		}
-
 		return true;
 	}
 	// ============================================
