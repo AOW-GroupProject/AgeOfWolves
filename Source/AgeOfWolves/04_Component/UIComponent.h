@@ -242,7 +242,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Common",
 		meta = (ToolTip = "화면 너비 대비 오른쪽 오프셋 비율 (0.0~1.0)"))
-	float CommonScreenOffsetRightRatio = 0.08f;  // 8% (전체 화면 기준)
+	float CommonScreenOffsetRightRatio = 0.f;  // 8% (전체 화면 기준)
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Common",
 		meta = (ToolTip = "화면 높이 대비 위쪽 오프셋 비율 (0.0~1.0)"))
@@ -253,7 +253,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn",
 		meta = (ToolTip = "LockOn 추가 오른쪽 오프셋 비율"))
-	float LockOnScreenOffsetRightRatio = 0.02f;  // 2% 추가
+	float LockOnScreenOffsetRightRatio = 0.04f;  // 2% 추가
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn",
 		meta = (ToolTip = "LockOn 추가 위쪽 오프셋 비율"))
@@ -265,7 +265,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn",
 		meta = (ToolTip = "타겟 중심에서 위로 올릴 높이 (cm)"))
-	float LockOnHeightOffset = 50.0f;
+	float LockOnHeightOffset = 100.0f;
 
 protected:
 	//@=== Structure Indicator 추가 오프셋 ===
@@ -280,7 +280,7 @@ protected:
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation",
 		meta = (ToolTip = "Structure Indicator 보간 속도"))
-	float StructureInterpolationSpeed = 8.0f;
+	float StructureInterpolationSpeed = 0.f;
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure",
 		meta = (ToolTip = "구조물 3D 중심 높이 오프셋 (cm)"))
