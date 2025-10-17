@@ -165,6 +165,7 @@ protected:
 	//@Indicator
 	UPROPERTY()
 		TMap<FGameplayTag, UUserWidget*> MIndicatorUIs;
+
 	//@각 인디케이터의 현재 타겟 추적
 	UPROPERTY()
 		TMap<FGameplayTag, TWeakObjectPtr<AActor>> IndicatorTargets;
@@ -209,6 +210,10 @@ protected:
 	bool bDebugMode = false;
 
 protected:
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Debug",
+		meta = (ToolTip = "타겟 중심점 디버그 구체 표시"))
+	bool bShowIndicatorDebugSpheres = false;
+
 	//@일반 Indicator 설정
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|General")
 	float GeneralIndicatorHeightOffset = 80.0f;
@@ -233,50 +238,53 @@ protected:
 	bool bHideIndicatorWhenOffScreen = true;
 
 protected:
-	//@=== 공통 Indicator 설정 ===
-	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Common",
-		meta = (ToolTip = "모든 Indicator 공통 오른쪽 오프셋 (픽셀) - Widget Pivot 보정용"))
-	float CommonScreenOffsetRight = 250.0f;
+	//@=== 공통 Indicator 설정 (정규화 좌표) ===
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Common",
-		meta = (ToolTip = "모든 Indicator 공통 위쪽 오프셋 (픽셀)"))
-	float CommonScreenOffsetUp = 0.0f;
+		meta = (ToolTip = "화면 너비 대비 오른쪽 오프셋 비율 (0.0~1.0)"))
+	float CommonScreenOffsetRightRatio = 0.08f;  // 8% (전체 화면 기준)
+
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Common",
+		meta = (ToolTip = "화면 높이 대비 위쪽 오프셋 비율 (0.0~1.0)"))
+	float CommonScreenOffsetUpRatio = 0.0f;
 
 protected:
-	//@=== LockOn Indicator 설정 ===
+	//@=== LockOn Indicator 추가 오프셋 ===
+
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn",
+		meta = (ToolTip = "LockOn 추가 오른쪽 오프셋 비율"))
+	float LockOnScreenOffsetRightRatio = 0.02f;  // 2% 추가
+
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn",
+		meta = (ToolTip = "LockOn 추가 위쪽 오프셋 비율"))
+	float LockOnScreenOffsetUpRatio = 0.0f;
+
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation",
-		meta = (ToolTip = "LockOn Indicator 보간 속도 (0=즉각 반응, 높을수록 부드럽게)"))
-	float LockOnInterpolationSpeed = 20.0f;  // 빠르게
+		meta = (ToolTip = "LockOn Indicator 보간 속도"))
+	float LockOnInterpolationSpeed = 20.0f;
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn",
 		meta = (ToolTip = "타겟 중심에서 위로 올릴 높이 (cm)"))
-	float LockOnHeightOffset = 0.0f;
-
-	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn",
-		meta = (ToolTip = "LockOn 추가 오른쪽 오프셋 (픽셀)"))
-	float LockOnScreenOffsetRight = 60.0f;
-
-	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn",
-		meta = (ToolTip = "LockOn 추가 위쪽 오프셋 (픽셀)"))
-	float LockOnScreenOffsetUp = 0.0f;
+	float LockOnHeightOffset = 50.0f;
 
 protected:
-	//@=== Structure Indicator 설정 ===
+	//@=== Structure Indicator 추가 오프셋 ===
+
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure",
+		meta = (ToolTip = "Structure 추가 오른쪽 오프셋 비율"))
+	float StructureScreenOffsetRightRatio = 0.0f;
+
+	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure",
+		meta = (ToolTip = "Structure 추가 위쪽 오프셋 비율"))
+	float StructureScreenOffsetUpRatio = 0.035f;  // 3.5% 위로 (1440p에서 약 50px)
+
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation",
 		meta = (ToolTip = "Structure Indicator 보간 속도"))
-	float StructureInterpolationSpeed = 8.0f;  // 느리게
+	float StructureInterpolationSpeed = 8.0f;
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure",
 		meta = (ToolTip = "구조물 3D 중심 높이 오프셋 (cm)"))
 	float StructureWorldHeightOffset = 0.0f;
-
-	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure",
-		meta = (ToolTip = "Structure 추가 오른쪽 오프셋 (픽셀)"))
-	float StructureScreenOffsetRight = 0.0f;
-
-	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure",
-		meta = (ToolTip = "Structure 추가 위쪽 오프셋 (픽셀, 음수=위)"))
-	float StructureScreenOffsetUp = 50.0f;
 #pragma endregion
 
 //@Delegates

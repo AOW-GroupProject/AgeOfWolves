@@ -13,6 +13,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInteractionGA, Log, All);
 class ACharacterBase;
 class UAnimMontage;
 class UAT_MoveToInteractionZone;
+class UObjectiveDetectionComponent;
 #pragma endregion
 
 //@열거형
@@ -55,11 +56,6 @@ protected:
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")
 		void MoveToInteractionTarget(FName SocketName = FName("ExecuterTarget"), float Duration = 1.0f);
 
-	//@이동 완료 콜백
-	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 상호작용")
-		void OnInteractionMoveCompleted();
-	virtual void OnInteractionMoveCompleted_Implementation();
-
 protected:
 	UPROPERTY(Transient)
 	UAT_MoveToInteractionZone* CurrentMoveTask;
@@ -90,6 +86,12 @@ protected:
 
 	//@오버라이드
 	virtual void OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag) override;
+
+protected:
+	//@이동 완료 콜백
+	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 상호작용")
+	void OnInteractionMoveCompleted();
+	virtual void OnInteractionMoveCompleted_Implementation();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
