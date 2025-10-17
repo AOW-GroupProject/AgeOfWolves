@@ -679,7 +679,6 @@ void UObjectiveDetectionComponent::UpdateDetectionStructure()
         }
     }
 }
-
 #pragma endregion
 
 //@Callbacks

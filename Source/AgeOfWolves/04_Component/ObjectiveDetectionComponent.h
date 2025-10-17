@@ -256,7 +256,7 @@ protected:
     //@감지된 구조물 액터
     UPROPERTY()
     TWeakObjectPtr<AActor> DetectedStructureActor;
-    
+
     //@ 구조물 감지 최대 거리(반경) 
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Objective Detection|Structure")
     float DetectionStructureDistance = 500.f;
