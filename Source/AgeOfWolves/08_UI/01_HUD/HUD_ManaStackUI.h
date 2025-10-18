@@ -94,6 +94,11 @@ protected:
 	//@ASC 캐시
 	UPROPERTY()
 	TWeakObjectPtr<UAbilitySystemComponent> CachedASC;
+
+private:
+	//@현재 활성화된 나이아가라 위젯 추적
+	UPROPERTY()
+	TWeakObjectPtr<UNiagaraSystemWidget> CurrentActiveNiagara;
 #pragma endregion
 
 };

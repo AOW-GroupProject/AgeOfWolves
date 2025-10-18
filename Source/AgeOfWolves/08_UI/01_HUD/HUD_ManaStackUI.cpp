@@ -12,7 +12,10 @@ DEFINE_LOG_CATEGORY(LogHUD_ManaStack)
 
 UHUD_ManaStackUI::UHUD_ManaStackUI(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
-{}
+{
+    CachedASC.Reset();
+    CurrentActiveNiagara.Reset();
+}
 
 void UHUD_ManaStackUI::NativeOnInitialized()
 {
@@ -108,11 +111,22 @@ void UHUD_ManaStackUI::ActivateNiagaraForStack(int32 StackLevel)
 
     if (TargetWidget)
     {
-        //@나이아가라 활성화
-        TargetWidget->SetVisibility(ESlateVisibility::Visible);
+        //@이전에 활성화된 나이아가라 비활성화
+        if (CurrentActiveNiagara.IsValid() && CurrentActiveNiagara.Get() != TargetWidget)
+        {
+            CurrentActiveNiagara->DeactivateSystem();
+            CurrentActiveNiagara->SetVisibility(ESlateVisibility::Collapsed);
+        }
+
+        //@새로운 나이아가라 활성화
+        TargetWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
         TargetWidget->ActivateSystem(false);
+
+        //@현재 활성화된 위젯 업데이트
+        CurrentActiveNiagara = TargetWidget;
     }
 }
+
 void UHUD_ManaStackUI::OnAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
 {
     //@마나 스택 변화 감지
