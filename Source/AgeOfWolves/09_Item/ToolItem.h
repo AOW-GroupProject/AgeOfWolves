@@ -32,5 +32,4 @@ public:
 	virtual const FToolItemInformation* GetItemInformation();
 #pragma endregion
 
-
 };

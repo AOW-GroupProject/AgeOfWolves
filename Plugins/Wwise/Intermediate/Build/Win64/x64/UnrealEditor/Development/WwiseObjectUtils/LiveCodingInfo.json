@@ -1,9 +1,0 @@
-{
-	"RemapUnityFiles": 
-	{
-		"Module.WwiseObjectUtils.cpp.obj": [
-			"WwiseObjectUtils.init.gen.cpp.obj",
-			"WwiseUnrealObjectHelper.gen.cpp.obj"
-		]
-	}
-}

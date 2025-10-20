@@ -13,6 +13,8 @@ class UImage;
 class UNiagaraSystemWidget;
 class UAsyncTaskAttributeChanged;
 class UAbilitySystemComponent;
+class UOverlay;
+class UTexture2D;
 #pragma endregion
 
 //@열거형
@@ -62,17 +64,47 @@ protected:
 	void ActivateNiagaraForStack(int32 StackLevel);
 
 protected:
+	//@시퀀스 실행: 1.5s Niagara -> 1.5s Image -> 0.5s FadeOut
+	void PlayStackSequence(UNiagaraSystemWidget* NiagaraWidget, UOverlay* OverlayWidget, UTexture2D* Texture);
+	void StartBlendOut(UOverlay* OverlayWidget, float DurationSeconds);
+	void TickBlendOut(UOverlay* OverlayWidget, float DurationSeconds, FTimerHandle& TimerHandle);
+
+protected:
 	//@나이아가라 이펙트 - 키(기)
 	UPROPERTY(BlueprintReadWrite, Category = "마나 스택 | '기' VFX", meta = (BindWidget))
 	UNiagaraSystemWidget* KI_NiagaraWidget;
+
+	//@오버레이 - 키(기)
+	UPROPERTY(BlueprintReadWrite, Category = "마나 스택 | '기' Overlay", meta = (BindWidget))
+	class UOverlay* KI_Overlay;
+
+	//@텍스처 - 키(기)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "마나 스택 | '기' Texture")
+	class UTexture2D* KI_Texture;
 
 	//@나이아가라 이펙트 - 쿄(흡)
 	UPROPERTY(BlueprintReadWrite, Category = "마나 스택 | '흡' VFX", meta = (BindWidget))
 	UNiagaraSystemWidget* KYU_NiagaraWidget;
 
+	//@오버레이 - 쿄(흡)
+	UPROPERTY(BlueprintReadWrite, Category = "마나 스택 | '흡' Overlay", meta = (BindWidget))
+	class UOverlay* KYU_Overlay;
+
+	//@텍스처 - 쿄(흡)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "마나 스택 | '흡' Texture")
+	class UTexture2D* KYU_Texture;
+
 	//@나이아가라 이펙트 - 큐(혼)
 	UPROPERTY(BlueprintReadWrite, Category = "마나 스택 | '혼' VFX", meta = (BindWidget))
 	UNiagaraSystemWidget* KON_NiagaraWidget;
+
+	//@오버레이 - 큐(혼)
+	UPROPERTY(BlueprintReadWrite, Category = "마나 스택 | '혼' Overlay", meta = (BindWidget))
+	class UOverlay* KON_Overlay;
+
+	//@텍스처 - 큐(혼)
+	UPROPERTY(BlueprintReadWrite, EditAnywhere, Category = "마나 스택 | '혼' Texture")
+	class UTexture2D* KON_Texture;
 
 protected:
 	//@능력치 속성 변화 이벤트 구독 Async Task 목록
@@ -99,6 +131,16 @@ private:
 	//@현재 활성화된 나이아가라 위젯 추적
 	UPROPERTY()
 	TWeakObjectPtr<UNiagaraSystemWidget> CurrentActiveNiagara;
+
+private:
+	//@블렌드아웃 진행 시간 추적
+	UPROPERTY()
+	TMap<TWeakObjectPtr<UOverlay>, float> BlendOutElapsedSeconds;
+
+	//@타이머 핸들
+	FTimerHandle KI_BlendTimerHandle;
+	FTimerHandle KYU_BlendTimerHandle;
+	FTimerHandle KON_BlendTimerHandle;
 #pragma endregion
 
 };
