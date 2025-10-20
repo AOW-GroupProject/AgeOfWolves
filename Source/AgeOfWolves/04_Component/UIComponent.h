@@ -23,6 +23,27 @@ class UObjectiveDetectionComponent;
 
 //@구조체
 #pragma region Structs
+// Indicator 오프셋 설정을 위한 구조체
+USTRUCT(BlueprintType)
+struct FIndicatorOffsetSettings
+{
+	GENERATED_BODY()
+
+	UPROPERTY(BlueprintReadWrite)
+	float AdditionalOffsetRightRatio = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite)
+	float AdditionalOffsetUpRatio = 0.0f;
+
+	UPROPERTY(BlueprintReadWrite)
+	float InterpolationSpeed = 12.0f;
+
+	FIndicatorOffsetSettings()
+		: AdditionalOffsetRightRatio(0.0f)
+		, AdditionalOffsetUpRatio(0.0f)
+		, InterpolationSpeed(12.0f)
+	{}
+};
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -376,6 +397,24 @@ public:
 
 	UFUNCTION(BlueprintCallable, Category = "UI|Indicator")
 	bool GetIndicatorWorldPosition(const FGameplayTag& IndicatorTag, AActor* Target, FVector& OutWorldPosition);
+
+private:
+	// Indicator 위치 업데이트 헬퍼 함수들
+	FGameplayTag FindIndicatorTagByWidget(UUserWidget* Widget) const;
+	FVector2D ConvertToNormalizedCoordinates(const FVector2D& ScreenPos, int32 ViewportSizeX, int32 ViewportSizeY) const;
+	FIndicatorOffsetSettings GetIndicatorOffsetSettings(const FGameplayTag& IndicatorTag) const;
+	FVector2D ApplyOffsetToNormalizedPosition(const FVector2D& NormalizedPos, const FIndicatorOffsetSettings& OffsetSettings) const;
+	FVector2D ConvertToScreenCoordinates(const FVector2D& NormalizedPos, int32 ViewportSizeX, int32 ViewportSizeY) const;
+	FVector2D ApplyInterpolation(const FGameplayTag& IndicatorTag, const FVector2D& TargetScreenPos, float DeltaTime, float InterpolationSpeed);
+	void UpdateLastIndicatorPosition(const FGameplayTag& IndicatorTag, const FVector2D& NewPosition);
+	
+	// Indicator 업데이트 헬퍼 함수
+	void UpdateIndicatorByType(const FString& TypeName, bool bShouldShow);
+	
+	// UI 초기화 헬퍼 함수들
+	void SetupExternalBindings(APlayerController* PC);
+	UUIManagerSubsystem* GetUIManagerSubsystem() const;
+	void CreateWidgetsForAllCategories(APlayerController* PC, UUIManagerSubsystem* UIManagerSubsystem);
 #pragma endregion
 
 };

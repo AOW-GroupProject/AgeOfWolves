@@ -7,6 +7,9 @@
 
 #include "NiagaraSystemWidget.h"
 #include "NiagaraComponent.h"
+#include "Components/Image.h"
+#include "Components/Overlay.h"
+#include "Engine/Texture2D.h"
 
 DEFINE_LOG_CATEGORY(LogHUD_ManaStack)
 
@@ -111,19 +114,173 @@ void UHUD_ManaStackUI::ActivateNiagaraForStack(int32 StackLevel)
 
     if (TargetWidget)
     {
-        //@이전에 활성화된 나이아가라 비활성화
-        if (CurrentActiveNiagara.IsValid() && CurrentActiveNiagara.Get() != TargetWidget)
+        //@모든 나이아가라를 비활성화하여 동시 활성화 방지
+        TArray<UNiagaraSystemWidget*> AllWidgets = { KI_NiagaraWidget, KYU_NiagaraWidget, KON_NiagaraWidget };
+        for (UNiagaraSystemWidget* Widget : AllWidgets)
         {
-            CurrentActiveNiagara->DeactivateSystem();
-            CurrentActiveNiagara->SetVisibility(ESlateVisibility::Collapsed);
+            if (Widget && Widget != TargetWidget)
+            {
+                Widget->SetVisibility(ESlateVisibility::Collapsed);
+                Widget->DeactivateSystem();
+            }
         }
 
-        //@새로운 나이아가라 활성화
+        //@모든 오버레이 숨김 및 초기화
+        TArray<UOverlay*> AllOverlays = { KI_Overlay, KYU_Overlay, KON_Overlay };
+        for (UOverlay* Overlay : AllOverlays)
+        {
+            if (Overlay)
+            {
+                Overlay->SetVisibility(ESlateVisibility::Collapsed);
+                Overlay->SetRenderOpacity(1.f);
+            }
+        }
+
+        //@타겟 위젯 시퀀스 실행: 1.5s Niagara -> 1.5s Image -> 0.5s FadeOut
         TargetWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
-        TargetWidget->ActivateSystem(false);
+        TargetWidget->ActivateSystem(true); // bReset = true로 최초 상태부터 재생
+
+        UOverlay* PairedOverlay = nullptr;
+        UTexture2D* PairedTexture = nullptr;
+        if (TargetWidget == KI_NiagaraWidget)      
+        {
+            PairedOverlay = KI_Overlay;
+            PairedTexture = KI_Texture;
+        }
+        else if (TargetWidget == KYU_NiagaraWidget) 
+        {
+            PairedOverlay = KYU_Overlay;
+            PairedTexture = KYU_Texture;
+        }
+        else if (TargetWidget == KON_NiagaraWidget) 
+        {
+            PairedOverlay = KON_Overlay;
+            PairedTexture = KON_Texture;
+        }
+
+        //@텍스처가 없어도 시퀀스는 실행 (Niagara만 표시)
+        PlayStackSequence(TargetWidget, PairedOverlay, PairedTexture);
 
         //@현재 활성화된 위젯 업데이트
         CurrentActiveNiagara = TargetWidget;
+    }
+}
+
+void UHUD_ManaStackUI::PlayStackSequence(UNiagaraSystemWidget* NiagaraWidget, UOverlay* OverlayWidget, UTexture2D* Texture)
+{
+    if (!NiagaraWidget)
+    {
+        return;
+    }
+
+    //@텍스처가 없으면 Niagara만 표시하고 종료
+    if (!Texture)
+    {
+        UE_LOGFMT(LogHUD_ManaStack, Warning, "텍스처가 설정되지 않았습니다. Niagara만 표시합니다.");
+        NiagaraWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+        return;
+    }
+
+    //@0.0s ~ 1.5s: Niagara만 표시
+    NiagaraWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+    if (OverlayWidget)
+    {
+        OverlayWidget->SetVisibility(ESlateVisibility::Collapsed);
+        OverlayWidget->SetRenderOpacity(1.f);
+    }
+
+    //@1.5s 후: Overlay 표시 (텍스처를 Image로 설정)
+    FTimerDelegate ShowOverlayDelegate;
+    ShowOverlayDelegate.BindLambda([this, OverlayWidget, Texture]()
+    {
+        if (OverlayWidget && Texture)
+        {
+            // Overlay 내부의 Image 위젯에 텍스처 설정
+            if (UImage* ImageWidget = Cast<UImage>(OverlayWidget->GetChildAt(0)))
+            {
+                ImageWidget->SetBrushFromTexture(Texture);
+            }
+            OverlayWidget->SetVisibility(ESlateVisibility::SelfHitTestInvisible);
+        }
+    });
+
+    FTimerHandle ShowOverlayHandle;
+    if (UWorld* World = GetWorld())
+    {
+        World->GetTimerManager().SetTimer(ShowOverlayHandle, ShowOverlayDelegate, 1.5f, false);
+    }
+
+    //@3.0s 후: 0.5s 동안 Overlay 페이드아웃
+    FTimerDelegate FadeOutDelegate;
+    FadeOutDelegate.BindLambda([this, OverlayWidget]()
+    {
+        if (!OverlayWidget) return;
+        StartBlendOut(OverlayWidget, 0.5f);
+    });
+
+    FTimerHandle FadeStartHandle;
+    if (UWorld* World2 = GetWorld())
+    {
+        World2->GetTimerManager().SetTimer(FadeStartHandle, FadeOutDelegate, 3.0f, false);
+    }
+}
+
+void UHUD_ManaStackUI::StartBlendOut(UOverlay* OverlayWidget, float DurationSeconds)
+{
+    if (!OverlayWidget || DurationSeconds <= 0.f)
+    {
+        return;
+    }
+
+    BlendOutElapsedSeconds.FindOrAdd(OverlayWidget) = 0.f;
+
+    FTimerHandle* HandlePtr = nullptr;
+    if (OverlayWidget == KI_Overlay) HandlePtr = &KI_BlendTimerHandle;
+    else if (OverlayWidget == KYU_Overlay) HandlePtr = &KYU_BlendTimerHandle;
+    else if (OverlayWidget == KON_Overlay) HandlePtr = &KON_BlendTimerHandle;
+
+    if (!HandlePtr)
+    {
+        return;
+    }
+
+    if (UWorld* World = GetWorld())
+    {
+        FTimerDelegate TickDelegate;
+        TickDelegate.BindLambda([this, OverlayWidget, DurationSeconds, HandlePtr]()
+        {
+            TickBlendOut(OverlayWidget, DurationSeconds, *HandlePtr);
+        });
+        World->GetTimerManager().SetTimer(*HandlePtr, TickDelegate, 0.016f, true);
+    }
+}
+
+void UHUD_ManaStackUI::TickBlendOut(UOverlay* OverlayWidget, float DurationSeconds, FTimerHandle& TimerHandle)
+{
+    if (!OverlayWidget)
+    {
+        if (UWorld* World = GetWorld())
+        {
+            World->GetTimerManager().ClearTimer(TimerHandle);
+        }
+        return;
+    }
+
+    float& Elapsed = BlendOutElapsedSeconds.FindOrAdd(OverlayWidget);
+    Elapsed += 0.016f;
+
+    float Alpha = FMath::Clamp(Elapsed / DurationSeconds, 0.f, 1.f);
+    float Opacity = FMath::Lerp(1.f, -1.f, Alpha); // 1 -> -1
+    OverlayWidget->SetRenderOpacity(Opacity);
+
+    if (Alpha >= 1.f)
+    {
+        if (UWorld* World = GetWorld())
+        {
+            World->GetTimerManager().ClearTimer(TimerHandle);
+        }
+        OverlayWidget->SetVisibility(ESlateVisibility::Collapsed);
+        BlendOutElapsedSeconds.Remove(OverlayWidget);
     }
 }
 

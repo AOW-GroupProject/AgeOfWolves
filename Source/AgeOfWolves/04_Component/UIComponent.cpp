@@ -154,7 +154,7 @@ void UUIComponent::InternalBindToMenuUI()
 
 void UUIComponent::InitializeUIComponent()
 {
-	//@Player Controller
+	// Player Controller 검증
 	APlayerController* PC = Cast<APlayerController>(GetOwner());
 	if (!PC)
 	{
@@ -162,59 +162,21 @@ void UUIComponent::InitializeUIComponent()
 		return;
 	}
 
-	//@External Binding
-	ExternalBindingToInputComponent(PC);
-	ExternalBindingToODComponent(PC);
+	// 외부 바인딩 설정
+	SetupExternalBindings(PC);
 
-	//@GameInstance
-	UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
-	if (!GameInstance)
-	{
-		UE_LOGFMT(LogUI, Error, "GameInstance를 가져올 수 없습니다.");
-		return;
-	}
-
-	//@UI Manager Subsystem
-	UUIManagerSubsystem* UIManagerSubsystem = GameInstance->GetSubsystem<UUIManagerSubsystem>();
+	// UI Manager Subsystem 가져오기
+	UUIManagerSubsystem* UIManagerSubsystem = GetUIManagerSubsystem();
 	if (!UIManagerSubsystem)
 	{
-		UE_LOGFMT(LogUI, Error, "UI Manager Subsystem이 유효하지 않습니다!");
 		return;
 	}
 
-	//@EUICategory 열거형 정보 가져오기
-	UEnum* EnumPtr = StaticEnum<EUICategory>();
-	if (!EnumPtr)
-	{
-		UE_LOGFMT(LogUI, Error, "EUICategory 열거형 정보를 가져올 수 없습니다.");
-		return;
-	}
+	// UI 카테고리별 위젯 생성
+	CreateWidgetsForAllCategories(PC, UIManagerSubsystem);
 
-	int32 EnumCount = EnumPtr->GetMaxEnumValue();
-
-	//@각 UI 카테고리에 대한 처리
-	for (int32 i = 0; i < EnumCount; ++i)
-	{
-		EUICategory UICategory = static_cast<EUICategory>(i);
-		const TArray<FUIInformation>* UIInfos = UIManagerSubsystem->GetUICategoryInformations(UICategory);
-
-		if (!UIInfos || UIInfos->Num() == 0)
-		{
-			UE_LOGFMT(LogUI, Warning, "UI Information 정보 중 {0}이 비어있습니다.",
-				*EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)));
-			continue;
-		}
-
-		//@각 UI 정보에 대한 위젯 생성 및 설정
-		for (const auto& UIInfo : *UIInfos)
-		{
-			CreateAndSetupWidget(PC, UICategory, UIInfo, EnumPtr);
-		}
-	}
-
-	//@초기화 요청 이벤트
+	// 초기화 요청 이벤트 브로드캐스트
 	RequestInitializationByUIComp.Broadcast();
-
 
 	UE_LOGFMT(LogUI, Log, "UI Component 초기화 완료 (Indicator: {0}개)", MIndicatorUIs.Num());
 }
@@ -538,98 +500,18 @@ void UUIComponent::HideAllUI(EUICategory UICategory)
 
 void UUIComponent::UpdateActiveIndicator()
 {
-	//@Indicator 전체가 비활성화된 경우
+	// Indicator 전체가 비활성화된 경우
 	if (!bEnableIndicators)
 	{
 		HideAllIndicators();
 		return;
 	}
 
-	//@각 Indicator를 개별적으로 처리 (독립적)
-
-	// 1. LockOn Indicator
-	{
-		FGameplayTag LockOnTag = FGameplayTag::RequestGameplayTag(FName("UI.Indicator.LockOn"));
-		UUserWidget* LockOnIndicator = GetIndicatorByTag(LockOnTag);
-		AActor* Target = GetIndicatorTarget(LockOnTag);
-
-		bool bShouldShow = (bShowLockOnIndicator || bDebugMode) && Target != nullptr;
-
-		if (LockOnIndicator)
-		{
-			if (bShouldShow)
-			{
-				ShowIndicatorWidget(LockOnIndicator);
-			}
-			else
-			{
-				HideIndicatorWidget(LockOnIndicator);
-			}
-		}
-	}
-
-	// 2. Execution Indicator
-	{
-		FGameplayTag ExecutionTag = FGameplayTag::RequestGameplayTag(FName("UI.Indicator.Execution"));
-		UUserWidget* ExecutionIndicator = GetIndicatorByTag(ExecutionTag);
-		AActor* Target = GetIndicatorTarget(ExecutionTag);
-
-		bool bShouldShow = (bShowExecutionIndicator || bDebugMode) && Target != nullptr;
-
-		if (ExecutionIndicator)
-		{
-			if (bShouldShow)
-			{
-				ShowIndicatorWidget(ExecutionIndicator);
-			}
-			else
-			{
-				HideIndicatorWidget(ExecutionIndicator);
-			}
-		}
-	}
-
-	// 3. Ambush Indicator
-	{
-		FGameplayTag AmbushTag = FGameplayTag::RequestGameplayTag(FName("UI.Indicator.Ambush"));
-		UUserWidget* AmbushIndicator = GetIndicatorByTag(AmbushTag);
-		AActor* Target = GetIndicatorTarget(AmbushTag);
-
-		bool bShouldShow = (bShowAmbushIndicator || bDebugMode) && Target != nullptr;
-
-		if (AmbushIndicator)
-		{
-			if (bShouldShow)
-			{
-				ShowIndicatorWidget(AmbushIndicator);
-			}
-			else
-			{
-				HideIndicatorWidget(AmbushIndicator);
-			}
-		}
-	}
-
-	// 4. Structure Indicator
-	{
-		FGameplayTag StructureTag = FGameplayTag::RequestGameplayTag(FName("UI.Indicator.StatueInteractionUI"));
-		UUserWidget* StructureIndicator = GetIndicatorByTag(StructureTag);
-		AActor* Target = GetIndicatorTarget(StructureTag);
-
-		bool bShouldShow = (bShowStructureIndicator || bDebugMode) && Target != nullptr;
-
-		if (StructureIndicator)
-		{
-			if (bShouldShow)
-			{
-				ShowIndicatorWidget(StructureIndicator);
-			}
-			else
-			{
-				HideIndicatorWidget(StructureIndicator);
-			}
-		}
-	}
+	// 각 Indicator 타입별 처리
+	UpdateIndicatorByType("LockOn", bShowLockOnIndicator);
+	UpdateIndicatorByType("Execution", bShowExecutionIndicator);
+	UpdateIndicatorByType("Ambush", bShowAmbushIndicator);
+	UpdateIndicatorByType("StatueInteractionUI", bShowStructureIndicator);
 }
 
 void UUIComponent::ShowIndicatorWidget(UUserWidget* Widget)
@@ -718,126 +600,44 @@ bool UUIComponent::UpdateSingleIndicatorPosition(UUserWidget* Indicator, AActor*
 		return false;
 	}
 
-	//@Indicator Tag 찾기
-	FGameplayTag IndicatorTag;
-	for (const auto& Pair : MIndicatorUIs)
-	{
-		if (Pair.Value == Indicator)
-		{
-			IndicatorTag = Pair.Key;
-			break;
-		}
-	}
-
+	// Indicator Tag 찾기
+	FGameplayTag IndicatorTag = FindIndicatorTagByWidget(Indicator);
 	if (!IndicatorTag.IsValid())
 	{
 		return false;
 	}
 
-	FString TagString = IndicatorTag.ToString();
-
-	// ============================================
-	// 1. 타겟의 3D 월드 위치 계산
-	// ============================================
+	// 3D 월드 위치 계산
 	FVector TargetWorldLocation;
 	if (!GetIndicatorWorldPosition(IndicatorTag, Target, TargetWorldLocation))
 	{
 		return false;
 	}
 
-	// ============================================
-	// 2. 3D → 2D 투영 (픽셀 좌표)
-	// ============================================
+	// 3D → 2D 투영
 	FVector2D ProjectedScreenPos;
-	bool bIsOnScreen = PC->ProjectWorldLocationToScreen(TargetWorldLocation, ProjectedScreenPos, true);
+	PC->ProjectWorldLocationToScreen(TargetWorldLocation, ProjectedScreenPos, true);
 
-	// ============================================
-	// 3. 현재 화면 크기
-	// ============================================
+	// 화면 크기 가져오기
 	int32 ViewportSizeX, ViewportSizeY;
 	PC->GetViewportSize(ViewportSizeX, ViewportSizeY);
 
-	// ============================================
-	// 4. 픽셀 → 정규화 좌표 (0~1)
-	// ============================================
-	FVector2D NormalizedPos;
-	NormalizedPos.X = ProjectedScreenPos.X / FMath::Max((float)ViewportSizeX, 1.0f);
-	NormalizedPos.Y = ProjectedScreenPos.Y / FMath::Max((float)ViewportSizeY, 1.0f);
+	// 픽셀 → 정규화 좌표 변환
+	FVector2D NormalizedPos = ConvertToNormalizedCoordinates(ProjectedScreenPos, ViewportSizeX, ViewportSizeY);
 
-	// ============================================
-	// 5. 타입별 정규화된 오프셋 결정
-	// ============================================
-	float AdditionalOffsetRightRatio = 0.0f;
-	float AdditionalOffsetUpRatio = 0.0f;
-	float InterpolationSpeed = GeneralInterpolationSpeed;
+	// 타입별 오프셋 및 보간 속도 결정
+	FIndicatorOffsetSettings OffsetSettings = GetIndicatorOffsetSettings(IndicatorTag);
 
-	if (TagString.Contains(TEXT("LockOn")))
-	{
-		AdditionalOffsetRightRatio = LockOnScreenOffsetRightRatio;
-		AdditionalOffsetUpRatio = LockOnScreenOffsetUpRatio;
-		InterpolationSpeed = LockOnInterpolationSpeed;
-	}
-	else if (TagString.Contains(TEXT("StatueInteractionUI")))
-	{
-		AdditionalOffsetRightRatio = StructureScreenOffsetRightRatio;
-		AdditionalOffsetUpRatio = StructureScreenOffsetUpRatio;
-		InterpolationSpeed = StructureInterpolationSpeed;
-	}
+	// 정규화된 오프셋 적용
+	FVector2D TargetNormalizedPos = ApplyOffsetToNormalizedPosition(NormalizedPos, OffsetSettings);
 
-	// ============================================
-	// 6. 정규화된 오프셋 적용 (단순)
-	// ============================================
-	FVector2D TargetNormalizedPos = NormalizedPos;
+	// 정규화 좌표 → 픽셀 좌표 변환
+	FVector2D TargetScreenPos = ConvertToScreenCoordinates(TargetNormalizedPos, ViewportSizeX, ViewportSizeY);
 
-	//@오프셋 적용 (복잡한 계산 없이 단순 덧셈)
-	TargetNormalizedPos.X += (CommonScreenOffsetRightRatio + AdditionalOffsetRightRatio);
-	TargetNormalizedPos.Y += (CommonScreenOffsetUpRatio + AdditionalOffsetUpRatio);
+	// 보간 적용
+	FVector2D FinalScreenPosition = ApplyInterpolation(IndicatorTag, TargetScreenPos, DeltaTime, OffsetSettings.InterpolationSpeed);
 
-	// ============================================
-	// 7. 정규화 좌표 → 픽셀 좌표
-	// ============================================
-	FVector2D TargetScreenPos;
-	TargetScreenPos.X = TargetNormalizedPos.X * ViewportSizeX;
-	TargetScreenPos.Y = TargetNormalizedPos.Y * ViewportSizeY;
-
-	// ============================================
-	// 8. 보간 적용
-	// ============================================
-	FVector2D FinalScreenPosition;
-
-	if (DeltaTime <= 0.0f)
-	{
-		FinalScreenPosition = TargetScreenPos;
-		LastIndicatorScreenPositions.Add(IndicatorTag, FinalScreenPosition);
-	}
-	else if (TagString.Contains(TEXT("StatueInteractionUI")))
-	{
-		FinalScreenPosition = TargetScreenPos;
-		LastIndicatorScreenPositions.Add(IndicatorTag, FinalScreenPosition);
-	}
-	else if (bUseInterpolation)
-	{
-		FVector2D* LastPosition = LastIndicatorScreenPositions.Find(IndicatorTag);
-
-		if (LastPosition)
-		{
-			FinalScreenPosition = FMath::Vector2DInterpTo(*LastPosition, TargetScreenPos, DeltaTime, InterpolationSpeed);
-		}
-		else
-		{
-			FinalScreenPosition = TargetScreenPos;
-		}
-
-		LastIndicatorScreenPositions.Add(IndicatorTag, FinalScreenPosition);
-	}
-	else
-	{
-		FinalScreenPosition = TargetScreenPos;
-	}
-
-	// ============================================
-	// 9. 위치 설정
-	// ============================================
+	// 위치 설정
 	Indicator->SetPositionInViewport(FinalScreenPosition, false);
 
 	return true;
@@ -1250,6 +1050,188 @@ bool UUIComponent::GetIndicatorWorldPosition(const FGameplayTag& IndicatorTag, A
 		}
 
 		return true;
+	}
+}
+
+// ============================================
+// Indicator 위치 업데이트 헬퍼 함수들
+// ============================================
+
+FGameplayTag UUIComponent::FindIndicatorTagByWidget(UUserWidget* Widget) const
+{
+	for (const auto& Pair : MIndicatorUIs)
+	{
+		if (Pair.Value == Widget)
+		{
+			return Pair.Key;
+		}
+	}
+	return FGameplayTag();
+}
+
+FVector2D UUIComponent::ConvertToNormalizedCoordinates(const FVector2D& ScreenPos, int32 ViewportSizeX, int32 ViewportSizeY) const
+{
+	FVector2D NormalizedPos;
+	NormalizedPos.X = ScreenPos.X / FMath::Max((float)ViewportSizeX, 1.0f);
+	NormalizedPos.Y = ScreenPos.Y / FMath::Max((float)ViewportSizeY, 1.0f);
+	return NormalizedPos;
+}
+
+FIndicatorOffsetSettings UUIComponent::GetIndicatorOffsetSettings(const FGameplayTag& IndicatorTag) const
+{
+	FIndicatorOffsetSettings Settings;
+	FString TagString = IndicatorTag.ToString();
+
+	if (TagString.Contains(TEXT("LockOn")))
+	{
+		Settings.AdditionalOffsetRightRatio = LockOnScreenOffsetRightRatio;
+		Settings.AdditionalOffsetUpRatio = LockOnScreenOffsetUpRatio;
+		Settings.InterpolationSpeed = LockOnInterpolationSpeed;
+	}
+	else if (TagString.Contains(TEXT("StatueInteractionUI")))
+	{
+		Settings.AdditionalOffsetRightRatio = StructureScreenOffsetRightRatio;
+		Settings.AdditionalOffsetUpRatio = StructureScreenOffsetUpRatio;
+		Settings.InterpolationSpeed = StructureInterpolationSpeed;
+	}
+	else
+	{
+		Settings.InterpolationSpeed = GeneralInterpolationSpeed;
+	}
+
+	return Settings;
+}
+
+FVector2D UUIComponent::ApplyOffsetToNormalizedPosition(const FVector2D& NormalizedPos, const FIndicatorOffsetSettings& OffsetSettings) const
+{
+	FVector2D TargetNormalizedPos = NormalizedPos;
+	TargetNormalizedPos.X += (CommonScreenOffsetRightRatio + OffsetSettings.AdditionalOffsetRightRatio);
+	TargetNormalizedPos.Y += (CommonScreenOffsetUpRatio + OffsetSettings.AdditionalOffsetUpRatio);
+	return TargetNormalizedPos;
+}
+
+FVector2D UUIComponent::ConvertToScreenCoordinates(const FVector2D& NormalizedPos, int32 ViewportSizeX, int32 ViewportSizeY) const
+{
+	FVector2D ScreenPos;
+	ScreenPos.X = NormalizedPos.X * ViewportSizeX;
+	ScreenPos.Y = NormalizedPos.Y * ViewportSizeY;
+	return ScreenPos;
+}
+
+FVector2D UUIComponent::ApplyInterpolation(const FGameplayTag& IndicatorTag, const FVector2D& TargetScreenPos, float DeltaTime, float InterpolationSpeed)
+{
+	FString TagString = IndicatorTag.ToString();
+
+	// 즉시 적용되는 경우들
+	if (DeltaTime <= 0.0f || TagString.Contains(TEXT("StatueInteractionUI")))
+	{
+		UpdateLastIndicatorPosition(IndicatorTag, TargetScreenPos);
+		return TargetScreenPos;
+	}
+
+	// 보간 적용
+	if (bUseInterpolation)
+	{
+		FVector2D* LastPosition = LastIndicatorScreenPositions.Find(IndicatorTag);
+		if (LastPosition)
+		{
+			FVector2D InterpolatedPos = FMath::Vector2DInterpTo(*LastPosition, TargetScreenPos, DeltaTime, InterpolationSpeed);
+			UpdateLastIndicatorPosition(IndicatorTag, InterpolatedPos);
+			return InterpolatedPos;
+		}
+	}
+
+	// 기본값
+	UpdateLastIndicatorPosition(IndicatorTag, TargetScreenPos);
+	return TargetScreenPos;
+}
+
+void UUIComponent::UpdateLastIndicatorPosition(const FGameplayTag& IndicatorTag, const FVector2D& NewPosition)
+{
+	LastIndicatorScreenPositions.Add(IndicatorTag, NewPosition);
+}
+
+void UUIComponent::UpdateIndicatorByType(const FString& TypeName, bool bShouldShow)
+{
+	FString TagString = FString::Printf(TEXT("UI.Indicator.%s"), *TypeName);
+	FGameplayTag IndicatorTag = FGameplayTag::RequestGameplayTag(FName(*TagString));
+	
+	UUserWidget* Indicator = GetIndicatorByTag(IndicatorTag);
+	AActor* Target = GetIndicatorTarget(IndicatorTag);
+
+	bool bShouldShowIndicator = (bShouldShow || bDebugMode) && Target != nullptr;
+
+	if (Indicator)
+	{
+		if (bShouldShowIndicator)
+		{
+			ShowIndicatorWidget(Indicator);
+		}
+		else
+		{
+			HideIndicatorWidget(Indicator);
+		}
+	}
+}
+
+// ============================================
+// UI 초기화 헬퍼 함수들
+// ============================================
+
+void UUIComponent::SetupExternalBindings(APlayerController* PC)
+{
+	ExternalBindingToInputComponent(PC);
+	ExternalBindingToODComponent(PC);
+}
+
+UUIManagerSubsystem* UUIComponent::GetUIManagerSubsystem() const
+{
+	UGameInstance* GameInstance = UGameplayStatics::GetGameInstance(GetWorld());
+	if (!GameInstance)
+	{
+		UE_LOGFMT(LogUI, Error, "GameInstance를 가져올 수 없습니다.");
+		return nullptr;
+	}
+
+	UUIManagerSubsystem* UIManagerSubsystem = GameInstance->GetSubsystem<UUIManagerSubsystem>();
+	if (!UIManagerSubsystem)
+	{
+		UE_LOGFMT(LogUI, Error, "UI Manager Subsystem이 유효하지 않습니다!");
+		return nullptr;
+	}
+
+	return UIManagerSubsystem;
+}
+
+void UUIComponent::CreateWidgetsForAllCategories(APlayerController* PC, UUIManagerSubsystem* UIManagerSubsystem)
+{
+	UEnum* EnumPtr = StaticEnum<EUICategory>();
+	if (!EnumPtr)
+	{
+		UE_LOGFMT(LogUI, Error, "EUICategory 열거형 정보를 가져올 수 없습니다.");
+		return;
+	}
+
+	int32 EnumCount = EnumPtr->GetMaxEnumValue();
+
+	// 각 UI 카테고리에 대한 처리
+	for (int32 i = 0; i < EnumCount; ++i)
+	{
+		EUICategory UICategory = static_cast<EUICategory>(i);
+		const TArray<FUIInformation>* UIInfos = UIManagerSubsystem->GetUICategoryInformations(UICategory);
+
+		if (!UIInfos || UIInfos->Num() == 0)
+		{
+			UE_LOGFMT(LogUI, Warning, "UI Information 정보 중 {0}이 비어있습니다.",
+				*EnumPtr->GetNameStringByValue(static_cast<int64>(UICategory)));
+			continue;
+		}
+
+		// 각 UI 정보에 대한 위젯 생성 및 설정
+		for (const auto& UIInfo : *UIInfos)
+		{
+			CreateAndSetupWidget(PC, UICategory, UIInfo, EnumPtr);
+		}
 	}
 }
 #pragma endregion

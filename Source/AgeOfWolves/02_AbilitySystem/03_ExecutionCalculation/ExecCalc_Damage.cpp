@@ -6,7 +6,6 @@
 
 DEFINE_LOG_CATEGORY(LogExecCalc_Damage)
 
-
 struct FDamageStatics
 {
 	DECLARE_ATTRIBUTE_CAPTUREDEF(Damage);
