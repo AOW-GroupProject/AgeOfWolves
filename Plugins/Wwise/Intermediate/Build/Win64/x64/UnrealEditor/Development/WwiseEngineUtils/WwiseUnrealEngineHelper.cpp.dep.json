@@ -1,0 +1,15 @@
+{
+    "Version": "1.1",
+    "Data": {
+        "Source": "e:\\aow\\ageofwolves\\plugins\\wwise\\source\\wwiseengineutils\\private\\wwiseunrealenginehelper.cpp",
+        "ProvidedModule": "",
+        "PCH": "e:\\aow\\ageofwolves\\intermediate\\build\\win64\\x64\\ageofwolveseditor\\development\\engine\\sharedpch.engine.shadowerrors.inclorderunreal5_1.h.pch",
+        "Includes": [
+            "e:\\aow\\ageofwolves\\plugins\\wwise\\intermediate\\build\\win64\\x64\\unrealeditor\\development\\wwiseengineutils\\definitions.wwiseengineutils.h",
+            "e:\\aow\\ageofwolves\\plugins\\wwise\\source\\wwiseengineutils\\public\\wwiseunrealenginehelper.h",
+            "e:\\aow\\ageofwolves\\plugins\\wwise\\source\\wwiseutils\\public\\wwiseunrealdefines.h"
+        ],
+        "ImportedModules": [],
+        "ImportedHeaderUnits": []
+    }
+}
