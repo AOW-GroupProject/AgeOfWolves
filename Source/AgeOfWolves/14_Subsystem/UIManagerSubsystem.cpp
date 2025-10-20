@@ -169,7 +169,7 @@ UUserWidget* UUIManagerSubsystem::CreateSystemUIWidget(const FUIInformation& UII
     }
 
     //@Viewport에 추가 (Z-Order는 기본값 사용)
-    CreatedWidget->AddToViewport();
+    CreatedWidget->AddToViewport(20);
 
     //@초기 가시성을 Collapsed로 설정 (렌더링 파이프라인에서 완전히 제외)
     CreatedWidget->SetVisibility(ESlateVisibility::Collapsed);

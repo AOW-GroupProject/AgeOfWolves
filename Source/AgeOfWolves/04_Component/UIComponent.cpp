@@ -417,7 +417,7 @@ void UUIComponent::SetupIndicatorUI(const FGameplayTag& UITag, UUserWidget* NewW
 	IndicatorTargets.Add(UITag, nullptr);
 
 	//@Viewport에 추가 (HUD 위에, 초기 숨김 상태)
-	NewWidget->AddToViewport(100); // Z-Order 100
+	NewWidget->AddToViewport(5); // Z-Order 100
 	NewWidget->SetVisibility(ESlateVisibility::Collapsed);
 
 	UE_LOGFMT(LogUI, Log, "Indicator UI 설정 완료: {0}", *UITag.ToString());
@@ -659,7 +659,7 @@ void UUIComponent::ShowIndicatorWidget(UUserWidget* Widget)
 
 	Widget->SetVisibility(ESlateVisibility::HitTestInvisible);
 
-	UE_LOGFMT(LogUI, Verbose, "Indicator 표시됨");
+	UE_LOGFMT(LogUI, Log, "Indicator 표시됨");
 }
 
 void UUIComponent::HideIndicatorWidget(UUserWidget* Widget)
@@ -674,7 +674,7 @@ void UUIComponent::HideIndicatorWidget(UUserWidget* Widget)
 
 	Widget->SetVisibility(ESlateVisibility::Collapsed);
 
-	UE_LOGFMT(LogUI, Verbose, "Indicator 숨김");
+	UE_LOGFMT(LogUI, Log, "Indicator 숨김");
 }
 
 void UUIComponent::HideAllIndicators()
@@ -746,102 +746,103 @@ bool UUIComponent::UpdateSingleIndicatorPosition(UUserWidget* Indicator, AActor*
 	}
 
 	// ============================================
-	// 2. 3D → 2D 투영
+	// 2. 3D → 2D 투영 (픽셀 좌표)
 	// ============================================
-	//@타입별 추가 오프셋 & 보간 속도 결정
-	float InterpolationSpeed = GeneralInterpolationSpeed;
-
-	// 2D 투영 후
-	FVector2D BaseScreenPosition;
-	bool bIsOnScreen = PC->ProjectWorldLocationToScreen(TargetWorldLocation, BaseScreenPosition, true);
+	FVector2D ProjectedScreenPos;
+	bool bIsOnScreen = PC->ProjectWorldLocationToScreen(TargetWorldLocation, ProjectedScreenPos, true);
 
 	// ============================================
-	// 화면 위치 기반 오프셋 보정 (새로 추가)
+	// 3. 현재 화면 크기
 	// ============================================
 	int32 ViewportSizeX, ViewportSizeY;
 	PC->GetViewportSize(ViewportSizeX, ViewportSizeY);
 
-	// 화면 중심으로부터의 정규화된 거리 계산 (-1 ~ 1)
-	float NormalizedX = (BaseScreenPosition.X - (ViewportSizeX * 0.5f)) / (ViewportSizeX * 0.5f);
-
-	// 가장자리로 갈수록 오프셋 감소 (0.3 ~ 1.0 범위)
-	float OffsetMultiplier = 1.0f + (NormalizedX * 0.7f);
+	// ============================================
+	// 4. 픽셀 → 정규화 좌표 (0~1)
+	// ============================================
+	FVector2D NormalizedPos;
+	NormalizedPos.X = ProjectedScreenPos.X / FMath::Max((float)ViewportSizeX, 1.0f);
+	NormalizedPos.Y = ProjectedScreenPos.Y / FMath::Max((float)ViewportSizeY, 1.0f);
 
 	// ============================================
-	// 3. 2D 픽셀 오프셋 적용 (수정됨)
+	// 5. 타입별 정규화된 오프셋 결정
 	// ============================================
-	FVector2D TargetScreenPosition = BaseScreenPosition;
+	float AdditionalOffsetRightRatio = 0.0f;
+	float AdditionalOffsetUpRatio = 0.0f;
+	float InterpolationSpeed = GeneralInterpolationSpeed;
 
-	// 보정된 오프셋 적용
-	TargetScreenPosition.X += CommonScreenOffsetRight * OffsetMultiplier;
-	TargetScreenPosition.Y += CommonScreenOffsetUp;
-
-	// 타입별 추가 오프셋도 동일하게 보정
 	if (TagString.Contains(TEXT("LockOn")))
 	{
-		TargetScreenPosition.X += LockOnScreenOffsetRight * OffsetMultiplier;
-		TargetScreenPosition.Y += LockOnScreenOffsetUp;
+		AdditionalOffsetRightRatio = LockOnScreenOffsetRightRatio;
+		AdditionalOffsetUpRatio = LockOnScreenOffsetUpRatio;
 		InterpolationSpeed = LockOnInterpolationSpeed;
 	}
 	else if (TagString.Contains(TEXT("StatueInteractionUI")))
 	{
-		TargetScreenPosition.X += StructureScreenOffsetRight * OffsetMultiplier;
-		TargetScreenPosition.Y += StructureScreenOffsetUp;
+		AdditionalOffsetRightRatio = StructureScreenOffsetRightRatio;
+		AdditionalOffsetUpRatio = StructureScreenOffsetUpRatio;
 		InterpolationSpeed = StructureInterpolationSpeed;
 	}
 
 	// ============================================
-	// 4. 보간 적용 (선택적)
+	// 6. 정규화된 오프셋 적용 (단순)
+	// ============================================
+	FVector2D TargetNormalizedPos = NormalizedPos;
+
+	//@오프셋 적용 (복잡한 계산 없이 단순 덧셈)
+	TargetNormalizedPos.X += (CommonScreenOffsetRightRatio + AdditionalOffsetRightRatio);
+	TargetNormalizedPos.Y += (CommonScreenOffsetUpRatio + AdditionalOffsetUpRatio);
+
+	// ============================================
+	// 7. 정규화 좌표 → 픽셀 좌표
+	// ============================================
+	FVector2D TargetScreenPos;
+	TargetScreenPos.X = TargetNormalizedPos.X * ViewportSizeX;
+	TargetScreenPos.Y = TargetNormalizedPos.Y * ViewportSizeY;
+
+	// ============================================
+	// 8. 보간 적용
 	// ============================================
 	FVector2D FinalScreenPosition;
 
-	//@✅ DeltaTime이 0이면 즉시 이동 (ShowIndicatorWidget에서 호출 시)
 	if (DeltaTime <= 0.0f)
 	{
-		FinalScreenPosition = TargetScreenPosition;
-		//@캐시에 바로 저장
+		FinalScreenPosition = TargetScreenPos;
 		LastIndicatorScreenPositions.Add(IndicatorTag, FinalScreenPosition);
 	}
-	//@✅ StatueInteractionUI는 보간 없이 항상 즉시 이동 (엄격한 중앙 위치)
 	else if (TagString.Contains(TEXT("StatueInteractionUI")))
 	{
-		FinalScreenPosition = TargetScreenPosition;
-		//@캐시 업데이트
+		FinalScreenPosition = TargetScreenPos;
 		LastIndicatorScreenPositions.Add(IndicatorTag, FinalScreenPosition);
 	}
-	//@나머지 Indicator는 보간 적용
 	else if (bUseInterpolation)
 	{
-		//@이전 위치 가져오기
 		FVector2D* LastPosition = LastIndicatorScreenPositions.Find(IndicatorTag);
 
 		if (LastPosition)
 		{
-			//@보간 적용
-			FinalScreenPosition = FMath::Vector2DInterpTo(*LastPosition, TargetScreenPosition, DeltaTime, InterpolationSpeed);
+			FinalScreenPosition = FMath::Vector2DInterpTo(*LastPosition, TargetScreenPos, DeltaTime, InterpolationSpeed);
 		}
 		else
 		{
-			//@첫 프레임: 즉시 이동
-			FinalScreenPosition = TargetScreenPosition;
+			FinalScreenPosition = TargetScreenPos;
 		}
 
-		//@위치 캐싱
 		LastIndicatorScreenPositions.Add(IndicatorTag, FinalScreenPosition);
 	}
 	else
 	{
-		//@보간 없이 즉시 이동
-		FinalScreenPosition = TargetScreenPosition;
+		FinalScreenPosition = TargetScreenPos;
 	}
 
 	// ============================================
-	// 5. 위치 설정
+	// 9. 위치 설정
 	// ============================================
 	Indicator->SetPositionInViewport(FinalScreenPosition, false);
 
 	return true;
 }
+
 #pragma endregion
 
 //@Callbacks
@@ -1146,33 +1147,108 @@ bool UUIComponent::GetIndicatorWorldPosition(const FGameplayTag& IndicatorTag, A
 	}
 
 	FString TagString = IndicatorTag.ToString();
-	FVector BaseLocation = Target->GetActorLocation();
 
 	// ============================================
-	// 1. LockOn Indicator
+	// 1. LockOn Indicator - ✅ Root 본 기준
 	// ============================================
 	if (TagString.Contains(TEXT("LockOn")))
 	{
-		OutWorldPosition = BaseLocation + FVector(0, 0, LockOnHeightOffset);
+		//@Character인 경우 Root 본 위치 사용
+		if (ACharacter* Character = Cast<ACharacter>(Target))
+		{
+			if (USkeletalMeshComponent* Mesh = Character->GetMesh())
+			{
+				//@✅ Root 본 위치 (가장 안정적)
+				FVector RootBoneLocation = Mesh->GetSocketLocation(FName("root"));
+				OutWorldPosition = RootBoneLocation + FVector(0, 0, LockOnHeightOffset);
+			}
+			else
+			{
+				//@Fallback: Actor Location
+				OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, LockOnHeightOffset);
+			}
+		}
+		else
+		{
+			//@Character가 아닌 경우
+			OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, LockOnHeightOffset);
+		}
+
+		//@디버그: 빨간색 구체
+		if (bShowIndicatorDebugSpheres)
+		{
+			DrawDebugSphere(
+				GetWorld(),
+				OutWorldPosition,
+				20.0f,
+				12,
+				FColor::Red,
+				false,
+				0.0f
+			);
+		}
+
 		return true;
 	}
 	// ============================================
-	// 2. Structure Indicator
+	// 2. Structure Indicator (변경 없음)
 	// ============================================
 	else if (TagString.Contains(TEXT("StatueInteractionUI")))
 	{
-		//@액터의 시각적 중심 (바운딩 박스 중심)
 		FVector Origin, BoxExtent;
 		Target->GetActorBounds(false, Origin, BoxExtent);
-		OutWorldPosition = Origin;
+		OutWorldPosition = Origin + FVector(0, 0, StructureWorldHeightOffset);
+
+		if (bShowIndicatorDebugSpheres)
+		{
+			DrawDebugSphere(
+				GetWorld(),
+				OutWorldPosition,
+				25.0f,
+				12,
+				FColor::Green,
+				false,
+				0.0f
+			);
+		}
 		return true;
 	}
 	// ============================================
-	// 3. 기타 Indicator (Execution, Ambush 등)
+	// 3. 기타 Indicator (Execution, Ambush)
 	// ============================================
 	else
 	{
-		OutWorldPosition = BaseLocation + FVector(0, 0, GeneralIndicatorHeightOffset);
+		//@Character인 경우 Root 본 사용
+		if (ACharacter* Character = Cast<ACharacter>(Target))
+		{
+			if (USkeletalMeshComponent* Mesh = Character->GetMesh())
+			{
+				FVector RootBoneLocation = Mesh->GetSocketLocation(FName("root"));
+				OutWorldPosition = RootBoneLocation + FVector(0, 0, GeneralIndicatorHeightOffset);
+			}
+			else
+			{
+				OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, GeneralIndicatorHeightOffset);
+			}
+		}
+		else
+		{
+			OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, GeneralIndicatorHeightOffset);
+		}
+
+		if (bShowIndicatorDebugSpheres)
+		{
+			DrawDebugSphere(
+				GetWorld(),
+				OutWorldPosition,
+				20.0f,
+				12,
+				FColor::Blue,
+				false,
+				0.0f
+			);
+		}
+
 		return true;
 	}
 }

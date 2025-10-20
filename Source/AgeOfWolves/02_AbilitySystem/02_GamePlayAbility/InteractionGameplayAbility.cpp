@@ -4,6 +4,7 @@
 #include "01_Character/CharacterBase.h"
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "04_Component/InteractionComponent.h"
+#include "04_Component/ObjectiveDetectionComponent.h"
 
 #include "Abilities/GameplayAbilityTypes.h"
 #include "AbilitySystemBlueprintLibrary.h"
@@ -27,8 +28,6 @@ UInteractionGameplayAbility::UInteractionGameplayAbility(const FObjectInitialize
     //@Interaction 성공 여부
     bInteractionCompleted = false;
 }
-
-
 #pragma endregion
 
 //@Property/Info...etc
