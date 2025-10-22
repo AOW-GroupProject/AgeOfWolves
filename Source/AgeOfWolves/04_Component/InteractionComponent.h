@@ -89,6 +89,10 @@ struct FPotentialInteraction
     UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Animation", meta = (EditCondition = "bIsMontagesPaired"))
         TSoftObjectPtr<UAnimMontage> TargetMontage;
 
+    //@상호작용 세션 ID (페어링 애니메이션용)
+    UPROPERTY(EditAnywhere, BlueprintReadOnly, Category = "Interaction|Animation", meta = (EditCondition = "bIsMontagesPaired"))
+        FGuid SessionID;
+
     FPotentialInteraction()
         : InteractionType(EInteractionType::None)
         , RequiredDistance(200.0f)
@@ -96,6 +100,7 @@ struct FPotentialInteraction
         , Priority(0)
         , bPlayMontage(false)
         , bIsMontagesPaired(false)
+        , SessionID(FGuid())
     {}
 
     FPotentialInteraction(FGameplayTag InObjectTag, EInteractionType InType, FGameplayTag InEventTag, float InDistance = 200.0f, int32 InPriority = 0)
@@ -137,6 +142,36 @@ struct FPotentialInteraction
     bool HasValidMontages() const
     {
         return bPlayMontage && PlayerMontage.IsValid() && TargetMontage.IsValid();
+    }
+
+    //@애니메이션 페어링이 필요한 상호작용인지 확인
+    bool IsPairedAnimationInteraction() const
+    {
+        return bPlayMontage && bIsMontagesPaired;
+    }
+
+    //@단순 애니메이션 재생 상호작용인지 확인 (페어링 없음)
+    bool IsSimpleAnimationInteraction() const
+    {
+        return bPlayMontage && !bIsMontagesPaired;
+    }
+
+    //@세션 ID 반환
+    FGuid GetSessionID() const
+    {
+        return SessionID;
+    }
+
+    //@플레이어 몽타주 반환 (SoftObjectPtr)
+    TSoftObjectPtr<UAnimMontage> GetPlayerMontage() const
+    {
+        return PlayerMontage;
+    }
+
+    //@타겟 몽타주 반환 (SoftObjectPtr)
+    TSoftObjectPtr<UAnimMontage> GetTargetMontage() const
+    {
+        return TargetMontage;
     }
 
 };
@@ -211,9 +246,27 @@ public:
     }
 
     UFUNCTION(BlueprintPure, Category = "Interaction")
+        FGuid GetSessionID() const
+    {
+        return InteractionData.SessionID;
+    }
+
+    UFUNCTION(BlueprintCallable, Category = "Interaction")
+        void SetSessionID(const FGuid& InSessionID)
+    {
+        InteractionData.SessionID = InSessionID;
+    }
+
+    UFUNCTION(BlueprintPure, Category = "Interaction")
         bool IsMontagesPaired() const
     {
         return InteractionData.bIsMontagesPaired;
+    }
+
+    UFUNCTION(BlueprintPure, Category = "Interaction")
+        bool IsPairedAnimationInteraction() const
+    {
+        return InteractionData.IsPairedAnimationInteraction();
     }
 };
 

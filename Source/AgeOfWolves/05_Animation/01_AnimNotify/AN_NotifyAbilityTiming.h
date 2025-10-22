@@ -12,7 +12,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogAN_NotifyAbilityTiming, Log, All)
  * 
  *	애니메이션을 재생 중인 어빌리티에게 특정 시점을 알리는 Anim Notify입니다.
  */
-UCLASS()
+UCLASS(meta = (DisplayName = "어빌리티 타이밍 알림"))
 class AGEOFWOLVES_API UAN_NotifyAbilityTiming : public UAnimNotify
 {
 	GENERATED_BODY()
@@ -20,6 +20,7 @@ class AGEOFWOLVES_API UAN_NotifyAbilityTiming : public UAnimNotify
 #pragma region Default Setting
 public:
     virtual void Notify(USkeletalMeshComponent* MeshComp, UAnimSequenceBase* Animation) override;
+    virtual FString GetNotifyName_Implementation() const override;
 #pragma endregion
 
 };

@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
 #include "04_Component/InteractionComponent.h"
+#include "14_Subsystem/InteractionManagerSubsystem.h"
 
 #include "InteractionGameplayAbility.generated.h"
 
@@ -49,7 +50,7 @@ public:
 protected:
 	//@상호작용 이벤트 전송
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")
-		void SendInteractionEvent(const FHitResult& HitResult);
+		void SendInteractionEvent();
 
 protected:
 	//@상호작용 위치로 이동
@@ -118,6 +119,10 @@ protected:
 	//@상호작용 가능 여부 검사
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")
 		bool CanInteractWith(AActor* Target) const;
+
+	//@페어링 애니메이션 상호작용 참여자 등록 (Player 측)
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")
+		void RegisterPairedAnimationParticipants();
 
 protected:
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")

@@ -321,12 +321,14 @@ UAbilityTask_PlayMontageAndWait* UBaseGameplayAbility::PlayMontageWithCallback(
 {
     if (!MontageToPlay)
     {
+        UE_LOGFMT(LogGA, Error, "몽타주 재생 실패 - 몽타주가 NULL입니다. 어빌리티: {0}", *GetName());
         return nullptr;
     }
 
     UAbilitySystemComponent* ASC = GetAbilitySystemComponentFromActorInfo();
     if (!ASC)
     {
+        UE_LOGFMT(LogGA, Error, "몽타주 재생 실패 - ASC가 유효하지 않습니다. 어빌리티: {0}", *GetName());
         return nullptr;
     }
 
@@ -341,6 +343,7 @@ UAbilityTask_PlayMontageAndWait* UBaseGameplayAbility::PlayMontageWithCallback(
 
     if (!Task)
     {
+        UE_LOGFMT(LogGA, Error, "몽타주 태스크 생성 실패 - 어빌리티: {0}", *GetName());
         return nullptr;
     }
 
@@ -355,6 +358,10 @@ UAbilityTask_PlayMontageAndWait* UBaseGameplayAbility::PlayMontageWithCallback(
 
     // 태스크 활성화
     Task->Activate();
+
+    UE_LOGFMT(LogGA, Log, "몽타주 재생 설정 완료 - 어빌리티: {0} | 몽타주: {1}", 
+        *GetName(), 
+        *MontageToPlay->GetName());
 
     return Task;
 }
