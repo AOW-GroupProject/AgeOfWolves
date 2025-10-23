@@ -15,6 +15,7 @@ class UOverlay;
 class UHUD_StatusUI;
 class UHUD_QuickSlotsUI;
 class UHUD_HPToolItemDotGauge;
+class UHUD_ManaStackUI;  // 추가
 #pragma endregion
 
 //@열거형
@@ -97,6 +98,8 @@ protected:
 	void CreateQuickSlotUI();
 	//@HP Potion UI 생성
 	void CreateHPToolItemDotGauge();
+	//@Mana Stack UI 생성 
+	void CreateManaStackUI();
 
 protected:
 	UPROPERTY(BlueprintReadWrite, Category = "HUD | Status UI", meta = (BindWidget))
@@ -107,6 +110,9 @@ protected:
 
 	UPROPERTY(BlueprintReadWrite, Category = "HUD | HP Potion UI", meta = (BindWidget))
 		UOverlay* HPToolItemDotGaugeOverlay;
+
+	UPROPERTY(BlueprintReadWrite, Category = "HUD | Mana Stack UI", meta = (BindWidget))
+		UOverlay* ManaStackUIOverlay;
 
 protected:
 	TObjectPtr<UHUD_StatusUI> StatusUIRef;
@@ -125,6 +131,12 @@ protected:
 
 	UPROPERTY(EditDefaultsOnly, category = "HUD | HP Potion UI")
 		TSubclassOf<UUserWidget> HPToolItemDotGaugeClass;
+
+protected:
+	TObjectPtr<UHUD_ManaStackUI> ManaStackUIRef;
+
+	UPROPERTY(EditDefaultsOnly, category = "HUD | Mana Stack UI")
+	TSubclassOf<UHUD_ManaStackUI> ManaStackUIClass;
 #pragma endregion
 
 //@Delegates

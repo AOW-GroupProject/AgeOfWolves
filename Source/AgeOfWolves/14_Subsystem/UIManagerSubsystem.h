@@ -17,6 +17,20 @@ DECLARE_LOG_CATEGORY_EXTERN(LogUIManager, Log, All)
 
 //@열거형
 #pragma region Enums
+/**
+ * EIndicatorType
+ *
+ * Indicator UI의 타입을 정의합니다.
+ */
+UENUM(BlueprintType)
+enum class EIndicatorType : uint8
+{
+	None        UMETA(DisplayName = "None"),
+	LockOn      UMETA(DisplayName = "Lock On Target"),      // 락온된 타겟
+	Execution   UMETA(DisplayName = "Execution Target"),    // 처형 가능 타겟
+	Ambush      UMETA(DisplayName = "Ambush Target"),       // 매복 암살 가능 타겟
+	Structure   UMETA(DisplayName = "Structure")            // 구조물
+};
 #pragma endregion
 
 //@구조체
@@ -91,28 +105,24 @@ UCLASS()
 class AGEOFWOLVES_API UUIManagerSubsystem : public UGameInstanceSubsystem
 {
 
-	//@친추 클래스
+//@친추 클래스
 #pragma region Friend Class
 	friend class AAgeOfWolvesGameMode;
 #pragma endregion
 
 	GENERATED_BODY()
 
-	//@Defualt Setting
+//@Defualt Setting
 #pragma region Default Setting
 public:
 	UUIManagerSubsystem();
-
-protected:
-	//@외부 바인딩 - GameState와의 이벤트 연결
-	//void ExternalBindinToGameState();
 
 protected:
 	virtual void Initialize(FSubsystemCollectionBase& Collection) override;
 	virtual void Deinitialize()override;
 #pragma endregion
 
-	//@Property/Info...etc
+//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 private:
 	//@System UI들을 초기화 시점에 생성 및 캐싱하는 함수
@@ -120,22 +130,6 @@ private:
 
 	//@특정 System UI를 생성하고 초기 설정하는 헬퍼 함수
 	UUserWidget* CreateSystemUIWidget(const FUIInformation& UIInfo);
-
-private:
-	//@System UI들을 미리 생성하고 캐싱하는 맵 (UITag -> Widget Instance)
-	UPROPERTY()
-	TMap<FGameplayTag, TObjectPtr<UUserWidget>> CachedSystemUIs;
-
-	//@최소 표시 시간 정보를 저장하는 맵 (UITag -> MinimumDisplayTimeInfo)
-	UPROPERTY()
-	TMap<FGameplayTag, FMinimumDisplayTimeInfo> MinimumDisplayTimeInfoMap;
-
-private:
-	// Promise는 값 설정용으로만 사용 (Timer에서 완료 신호를 보낼 때)
-	TMap<FGameplayTag, TSharedPtr<TPromise<void>>> UIMinimumTimePromises;
-
-	// Future는 상태 확인용으로 별도 저장 (여러 번 IsReady() 호출 가능)
-	TMap<FGameplayTag, TSharedPtr<TFuture<void>>> UIMinimumTimeFutures;
 
 protected:
 	//@특정 System UI를 표시하는 함수
@@ -162,18 +156,53 @@ private:
 	//@Promise가 완료된(최소 시간이 경과한) UI의 pending 요청을 처리
 	void ProcessPendingHideRequestIfExists(const FGameplayTag& UITag);
 
-
-
 	//@UI 관련 Promise 및 시간 정보를 정리
 	void CleanupUITimeTrackingInfo(const FGameplayTag& UITag);
+
+public:
+	//@특정 타입의 Indicator UI 표시
+	UFUNCTION(BlueprintCallable, Category = "UI Management | Indicator")
+	bool ShowIndicatorUI(EIndicatorType IndicatorType, AActor* TargetActor);
+
+	//@특정 타입의 Indicator UI 숨김
+	UFUNCTION(BlueprintCallable, Category = "UI Management | Indicator")
+	bool HideIndicatorUI(EIndicatorType IndicatorType);
+
+	//@모든 Indicator UI 숨김
+	UFUNCTION(BlueprintCallable, Category = "UI Management | Indicator")
+	void HideAllIndicatorUIs();
 
 protected:
 	//@UI Collection 데이터 에셋
 	UPROPERTY()
 	TObjectPtr<UUICollection> UICollection;
+
+private:
+	//@System UI들을 미리 생성하고 캐싱하는 맵 (UITag -> Widget Instance)
+	UPROPERTY()
+	TMap<FGameplayTag, TObjectPtr<UUserWidget>> CachedSystemUIs;
+
+	//@최소 표시 시간 정보를 저장하는 맵 (UITag -> MinimumDisplayTimeInfo)
+	UPROPERTY()
+	TMap<FGameplayTag, FMinimumDisplayTimeInfo> MinimumDisplayTimeInfoMap;
+
+private:
+	// Promise는 값 설정용으로만 사용 (Timer에서 완료 신호를 보낼 때)
+	TMap<FGameplayTag, TSharedPtr<TPromise<void>>> UIMinimumTimePromises;
+
+	// Future는 상태 확인용으로 별도 저장 (여러 번 IsReady() 호출 가능)
+	TMap<FGameplayTag, TSharedPtr<TFuture<void>>> UIMinimumTimeFutures;
+
+private:
+	//@Indicator UI를 타입별로 관리하는 맵 (IndicatorType -> Widget Instance)
+	UPROPERTY()
+	TMap<EIndicatorType, TObjectPtr<UUserWidget>> ActiveIndicatorWidgets;
+
+	//@현재 활성화된 Indicator 타입들 (빠른 체크용)
+	TSet<EIndicatorType> ActiveIndicatorTypes;
 #pragma endregion
 
-	//@Delegates
+//@Delegates
 #pragma region Delegates
 protected:
 	//@델리게이트 핸들을 저장해서 나중에 해제할 수 있도록 함
@@ -187,7 +216,7 @@ public:
 	FLoadingUIHidden LoadingUIHidden;
 #pragma endregion
 
-	//@Callbacks
+//@Callbacks
 #pragma region Callbacks
 public:
 	//@World BeginPlay 시점에 호출될 함수
@@ -195,7 +224,7 @@ public:
 		void OnWorldBeginPlay();
 #pragma endregion
 
-	//@Utility(Setter, Getter,...etc)
+//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 private:
 	// 특정 UI를 안전하게 생성하는 함수 (ShowSystemUI에서만 호출)
@@ -237,6 +266,21 @@ public:
 	//@디버그용: 현재 추적 중인 UI들의 최소 표시 시간 정보 출력
 	UFUNCTION(BlueprintCallable, Category = "UI Management | Debug")
 	void PrintMinimumDisplayTimeDebugInfo() const;
+
+public:
+	//@특정 타입의 Indicator가 표시 중인지 확인
+	UFUNCTION(BlueprintCallable, Category = "UI Management | Indicator")
+	bool IsIndicatorUIVisible(EIndicatorType IndicatorType) const;
+
+private:
+	//@IndicatorType에 해당하는 UITag 가져오기
+	FGameplayTag GetIndicatorUITag(EIndicatorType IndicatorType) const;
+
+	//@Indicator Widget 생성 (필요시)
+	UUserWidget* GetOrCreateIndicatorWidget(EIndicatorType IndicatorType);
+
+	//@Indicator Widget에 타겟 설정 (Blueprint 인터페이스 호출)
+	bool SetIndicatorTarget(UUserWidget* IndicatorWidget, AActor* TargetActor);
 #pragma endregion
 
 };
