@@ -4,7 +4,9 @@
 
 #include "CoreMinimal.h"
 #include "Components/ActorComponent.h"
+#include "04_Component/CameraAngleSettings.h"
 #include "DynamicCameraComponent.generated.h"
+
 
 DECLARE_LOG_CATEGORY_EXTERN(LogDynamicCamera, Log, All)
 
@@ -17,23 +19,6 @@ class APlayerCharacter;
 #pragma endregion
 
 //@열거형
-#pragma region Enums
-UENUM(BlueprintType)
-enum class ECameraAngle : uint8
-{
-	BackView	   UMETA(DisplayName = "BackView"),
-	LeftShoulder   UMETA(DisplayName = "LeftShoulder"),
-	RightShoulder  UMETA(DisplayName = "RightShoulder"),
-	CloseUp        UMETA(DisplayName = "CloseUp"),
-	BustShot       UMETA(DisplayName = "BustShot"),
-	FullShot       UMETA(DisplayName = "FullShot"),
-	WideShot       UMETA(DisplayName = "WideShot"),
-	LeftSide       UMETA(DisplayName = "LeftSide"),
-	RightSide      UMETA(DisplayName = "RightSide"),
-	HighAngle      UMETA(DisplayName = "HighAngle"),
-	MAX
-};
-
 UENUM(BlueprintType)
 enum class EBlendCurve : uint8
 {
@@ -291,16 +276,12 @@ protected:
 	//@ 전환 큐 (우선순위큐)
 	TArray<FCurrentCameraTransitionInfo> TransitionQueue;
 
-	//@ 블루프린트 에디터에서 미리 등록해야하는 ECameraAngle-SpringArmName Map 
-	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "CameraAngle")
-	TMap<ECameraAngle, FName> CameraAngleNameMap;
-
 	//@ CameraAngleNameMap의 SpringArmName을 ECameraAngle-SpringArmComponent를 캐싱할  Map 
 	UPROPERTY()
 	TMap<ECameraAngle, USpringArmComponent*> CameraAngleSpringArmMap;
 
 	// 보간 진행 이전 시작 위치를 캐싱할 Transform
-	UPROPERTY()
+	UPROPERTY()	
 	FTransform CachedStartRelativeTransform;
 
 	// 보간 대상 위치를 캐싱할 Transform

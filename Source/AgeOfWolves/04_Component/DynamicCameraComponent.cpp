@@ -24,9 +24,9 @@ UDynamicCameraComponent::UDynamicCameraComponent()
 void UDynamicCameraComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-	
+
 	CheckHitInterrupt();
-	
+
 	if (bIsTransitioning)
 	{
 		ProcessCurrentTransition(DeltaTime);
@@ -57,6 +57,22 @@ void UDynamicCameraComponent::AddCameraTransition(const FCameraTransitionInfo& N
 		return;
 	}
 
+
+	// 복원 전환 여부가 false이고, 전환 작업 도중일 때, 이전 작업과 현재 작업의 목표가 동일 하다면 무시
+	if (!NewTransition.bShouldRestoreAfterDuration && bIsTransitioning && IsValid(CurrentTransition.TargetSpringArm))
+	{
+		USpringArmComponent* NewTargetSpringArm = FindSpringArm(NewTransition.TargetAngle);
+		
+		if (NewTargetSpringArm == CurrentTransition.TargetSpringArm)
+		{
+			UE_LOGFMT(LogDynamicCamera, Log, 
+				"카메라 전환 무시됨 - 이전 작업의 목표({0})와 새 작업의 목표({1})가 동일합니다. ",
+				CurrentTransition.TargetSpringArm->GetFName(),
+				*UEnum::GetValueAsString(NewTransition.TargetAngle));
+			return;
+		}
+	}
+	
 	if (LockOnComponentRef.IsValid() && LockOnComponentRef->GetbLockOn())
 	{
 		LockOnComponentRef->CancelLockOn();
@@ -79,7 +95,7 @@ void UDynamicCameraComponent::AddCameraTransition(const FCameraTransitionInfo& N
 	{
 		TransitionInfo.StartFOV = NewTransition.StartFOV;
 		TransitionInfo.EndFOV = NewTransition.EndFOV;
-		
+
 	}
 	// 복원 관련 정보 설정
 	if (NewTransition.bShouldRestoreAfterDuration)
@@ -93,12 +109,12 @@ void UDynamicCameraComponent::AddCameraTransition(const FCameraTransitionInfo& N
 	EnqueueTransition(TransitionInfo);
 
 	UE_LOGFMT(LogDynamicCamera, Log,
-	"카메라 전환이 큐에 추가됨 - {0} -> {1}, Duration: {2}s, 복원 유무: {3}",
-	*UEnum::GetValueAsString(NewTransition.StartAngle),
-	*UEnum::GetValueAsString(NewTransition.TargetAngle),
-	NewTransition.TransitionDuration,
-	NewTransition.bShouldRestoreAfterDuration ? TEXT("True") : TEXT("False"));
-	
+		"카메라 전환이 큐에 추가됨 - {0} -> {1}, Duration: {2}s, 복원 유무: {3}",
+		*UEnum::GetValueAsString(NewTransition.StartAngle),
+		*UEnum::GetValueAsString(NewTransition.TargetAngle),
+		NewTransition.TransitionDuration,
+		NewTransition.bShouldRestoreAfterDuration ? TEXT("True") : TEXT("False"));
+
 	// 전환 중이 아니라면 전환 시작
 	if (!bIsTransitioning)
 	{
@@ -162,7 +178,7 @@ void UDynamicCameraComponent::StartTransition()
 	{
 		PC->SetIgnoreLookInput(true);
 	}
-	
+
 	CameraComponentRef->AttachToComponent(CurrentTransition.TargetSpringArm, FAttachmentTransformRules::KeepWorldTransform, USpringArmComponent::SocketName);
 	// TargetSpringArm부터의 상대 위치 값
 	CachedStartRelativeTransform = CameraComponentRef->GetRelativeTransform();
@@ -172,7 +188,7 @@ void UDynamicCameraComponent::StartTransition()
 	{
 		// 현재 FOV가 StartFOV와 다르면 StartFOV로 설정
 		CameraComponentRef->SetFieldOfView(CurrentTransition.StartFOV);
-		
+
 	}
 	if (CurrentTransition.TargetSpringArm == FindSpringArm(ECameraAngle::BackView))
 	{
@@ -184,10 +200,10 @@ void UDynamicCameraComponent::StartTransition()
 		TargetRelativeTransform = FTransform::Identity;
 	}
 
-	bIsTransitioning = true;  
+	bIsTransitioning = true;
 	bIsInterrupting = false; // 정상 전환 시작 시 인터럽트 플래그 리셋
 	CurrentTransition.TransitionElapsedTime = 0.f;
-	
+
 	UE_LOGFMT(LogDynamicCamera, Log, "카메라 전환 시작: {0} -> {1}, Duration: {2}",
 		CurrentTransition.StartSpringArm->GetFName(),
 		CurrentTransition.TargetSpringArm->GetFName(),
@@ -195,7 +211,7 @@ void UDynamicCameraComponent::StartTransition()
 }
 
 void UDynamicCameraComponent::CompleteCurrentTransition()
-{	
+{
 	// 최종 스냅(남은 오차 보정)
 	if (CameraComponentRef.IsValid() && IsValid(CurrentTransition.TargetSpringArm))
 	{
@@ -211,12 +227,12 @@ void UDynamicCameraComponent::CompleteCurrentTransition()
 			CameraComponentRef->SetFieldOfView(CurrentTransition.EndFOV);
 		}
 	}
-	
+
 	if (APlayerController* PC = Cast<APlayerController>(PlayerCharacterRef->GetController()))
 	{
 		PC->ResetIgnoreLookInput();
 	}
-	
+
 	bIsTransitioning = false;
 	bIsInterrupting = false; // 전환 완료 시 인터럽트 플래그 리셋
 	CurrentTransition.TransitionElapsedTime = 0.0f;
@@ -230,78 +246,78 @@ void UDynamicCameraComponent::CompleteCurrentTransition()
 
 void UDynamicCameraComponent::ProcessCurrentTransition(float DeltaTime)
 {
-    if (!PlayerCharacterRef.IsValid() || !CameraComponentRef.IsValid())
-    {
-        CompleteCurrentTransition();
-        return;
-    }
+	if (!PlayerCharacterRef.IsValid() || !CameraComponentRef.IsValid())
+	{
+		CompleteCurrentTransition();
+		return;
+	}
 
-    if (!IsValid(CurrentTransition.StartSpringArm) || !IsValid(CurrentTransition.TargetSpringArm))
-    {
-        CompleteCurrentTransition();
-        return;
-    }
+	if (!IsValid(CurrentTransition.StartSpringArm) || !IsValid(CurrentTransition.TargetSpringArm))
+	{
+		CompleteCurrentTransition();
+		return;
+	}
 
-    CurrentTransition.TransitionElapsedTime += DeltaTime;
+	CurrentTransition.TransitionElapsedTime += DeltaTime;
 
-    // 복원이 필요한 경우 복원 대기 시간 처리
-if (!CurrentTransition.bIsInRestorePhase && CurrentTransition.bShouldRestore)
-{
-    if (CurrentTransition.TransitionElapsedTime >= CurrentTransition.TransitionDuration)
-    {
-        // 첫 전환이 완료되고 복원 대기 시간 처리
-        CurrentTransition.RestoreDelayElapsed += DeltaTime;
-        if (CurrentTransition.RestoreDelayElapsed >= CurrentTransition.RestoreDelay)
-        {
-            // 복원 단계 시작
-            CurrentTransition.bIsInRestorePhase = true;
-            CurrentTransition.TransitionElapsedTime = 0.0f;
+	// 복원이 필요한 경우 복원 대기 시간 처리
+	if (!CurrentTransition.bIsInRestorePhase && CurrentTransition.bShouldRestore)
+	{
+		if (CurrentTransition.TransitionElapsedTime >= CurrentTransition.TransitionDuration)
+		{
+			// 첫 전환이 완료되고 복원 대기 시간 처리
+			CurrentTransition.RestoreDelayElapsed += DeltaTime;
+			if (CurrentTransition.RestoreDelayElapsed >= CurrentTransition.RestoreDelay)
+			{
+				// 복원 단계 시작
+				CurrentTransition.bIsInRestorePhase = true;
+				CurrentTransition.TransitionElapsedTime = 0.0f;
 
-            // Spring Arm 교체
-            USpringArmComponent* TempArm = CurrentTransition.StartSpringArm;
-            CurrentTransition.StartSpringArm = CurrentTransition.TargetSpringArm;
-            CurrentTransition.TargetSpringArm = TempArm;
+				// Spring Arm 교체
+				USpringArmComponent* TempArm = CurrentTransition.StartSpringArm;
+				CurrentTransition.StartSpringArm = CurrentTransition.TargetSpringArm;
+				CurrentTransition.TargetSpringArm = TempArm;
 
-        	// FOV 교체
-        	if (CurrentTransition.bShouldChangeFOV)
-        	{
-        		float TempFOV = CurrentTransition.StartFOV;
-        		CurrentTransition.StartFOV = CurrentTransition.EndFOV;
-        		CurrentTransition.EndFOV = TempFOV;
-        	}
-        	
-        	CameraComponentRef->AttachToComponent(CurrentTransition.TargetSpringArm, FAttachmentTransformRules::KeepWorldTransform, USpringArmComponent::SocketName);
-        	// TargetSpringArm부터의 상대 위치 값
-        	CachedStartRelativeTransform = CameraComponentRef->GetRelativeTransform();
+				// FOV 교체
+				if (CurrentTransition.bShouldChangeFOV)
+				{
+					float TempFOV = CurrentTransition.StartFOV;
+					CurrentTransition.StartFOV = CurrentTransition.EndFOV;
+					CurrentTransition.EndFOV = TempFOV;
+				}
 
-        	if (CurrentTransition.TargetSpringArm == FindSpringArm(ECameraAngle::BackView))
-        	{
-        		TargetRelativeTransform = FTransform::Identity;
-        		TargetRelativeTransform.SetRotation(FRotator(-25.f, 0.f, 0.f).Quaternion());
-        	}
-        	else
-        	{
-        		TargetRelativeTransform = FTransform::Identity;
-        	}
-        }
-        return;
-    }
-}
+				CameraComponentRef->AttachToComponent(CurrentTransition.TargetSpringArm, FAttachmentTransformRules::KeepWorldTransform, USpringArmComponent::SocketName);
+				// TargetSpringArm부터의 상대 위치 값
+				CachedStartRelativeTransform = CameraComponentRef->GetRelativeTransform();
 
-    // 현재 단계에 따른 진행 시간과 보간 곡선 선택
-    const float Duration = CurrentTransition.bIsInRestorePhase ? CurrentTransition.RestoreDuration : CurrentTransition.TransitionDuration;
-    const EBlendCurve CurrentBlendCurve = CurrentTransition.bIsInRestorePhase ? CurrentTransition.RestoreBlendCurve : CurrentTransition.BlendCurve;
+				if (CurrentTransition.TargetSpringArm == FindSpringArm(ECameraAngle::BackView))
+				{
+					TargetRelativeTransform = FTransform::Identity;
+					TargetRelativeTransform.SetRotation(FRotator(-25.f, 0.f, 0.f).Quaternion());
+				}
+				else
+				{
+					TargetRelativeTransform = FTransform::Identity;
+				}
+			}
+			return;
+		}
+	}
+
+	// 현재 단계에 따른 진행 시간과 보간 곡선 선택
+	const float Duration = CurrentTransition.bIsInRestorePhase ? CurrentTransition.RestoreDuration : CurrentTransition.TransitionDuration;
+	const EBlendCurve CurrentBlendCurve = CurrentTransition.bIsInRestorePhase ? CurrentTransition.RestoreBlendCurve : CurrentTransition.BlendCurve;
 	const float Alpha = FMath::Clamp(CurrentTransition.TransitionElapsedTime / Duration, 0.0f, 1.0f);
-    const float EasedAlpha = ApplyEaseFunction(Alpha, CurrentBlendCurve);
+	const float EasedAlpha = ApplyEaseFunction(Alpha, CurrentBlendCurve);
 
-    // Transform 보간
-    const FTransform BlendedRelTransform = UKismetMathLibrary::TLerp(
-        CachedStartRelativeTransform,
-        TargetRelativeTransform,
-        EasedAlpha
-    );
+	// Transform 보간
+	const FTransform BlendedRelTransform = UKismetMathLibrary::TLerp(
+		CachedStartRelativeTransform,
+		TargetRelativeTransform,
+		EasedAlpha
+	);
 
-    CameraComponentRef->SetRelativeTransform(BlendedRelTransform);
+	CameraComponentRef->SetRelativeTransform(BlendedRelTransform);
 
 	// FOV 보간 
 	if (CurrentTransition.bShouldChangeFOV)
@@ -313,14 +329,14 @@ if (!CurrentTransition.bIsInRestorePhase && CurrentTransition.bShouldRestore)
 		);
 		CameraComponentRef->SetFieldOfView(BlendedFOV);
 	}
-	
-    // bIsInRestorePhase면 Comeplete하고 아니면 return 함
-    if (Alpha >= 1.0f)
-    {
-        if (CurrentTransition.bShouldRestore && !CurrentTransition.bIsInRestorePhase) return;
-        
-        CompleteCurrentTransition();
-    }
+
+	// bIsInRestorePhase면 Comeplete하고 아니면 return 함
+	if (Alpha >= 1.0f)
+	{
+		if (CurrentTransition.bShouldRestore && !CurrentTransition.bIsInRestorePhase) return;
+
+		CompleteCurrentTransition();
+	}
 }
 
 float UDynamicCameraComponent::ApplyEaseFunction(float Alpha, EBlendCurve BlendCurve)
@@ -328,7 +344,7 @@ float UDynamicCameraComponent::ApplyEaseFunction(float Alpha, EBlendCurve BlendC
 	switch (BlendCurve)
 	{
 	case EBlendCurve::Snap:
-		return Alpha > 0.0f ? 1.0f : 0.0f; 
+		return Alpha > 0.0f ? 1.0f : 0.0f;
 
 	case EBlendCurve::Linear:
 		return Alpha;
@@ -353,99 +369,99 @@ float UDynamicCameraComponent::ApplyEaseFunction(float Alpha, EBlendCurve BlendC
 
 void UDynamicCameraComponent::ApplyFallbackPolicy(const FCurrentCameraTransitionInfo& NewInterruptTransition, FCurrentCameraTransitionInfo& OutInterruptTransitionInfo)
 {
-    // FallbackPolicy에 따른 설정
-    switch (OutInterruptTransitionInfo.FallbackPolicy)
-    {
-    case ECameraFallbackPolicy::SnapToDefault:
-        {
-            OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm; 
-            OutInterruptTransitionInfo.TargetSpringArm = FindSpringArm(ECameraAngle::BackView);
-            OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
-            OutInterruptTransitionInfo.BlendCurve = EBlendCurve::Snap;
-        }
-        break;
- 
-    case ECameraFallbackPolicy::EaseInToDefault:
-        {
-            OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
-            OutInterruptTransitionInfo.TargetSpringArm = FindSpringArm(ECameraAngle::BackView);
-    		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
-            OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseIn;
-        }
-        break;
- 
-    case ECameraFallbackPolicy::EaseOutToDefault:
-        {
-            OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
-            OutInterruptTransitionInfo.TargetSpringArm = FindSpringArm(ECameraAngle::BackView);
-    		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
-            OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseOut;
-        }
-        break;
- 
-    case ECameraFallbackPolicy::EaseInOutToDefault:
-        {
-            OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
-            OutInterruptTransitionInfo.TargetSpringArm = FindSpringArm(ECameraAngle::BackView);
-    		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;	
-            OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseInOut;
-        }
-        break;
- 
-    case ECameraFallbackPolicy::SnapToStartAngle:
-        {
-            OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
-            OutInterruptTransitionInfo.TargetSpringArm = NewInterruptTransition.StartSpringArm;
-    		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
-            OutInterruptTransitionInfo.BlendCurve = EBlendCurve::Snap;
-        }
-        break;
- 
-    case ECameraFallbackPolicy::EaseInToStartAngle:
-        {
-            OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
-            OutInterruptTransitionInfo.TargetSpringArm = NewInterruptTransition.StartSpringArm;
-    		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
-            OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseIn;
-        }
-        break;
- 
-    case ECameraFallbackPolicy::EaseOutToStartAngle:
-        {
-            OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
-            OutInterruptTransitionInfo.TargetSpringArm = NewInterruptTransition.StartSpringArm;
-    		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
-            OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseOut;
-        }
-        break;
- 
-    case ECameraFallbackPolicy::EaseInOutToStartAngle:
-        {
-            OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
-            OutInterruptTransitionInfo.TargetSpringArm = NewInterruptTransition.StartSpringArm;
-    		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
-            OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseInOut;
-        }
-        break;
- 
-    case ECameraFallbackPolicy::UseRestoreSettings:
-        {
-            OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
-            OutInterruptTransitionInfo.TargetSpringArm = NewInterruptTransition.StartSpringArm;
-            OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.RestoreDuration;
-            OutInterruptTransitionInfo.BlendCurve = NewInterruptTransition.RestoreBlendCurve;
-        }
-        break;
-    
-    case ECameraFallbackPolicy::ContinueToTarget:
-        {
-    		OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
-    		OutInterruptTransitionInfo.TargetSpringArm = FindSpringArm(ECameraAngle::BackView);
-    		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.TransitionDuration;
-    		OutInterruptTransitionInfo.BlendCurve = NewInterruptTransition.BlendCurve;
-        }
-        break;
-    }
+	// FallbackPolicy에 따른 설정
+	switch (OutInterruptTransitionInfo.FallbackPolicy)
+	{
+	case ECameraFallbackPolicy::SnapToDefault:
+	{
+		OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
+		OutInterruptTransitionInfo.TargetSpringArm = FindSpringArm(ECameraAngle::BackView);
+		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
+		OutInterruptTransitionInfo.BlendCurve = EBlendCurve::Snap;
+	}
+	break;
+
+	case ECameraFallbackPolicy::EaseInToDefault:
+	{
+		OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
+		OutInterruptTransitionInfo.TargetSpringArm = FindSpringArm(ECameraAngle::BackView);
+		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
+		OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseIn;
+	}
+	break;
+
+	case ECameraFallbackPolicy::EaseOutToDefault:
+	{
+		OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
+		OutInterruptTransitionInfo.TargetSpringArm = FindSpringArm(ECameraAngle::BackView);
+		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
+		OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseOut;
+	}
+	break;
+
+	case ECameraFallbackPolicy::EaseInOutToDefault:
+	{
+		OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
+		OutInterruptTransitionInfo.TargetSpringArm = FindSpringArm(ECameraAngle::BackView);
+		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
+		OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseInOut;
+	}
+	break;
+
+	case ECameraFallbackPolicy::SnapToStartAngle:
+	{
+		OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
+		OutInterruptTransitionInfo.TargetSpringArm = NewInterruptTransition.StartSpringArm;
+		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
+		OutInterruptTransitionInfo.BlendCurve = EBlendCurve::Snap;
+	}
+	break;
+
+	case ECameraFallbackPolicy::EaseInToStartAngle:
+	{
+		OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
+		OutInterruptTransitionInfo.TargetSpringArm = NewInterruptTransition.StartSpringArm;
+		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
+		OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseIn;
+	}
+	break;
+
+	case ECameraFallbackPolicy::EaseOutToStartAngle:
+	{
+		OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
+		OutInterruptTransitionInfo.TargetSpringArm = NewInterruptTransition.StartSpringArm;
+		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
+		OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseOut;
+	}
+	break;
+
+	case ECameraFallbackPolicy::EaseInOutToStartAngle:
+	{
+		OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
+		OutInterruptTransitionInfo.TargetSpringArm = NewInterruptTransition.StartSpringArm;
+		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.InterruptDuration;
+		OutInterruptTransitionInfo.BlendCurve = EBlendCurve::EaseInOut;
+	}
+	break;
+
+	case ECameraFallbackPolicy::UseRestoreSettings:
+	{
+		OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
+		OutInterruptTransitionInfo.TargetSpringArm = NewInterruptTransition.StartSpringArm;
+		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.RestoreDuration;
+		OutInterruptTransitionInfo.BlendCurve = NewInterruptTransition.RestoreBlendCurve;
+	}
+	break;
+
+	case ECameraFallbackPolicy::ContinueToTarget:
+	{
+		OutInterruptTransitionInfo.StartSpringArm = NewInterruptTransition.TargetSpringArm;
+		OutInterruptTransitionInfo.TargetSpringArm = FindSpringArm(ECameraAngle::BackView);
+		OutInterruptTransitionInfo.TransitionDuration = NewInterruptTransition.TransitionDuration;
+		OutInterruptTransitionInfo.BlendCurve = NewInterruptTransition.BlendCurve;
+	}
+	break;
+	}
 }
 #pragma endregion
 
@@ -453,7 +469,7 @@ void UDynamicCameraComponent::ApplyFallbackPolicy(const FCurrentCameraTransition
 #pragma region Utility
 bool UDynamicCameraComponent::IsAngleValid(ECameraAngle Angle) const
 {
-	if (CameraAngleNameMap.Contains(Angle))
+	if (CameraAngleSpringArmMap.Contains(Angle))
 	{
 		return true;
 	}
@@ -497,33 +513,33 @@ void UDynamicCameraComponent::CheckHitInterrupt()
 {
 	if (!PlayerCharacterRef.IsValid())
 		return;
-    
+
 	USkeletalMeshComponent* Mesh = PlayerCharacterRef->GetMesh();
 	if (!Mesh)
 		return;
-    
+
 	UAnimInstance* AnimInstance = Mesh->GetAnimInstance();
 	if (!AnimInstance)
 		return;
-    
+
 	UAnimMontage* CurrentMontage = AnimInstance->GetCurrentActiveMontage();
 	bool bCurrentlyHit = false;
-    
+
 	if (CurrentMontage)
 	{
 		FString MontageName = CurrentMontage->GetName();
-        
+
 		// 피격 애니메이션 감지
 		bCurrentlyHit = MontageName.Contains("Hit");
 	}
-	
+
 	if (bCurrentlyHit)
 	{
 		// 현재 전환이 진행 중이고 인터럽트 가능한 상태인지 확인
 		if (bIsTransitioning && CurrentTransition.bInterruptible && !CurrentTransition.bIsInRestorePhase)
 		{
 			UE_LOGFMT(LogDynamicCamera, Log, "피격 애니메이션 인터럽트 발생 - CurrentTransition 인터럽트");
-			
+
 			AddCameraInterruptTransition(CurrentTransition);
 		}
 	}
@@ -576,6 +592,15 @@ void UDynamicCameraComponent::InitializeDynamicCameraComp(const AController* Con
 		UE_LOGFMT(LogDynamicCamera, Warning, "컴포넌트 초기화 실패: LockOnComponent가 유효하지 않음");
 	}
 
+	const FString AssetPath = TEXT("/Game/Blueprints/03_Player/DA_CameraAngleSettings.DA_CameraAngleSettings");
+	UCameraAngleSettings* CameraAngleSettingsData = LoadObject<UCameraAngleSettings>(nullptr, *AssetPath);
+	if (!IsValid(CameraAngleSettingsData))
+	{
+		UE_LOGFMT(LogDynamicCamera, Warning, "카메라 SpringArm을 매핑할 UCameraAngleSettings가 유효하지 않음");	
+	} 
+
+	TMap<ECameraAngle, FName> CameraAngleNameMap = CameraAngleSettingsData->GetCameraAngleNameMap();
+	
 	// FName에 해당하는 SpringArm이 있는지 유효성 검사 후 SpringArm 매칭
 	if (!CameraAngleNameMap.IsEmpty())
 	{
