@@ -47,3 +47,8 @@ void UAN_NotifyAbilityTiming::Notify(USkeletalMeshComponent* MeshComp, UAnimSequ
     UE_LOGFMT(LogAN_NotifyAbilityTiming, Log, "Notify 성공 - Character: {0}, Ability: {1}",
         *CharacterBase->GetName(), *AnimatingAbility->GetName());
 }
+
+FString UAN_NotifyAbilityTiming::GetNotifyName_Implementation() const
+{
+    return FString::Printf(TEXT("어빌리티 타이밍 알림"));
+}
