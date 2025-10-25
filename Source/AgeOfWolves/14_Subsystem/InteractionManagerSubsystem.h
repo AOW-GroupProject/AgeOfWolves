@@ -14,6 +14,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInteractionManager, Log, All);
 #pragma region Forward Declaration
 class ACharacterBase;
 class UAnimMontage;
+class UBaseGameplayAbility;
 #pragma endregion
 
 //@구조체
@@ -57,12 +58,17 @@ struct FInteractionParticipant
 	UPROPERTY()
 	EInteractionRole Role;
 
+	//@연관된 어빌리티 (콜백 호출용)
+	UPROPERTY()
+	TWeakObjectPtr<UBaseGameplayAbility> AssociatedAbility;
+
 	FInteractionParticipant()
 		: Character(nullptr)
 		, Montage(nullptr)
 		, PlayRate(1.0f)
 		, StartSectionName(NAME_None)
 		, Role(EInteractionRole::None)
+		, AssociatedAbility(nullptr)
 	{
 	}
 
@@ -72,6 +78,7 @@ struct FInteractionParticipant
 		, PlayRate(InPlayRate)
 		, StartSectionName(NAME_None)
 		, Role(InRole)
+		, AssociatedAbility(nullptr)
 	{
 	}
 
@@ -186,6 +193,9 @@ private:
 
 	//@타이머 핸들
 	FTimerHandle TimeoutCheckTimerHandle;
+
+	//@몽타주와 세션 매핑 (콜백에서 세션 찾기용)
+	TMap<UAnimMontage*, FGuid> MontageToSessionMap;
 #pragma endregion
 
 //@Core Functions
@@ -206,6 +216,7 @@ public:
 	 * @param PlayRate 재생 속도 (기본 1.0)
 	 * @param StartSectionName 시작 섹션 이름 (선택)
 	 * @param Role 참여자 역할 (Player/Target)
+	 * @param AssociatedAbility 연관된 어빌리티 (콜백 호출용)
 	 * @return 등록 성공 여부
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Interaction Manager")
@@ -215,7 +226,8 @@ public:
 		UAnimMontage* Montage,
 		float PlayRate = 1.0f,
 		FName StartSectionName = NAME_None,
-		EInteractionRole Role = EInteractionRole::None
+		EInteractionRole Role = EInteractionRole::None,
+		UBaseGameplayAbility* AssociatedAbility = nullptr
 	);
 
 	/**
@@ -225,6 +237,7 @@ public:
 	 * @param PlayerMontage 플레이어 몽타주
 	 * @param PlayRate 재생 속도 (기본 1.0)
 	 * @param StartSectionName 시작 섹션 이름 (선택)
+	 * @param AssociatedAbility 연관된 어빌리티 (콜백 호출용)
 	 * @return 등록 성공 여부
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Interaction Manager")
@@ -233,7 +246,8 @@ public:
 		ACharacterBase* PlayerCharacter,
 		UAnimMontage* PlayerMontage,
 		float PlayRate = 1.0f,
-		FName StartSectionName = NAME_None
+		FName StartSectionName = NAME_None,
+		UBaseGameplayAbility* AssociatedAbility = nullptr
 	);
 
 	/**
@@ -243,6 +257,7 @@ public:
 	 * @param TargetMontage 타겟 몽타주
 	 * @param PlayRate 재생 속도 (기본 1.0)
 	 * @param StartSectionName 시작 섹션 이름 (선택)
+	 * @param AssociatedAbility 연관된 어빌리티 (콜백 호출용)
 	 * @return 등록 성공 여부
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Interaction Manager")
@@ -251,7 +266,8 @@ public:
 		ACharacterBase* TargetCharacter,
 		UAnimMontage* TargetMontage,
 		float PlayRate = 1.0f,
-		FName StartSectionName = NAME_None
+		FName StartSectionName = NAME_None,
+		UBaseGameplayAbility* AssociatedAbility = nullptr
 	);
 
 	/**
@@ -276,6 +292,37 @@ public:
 	 */
 	UFUNCTION(BlueprintCallable, Category = "Interaction Manager")
 	void CleanupSession(FGuid SessionID);
+
+	/**
+	 * 몽타주 재생 완료 콜백
+	 * @param Montage 완료된 몽타주
+	 * @param bInterrupted 인터럽트 여부
+	 */
+	UFUNCTION()
+	void OnMontageCompleted(UAnimMontage* Montage, bool bInterrupted);
+
+	/**
+	 * 몽타주 블렌드 아웃 콜백
+	 * @param Montage 블렌드 아웃된 몽타주
+	 * @param bInterrupted 인터럽트 여부
+	 */
+	UFUNCTION()
+	void OnMontageBlendOut(UAnimMontage* Montage, bool bInterrupted);
+
+	/**
+	 * 몽타주 인터럽트 콜백
+	 * @param Montage 인터럽트된 몽타주
+	 * @param NewMontage 새로운 몽타주
+	 */
+	UFUNCTION()
+	void OnMontageInterrupted(UAnimMontage* Montage, UAnimMontage* NewMontage);
+
+	/**
+	 * 몽타주 취소 콜백
+	 * @param Montage 취소된 몽타주
+	 */
+	UFUNCTION()
+	void OnMontageCancelled(UAnimMontage* Montage);
 
 private:
 	/**
