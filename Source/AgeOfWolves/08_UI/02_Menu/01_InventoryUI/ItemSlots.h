@@ -57,7 +57,7 @@ DECLARE_MULTICAST_DELEGATE_TwoParams(FItemDiscarded, const FGuid&, int32)
 {
 //@친추 클래스
 #pragma region Friend Class
-    friend class UInventoryUIContent;
+    friend class UInventoryUI;
     friend class UItemSlot_DropDownMenu;
 #pragma endregion
 
@@ -304,6 +304,13 @@ protected:
     UInteractableItemSlot* GetSlotAtPosition(int32 Row, int32 Column) const;
 
 protected:
+    // 전체 슬롯을 좌상단으로 압축합니다. (O(n) 1-pass)
+    UFUNCTION(BlueprintCallable, Category = "Item Slots | Utility")
+    void CompactAllSlots();
+
+    // 특정 시작 인덱스부터 좌상단 규칙을 유지하도록 압축합니다. (O(n))
+    void CompactFromIndex(int32 StartIndex);
+
     void SortItemSlots(int32 StartIndex);
     void MoveItemSlot(int32 FromIndex, int32 ToIndex);
 

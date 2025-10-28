@@ -1173,8 +1173,11 @@ void UItemSlots::OnItemRemovedFromInventory(const FGuid& UniqueItemID, EItemType
 
     if (ShouldPerformSort(CurrentRow, CurrentCol))
     {
-        UE_LOGFMT(LogItemSlots, Log, "정렬 작업 시작 - Row: {0}, Col: {1}", CurrentRow, CurrentCol);
-        SortItemSlots(RemovedIndex);
+        UE_LOGFMT(LogItemSlots, Log, "압축 작업 시작 - Row: {0}, Col: {1}", CurrentRow, CurrentCol);
+        // 제거된 지점부터 좌상단으로 압축
+        // 먼저 제거 슬롯 비우기
+        RemovedItemSlot->ClearAssignedItem();
+        CompactFromIndex(RemovedIndex);
 
         // 정렬 후에는 제거된 슬롯 위치에 새로운 아이템이 있을 것이므로, 그 위치를 호버 상태로 설정
         if (ItemSlots.IsValidIndex(RemovedIndex))
@@ -1382,6 +1385,52 @@ void UItemSlots::MoveItemSlot(int32 FromIndex, int32 ToIndex)
 
     UE_LOGFMT(LogItemSlots, Log, "아이템 이동 완료 - From: {0}, To: {1}, ID: {2}",
         FromIndex, ToIndex, ItemID.ToString());
+}
+
+void UItemSlots::CompactAllSlots()
+{
+    // 투 포인터 압축: 읽기 포인터(readIdx), 쓰기 포인터(writeIdx)
+    int32 Total = ItemSlots.Num();
+    int32 writeIdx = 0;
+    for (int32 readIdx = 0; readIdx < Total; ++readIdx)
+    {
+        if (!ItemSlots.IsValidIndex(readIdx)) continue;
+        UInteractableItemSlot* ReadSlot = ItemSlots[readIdx];
+        if (!ReadSlot) continue;
+
+        // 아이템이 있는 슬롯만 앞으로 복사
+        if (ReadSlot->GetUniqueItemID().IsValid())
+        {
+            if (readIdx != writeIdx)
+            {
+                MoveItemSlot(readIdx, writeIdx);
+            }
+            ++writeIdx;
+        }
+    }
+}
+
+void UItemSlots::CompactFromIndex(int32 StartIndex)
+{
+    if (!ItemSlots.IsValidIndex(StartIndex)) return;
+
+    // StartIndex부터 끝까지 투 포인터로 압축
+    int32 Total = ItemSlots.Num();
+    int32 writeIdx = StartIndex;
+    for (int32 readIdx = StartIndex; readIdx < Total; ++readIdx)
+    {
+        UInteractableItemSlot* ReadSlot = ItemSlots[readIdx];
+        if (!ReadSlot) continue;
+
+        if (ReadSlot->GetUniqueItemID().IsValid())
+        {
+            if (readIdx != writeIdx)
+            {
+                MoveItemSlot(readIdx, writeIdx);
+            }
+            ++writeIdx;
+        }
+    }
 }
 
 bool UItemSlots::ShouldPerformSort(int32 CurrentRow, int32 CurrentCol) const

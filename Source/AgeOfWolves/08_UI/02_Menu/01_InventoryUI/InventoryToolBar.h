@@ -10,7 +10,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInventoryToolBar, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
-class UInventoryUIContent;
+class UInventoryUI;
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -32,7 +32,7 @@ DECLARE_DELEGATE_OneParam(FInventoryToolBarButtonClicked, EItemType)
 
 //@친추 클래스
 #pragma region Friend Class
-    friend class UInventoryUIContent;
+    friend class UInventoryUI;
 #pragma endregion
 
     GENERATED_BODY()
@@ -45,6 +45,9 @@ public:
 protected:
     //~ Begin UUserWidget Interface
     virtual void NativeOnInitialized() override;
+    virtual void NativePreConstruct() override;
+    virtual FReply NativeOnFocusReceived(const FGeometry& MyGeometry, const FFocusEvent& InFocusEvent) override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
     //~ End UUserWidget Interface
 
 protected:

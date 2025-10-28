@@ -1,4 +1,3 @@
-// InteractionManagerSubsystem.h
 #pragma once
 
 #include "CoreMinimal.h"

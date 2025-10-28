@@ -24,6 +24,60 @@ void UInventoryToolBar::NativeOnInitialized()
     Super::NativeOnInitialized();
 }
 
+void UInventoryToolBar::NativePreConstruct()
+{
+    Super::NativePreConstruct();
+
+    //@포커스 가능하도록 설정
+    SetIsFocusable(true);
+}
+
+FReply UInventoryToolBar::NativeOnFocusReceived(const FGeometry& MyGeometry, const FFocusEvent& InFocusEvent)
+{
+    //@SetDirectly(SetFocus())를 통한 포커스 시도 외에 다른 시도는 허용하지 않습니다.
+    if (InFocusEvent.GetCause() != EFocusCause::SetDirectly)
+    {
+        return FReply::Handled().ClearUserFocus();
+    }
+
+    UE_LOGFMT(LogInventoryToolBar, Log, "포커스 : 위젯: {0}, 원인: {1}",
+        *GetName(), *UEnum::GetValueAsString(InFocusEvent.GetCause()));
+
+    //@현재 선택된 버튼에 포커스 설정
+    if (UCustomButton* CurrentButton = MItemTypeButtons.FindRef(CurrentSelectedItemType))
+    {
+        //@버튼이 이미 선택된 상태이므로 다시 선택할 필요는 없습니다.
+        // UI에서 선택된 버튼이 표시되어 있으면 그것으로 충분합니다.
+        UE_LOGFMT(LogInventoryToolBar, Log, "현재 선택된 버튼: {0}", *UEnum::GetValueAsString(CurrentSelectedItemType));
+    }
+
+    return FReply::Handled();
+}
+
+FNavigationReply UInventoryToolBar::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
+{
+    //@Left, Right Navigation은 기본 동작 사용
+    if (InNavigationEvent.GetNavigationType() == EUINavigation::Left || 
+        InNavigationEvent.GetNavigationType() == EUINavigation::Right)
+    {
+        return InDefaultReply;
+    }
+
+    //@Up Navigation은 무시 (InventoryUI에서 처리)
+    if (InNavigationEvent.GetNavigationType() == EUINavigation::Up)
+    {
+        return FNavigationReply::Explicit(nullptr);
+    }
+
+    //@Down Navigation은 InventoryUI에서 처리하도록 차단
+    if (InNavigationEvent.GetNavigationType() == EUINavigation::Down)
+    {
+        //@InventoryUI가 Down Navigation을 처리하도록 nullptr 반환
+        return FNavigationReply::Explicit(nullptr);
+    }
+
+    return FNavigationReply::Explicit(nullptr);
+}
 
 void UInventoryToolBar::InternalBindToButton(UCustomButton* Button, EItemType ItemType)
 {

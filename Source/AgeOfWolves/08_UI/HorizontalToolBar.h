@@ -35,8 +35,8 @@ DECLARE_DELEGATE(FToolBarInitFinished)
  * 수평으로 배치된 버튼들을 관리하는 기본 툴바 클래스입니다.
  * 버튼의 생성, 이동, 선택 관리 등의 공통 기능을 제공합니다.
  */
-    UCLASS(Abstract)
-    class AGEOFWOLVES_API UHorizontalToolBar : public UUserWidget
+UCLASS(Abstract)
+class AGEOFWOLVES_API UHorizontalToolBar : public UUserWidget
 {
 //@친추 클래스
 #pragma region Friend Class

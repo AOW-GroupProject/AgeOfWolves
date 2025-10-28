@@ -1,6 +1,6 @@
-// InteractionManagerSubsystem.cpp
 #include "InteractionManagerSubsystem.h"
 #include "Logging/StructuredLog.h"
+
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "Animation/AnimMontage.h"
@@ -252,14 +252,14 @@ bool UInteractionManagerSubsystem::ExecuteSynchronizedPlay(FGuid SessionID)
 			//@기존 델리게이트 클리어
 			AnimInstance->OnMontageBlendingOut.RemoveAll(this);
 			AnimInstance->OnMontageEnded.RemoveAll(this);
-			AnimInstance->OnMontageInterrupted.RemoveAll(this);
-			AnimInstance->OnMontageCancelled.RemoveAll(this);
+			//AnimInstance->OnMontageInterrupted.RemoveAll(this);
+			//AnimInstance->OnMontageCancelled.RemoveAll(this);
 
 			//@새로운 델리게이트 바인딩
 			AnimInstance->OnMontageBlendingOut.AddDynamic(this, &UInteractionManagerSubsystem::OnMontageBlendOut);
 			AnimInstance->OnMontageEnded.AddDynamic(this, &UInteractionManagerSubsystem::OnMontageCompleted);
-			AnimInstance->OnMontageInterrupted.AddDynamic(this, &UInteractionManagerSubsystem::OnMontageInterrupted);
-			AnimInstance->OnMontageCancelled.AddDynamic(this, &UInteractionManagerSubsystem::OnMontageCancelled);
+			//AnimInstance->OnMontageInterrupted.AddDynamic(this, &UInteractionManagerSubsystem::OnMontageInterrupted);
+			//AnimInstance->OnMontageCancelled.AddDynamic(this, &UInteractionManagerSubsystem::OnMontageCancelled);
 		}
 
 		//@몽타주 재생

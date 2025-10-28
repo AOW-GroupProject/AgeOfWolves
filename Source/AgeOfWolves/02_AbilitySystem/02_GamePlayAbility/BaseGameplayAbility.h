@@ -262,6 +262,7 @@ class AGEOFWOLVES_API UBaseGameplayAbility : public UGameplayAbility
 	friend class UPlayerAbilitySystemComponent;
 	friend class UBaseMonsterASC;
 	friend class UAttackGameplayAbility;
+	friend class UInteractionManagerSubsystem;
 #pragma endregion
 
 	GENERATED_BODY()
