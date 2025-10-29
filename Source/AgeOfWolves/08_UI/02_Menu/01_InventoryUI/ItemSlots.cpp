@@ -741,6 +741,17 @@ void UItemSlots::OnItemSlotButtonHovered(const FGuid& UniqueItemID, EInteraction
         return;
     }
 
+    //@✅ Drop Down Menu가 열려있으면 Selected 슬롯 외 다른 슬롯의 호버 무시
+    if (ItemSlotDropDownMenu && ItemSlotDropDownMenu->GetVisibility() == ESlateVisibility::SelfHitTestInvisible)
+    {
+        //@Selected 슬롯이 아닌 다른 슬롯의 호버는 무시
+        if (!CurrentSelectedItemSlot.IsValid() || CurrentSelectedItemSlot->GetUniqueItemID() != UniqueItemID)
+        {
+            UE_LOGFMT(LogItemSlots, Log, "Drop Down Menu 열려있어 호버 무시: ID {0}", UniqueItemID.ToString());
+            return;
+        }
+    }
+
     //@Current Hovered Item Slot
     if (CurrentHoveredItemSlot.IsValid() && CurrentHoveredItemSlot->GetUniqueItemID() == UniqueItemID)
     {
@@ -748,13 +759,19 @@ void UItemSlots::OnItemSlotButtonHovered(const FGuid& UniqueItemID, EInteraction
         return;
     }
 
-    //@이전 호버 상태 취소
+    //@✅ 이전 호버 상태 취소 (단, Selected 슬롯은 제외)
     if (CurrentHoveredItemSlot.IsValid())
     {
-        FGuid PreviousItemID = CurrentHoveredItemSlot->GetUniqueItemID();
-        CancelItemSlotButton.Broadcast(PreviousItemID);
-
-        UE_LOGFMT(LogItemSlots, Log, "이전에 호버된 아이템 슬롯 호버 취소: ID {0}", PreviousItemID.ToString());
+        //@Selected 슬롯이 아닐 때만 취소
+        bool bIsSelectedSlot = CurrentSelectedItemSlot.IsValid() && 
+                               CurrentHoveredItemSlot->GetUniqueItemID() == CurrentSelectedItemSlot->GetUniqueItemID();
+        
+        if (!bIsSelectedSlot)
+        {
+            FGuid PreviousItemID = CurrentHoveredItemSlot->GetUniqueItemID();
+            CancelItemSlotButton.Broadcast(PreviousItemID);
+            UE_LOGFMT(LogItemSlots, Log, "이전에 호버된 아이템 슬롯 호버 취소: ID {0}", PreviousItemID.ToString());
+        }
     }
 
     //@Current Hovered Item Slot 업데이트
@@ -763,30 +780,31 @@ void UItemSlots::OnItemSlotButtonHovered(const FGuid& UniqueItemID, EInteraction
 
     //@SetFocus
     SetFocus();
-
-    // TODO: 필요한 경우 여기에 추가 동작 구현
-    // 예: 호버된 아이템 슬롯의 시각적 상태 변경, 아이템 정보 표시 등
 }
 
 void UItemSlots::OnItemSlotButtonUnhovered(const FGuid& UniqueItemID)
 {
     UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 버튼 언호버됨: ID {0}", UniqueItemID.ToString());
 
+    //@✅ Selected 슬롯의 Unhover는 무시
+    if (CurrentSelectedItemSlot.IsValid() && CurrentSelectedItemSlot->GetUniqueItemID() == UniqueItemID)
+    {
+        UE_LOGFMT(LogItemSlots, Log, "Selected 슬롯의 Unhover 무시: ID {0}", UniqueItemID.ToString());
+        return;
+    }
+
     //@Current Hovered Item Slot
     if (CurrentHoveredItemSlot.IsValid() && CurrentHoveredItemSlot->GetUniqueItemID() != UniqueItemID)
     {
         UE_LOGFMT(LogItemSlots, Log, "언호버된 아이템 슬롯이 현재 호버된 슬롯과 일치하지 않음: ID {0}", UniqueItemID.ToString());
-
         return;
     }
 
     if (CurrentHoveredItemSlot.IsValid() && CurrentHoveredItemSlot->GetUniqueItemID() == UniqueItemID)
     {
         CurrentHoveredItemSlot.Reset();
-
         UE_LOGFMT(LogItemSlots, Log, "현재 호버된 아이템 슬롯 리셋됨: ID {0}", UniqueItemID.ToString());
     }
-
 }
 
 void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID, EInteractionMethod InteractionMethodType)
@@ -820,6 +838,19 @@ void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID, EInteraction
     //@Current Selected Item Slot 업데이트
     CurrentSelectedItemSlot = SelectedItemSlot;
     UE_LOGFMT(LogItemSlots, Log, "새로운 아이템 슬롯이 선택됨: ID {0}", UniqueItemID.ToString());
+
+    //@✅ Selected 슬롯 외 모든 버튼 비활성화
+    for (UInteractableItemSlot* ItemSlot : ItemSlots)
+    {
+        if (ItemSlot && ItemSlot->GetUniqueItemID().IsValid() && 
+            ItemSlot->GetUniqueItemID() != UniqueItemID)
+        {
+            if (UCustomButton* Button = ItemSlot->GetItemSlotButton())
+            {
+                Button->SetIsEnabled(false);
+            }
+        }
+    }
 
     //@Drop Down Menu의 위치
     FVector2D MenuPosition;
@@ -868,9 +899,6 @@ void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID, EInteraction
 
     //@DropDownMenu 열기
     OpenDropDownMenu(MenuPosition, InteractionMethodType);
-
-    // TODO: 필요한 경우 여기에 추가 동작 구현
-    // 예: 선택된 아이템 슬롯의 시각적 상태 변경, 아이템 정보 표시 등
 }
 
 void UItemSlots::OnItemSlotDropDownMenuClosed(ESlateVisibility VisibilityType)
@@ -880,12 +908,30 @@ void UItemSlots::OnItemSlotDropDownMenuClosed(ESlateVisibility VisibilityType)
         return;
     }
     
-    UE_LOGFMT(LogItemSlots, Warning, "Drop Down Menu가 닫혔습니다.");
+    UE_LOGFMT(LogItemSlots, Log, "Drop Down Menu가 닫혔습니다.");
+
+    //@✅ 모든 버튼 다시 활성화
+    for (UInteractableItemSlot* ItemSlot : ItemSlots)
+    {
+        if (ItemSlot && ItemSlot->GetUniqueItemID().IsValid())
+        {
+            if (UCustomButton* Button = ItemSlot->GetItemSlotButton())
+            {
+                Button->SetIsEnabled(true);
+            }
+        }
+    }
+
+    //@Selected 슬롯을 Normal 상태로 복원
+    if (CurrentSelectedItemSlot.IsValid())
+    {
+        CancelItemSlotButton.Broadcast(CurrentSelectedItemSlot->GetUniqueItemID());
+        CurrentSelectedItemSlot.Reset();
+    }
 
     //@Set Focus
     SetFocus();
 }
-
 void UItemSlots::OnItemSlotDropDownMenuOptionSelected(FName ItemSlotDropDownMenuOptionName)
 {
 
