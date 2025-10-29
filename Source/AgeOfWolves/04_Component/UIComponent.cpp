@@ -10,6 +10,8 @@
 #include "04_Component/ObjectiveDetectionComponent.h"
 
 #include "Kismet/GameplayStatics.h"
+#include "Blueprint/WidgetLayoutLibrary.h"
+#include "Components/StaticMeshComponent.h"
 
 DEFINE_LOG_CATEGORY(LogUI)
 // UE_LOGFMT(LogUI, Log, "");
@@ -28,6 +30,8 @@ UUIComponent::UUIComponent(const FObjectInitializer& ObjectInitializer)
 	MIndicatorUIs.Empty();
 	IndicatorTargets.Empty();
 }
+
+
 
 void UUIComponent::OnRegister()
 {
@@ -614,9 +618,9 @@ bool UUIComponent::UpdateSingleIndicatorPosition(UUserWidget* Indicator, AActor*
 		return false;
 	}
 
-	// 3D → 2D 투영
-	FVector2D ProjectedScreenPos;
-	PC->ProjectWorldLocationToScreen(TargetWorldLocation, ProjectedScreenPos, true);
+    // 3D → 2D 투영 (DPI/Viewport 보정)
+    FVector2D ProjectedScreenPos;
+    UWidgetLayoutLibrary::ProjectWorldLocationToWidgetPosition(PC, TargetWorldLocation, ProjectedScreenPos, false);
 
 	// 화면 크기 가져오기
 	int32 ViewportSizeX, ViewportSizeY;
@@ -634,11 +638,15 @@ bool UUIComponent::UpdateSingleIndicatorPosition(UUserWidget* Indicator, AActor*
 	// 정규화 좌표 → 픽셀 좌표 변환
 	FVector2D TargetScreenPos = ConvertToScreenCoordinates(TargetNormalizedPos, ViewportSizeX, ViewportSizeY);
 
-	// 보간 적용
-	FVector2D FinalScreenPosition = ApplyInterpolation(IndicatorTag, TargetScreenPos, DeltaTime, OffsetSettings.InterpolationSpeed);
+    // 보간 적용
+    FVector2D FinalScreenPosition = ApplyInterpolation(IndicatorTag, TargetScreenPos, DeltaTime, OffsetSettings.InterpolationSpeed, OffsetSettings.bUseInterpolation);
 
-	// 위치 설정
-	Indicator->SetPositionInViewport(FinalScreenPosition, false);
+    // 위젯 중심 정렬: 좌상단 기준 좌표에서 위젯의 절반 크기만큼 보정
+    const FVector2D DesiredSize = Indicator->GetDesiredSize();
+    const FVector2D CenteredPos = FinalScreenPosition - (DesiredSize * 0.5f);
+
+    // 위치 설정 (DPI 제거 안 함: 위젯 위치는 위에서 보정된 위젯 좌표계 기준)
+    Indicator->SetPositionInViewport(CenteredPos, false);
 
 	return true;
 }
@@ -941,116 +949,25 @@ AActor* UUIComponent::GetIndicatorTarget(const FGameplayTag& IndicatorTag) const
 
 bool UUIComponent::GetIndicatorWorldPosition(const FGameplayTag& IndicatorTag, AActor* Target, FVector& OutWorldPosition)
 {
-	if (!Target)
-	{
-		return false;
-	}
+    if (!Target)
+    {
+        return false;
+    }
 
-	FString TagString = IndicatorTag.ToString();
+    FString TagString = IndicatorTag.ToString();
 
-	// ============================================
-	// 1. LockOn Indicator - ✅ Root 본 기준
-	// ============================================
-	if (TagString.Contains(TEXT("LockOn")))
-	{
-		//@Character인 경우 Root 본 위치 사용
-		if (ACharacter* Character = Cast<ACharacter>(Target))
-		{
-			if (USkeletalMeshComponent* Mesh = Character->GetMesh())
-			{
-				//@✅ Root 본 위치 (가장 안정적)
-				FVector RootBoneLocation = Mesh->GetSocketLocation(FName("root"));
-				OutWorldPosition = RootBoneLocation + FVector(0, 0, LockOnHeightOffset);
-			}
-			else
-			{
-				//@Fallback: Actor Location
-				OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, LockOnHeightOffset);
-			}
-		}
-		else
-		{
-			//@Character가 아닌 경우
-			OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, LockOnHeightOffset);
-		}
-
-		//@디버그: 빨간색 구체
-		if (bShowIndicatorDebugSpheres)
-		{
-			DrawDebugSphere(
-				GetWorld(),
-				OutWorldPosition,
-				20.0f,
-				12,
-				FColor::Red,
-				false,
-				0.0f
-			);
-		}
-
-		return true;
-	}
-	// ============================================
-	// 2. Structure Indicator (변경 없음)
-	// ============================================
-	else if (TagString.Contains(TEXT("StatueInteractionUI")))
-	{
-		FVector Origin, BoxExtent;
-		Target->GetActorBounds(false, Origin, BoxExtent);
-		OutWorldPosition = Origin + FVector(0, 0, StructureWorldHeightOffset);
-
-		if (bShowIndicatorDebugSpheres)
-		{
-			DrawDebugSphere(
-				GetWorld(),
-				OutWorldPosition,
-				25.0f,
-				12,
-				FColor::Green,
-				false,
-				0.0f
-			);
-		}
-		return true;
-	}
-	// ============================================
-	// 3. 기타 Indicator (Execution, Ambush)
-	// ============================================
-	else
-	{
-		//@Character인 경우 Root 본 사용
-		if (ACharacter* Character = Cast<ACharacter>(Target))
-		{
-			if (USkeletalMeshComponent* Mesh = Character->GetMesh())
-			{
-				FVector RootBoneLocation = Mesh->GetSocketLocation(FName("root"));
-				OutWorldPosition = RootBoneLocation + FVector(0, 0, GeneralIndicatorHeightOffset);
-			}
-			else
-			{
-				OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, GeneralIndicatorHeightOffset);
-			}
-		}
-		else
-		{
-			OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, GeneralIndicatorHeightOffset);
-		}
-
-		if (bShowIndicatorDebugSpheres)
-		{
-			DrawDebugSphere(
-				GetWorld(),
-				OutWorldPosition,
-				20.0f,
-				12,
-				FColor::Blue,
-				false,
-				0.0f
-			);
-		}
-
-		return true;
-	}
+    if (TagString.Contains(TEXT("LockOn")))
+    {
+        return ComputeLockOnWorldPosition(Target, OutWorldPosition);
+    }
+    else if (TagString.Contains(TEXT("StatueInteractionUI")))
+    {
+        return ComputeStructureWorldPosition(Target, OutWorldPosition);
+    }
+    else
+    {
+        return ComputeGenericIndicatorWorldPosition(Target, GeneralIndicatorHeightOffset, OutWorldPosition);
+    }
 }
 
 // ============================================
@@ -1086,17 +1003,33 @@ FIndicatorOffsetSettings UUIComponent::GetIndicatorOffsetSettings(const FGamepla
 	{
 		Settings.AdditionalOffsetRightRatio = LockOnScreenOffsetRightRatio;
 		Settings.AdditionalOffsetUpRatio = LockOnScreenOffsetUpRatio;
-		Settings.InterpolationSpeed = LockOnInterpolationSpeed;
+        Settings.bUseInterpolation = bUseLockOnInterpolation;
+        Settings.InterpolationSpeed = LockOnInterpolationSpeed;
 	}
 	else if (TagString.Contains(TEXT("StatueInteractionUI")))
 	{
 		Settings.AdditionalOffsetRightRatio = StructureScreenOffsetRightRatio;
 		Settings.AdditionalOffsetUpRatio = StructureScreenOffsetUpRatio;
-		Settings.InterpolationSpeed = StructureInterpolationSpeed;
+        Settings.bUseInterpolation = bUseStructureInterpolation;
+        Settings.InterpolationSpeed = StructureInterpolationSpeed;
 	}
 	else
 	{
-		Settings.InterpolationSpeed = GeneralInterpolationSpeed;
+        if (TagString.Contains(TEXT("Execution")))
+        {
+            Settings.bUseInterpolation = bUseExecutionInterpolation;
+            Settings.InterpolationSpeed = ExecutionInterpolationSpeed;
+        }
+        else if (TagString.Contains(TEXT("Ambush")))
+        {
+            Settings.bUseInterpolation = bUseAmbushInterpolation;
+            Settings.InterpolationSpeed = AmbushInterpolationSpeed;
+        }
+        else
+        {
+            Settings.bUseInterpolation = true;
+            Settings.InterpolationSpeed = 12.0f;
+        }
 	}
 
 	return Settings;
@@ -1118,7 +1051,7 @@ FVector2D UUIComponent::ConvertToScreenCoordinates(const FVector2D& NormalizedPo
 	return ScreenPos;
 }
 
-FVector2D UUIComponent::ApplyInterpolation(const FGameplayTag& IndicatorTag, const FVector2D& TargetScreenPos, float DeltaTime, float InterpolationSpeed)
+FVector2D UUIComponent::ApplyInterpolation(const FGameplayTag& IndicatorTag, const FVector2D& TargetScreenPos, float DeltaTime, float InterpolationSpeed, bool bUseInterpolation)
 {
 	FString TagString = IndicatorTag.ToString();
 
@@ -1129,8 +1062,8 @@ FVector2D UUIComponent::ApplyInterpolation(const FGameplayTag& IndicatorTag, con
 		return TargetScreenPos;
 	}
 
-	// 보간 적용
-	if (bUseInterpolation)
+    // 보간 적용
+    if (bUseInterpolation)
 	{
 		FVector2D* LastPosition = LastIndicatorScreenPositions.Find(IndicatorTag);
 		if (LastPosition)
@@ -1233,5 +1166,100 @@ void UUIComponent::CreateWidgetsForAllCategories(APlayerController* PC, UUIManag
 			CreateAndSetupWidget(PC, UICategory, UIInfo, EnumPtr);
 		}
 	}
+}
+
+bool UUIComponent::ComputeLockOnWorldPosition(AActor* Target, FVector& OutWorldPosition)
+{
+    if (!Target) return false;
+
+    if (ACharacter* Character = Cast<ACharacter>(Target))
+    {
+        if (USkeletalMeshComponent* Mesh = Character->GetMesh())
+        {
+            FVector RootBoneLocation = Mesh->GetSocketLocation(FName("root"));
+            OutWorldPosition = RootBoneLocation + FVector(0, 0, LockOnHeightOffset);
+        }
+        else
+        {
+            OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, LockOnHeightOffset);
+        }
+    }
+    else
+    {
+        OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, LockOnHeightOffset);
+    }
+
+    if (bShowIndicatorDebugSpheres)
+    {
+        DrawDebugSphere(
+            GetWorld(),
+            OutWorldPosition,
+            20.0f,
+            12,
+            FColor::Red,
+            false,
+            0.0f
+        );
+    }
+    return true;
+}
+
+bool UUIComponent::ComputeStructureWorldPosition(AActor* Target, FVector& OutWorldPosition)
+{
+    if (!Target) return false;
+
+    // 구조물 인디케이터 기준점은 ActorLocation + 높이 오프셋
+    // Use ActorLocation as the anchor for structures (more stable/expected center)
+    OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, StructureWorldHeightOffset);
+
+    if (bShowIndicatorDebugSpheres)
+    {
+        DrawDebugSphere(
+            GetWorld(),
+            OutWorldPosition,
+            25.0f,
+            12,
+            FColor::Green,
+            false,
+            0.0f
+        );
+    }
+    return true;
+}
+
+bool UUIComponent::ComputeGenericIndicatorWorldPosition(AActor* Target, float HeightOffset, FVector& OutWorldPosition)
+{
+    if (!Target) return false;
+
+    if (ACharacter* Character = Cast<ACharacter>(Target))
+    {
+        if (USkeletalMeshComponent* Mesh = Character->GetMesh())
+        {
+            FVector RootBoneLocation = Mesh->GetSocketLocation(FName("root"));
+            OutWorldPosition = RootBoneLocation + FVector(0, 0, HeightOffset);
+        }
+        else
+        {
+            OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, HeightOffset);
+        }
+    }
+    else
+    {
+        OutWorldPosition = Target->GetActorLocation() + FVector(0, 0, HeightOffset);
+    }
+
+    if (bShowIndicatorDebugSpheres)
+    {
+        DrawDebugSphere(
+            GetWorld(),
+            OutWorldPosition,
+            20.0f,
+            12,
+            FColor::Blue,
+            false,
+            0.0f
+        );
+    }
+    return true;
 }
 #pragma endregion
