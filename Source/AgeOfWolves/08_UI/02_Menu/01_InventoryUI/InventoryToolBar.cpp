@@ -56,27 +56,25 @@ FReply UInventoryToolBar::NativeOnFocusReceived(const FGeometry& MyGeometry, con
 
 FNavigationReply UInventoryToolBar::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
 {
-    //@Left, Right Navigation은 기본 동작 사용
-    if (InNavigationEvent.GetNavigationType() == EUINavigation::Left || 
-        InNavigationEvent.GetNavigationType() == EUINavigation::Right)
-    {
-        return InDefaultReply;
-    }
+    const EUINavigation NavType = InNavigationEvent.GetNavigationType();
 
-    //@Up Navigation은 무시 (InventoryUI에서 처리)
-    if (InNavigationEvent.GetNavigationType() == EUINavigation::Up)
+    switch (NavType)
     {
+    case EUINavigation::Left:
+        MoveLeft();  // ← 명확함
+        return FNavigationReply::Explicit(nullptr);
+
+    case EUINavigation::Right:
+        MoveRight();  // ← 명확함
+        return FNavigationReply::Explicit(nullptr);
+
+    case EUINavigation::Up:
+    case EUINavigation::Down:
+        return FNavigationReply::Explicit(nullptr);
+
+    default:
         return FNavigationReply::Explicit(nullptr);
     }
-
-    //@Down Navigation은 InventoryUI에서 처리하도록 차단
-    if (InNavigationEvent.GetNavigationType() == EUINavigation::Down)
-    {
-        //@InventoryUI가 Down Navigation을 처리하도록 nullptr 반환
-        return FNavigationReply::Explicit(nullptr);
-    }
-
-    return FNavigationReply::Explicit(nullptr);
 }
 
 void UInventoryToolBar::InternalBindToButton(UCustomButton* Button, EItemType ItemType)
@@ -141,7 +139,7 @@ void UInventoryToolBar::CreateButtons()
 
     ButtonBox->ClearChildren();
     MItemTypeButtons.Empty();
-    MButtons.Empty();
+    //MButtons.Empty();
 
     //@Item Type별 버튼 생성
     CreateAndAddButton(EItemType::Tool, 0.5f);
@@ -241,9 +239,19 @@ void UInventoryToolBar::CreateAndAddButton(EItemType ButtonType, float Scale)
 
     //@Maps
     MItemTypeButtons.Add(ButtonType, NewButton);
-    MButtons.Add(ItemTypeToIndex(ButtonType), NewButton);
+    //MButtons.Add(ItemTypeToIndex(ButtonType), NewButton);
 
     UE_LOGFMT(LogInventoryToolBar, Log, "{0} 버튼이 생성되고 추가되었습니다. Scale: {1}", UEnum::GetValueAsString(ButtonType), Scale);
+}
+
+void UInventoryToolBar::MoveLeft()
+{
+    MoveSelection(-1);
+}
+
+void UInventoryToolBar::MoveRight()
+{
+    MoveSelection(1);
 }
 
 void UInventoryToolBar::MoveSelection(int32 Direction)
@@ -252,8 +260,19 @@ void UInventoryToolBar::MoveSelection(int32 Direction)
     TArray<EItemType> ItemTypes;
     MItemTypeButtons.GetKeys(ItemTypes);
 
+    if (ItemTypes.Num() == 0)
+    {
+        UE_LOGFMT(LogInventoryToolBar, Warning, "이동할 버튼이 없습니다.");
+        return;
+    }
+
     //@Current Item Type Button의 인덱스
     int32 CurrentIndex = ItemTypes.IndexOfByKey(CurrentSelectedItemType);
+    if (CurrentIndex == INDEX_NONE)
+    {
+        UE_LOGFMT(LogInventoryToolBar, Warning, "현재 선택된 아이템 타입이 유효하지 않습니다: {0}", *UEnum::GetValueAsString(CurrentSelectedItemType));
+        return;
+    }
     int32 NewIndex;
 
     //@오른쪽 방향키 눌림
@@ -336,5 +355,11 @@ void UInventoryToolBar::CancelToolBarButtonSelected_Implementation(uint8 Previou
 bool UInventoryToolBar::IsValidButtonIndex(uint8 Index) const
 {
     return Index < static_cast<uint8>(EItemType::MAX);
+}
+
+UCustomButton* UInventoryToolBar::GetButtonByIndex(uint8 Index) const
+{
+    EItemType Category = IndexToItemType(Index);
+    return MItemTypeButtons.FindRef(Category);
 }
 #pragma endregion

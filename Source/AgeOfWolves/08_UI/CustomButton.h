@@ -32,6 +32,11 @@ enum class EButtonState : uint8
     MAX,
 };
 
+/*
+    @EInteractionMethod
+    *
+    * Button의 상호작용 방법을 나타내는 열거형
+*/
 UENUM(BlueprintType)
 enum class EInteractionMethod
 {
@@ -102,6 +107,19 @@ protected:
 private:
     //@Button State를 설정합니다.
     void SetButtonState(EButtonState NewState);
+
+private:
+    //@애니메이션 유틸
+    void PlayHoverAnimation();
+    void StopHoverAnimationIfPlaying();
+    void PlayBlendOutOnce();
+
+    //@이미지 업데이트 유틸(상태별 텍스처 적용)
+    void ApplyImageForCurrentState();
+
+    //@입력 방식 공통 처리 유틸
+    bool TrySetHovered(EInteractionMethod InteractionMethod);
+    bool TrySelect(EInteractionMethod InteractionMethod);
 
 protected:
     //@버튼 이미지를 업데이트합니다.

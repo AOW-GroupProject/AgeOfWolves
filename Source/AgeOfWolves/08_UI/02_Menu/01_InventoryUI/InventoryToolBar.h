@@ -70,6 +70,11 @@ protected:
     void CreateAndAddButton(EItemType ButtonType, float Scale);
 
 protected:
+    //@방향키 좌우 이동 편의 함수 (오버라이드)
+    virtual void MoveLeft() override;
+    virtual void MoveRight() override;
+
+protected:
     virtual void MoveSelection(int32 Direction) override;
 
 protected:
@@ -111,6 +116,9 @@ protected:
 protected:
     //@인덱스의 유효성 검사 override
     virtual bool IsValidButtonIndex(uint8 Index) const override;
+
+    //@특정 인덱스의 버튼 가져오기 (파생 클래스에서 구현 필수)
+    virtual UCustomButton* GetButtonByIndex(uint8 Index) const override;
 
 private:
     //@uint8 <-> EItemType 변환 유틸리티

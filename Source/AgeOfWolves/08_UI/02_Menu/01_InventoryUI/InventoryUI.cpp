@@ -55,47 +55,15 @@ FNavigationReply UInventoryUI::NativeOnNavigation(const FGeometry& MyGeometry, c
     {
     case EUINavigation::Down:
     {
-        //@아래 방향키: ItemSlots로 포커스 이동
-        UItemSlots* CurrentItemSlots = Cast<UItemSlots>(GetItemSlotsUI(CurrentItemType));
-        if (CurrentItemSlots)
-        {
-            //@첫 번째 아이템 슬롯 유효한가?
-            UInteractableItemSlot* FirstItemSlot = CurrentItemSlots->FindFirstItemSlot();
-            if (FirstItemSlot && FirstItemSlot->GetUniqueItemID().IsValid())
-            {
-                //@첫 번째 아이템 슬롯의 강제 호버 상태 전환 요청 이벤트
-                RequestFirstItemSlotHover.Broadcast(CurrentItemType);
-
-                //@SetFocus
-                CurrentItemSlots->SetFocus();
-
-                UE_LOGFMT(LogInventoryUI, Log, "Navigation Down: 포커스가 {0} 타입의 ItemSlots로 이동했습니다.", *UEnum::GetValueAsString(CurrentItemType));
-
-                //@SetFocus를 통해 포커스를 주었으므로 nullptr을 반환
-                return FNavigationReply::Explicit(nullptr);
-            }
-        }
-        break;
+        //@Down 무시
+        UE_LOGFMT(LogInventoryUI, Log, "Navigation Down ignored in InventoryUI.");
+        return FNavigationReply::Explicit(nullptr);
     }
     case EUINavigation::Up:
     {
-        //@위 방향키: ItemSlots에서 InventoryToolBar로 포커스 이동
-        UItemSlots* CurrentItemSlots = Cast<UItemSlots>(GetItemSlotsUI(CurrentItemType));
-        if (CurrentItemSlots && CurrentItemSlots->HasKeyboardFocus())
-        {
-            //@Request Cancel Current Hovered Item Slot
-            RequestCancelCurrentHoveredItemSlot.Broadcast(CurrentItemType);
-
-            //@ToolBar에게 포커스 전달
-            if (InventoryToolBar)
-            {
-                InventoryToolBar->SetFocus();
-                UE_LOGFMT(LogInventoryUI, Log, "Navigation Up: InventoryToolBar에게 포커스를 전달합니다.");
-                //@SetFocus를 통해 포커스를 주었으므로 nullptr을 반환
-                return FNavigationReply::Explicit(nullptr);
-            }
-        }
-        break;
+        //@Up 무시
+        UE_LOGFMT(LogInventoryUI, Log, "Navigation Up ignored in InventoryUI.");
+        return FNavigationReply::Explicit(nullptr);
     }
     case EUINavigation::Left:
     case EUINavigation::Right:
@@ -170,7 +138,7 @@ FReply UInventoryUI::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEven
         return FReply::Unhandled();
     }
 
-    //@Enter 키: ItemSlots로 포커스 이동 (Navigation Down과 동일한 동작)
+    //@Space Bar: ItemSlots로 포커스 이동 (기존 Enter 동작)
     if (Key == EKeys::Enter)
     {
         //@Current Item Slots
@@ -195,34 +163,38 @@ FReply UInventoryUI::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEven
         //@SetFocus
         CurrentItemSlots->SetFocus();
 
-        UE_LOGFMT(LogInventoryUI, Log, "Enter 키: 포커스가 {0} 타입의 ItemSlots로 이동했습니다.", *UEnum::GetValueAsString(CurrentItemType));
+        UE_LOGFMT(LogInventoryUI, Log, "Space Bar: 포커스가 {0} 타입의 ItemSlots로 이동했습니다.", *UEnum::GetValueAsString(CurrentItemType));
 
         return FReply::Handled();
     }
-    
-    //@Escape 키: ItemSlots에서 InventoryToolBar로 포커스 복귀
+
+    //@Escape: ItemSlots에 포커스가 있으면 여기서 소비하고 ToolBar로 포커스 반환, ToolBar에 있으면 상위(MenuUI)로 전달
     if (Key == EKeys::Escape)
     {
-        //@Current Item Slots
         UItemSlots* CurrentItemSlots = Cast<UItemSlots>(GetItemSlotsUI(CurrentItemType));
         if (CurrentItemSlots && CurrentItemSlots->HasKeyboardFocus())
         {
-            //@Request Cancel Current Hovered Item Slot
+            //@현재 Hovered Item Slot 취소 요청
             RequestCancelCurrentHoveredItemSlot.Broadcast(CurrentItemType);
 
-            //@ToolBar에게 포커스 전달
+            //@ToolBar로 포커스 반환
             if (InventoryToolBar)
             {
                 InventoryToolBar->SetFocus();
-                UE_LOGFMT(LogInventoryUI, Log, "Escape 키: InventoryToolBar에게 포커스를 전달합니다.");
-                return FReply::Handled();
             }
+
+            UE_LOGFMT(LogInventoryUI, Log, "Escape: ItemSlots에서 포커스를 회수하여 ToolBar로 전달하고 이벤트를 소비합니다.");
+            return FReply::Handled();
         }
-        else
+
+        //@Toolbar가 포커스를 가진 경우: MenuUI에서 처리하도록 위임
+        if (InventoryToolBar && InventoryToolBar->HasKeyboardFocus())
         {
-            //@ItemSlots에 포커스가 없으면 상위 위젯에서 처리하도록 Unhandled 반환 및 Focus 해제
-            return FReply::Unhandled().ClearUserFocus();
+            return FReply::Unhandled();
         }
+
+        //@그 외: 상위로 전달
+        return FReply::Unhandled();
     }
 
     UE_LOGFMT(LogInventoryUI, Log, "Inventory UI에서 처리하지 않는 키 입력: {0}", *Key.ToString());

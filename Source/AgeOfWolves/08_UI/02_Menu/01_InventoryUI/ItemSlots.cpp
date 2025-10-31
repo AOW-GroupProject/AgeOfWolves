@@ -163,15 +163,10 @@ FReply UItemSlots::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent&
             int32 CurrentColumn = 0;
             GetSlotRowAndColumn(SlotIndex, CurrentRow, CurrentColumn);
 
-            //@첫 번째 Row에 있으면 상위 위젯에서 처리하도록 Unhandled 반환
+            //@첫 번째 Row에 있으면 상위 위젯에 넘기지 않고 무시(소비)
             if (CurrentRow == 0)
             {
-                //@현재 Hovered 상태의 Item Slot의 상태를 Normal로 변경
-                OnRequestCancelCurrentHoveredItemSlot(ItemType);
-
-                //@현재 Item Slots의 포커스 소실 요청 이벤트
-                RequestCancelItemSlotsFocus.ExecuteIfBound();
-
+                UE_LOGFMT(LogItemSlots, Log, "Up 키: 첫 번째 행이므로 이벤트를 소비하고 상위로 전달하지 않습니다.");
                 return FReply::Handled();
             }
 
