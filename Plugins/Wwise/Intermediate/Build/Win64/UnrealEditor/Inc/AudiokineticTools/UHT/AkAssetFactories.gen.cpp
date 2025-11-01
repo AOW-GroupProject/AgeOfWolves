@@ -644,11 +644,11 @@ void EmptyLinkFunctionForGeneratedCodeAkAssetFactories() {}
 	}
 	DEFINE_VTABLE_PTR_HELPER_CTOR(UAkAudioDeviceShareSetFactory);
 	UAkAudioDeviceShareSetFactory::~UAkAudioDeviceShareSetFactory() {}
-	struct Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Public_AkAssetFactories_h_Statics
+	struct Z_CompiledInDeferFile_FID_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Public_AkAssetFactories_h_Statics
 	{
 		static const FClassRegisterCompiledInInfo ClassInfo[];
 	};
-	const FClassRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Public_AkAssetFactories_h_Statics::ClassInfo[] = {
+	const FClassRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Public_AkAssetFactories_h_Statics::ClassInfo[] = {
 		{ Z_Construct_UClass_UAkAssetFactory, UAkAssetFactory::StaticClass, TEXT("UAkAssetFactory"), &Z_Registration_Info_UClass_UAkAssetFactory, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UAkAssetFactory), 722839164U) },
 		{ Z_Construct_UClass_UAkAcousticTextureFactory, UAkAcousticTextureFactory::StaticClass, TEXT("UAkAcousticTextureFactory"), &Z_Registration_Info_UClass_UAkAcousticTextureFactory, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UAkAcousticTextureFactory), 855844361U) },
 		{ Z_Construct_UClass_UAkAudioEventFactory, UAkAudioEventFactory::StaticClass, TEXT("UAkAudioEventFactory"), &Z_Registration_Info_UClass_UAkAudioEventFactory, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UAkAudioEventFactory), 1277204270U) },
@@ -660,8 +660,8 @@ void EmptyLinkFunctionForGeneratedCodeAkAssetFactories() {}
 		{ Z_Construct_UClass_UAkEffectShareSetFactory, UAkEffectShareSetFactory::StaticClass, TEXT("UAkEffectShareSetFactory"), &Z_Registration_Info_UClass_UAkEffectShareSetFactory, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UAkEffectShareSetFactory), 2153938778U) },
 		{ Z_Construct_UClass_UAkAudioDeviceShareSetFactory, UAkAudioDeviceShareSetFactory::StaticClass, TEXT("UAkAudioDeviceShareSetFactory"), &Z_Registration_Info_UClass_UAkAudioDeviceShareSetFactory, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UAkAudioDeviceShareSetFactory), 1865368325U) },
 	};
-	static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Public_AkAssetFactories_h_4215182439(TEXT("/Script/AudiokineticTools"),
-		Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Public_AkAssetFactories_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Public_AkAssetFactories_h_Statics::ClassInfo),
+	static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Public_AkAssetFactories_h_4215182439(TEXT("/Script/AudiokineticTools"),
+		Z_CompiledInDeferFile_FID_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Public_AkAssetFactories_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_AgeOfWolves_Plugins_Wwise_Source_AudiokineticTools_Public_AkAssetFactories_h_Statics::ClassInfo),
 		nullptr, 0,
 		nullptr, 0);
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

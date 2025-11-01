@@ -14,7 +14,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #endif
 #define WWISEFILEHANDLER_WwiseSoundBankCookedData_generated_h
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_WwiseFileHandler_Public_Wwise_CookedData_WwiseSoundBankCookedData_h_39_GENERATED_BODY \
+#define FID_AgeOfWolves_Plugins_Wwise_Source_WwiseFileHandler_Public_Wwise_CookedData_WwiseSoundBankCookedData_h_39_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FWwiseSoundBankCookedData_Statics; \
 	static class UScriptStruct* StaticStruct();
 
@@ -22,7 +22,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 template<> WWISEFILEHANDLER_API UScriptStruct* StaticStruct<struct FWwiseSoundBankCookedData>();
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_WwiseFileHandler_Public_Wwise_CookedData_WwiseSoundBankCookedData_h
+#define CURRENT_FILE_ID FID_AgeOfWolves_Plugins_Wwise_Source_WwiseFileHandler_Public_Wwise_CookedData_WwiseSoundBankCookedData_h
 
 
 #define FOREACH_ENUM_EWWISESOUNDBANKTYPE(op) \

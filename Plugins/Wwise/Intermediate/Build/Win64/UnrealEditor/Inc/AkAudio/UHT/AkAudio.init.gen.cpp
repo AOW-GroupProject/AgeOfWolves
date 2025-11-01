@@ -59,7 +59,7 @@ void EmptyLinkFunctionForGeneratedCodeAkAudio_init() {}
 				SingletonFuncArray,
 				UE_ARRAY_COUNT(SingletonFuncArray),
 				PKG_CompiledIn | 0x00000000,
-				0xCD5ADE84,
+				0x44B93E73,
 				0xC59BBCD2,
 				METADATA_PARAMS(nullptr, 0)
 			};
@@ -67,5 +67,5 @@ void EmptyLinkFunctionForGeneratedCodeAkAudio_init() {}
 		}
 		return Z_Registration_Info_UPackage__Script_AkAudio.OuterSingleton;
 	}
-	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_AkAudio(Z_Construct_UPackage__Script_AkAudio, TEXT("/Script/AkAudio"), Z_Registration_Info_UPackage__Script_AkAudio, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0xCD5ADE84, 0xC59BBCD2));
+	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_AkAudio(Z_Construct_UPackage__Script_AkAudio, TEXT("/Script/AkAudio"), Z_Registration_Info_UPackage__Script_AkAudio, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0x44B93E73, 0xC59BBCD2));
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

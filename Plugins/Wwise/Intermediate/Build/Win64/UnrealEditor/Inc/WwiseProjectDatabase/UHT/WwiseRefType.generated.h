@@ -15,7 +15,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #define WWISEPROJECTDATABASE_WwiseRefType_generated_h
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_WwiseProjectDatabase_Public_Wwise_Ref_WwiseRefType_h
+#define CURRENT_FILE_ID FID_AgeOfWolves_Plugins_Wwise_Source_WwiseProjectDatabase_Public_Wwise_Ref_WwiseRefType_h
 
 
 #define FOREACH_ENUM_EWWISEREFTYPE(op) \

@@ -1,7 +1,7 @@
-D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AkAudio\Module.AkAudio.5_of_10.cpp
+E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AkAudio\Module.AkAudio.5_of_10.cpp
 /I .
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\AkAudio\Private
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\AkAudio\Classes\GTE
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\AkAudio\Private
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\AkAudio\Classes\GTE
 /I Runtime\TraceLog\Public
 /I Runtime\Core\Public
 /I Runtime
@@ -279,17 +279,17 @@ D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEd
 /I ..\Intermediate\Build\Win64\UnrealEditor\Inc\MRMesh\UHT
 /I Runtime\MRMesh\Public
 /I Runtime\XmlParser\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\WwiseFileHandler\UHT
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseFileHandler\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseConcurrency\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseUtils\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseSoundEngine_2023_1\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\ThirdParty\include
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseSoundEngine_Null\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseSoundEngine\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\WwiseObjectUtils\UHT
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseObjectUtils\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\WwiseFileHandler\UHT
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseFileHandler\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseConcurrency\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseUtils\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseSoundEngine_2023_1\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\ThirdParty\include
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseSoundEngine_Null\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseSoundEngine\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\WwiseObjectUtils\UHT
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseObjectUtils\Public
 /I Developer\DesktopPlatform\Public
 /I Editor\EditorStyle\Public
 /I ..\Plugins\Editor\GeometryMode\Intermediate\Build\Win64\UnrealEditor\Inc\GeometryMode\UHT
@@ -299,18 +299,18 @@ D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEd
 /I Developer\SettingsEditor\Public
 /I Developer\SharedSettingsWidgets\Public
 /I Developer\ExternalImagePicker\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\WwiseResourceCooker\UHT
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseResourceCooker\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\AkAudio\UHT
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\AkAudio\Classes
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\AkAudio\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\WwiseResourceLoader\UHT
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseResourceLoader\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseObstructionOcclusion\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseEngineUtils\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseProcessing\Public
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\WwiseProjectDatabase\UHT
-/I D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Source\WwiseProjectDatabase\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\WwiseResourceCooker\UHT
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseResourceCooker\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\AkAudio\UHT
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\AkAudio\Classes
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\AkAudio\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\WwiseResourceLoader\UHT
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseResourceLoader\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseObstructionOcclusion\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseEngineUtils\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseProcessing\Public
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\UnrealEditor\Inc\WwiseProjectDatabase\UHT
+/I E:\AOW_2\AgeOfWolves\Plugins\Wwise\Source\WwiseProjectDatabase\Public
 /external:W0
 /external:I ThirdParty\mimalloc\include
 /external:I ThirdParty\LibTiff\Source\Win64
@@ -320,12 +320,12 @@ D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEd
 /external:I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\shared"
 /external:I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\um"
 /external:I "C:\Program Files (x86)\Windows Kits\10\include\10.0.26100.0\winrt"
-/FI"D:\AgeofWolves_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\UnrealEd\SharedPCH.UnrealEd.ShadowErrors.InclOrderUnreal5_1.h"
-/FI"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AkAudio\Definitions.AkAudio.h"
-/Yu"D:\AgeofWolves_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\UnrealEd\SharedPCH.UnrealEd.ShadowErrors.InclOrderUnreal5_1.h"
-/Fp"D:\AgeofWolves_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\UnrealEd\SharedPCH.UnrealEd.ShadowErrors.InclOrderUnreal5_1.h.pch"
-/Fo"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AkAudio\Module.AkAudio.5_of_10.cpp.obj"
-/sourceDependencies D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AkAudio\Module.AkAudio.5_of_10.cpp.dep.json
+/FI"E:\AOW_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\UnrealEd\SharedPCH.UnrealEd.ShadowErrors.InclOrderUnreal5_1.h"
+/FI"E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AkAudio\Definitions.AkAudio.h"
+/Yu"E:\AOW_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\UnrealEd\SharedPCH.UnrealEd.ShadowErrors.InclOrderUnreal5_1.h"
+/Fp"E:\AOW_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\UnrealEd\SharedPCH.UnrealEd.ShadowErrors.InclOrderUnreal5_1.h.pch"
+/Fo"E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AkAudio\Module.AkAudio.5_of_10.cpp.obj"
+/sourceDependencies E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AkAudio\Module.AkAudio.5_of_10.cpp.dep.json
 /Zc:inline
 /nologo
 /Oi

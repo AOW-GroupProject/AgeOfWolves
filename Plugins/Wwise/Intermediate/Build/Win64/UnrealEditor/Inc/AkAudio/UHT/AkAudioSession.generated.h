@@ -14,7 +14,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #endif
 #define AKAUDIO_AkAudioSession_generated_h
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_InitializationSettings_AkAudioSession_h_60_GENERATED_BODY \
+#define FID_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_InitializationSettings_AkAudioSession_h_60_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FAkAudioSession_Statics; \
 	AKAUDIO_API static class UScriptStruct* StaticStruct();
 
@@ -22,7 +22,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 template<> AKAUDIO_API UScriptStruct* StaticStruct<struct FAkAudioSession>();
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_InitializationSettings_AkAudioSession_h
+#define CURRENT_FILE_ID FID_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_InitializationSettings_AkAudioSession_h
 
 
 #define FOREACH_ENUM_EAKAUDIOSESSIONCATEGORY(op) \

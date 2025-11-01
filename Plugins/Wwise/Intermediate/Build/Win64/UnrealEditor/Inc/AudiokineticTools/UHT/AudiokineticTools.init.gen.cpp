@@ -17,7 +17,7 @@ void EmptyLinkFunctionForGeneratedCodeAudiokineticTools_init() {}
 				nullptr,
 				0,
 				PKG_CompiledIn | 0x00000040,
-				0x6F5CC98C,
+				0x35A83C5B,
 				0x0649C199,
 				METADATA_PARAMS(nullptr, 0)
 			};
@@ -25,5 +25,5 @@ void EmptyLinkFunctionForGeneratedCodeAudiokineticTools_init() {}
 		}
 		return Z_Registration_Info_UPackage__Script_AudiokineticTools.OuterSingleton;
 	}
-	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_AudiokineticTools(Z_Construct_UPackage__Script_AudiokineticTools, TEXT("/Script/AudiokineticTools"), Z_Registration_Info_UPackage__Script_AudiokineticTools, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0x6F5CC98C, 0x0649C199));
+	static FRegisterCompiledInInfo Z_CompiledInDeferPackage_UPackage__Script_AudiokineticTools(Z_Construct_UPackage__Script_AudiokineticTools, TEXT("/Script/AudiokineticTools"), Z_Registration_Info_UPackage__Script_AudiokineticTools, CONSTRUCT_RELOAD_VERSION_INFO(FPackageReloadVersionInfo, 0x35A83C5B, 0x0649C199));
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

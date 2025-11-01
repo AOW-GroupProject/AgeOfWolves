@@ -113,15 +113,15 @@ void EmptyLinkFunctionForGeneratedCodeMovieSceneAkTrack() {}
 	UMovieSceneAkTrack::UMovieSceneAkTrack(const FObjectInitializer& ObjectInitializer) : Super(ObjectInitializer) {}
 	DEFINE_VTABLE_PTR_HELPER_CTOR(UMovieSceneAkTrack);
 	UMovieSceneAkTrack::~UMovieSceneAkTrack() {}
-	struct Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_MovieSceneAkTrack_h_Statics
+	struct Z_CompiledInDeferFile_FID_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_MovieSceneAkTrack_h_Statics
 	{
 		static const FClassRegisterCompiledInInfo ClassInfo[];
 	};
-	const FClassRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_MovieSceneAkTrack_h_Statics::ClassInfo[] = {
+	const FClassRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_MovieSceneAkTrack_h_Statics::ClassInfo[] = {
 		{ Z_Construct_UClass_UMovieSceneAkTrack, UMovieSceneAkTrack::StaticClass, TEXT("UMovieSceneAkTrack"), &Z_Registration_Info_UClass_UMovieSceneAkTrack, CONSTRUCT_RELOAD_VERSION_INFO(FClassReloadVersionInfo, sizeof(UMovieSceneAkTrack), 4135840290U) },
 	};
-	static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_MovieSceneAkTrack_h_1482875653(TEXT("/Script/AkAudio"),
-		Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_MovieSceneAkTrack_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_MovieSceneAkTrack_h_Statics::ClassInfo),
+	static FRegisterCompiledInInfo Z_CompiledInDeferFile_FID_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_MovieSceneAkTrack_h_1482875653(TEXT("/Script/AkAudio"),
+		Z_CompiledInDeferFile_FID_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_MovieSceneAkTrack_h_Statics::ClassInfo, UE_ARRAY_COUNT(Z_CompiledInDeferFile_FID_AgeOfWolves_Plugins_Wwise_Source_AkAudio_Classes_MovieSceneAkTrack_h_Statics::ClassInfo),
 		nullptr, 0,
 		nullptr, 0);
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

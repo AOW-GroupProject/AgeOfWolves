@@ -14,7 +14,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 #endif
 #define WWISERESOURCELOADER_WwiseInitBankCookedData_generated_h
 
-#define FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_CookedData_WwiseInitBankCookedData_h_29_GENERATED_BODY \
+#define FID_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_CookedData_WwiseInitBankCookedData_h_29_GENERATED_BODY \
 	friend struct Z_Construct_UScriptStruct_FWwiseInitBankCookedData_Statics; \
 	static class UScriptStruct* StaticStruct(); \
 	typedef FWwiseSoundBankCookedData Super;
@@ -23,7 +23,7 @@ PRAGMA_DISABLE_DEPRECATION_WARNINGS
 template<> WWISERESOURCELOADER_API UScriptStruct* StaticStruct<struct FWwiseInitBankCookedData>();
 
 #undef CURRENT_FILE_ID
-#define CURRENT_FILE_ID FID_AgeofWolves_2_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_CookedData_WwiseInitBankCookedData_h
+#define CURRENT_FILE_ID FID_AgeOfWolves_Plugins_Wwise_Source_WwiseResourceLoader_Public_Wwise_CookedData_WwiseInitBankCookedData_h
 
 
 PRAGMA_ENABLE_DEPRECATION_WARNINGS

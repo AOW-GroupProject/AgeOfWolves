@@ -33,9 +33,9 @@
 /NODEFAULTLIB:"LIBCD"
 /NODEFAULTLIB:"LIBCPD"
 /FUNCTIONPADMIN:6
-"D:\AgeofWolves_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Core\SharedPCH.Core.ShadowErrors.InclOrderUnreal5_1.h.obj"
-"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Module.WwiseUtils.cpp.obj"
-"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Default.rc2.res"
+"E:\AOW_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\Core\SharedPCH.Core.ShadowErrors.InclOrderUnreal5_1.h.obj"
+"E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Module.WwiseUtils.cpp.obj"
+"E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\Default.rc2.res"
 "..\Intermediate\Build\Win64\x64\UnrealEditor\Development\Core\UnrealEditor-Core.lib"
 "delayimp.lib"
 "wininet.lib"
@@ -61,7 +61,7 @@
 "setupapi.lib"
 "dwmapi.lib"
 "imm32.lib"
-/OUT:"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Binaries\Win64\UnrealEditor-WwiseUtils.dll"
-/IMPLIB:"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\UnrealEditor-WwiseUtils.suppressed.lib"
-/PDB:"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Binaries\Win64\UnrealEditor-WwiseUtils.pdb"
+/OUT:"E:\AOW_2\AgeOfWolves\Plugins\Wwise\Binaries\Win64\UnrealEditor-WwiseUtils.dll"
+/IMPLIB:"E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\WwiseUtils\UnrealEditor-WwiseUtils.suppressed.lib"
+/PDB:"E:\AOW_2\AgeOfWolves\Plugins\Wwise\Binaries\Win64\UnrealEditor-WwiseUtils.pdb"
 /ignore:4078

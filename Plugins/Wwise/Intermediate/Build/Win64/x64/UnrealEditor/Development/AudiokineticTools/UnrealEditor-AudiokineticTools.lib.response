@@ -6,7 +6,7 @@
 /NAME:"UnrealEditor-AudiokineticTools.dll"
 /IGNORE:4221
 /NODEFAULTLIB
-"D:\AgeofWolves_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\UnrealEd\SharedPCH.UnrealEd.ShadowErrors.InclOrderUnreal5_1.h.obj"
-"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AudiokineticTools\Module.AudiokineticTools.cpp.obj"
-"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AudiokineticTools\Default.rc2.res"
-/OUT:"D:\AgeofWolves_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AudiokineticTools\UnrealEditor-AudiokineticTools.lib"
+"E:\AOW_2\AgeOfWolves\Intermediate\Build\Win64\x64\AgeOfWolvesEditor\Development\UnrealEd\SharedPCH.UnrealEd.ShadowErrors.InclOrderUnreal5_1.h.obj"
+"E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AudiokineticTools\Module.AudiokineticTools.cpp.obj"
+"E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AudiokineticTools\Default.rc2.res"
+/OUT:"E:\AOW_2\AgeOfWolves\Plugins\Wwise\Intermediate\Build\Win64\x64\UnrealEditor\Development\AudiokineticTools\UnrealEditor-AudiokineticTools.lib"
