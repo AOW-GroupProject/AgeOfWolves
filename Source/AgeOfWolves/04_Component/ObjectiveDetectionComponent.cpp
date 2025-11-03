@@ -903,11 +903,13 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
 void UObjectiveDetectionComponent::UpdateDetectionStructure()
 {
     FVector OwnerLocation;
+    FVector OwnerForwardDir  ;
     if (const APlayerController* PC = Cast<APlayerController>(GetOwner()))
     {
         if (const APawn* P = PC->GetPawn())
         {
             OwnerLocation = P->GetActorLocation();
+            OwnerForwardDir = P->GetActorForwardVector();
         }
     }
 
@@ -935,20 +937,20 @@ void UObjectiveDetectionComponent::UpdateDetectionStructure()
 
             
             //@ 감지 거리 체크
-            const FVector ToOwner = OwnerLocation - Target->GetActorLocation();
+            const FVector ToTarget =  Target->GetActorLocation() - OwnerLocation;
             float DistSq  = FVector::Dist(Target->GetActorLocation(), OwnerLocation);
             if (DistSq > DistLimit)
                 continue;
 
             FVector TargetForwardDir = Target->GetActorForwardVector();
-            FVector OwerToTargetDir = ToOwner;
+            FVector OwerToTargetDir = ToTarget;
 
             // if (bIgnoreZ) { TargetForwardDir.Z = 0; OwerToTargetDir.Z = 0; }
             if (!TargetForwardDir.Normalize() || !OwerToTargetDir.Normalize())
                 continue;
 
             //@구조물 보는 방향 x각도 이내에 있는지 체크
-            const float CosAngle = FVector::DotProduct(TargetForwardDir, OwerToTargetDir);
+            const float CosAngle = FVector::DotProduct(OwnerForwardDir, OwerToTargetDir);
             if (CosAngle < CosThreshold)
                 continue;
 
