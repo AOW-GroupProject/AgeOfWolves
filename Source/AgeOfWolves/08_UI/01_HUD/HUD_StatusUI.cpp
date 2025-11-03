@@ -405,29 +405,43 @@ bool UHUD_StatusUI::UpdateStateBarAttribute(const FGameplayAttribute& Attribute,
 
 void UHUD_StatusUI::UpdateManaAttribute(const FGameplayAttribute& Attribute, float NewValue)
 {
-    //@Mana Dot Gauge Ref
+    //@Mana Dot Gauge Ref 체크
     if (!ManaDotGaugeRef)
     {
         UE_LOGFMT(LogStatusUI, Warning, "ManaDotGaugeRef가 유효하지 않습니다.");
         return;
     }
 
-    //@MaxMana 변경 시 (NewValue: 최대 마나 개수)
+    //@MaxMana 변경 → 빈 슬롯 개수 설정
     if (Attribute.AttributeName == "MaxMana")
     {
-        UE_LOGFMT(LogStatusUI, Log, "MaxMana 값 변경: {0}", FString::FromInt(static_cast<int32>(NewValue)));
-        //@Update Max Count
-        ManaDotGaugeRef->UpdateMaxCount(static_cast<int32>(NewValue));
-        //@캐시 값 업데이트
+        //@중복 업데이트 방지
+        if (FMath::IsNearlyEqual(LastMaxManaValue, NewValue, 0.01f))
+        {
+            return;
+        }
+
+        UE_LOGFMT(LogStatusUI, Log, "MaxMana 어트리뷰트 변경: {0}", FString::FromInt(static_cast<int32>(NewValue)));
+
+        //@✅ SetMaxMana → SetMaxCount로 변경
+        ManaDotGaugeRef->SetMaxCount(static_cast<int32>(NewValue));
+
         LastMaxManaValue = NewValue;
     }
-    //@현재 Mana 변경 시 (NewValue: 현재 보유 마나 개수)
+    //@Mana 변경 → 채워진 개수 설정
     else if (Attribute.AttributeName == "Mana")
     {
-        UE_LOGFMT(LogStatusUI, Log, "현재 Mana 값 변경: {0}", FString::FromInt(static_cast<int32>(NewValue)));
-        //@Update Filled Count
-        ManaDotGaugeRef->UpdateFilledCount(static_cast<int32>(NewValue));
-        //@캐시 값 업데이트
+        //@중복 업데이트 방지
+        if (FMath::IsNearlyEqual(LastManaValue, NewValue, 0.01f))
+        {
+            return;
+        }
+
+        UE_LOGFMT(LogStatusUI, Log, "Mana 어트리뷰트 변경: {0}", FString::FromInt(static_cast<int32>(NewValue)));
+
+        //@✅ SetCurrentMana → SetFilledCount로 변경
+        ManaDotGaugeRef->SetFilledCount(static_cast<int32>(NewValue));
+
         LastManaValue = NewValue;
     }
 }

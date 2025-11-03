@@ -1,9 +1,5 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "DotGaugeUnit.h"
 #include "Logging/StructuredLog.h"
-
 #include "Components/Image.h"
 
 DEFINE_LOG_CATEGORY(LogDotGaugeUnit)
@@ -13,7 +9,7 @@ DEFINE_LOG_CATEGORY(LogDotGaugeUnit)
 UDotGaugeUnit::UDotGaugeUnit(const FObjectInitializer& ObjectInitializer)
     : Super(ObjectInitializer)
 {
-    bIsFilled = true;
+    bIsFilled = false;
     bIsActive = false;
 }
 
@@ -28,7 +24,7 @@ void UDotGaugeUnit::NativeOnInitialized()
         return;
     }
 
-    //@Texutr2D
+    //@Texture2D
     if (!DotGaugeUnitInformation.BackgroundImageTexture || !DotGaugeUnitInformation.FillImageTexture)
     {
         UE_LOGFMT(LogDotGaugeUnit, Warning, "텍스처가 유효하지 않습니다.");
@@ -37,8 +33,13 @@ void UDotGaugeUnit::NativeOnInitialized()
 
     //@BG Image
     BackgroundImage->SetBrushFromTexture(DotGaugeUnitInformation.BackgroundImageTexture);
+
     //@Fill Image
     FillImage->SetBrushFromTexture(DotGaugeUnitInformation.FillImageTexture);
+    FillImage->SetVisibility(ESlateVisibility::Collapsed);  // ✅ 초기에 숨김
+
+    //@초기 상태
+    bIsFilled = false;
 
     //@Deactivate
     DeactivateDotGaugeUnit();
@@ -51,45 +52,69 @@ void UDotGaugeUnit::NativeOnInitialized()
 #pragma region Property or Subwidgets or Infos...etc
 void UDotGaugeUnit::ActivateDotGaugeUnit_Implementation()
 {
-    //@Visibility
+    //@Visibility 설정
     SetVisibility(ESlateVisibility::HitTestInvisible);
 
+    //@상태 동기화
+    bIsActive = true;
+
     //@TODO: Animation 추가
-    SetIsActive(true);
+
+    UE_LOGFMT(LogDotGaugeUnit, Log, "게이지 유닛 활성화됨");
 }
 
 void UDotGaugeUnit::DeactivateDotGaugeUnit_Implementation()
 {
-    //@Visibility
+    //@Visibility 설정
     SetVisibility(ESlateVisibility::Collapsed);
 
+    //@상태 동기화
+    bIsActive = false;
+    bIsFilled = false;  // 비활성화 시 Filled 상태도 초기화
+
+    //@Fill Image도 숨김
+    if (FillImage)
+    {
+        FillImage->SetVisibility(ESlateVisibility::Collapsed);
+    }
+
     //@TODO: Animation 추가
-    SetIsActive(false);
+
+    UE_LOGFMT(LogDotGaugeUnit, Log, "게이지 유닛 비활성화됨");
 }
 
 void UDotGaugeUnit::UpdateDotGaugeUnit_Implementation(bool bFilled)
 {
-    //@bFilled
+    //@이미 같은 상태면 무시
     if (bIsFilled == bFilled)
     {
         return;
     }
 
-    //@Fill Image
+    //@Fill Image 체크
     if (!FillImage)
     {
         UE_LOGFMT(LogDotGaugeUnit, Warning, "채우기 이미지가 유효하지 않습니다.");
         return;
     }
 
-    //@bIsFilled
+    //@Active 상태가 아니면 업데이트 불가
+    if (!bIsActive)
+    {
+        UE_LOGFMT(LogDotGaugeUnit, Warning, "비활성화 상태에서는 Filled 상태를 변경할 수 없습니다.");
+        return;
+    }
+
+    //@상태 업데이트
     bIsFilled = bFilled;
-    //@Set Visibility
+
+    //@Visibility 설정
     FillImage->SetVisibility(bIsFilled ? ESlateVisibility::HitTestInvisible : ESlateVisibility::Collapsed);
 
-    UE_LOGFMT(LogDotGaugeUnit, Log, "게이지 유닛 상태가 업데이트 되었습니다. 채워짐: {0}", bIsFilled);
-}
+    //@TODO: Animation 추가
 
+    UE_LOGFMT(LogDotGaugeUnit, Log, "게이지 유닛 상태 업데이트됨. Filled: {0}", bIsFilled);
+}
 #pragma endregion
 
 //@Delegates

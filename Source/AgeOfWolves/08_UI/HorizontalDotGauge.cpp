@@ -6,15 +6,15 @@
 
 #include "08_UI/DotGaugeUnit.h"
 
-DEFINE_LOG_CATEGORY(LogHorizontalDotGaguge)
+DEFINE_LOG_CATEGORY(LogHorizontalDotGauge)
 
 //@Defualt Setting
 #pragma region Default Setting
 UHorizontalDotGauge::UHorizontalDotGauge(const FObjectInitializer& ObjectInitializer)
-	:Super(ObjectInitializer)
+    :Super(ObjectInitializer)
 {
-	HorizontalDotGaugeBox = nullptr;
-	DotGaugeUnits.Empty();
+    HorizontalDotGaugeBox = nullptr;
+    DotGaugeUnits.Empty();
 
     MaxUnitCount = 0;
     FilledUnitCount = 0;
@@ -22,7 +22,7 @@ UHorizontalDotGauge::UHorizontalDotGauge(const FObjectInitializer& ObjectInitial
 
 void UHorizontalDotGauge::NativeOnInitialized()
 {
-	Super::NativeOnInitialized();
+    Super::NativeOnInitialized();
 }
 
 void UHorizontalDotGauge::InitializeHorizontalDotGauge()
@@ -39,24 +39,23 @@ void UHorizontalDotGauge::InitializeHorizontalDotGauge()
 #pragma region Property or Subwidgets or Infos...etc
 void UHorizontalDotGauge::CreateDotGaugeUnits()
 {
-
     if (!HorizontalDotGaugeBox || !DotGaugeUnitClass)
     {
-        UE_LOGFMT(LogHorizontalDotGaguge, Warning, "HorizontalDotGaugeBox 또는 DotGaugeUnitClass가 유효하지 않습니다.");
+        UE_LOGFMT(LogHorizontalDotGauge, Warning, "HorizontalDotGaugeBox 또는 DotGaugeUnitClass가 유효하지 않습니다.");
         return;
     }
 
-    //@Create Widget
+    //@Create Widget (풀 크기만큼 미리 생성)
     for (int32 i = 0; i < GaugeSettings.MaxCount; ++i)
     {
         UDotGaugeUnit* NewUnit = CreateWidget<UDotGaugeUnit>(this, DotGaugeUnitClass);
         if (!NewUnit)
         {
-            UE_LOGFMT(LogHorizontalDotGaguge, Error, "DotGaugeUnit 생성 실패: {0}번째", i);
+            UE_LOGFMT(LogHorizontalDotGauge, Error, "DotGaugeUnit 생성 실패: {0}번째", i);
             continue;
         }
 
-        // 마지막 위치에 추가하여 새로운 유닛이 오른쪽에 추가되도록 함
+        //@HorizontalBox에 추가
         UHorizontalBoxSlot* GaugeUnit = HorizontalDotGaugeBox->AddChildToHorizontalBox(NewUnit);
         if (GaugeUnit)
         {
@@ -65,112 +64,138 @@ void UHorizontalDotGauge::CreateDotGaugeUnits()
             GaugeUnit->SetVerticalAlignment(VAlign_Fill);
         }
 
-        // 배열에도 추가
+        //@배열에 추가
         DotGaugeUnits.Add(NewUnit);
     }
 
-    UE_LOGFMT(LogHorizontalDotGaguge, Log, "게이지 초기화 완료. 총 {0}개의 유닛이 생성됨", DotGaugeUnits.Num());
+    //@초기 상태: 모든 유닛 비활성화
+    MaxUnitCount = 0;
+    FilledUnitCount = 0;
+
+    UE_LOGFMT(LogHorizontalDotGauge, Log, "게이지 초기화 완료. 총 {0}개의 유닛이 생성됨 (비활성 상태)", DotGaugeUnits.Num());
 }
 
-void UHorizontalDotGauge::UpdateFilledCount(int32 Count)
+void UHorizontalDotGauge::UpdateGauge(int32 FilledCount, int32 MaxCount)
+{
+    //@MaxCount 먼저 설정 (게이지 슬롯 개수)
+    SetMaxCount(MaxCount);
+
+    //@FilledCount 설정 (채우기)
+    SetFilledCount(FilledCount);
+
+    UE_LOGFMT(LogHorizontalDotGauge, Log, "게이지 업데이트 완료. Filled: {0}/{1}", FilledUnitCount, MaxUnitCount);
+}
+
+void UHorizontalDotGauge::SetMaxCount(int32 MaxCount)
 {
     if (!HorizontalDotGaugeBox)
     {
-        UE_LOGFMT(LogHorizontalDotGaguge, Warning, "HorizontalDotGaugeBox가 유효하지 않습니다.");
+        UE_LOGFMT(LogHorizontalDotGauge, Warning, "HorizontalDotGaugeBox가 유효하지 않습니다.");
         return;
     }
 
-    //@FilledCount와 목표 Count의 차이
-    int32 Difference = Count - FilledUnitCount;
-    int32 RemainingDifference = FMath::Abs(Difference);
+    //@범위 체크
+    MaxCount = FMath::Clamp(MaxCount, 0, GaugeSettings.MaxCount);
 
-    //@Count가 현재보다 작음 (Unfill 필요)
-    if (Difference < 0)
+    if (MaxCount == MaxUnitCount)
     {
-        //@정순으로 순회하며 Filled Unit 찾아서 Unfill
-        for (int32 i = DotGaugeUnits.Num() - 1; i >= 0 && RemainingDifference > 0; --i)
-        {
-            if (UDotGaugeUnit* Unit = DotGaugeUnits[i])
-            {
-                if (Unit->IsActive() && Unit->IsFilled())
-                {
-                    Unit->UpdateDotGaugeUnit(false);
-                    FilledUnitCount--;
-                    RemainingDifference--;
-                    UE_LOGFMT(LogHorizontalDotGaguge, Log, "게이지 유닛 Unfill: {0}번째, 남은 차이: {1}", i, RemainingDifference);
-                }
-            }
-        }
-    }
-    //@Count가 현재보다 큼 (Fill 필요)
-    else if (Difference > 0)
-    {
-        //@MaxCount 초과 체크
-        if (Count > MaxUnitCount)
-        {
-            UpdateMaxCount(Count);
-        }
-
-        //@역순으로 순회하며 Unfilled Unit 찾아서 Fill
-        for (int32 i = 0; i < DotGaugeUnits.Num() && RemainingDifference > 0; ++i)
-        {
-            if (UDotGaugeUnit* Unit = DotGaugeUnits[i])
-            {
-                if (Unit->IsActive() && !Unit->IsFilled())
-                {
-                    Unit->UpdateDotGaugeUnit(true);
-                    FilledUnitCount++;
-                    RemainingDifference--;
-                    UE_LOGFMT(LogHorizontalDotGaguge, Log, "게이지 유닛 Fill: {0}번째, 남은 차이: {1}", i, RemainingDifference);
-                }
-            }
-        }
+        UE_LOGFMT(LogHorizontalDotGauge, Log, "MaxCount가 이미 {0}입니다. 변경 없음.", MaxUnitCount);
+        return;
     }
 
-    UE_LOGFMT(LogHorizontalDotGaguge, Log, "Filled Count 업데이트 완료. 현재 Filled Unit: {0}/{1}, 목표 Count: {2}, 처리된 변경: {3}",
-        FilledUnitCount, MaxUnitCount, Count, FMath::Abs(Difference) - RemainingDifference);
+    //@MaxCount 증가 (게이지 슬롯 추가)
+    if (MaxCount > MaxUnitCount)
+    {
+        int32 DifferenceCount = MaxCount - MaxUnitCount;
+        ActivateUnits(DifferenceCount);
+    }
+    //@MaxCount 감소 (게이지 슬롯 제거)
+    else if (MaxCount < MaxUnitCount)
+    {
+        int32 DifferenceCount = MaxUnitCount - MaxCount;
+        DeactivateUnits(DifferenceCount);
+    }
+
+    //@MaxUnitCount 업데이트
+    MaxUnitCount = MaxCount;
+
+    UE_LOGFMT(LogHorizontalDotGauge, Log, "최대 개수 설정 완료. MaxCount: {0}, FilledCount: {1}", MaxUnitCount, FilledUnitCount);
 }
 
-void UHorizontalDotGauge::UpdateMaxCount(int32 NewMaxCount)
+void UHorizontalDotGauge::SetFilledCount(int32 FilledCount)
 {
-    //@New Max Count, Horizontal Dot Gauge Box 체크
-    if (NewMaxCount <= 0 || !HorizontalDotGaugeBox)
+    if (!HorizontalDotGaugeBox)
     {
-        UE_LOGFMT(LogHorizontalDotGaguge, Warning, "유효하지 않은 NewMaxCount 값이거나 HorizontalDotGaugeBox가 유효하지 않습니다.");
+        UE_LOGFMT(LogHorizontalDotGauge, Warning, "HorizontalDotGaugeBox가 유효하지 않습니다.");
         return;
     }
 
-    NewMaxCount = FMath::Clamp(NewMaxCount, 0, GaugeSettings.MaxCount);
+    //@범위 체크 (MaxUnitCount 이하로 제한)
+    FilledCount = FMath::Clamp(FilledCount, 0, MaxUnitCount);
 
-    //@MaxCount 증가
-    if (NewMaxCount > MaxUnitCount)
+    //@차이 계산
+    int32 Difference = FilledCount - FilledUnitCount;
+
+    if (Difference < 0)
     {
-        int32 DifferenceCount = NewMaxCount - MaxUnitCount;
-        int32 ActivatedCount = 0;
+        //@감소 (Unfill)
+        UnfillUnits(FMath::Abs(Difference));
+    }
+    else if (Difference > 0)
+    {
+        //@증가 (Fill)
+        FillUnits(Difference);
+    }
 
-        //@MaxUnitCount 인덱스부터 차례대로 활성화
-        for (int32 i = 0; i < DifferenceCount && (MaxUnitCount + i) < DotGaugeUnits.Num(); ++i)
+    UE_LOGFMT(LogHorizontalDotGauge, Log, "채워진 개수 설정 완료. FilledCount: {0}/{1}", FilledUnitCount, MaxUnitCount);
+}
+
+void UHorizontalDotGauge::ActivateUnits(int32 Count)
+{
+    if (Count <= 0) return;
+
+    int32 ActivatedCount = 0;
+
+    if (GaugeSettings.bRightToLeft)
+    {
+        //@오른쪽에서 왼쪽으로 활성화 (뒤에서부터)
+        for (int32 i = 0; i < Count && (MaxUnitCount + i) < DotGaugeUnits.Num(); ++i)
         {
-            if (UDotGaugeUnit* UnitToActivate = DotGaugeUnits[MaxUnitCount + i])
+            int32 Index = MaxUnitCount + i;
+            if (UDotGaugeUnit* Unit = DotGaugeUnits[Index])
             {
-                UnitToActivate->ActivateDotGaugeUnit();
-                UnitToActivate->UpdateDotGaugeUnit(true);
+                Unit->ActivateDotGaugeUnit();
                 ActivatedCount++;
-                UE_LOGFMT(LogHorizontalDotGaguge, Log, "게이지 유닛 활성화 및 Fill: {0}번째", MaxUnitCount + i);
+                UE_LOGFMT(LogHorizontalDotGauge, Log, "게이지 유닛 활성화 (RightToLeft): {0}번째", Index);
             }
         }
-
-        //@Filled Count 업데이트
-        FilledUnitCount += ActivatedCount;
     }
-    //@MaxCount 감소
-    else if (NewMaxCount < MaxUnitCount)
+    else
     {
-        int32 DifferenceCount = MaxUnitCount - NewMaxCount;
-        int32 FilledUnitsToRemove = 0;
+        //@왼쪽에서 오른쪽으로 활성화 (앞에서부터)
+        for (int32 i = 0; i < Count && (MaxUnitCount + i) < DotGaugeUnits.Num(); ++i)
+        {
+            int32 Index = MaxUnitCount + i;
+            if (UDotGaugeUnit* Unit = DotGaugeUnits[Index])
+            {
+                Unit->ActivateDotGaugeUnit();
+                ActivatedCount++;
+                UE_LOGFMT(LogHorizontalDotGauge, Log, "게이지 유닛 활성화 (LeftToRight): {0}번째", Index);
+            }
+        }
+    }
+}
 
-        //@제거할 Filled Unit 수 계산
-        for (int32 i = 0; i < DifferenceCount && i < DotGaugeUnits.Num(); ++i)
+void UHorizontalDotGauge::DeactivateUnits(int32 Count)
+{
+    if (Count <= 0) return;
+
+    int32 FilledUnitsToRemove = 0;
+
+    if (GaugeSettings.bRightToLeft)
+    {
+        //@오른쪽에서 왼쪽으로 비활성화 (앞에서부터 제거)
+        for (int32 i = 0; i < Count && i < MaxUnitCount; ++i)
         {
             if (UDotGaugeUnit* Unit = DotGaugeUnits[i])
             {
@@ -178,30 +203,114 @@ void UHorizontalDotGauge::UpdateMaxCount(int32 NewMaxCount)
                 {
                     FilledUnitsToRemove++;
                 }
+                Unit->DeactivateDotGaugeUnit();
+                UE_LOGFMT(LogHorizontalDotGauge, Log, "게이지 유닛 비활성화 (RightToLeft): {0}번째", i);
             }
         }
-
-        //@FilledCount가 음수가 되지 않도록 보정
-        FilledUnitsToRemove = FMath::Min(FilledUnitsToRemove, FilledUnitCount);
-        FilledUnitCount = FMath::Max(0, FilledUnitCount - FilledUnitsToRemove);
-
-        //@첫 번째 인덱스부터 차례대로 비활성화
-        for (int32 i = 0; i < DifferenceCount && i < DotGaugeUnits.Num(); ++i)
+    }
+    else
+    {
+        //@왼쪽에서 오른쪽으로 비활성화 (뒤에서부터 제거)
+        for (int32 i = MaxUnitCount - 1; i >= 0 && (MaxUnitCount - i) <= Count; --i)
         {
-            if (UDotGaugeUnit* UnitToDeactivate = DotGaugeUnits[i])
+            if (UDotGaugeUnit* Unit = DotGaugeUnits[i])
             {
-                UnitToDeactivate->DeactivateDotGaugeUnit();
-                UE_LOGFMT(LogHorizontalDotGaguge, Log, "게이지 유닛 비활성화: {0}번째, Filled상태였음: {1}",
-                    i, UnitToDeactivate->IsFilled());
+                if (Unit->IsFilled())
+                {
+                    FilledUnitsToRemove++;
+                }
+                Unit->DeactivateDotGaugeUnit();
+                UE_LOGFMT(LogHorizontalDotGauge, Log, "게이지 유닛 비활성화 (LeftToRight): {0}번째", i);
             }
         }
     }
 
-    //@MaxCount 업데이트
-    MaxUnitCount = NewMaxCount;
+    //@제거된 Filled 유닛 수만큼 FilledCount 감소
+    FilledUnitCount = FMath::Max(0, FilledUnitCount - FilledUnitsToRemove);
+}
 
-    UE_LOGFMT(LogHorizontalDotGaguge, Log, "게이지 최대 개수 업데이트 완료. Active Unit: {0}, Filled Unit: {1}",
-        MaxUnitCount, FilledUnitCount);
+void UHorizontalDotGauge::FillUnits(int32 CountToFill)
+{
+    if (CountToFill <= 0) return;
+
+    int32 FilledCount = 0;
+
+    if (GaugeSettings.bRightToLeft)
+    {
+        //@오른쪽에서 왼쪽으로 채우기 (역순)
+        for (int32 i = MaxUnitCount - 1; i >= 0 && FilledCount < CountToFill; --i)
+        {
+            if (UDotGaugeUnit* Unit = DotGaugeUnits[i])
+            {
+                if (Unit->IsActive() && !Unit->IsFilled())
+                {
+                    Unit->UpdateDotGaugeUnit(true);
+                    FilledUnitCount++;
+                    FilledCount++;
+                    UE_LOGFMT(LogHorizontalDotGauge, Log, "게이지 유닛 Fill (RightToLeft): {0}번째", i);
+                }
+            }
+        }
+    }
+    else
+    {
+        //@왼쪽에서 오른쪽으로 채우기 (정순)
+        for (int32 i = 0; i < MaxUnitCount && FilledCount < CountToFill; ++i)
+        {
+            if (UDotGaugeUnit* Unit = DotGaugeUnits[i])
+            {
+                if (Unit->IsActive() && !Unit->IsFilled())
+                {
+                    Unit->UpdateDotGaugeUnit(true);
+                    FilledUnitCount++;
+                    FilledCount++;
+                    UE_LOGFMT(LogHorizontalDotGauge, Log, "게이지 유닛 Fill (LeftToRight): {0}번째", i);
+                }
+            }
+        }
+    }
+}
+
+void UHorizontalDotGauge::UnfillUnits(int32 CountToUnfill)
+{
+    if (CountToUnfill <= 0) return;
+
+    int32 UnfilledCount = 0;
+
+    if (GaugeSettings.bRightToLeft)
+    {
+        //@오른쪽에서 왼쪽으로 비우기 (정순으로 찾기)
+        for (int32 i = 0; i < MaxUnitCount && UnfilledCount < CountToUnfill; ++i)
+        {
+            if (UDotGaugeUnit* Unit = DotGaugeUnits[i])
+            {
+                if (Unit->IsActive() && Unit->IsFilled())
+                {
+                    Unit->UpdateDotGaugeUnit(false);
+                    FilledUnitCount--;
+                    UnfilledCount++;
+                    UE_LOGFMT(LogHorizontalDotGauge, Log, "게이지 유닛 Unfill (RightToLeft): {0}번째", i);
+                }
+            }
+        }
+    }
+    else
+    {
+        //@왼쪽에서 오른쪽으로 비우기 (역순으로 찾기)
+        for (int32 i = MaxUnitCount - 1; i >= 0 && UnfilledCount < CountToUnfill; --i)
+        {
+            if (UDotGaugeUnit* Unit = DotGaugeUnits[i])
+            {
+                if (Unit->IsActive() && Unit->IsFilled())
+                {
+                    Unit->UpdateDotGaugeUnit(false);
+                    FilledUnitCount--;
+                    UnfilledCount++;
+                    UE_LOGFMT(LogHorizontalDotGauge, Log, "게이지 유닛 Unfill (LeftToRight): {0}번째", i);
+                }
+            }
+        }
+    }
 }
 #pragma endregion
 
