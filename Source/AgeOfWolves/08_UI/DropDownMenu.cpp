@@ -1,4 +1,3 @@
-
 #include "DropDownMenu.h"
 #include "Logging/StructuredLog.h"
 
@@ -7,6 +6,7 @@
 #include "Components/VerticalBoxSlot.h"
 
 #include "08_UI/DropDownMenuOption.h"
+#include "08_UI/CustomButton.h"
 
 DEFINE_LOG_CATEGORY(LogDropDownMenu)
 
@@ -16,7 +16,7 @@ UDropDownMenu::UDropDownMenu(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
 {
     DropDownMenuOptionBox = nullptr;
-    CurrentSelectedOptionName = FName();
+    CurrentSelectedOption = nullptr;  // [리팩토링] 포인터로 변경
 }
 
 void UDropDownMenu::NativeOnInitialized()
@@ -66,7 +66,7 @@ FReply UDropDownMenu::NativeOnFocusReceived(const FGeometry& InGeometry, const F
 }
 
 void UDropDownMenu::NativeOnFocusLost(const FFocusEvent& InFocusEvent)
-{   
+{
     //@Mouse를 통한 포커스 소실은 Drop Down Menu를 닫습니다.
     if (InFocusEvent.GetCause() == EFocusCause::Mouse)
     {
@@ -136,19 +136,18 @@ void UDropDownMenu::ResetDropDownMenu()
 {
     //@TODO: Drop Donw Menu의 초기 설정에 필요한 동작들...
 
-    //@이전에 선택된 옴션 버튼의 선택 취소 이벤트
-    if (!CurrentSelectedOptionName.IsNone())
+    //@[리팩토링] 포인터로 직접 취소 (O(1))
+    if (CurrentSelectedOption)
     {
-        //@이전 선택된 옵션의 버튼 선택 취소 이벤트
-        FName PrevSelectedOption = CurrentSelectedOptionName;
-        CancelDropDownMenuOptionButton.Broadcast(PrevSelectedOption);
+        UCustomButton* Button = CurrentSelectedOption->GetDropDownMenuOptionButton();
+        if (Button)
+        {
+            Button->CancelSelectedButton();
+            UE_LOGFMT(LogDropDownMenu, Log, "이전에 선택된 옵션 취소: {0}", CurrentSelectedOption->GetOptionName().ToString());
+        }
 
-        //@Current Selected Option
-        CurrentSelectedOptionName = FName();
-
-        UE_LOGFMT(LogDropDownMenu, Log, "이전에 선택된 옵션 취소: {0}", PrevSelectedOption.ToString());
+        CurrentSelectedOption = nullptr;
     }
-
 }
 
 void UDropDownMenu::CreateDropDownMenuOptions()
@@ -163,6 +162,10 @@ void UDropDownMenu::CreateDropDownMenuOptions()
     //@기존 옵션 제거
     DropDownMenuOptionBox->ClearChildren();
 
+    //@[리팩토링] 맵 초기화
+    OptionMap.Empty();
+    OptionInfoMap.Empty();
+
     //@전체 높이 계산을 위한 변수
     float TotalHeight = 0.f;
 
@@ -170,8 +173,10 @@ void UDropDownMenu::CreateDropDownMenuOptions()
     int32 OptionCount = OptionInformations.Num();
     for (int32 i = 0; i < OptionCount; ++i)
     {
+        const FDropDownMenuOptionInformation& Info = OptionInformations[i];
+
         //@Drop Down Menu Option의 블루프린트 클래스
-        TSubclassOf<UDropDownMenuOption> OptionClass = OptionInformations[i].GetOptionClass();
+        TSubclassOf<UDropDownMenuOption> OptionClass = Info.GetOptionClass();
         if (!OptionClass)
         {
             UE_LOGFMT(LogDropDownMenu, Error, "Option {0}의 OptionClass가 설정되지 않았습니다.", i);
@@ -186,18 +191,19 @@ void UDropDownMenu::CreateDropDownMenuOptions()
         }
 
         //@Set Option Name
-        Option->SetOptionName(FText::FromName(OptionInformations[i].GetOptionName()));
+        FName OptionName = Info.GetOptionName();
+        Option->SetOptionName(FText::FromName(OptionName));
         //@Set Option Hot Key Text
-        Option->SetDropDownMenuOptionHotKeyText(OptionInformations[i].GetOptionHotKeyText());
+        Option->SetDropDownMenuOptionHotKeyText(Info.GetOptionHotKeyText());
 
         //@비동기 초기화 이벤트
         RequestStartInitByDropDownMenu.AddUFunction(Option, "InitializeDropDownMenuOption");
 
-        //@Option Button 선택 취소 이벤트
+        //@Option Button 선택 취소 이벤트 (하위 호환성 유지)
         CancelDropDownMenuOptionButton.AddUFunction(Option, "DropDownMenuOptionButtonCanceledNotified");
 
         //@내부 바인딩 (마지막 옵션인 경우에만 DropDownMenuOptionInitFinished 이벤트 바인딩)
-        InternalBindToOptions(Option, OptionInformations[i].GetOptionName(), i == OptionCount - 1);
+        InternalBindToOptions(Option, OptionName, i == OptionCount - 1);
 
         //@AddChildToVerticalBox
         UVerticalBoxSlot* VerticalBoxSlot = DropDownMenuOptionBox->AddChildToVerticalBox(Option);
@@ -221,10 +227,14 @@ void UDropDownMenu::CreateDropDownMenuOptions()
             TotalHeight += Option->GetOptionHeight() + TopPadding + BottomPadding;
         }
 
-        //@DropDownMenuOptions
+        //@[리팩토링] 맵에 추가 (O(1) 접근을 위해)
+        OptionMap.Add(OptionName, Option);
+        OptionInfoMap.Add(OptionName, Info);
+
+        //@DropDownMenuOptions (기존 배열도 유지)
         DropDownMenuOptions.Add(Option);
 
-        UE_LOGFMT(LogDropDownMenu, Log, "DropDownMenuOption({0})이 생성되고 이벤트가 바인딩되었습니다.", OptionInformations[i].GetOptionName().ToString());
+        UE_LOGFMT(LogDropDownMenu, Log, "DropDownMenuOption({0})이 생성되고 이벤트가 바인딩되었습니다.", OptionName.ToString());
     }
 
     //@Brush.X
@@ -269,7 +279,8 @@ void UDropDownMenu::CloseDropDownMenu_Implementation()
 //@Callbacks
 #pragma region Callbacks
 void UDropDownMenu::OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType)
-{}
+{
+}
 
 void UDropDownMenu::OnDropDownMenuOptionInitFinished()
 {
@@ -284,36 +295,34 @@ void UDropDownMenu::OnDropDownMenuOptionSelected_Implementation(FName SelectedOp
 {
     UE_LOGFMT(LogDropDownMenu, Log, "드롭다운 메뉴 옵션 선택됨: {0}", SelectedOptionName.ToString());
 
-    //@이미 선택된 옵션을 한번 더 선택했을 경우, 무시
-    if (CurrentSelectedOptionName == SelectedOptionName)
-    {
-        UE_LOGFMT(LogDropDownMenu, Log, "이미 선택된 옵션입니다. 처리를 무시합니다: {0}", SelectedOptionName.ToString());
-        return;
-    }
-
-    //@이전에 선택된 옴션 버튼의 선택 취소 이벤트
-    if (!CurrentSelectedOptionName.IsNone())
-    {
-        FName PrevSelectedOption = CurrentSelectedOptionName;
-        CancelDropDownMenuOptionButton.Broadcast(PrevSelectedOption);
-
-        UE_LOGFMT(LogDropDownMenu, Log, "이전에 선택된 옵션 취소: {0}", PrevSelectedOption.ToString());
-    }
-
-    //@Option Informations
-    FDropDownMenuOptionInformation* SelectedOptionInformation = OptionInformations.FindByPredicate([&](const FDropDownMenuOptionInformation& Option) {
-        return Option.GetOptionName() == SelectedOptionName;
-        });
-
-    //@FDropDownMenuOptionInformation
-    if (!SelectedOptionInformation)
+    //@[리팩토링] TMap으로 O(1) 조회
+    UDropDownMenuOption* NewSelectedOption = OptionMap.FindRef(SelectedOptionName);
+    if (!NewSelectedOption)
     {
         UE_LOGFMT(LogDropDownMenu, Error, "선택된 옵션을 찾을 수 없습니다: {0}", SelectedOptionName.ToString());
         return;
     }
 
-    //@Current Selected Option
-    CurrentSelectedOptionName = SelectedOptionName;
+    //@[리팩토링] 포인터로 직접 비교
+    if (CurrentSelectedOption == NewSelectedOption)
+    {
+        UE_LOGFMT(LogDropDownMenu, Log, "이미 선택된 옵션입니다. 처리를 무시합니다: {0}", SelectedOptionName.ToString());
+        return;
+    }
+
+    //@[리팩토링] 이전 옵션을 포인터로 직접 취소 (O(1))
+    if (CurrentSelectedOption)
+    {
+        UCustomButton* PrevButton = CurrentSelectedOption->GetDropDownMenuOptionButton();
+        if (PrevButton)
+        {
+            PrevButton->CancelSelectedButton();
+            UE_LOGFMT(LogDropDownMenu, Log, "이전에 선택된 옵션 취소: {0}", CurrentSelectedOption->GetOptionName().ToString());
+        }
+    }
+
+    //@Current Selected Option 업데이트
+    CurrentSelectedOption = NewSelectedOption;
     UE_LOGFMT(LogDropDownMenu, Log, "새로운 옵션이 선택됨: {0}", SelectedOptionName.ToString());
 
     //@옵션 버튼 선택 이벤트 호출
@@ -331,25 +340,20 @@ UDropDownMenuOption* UDropDownMenu::GetFirstDropDownMenuOption() const
 
 UDropDownMenuOption* UDropDownMenu::GetDropDownMenuOptionByName(const FName& OptionName) const
 {
-    const UDropDownMenuOption* const* FoundOptionPtr = DropDownMenuOptions.FindByPredicate([&OptionName](const UDropDownMenuOption* Option) {
-        return Option && Option->GetOptionName() == OptionName;
-        });
-
-    return FoundOptionPtr ? const_cast<UDropDownMenuOption*>(*FoundOptionPtr) : nullptr;
+    //@[리팩토링] TMap으로 O(1) 조회
+    return OptionMap.FindRef(OptionName);
 }
 
 FName UDropDownMenu::GetOptionName() const
 {
-    return CurrentSelectedOptionName;
+    //@[리팩토링] 포인터에서 직접 가져오기
+    return CurrentSelectedOption ? CurrentSelectedOption->GetOptionName() : NAME_None;
 }
 
 const FText UDropDownMenu::GetConfirmationMenuDialogueText(const FName& Name) const
 {
-    const FDropDownMenuOptionInformation* FoundOption = OptionInformations.FindByPredicate([&Name](const FDropDownMenuOptionInformation& Option) {
-        return Option.CompareOptionName(Name);
-        });
-
-    if (FoundOption)
+    //@[리팩토링] TMap으로 O(1) 조회
+    if (const FDropDownMenuOptionInformation* FoundOption = OptionInfoMap.Find(Name))
     {
         return FoundOption->GetConfirmationMenuDialogueText();
     }

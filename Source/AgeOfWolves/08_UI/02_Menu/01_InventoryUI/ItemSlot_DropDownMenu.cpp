@@ -1,7 +1,3 @@
-
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "ItemSlot_DropDownMenu.h"
 #include "Logging/StructuredLog.h"
 
@@ -16,7 +12,7 @@ DEFINE_LOG_CATEGORY(LogItemSlot_DropDownMenu)
 UItemSlot_DropDownMenu::UItemSlot_DropDownMenu(const FObjectInitializer& ObjectInitializer)
     :Super(ObjectInitializer)
 {
-    CurrentHoveredOptionName = FName();
+    CurrentHoveredOption = nullptr;  // [리팩토링] 포인터로 변경
 }
 
 void UItemSlot_DropDownMenu::NativeOnInitialized()
@@ -73,7 +69,11 @@ FReply UItemSlot_DropDownMenu::NativeOnKeyDown(const FGeometry& InGeometry, cons
     //@옵션 선택
     else if (Key == EKeys::Enter)
     {
-        SelectOptionByHotKey(CurrentHoveredOptionName);
+        //@[리팩토링] 포인터에서 직접 이름 가져오기
+        if (CurrentHoveredOption)
+        {
+            SelectOptionByHotKey(CurrentHoveredOption->GetOptionName());
+        }
 
         return FReply::Handled();
     }
@@ -134,13 +134,17 @@ void UItemSlot_DropDownMenu::ResetDropDownMenu()
 {
     Super::ResetDropDownMenu();
 
-    //@Prev Hovered Option의 선택/호버 상태 취소
-    if (!CurrentHoveredOptionName.IsNone())
+    //@[리팩토링] 이전 Hovered Option을 포인터로 직접 취소 (O(1))
+    if (CurrentHoveredOption)
     {
-        FName PrevHoveredOption = CurrentHoveredOptionName;
-        CancelOptionButton.Broadcast(PrevHoveredOption);
-        CurrentHoveredOptionName = FName();
-        UE_LOGFMT(LogDropDownMenu, Log, "이전에 선택된 옵션 취소: {0}", PrevHoveredOption.ToString());
+        UCustomButton* Button = CurrentHoveredOption->GetDropDownMenuOptionButton();
+        if (Button)
+        {
+            Button->CancelSelectedButton();
+            UE_LOGFMT(LogDropDownMenu, Log, "이전에 호버된 옵션 취소: {0}", CurrentHoveredOption->GetOptionName().ToString());
+        }
+
+        CurrentHoveredOption = nullptr;
     }
 
     //@첫 번째 Drop Down Menu Option
@@ -162,13 +166,13 @@ void UItemSlot_DropDownMenu::ResetDropDownMenu()
     //@Set Button Hovered By Keyboard
     if (!Button->SetButtonHoveredByKeyboard())
     {
-        UE_LOGFMT(LogItemSlot_DropDownMenu, Warning, "{0} 옵션을 Hover 상태로 설정하는 데 실패했습니다.", FirstDropDownMenuOption->GetOptionName());
+        UE_LOGFMT(LogItemSlot_DropDownMenu, Warning, "{0} 옵션을 Hover 상태로 설정하는 데 실패했습니다.", FirstDropDownMenuOption->GetOptionName().ToString());
         return;
     }
 
-    //@Current Hovered Option Name
-    CurrentHoveredOptionName = FirstDropDownMenuOption->GetOptionName();
-    UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "{0} 옵션이 Hover 상태로 설정되었습니다.", CurrentHoveredOptionName.ToString());
+    //@[리팩토링] Current Hovered Option을 포인터로 직접 설정
+    CurrentHoveredOption = FirstDropDownMenuOption;
+    UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "{0} 옵션이 Hover 상태로 설정되었습니다.", CurrentHoveredOption->GetOptionName().ToString());
 
 }
 
@@ -176,7 +180,7 @@ void UItemSlot_DropDownMenu::CreateDropDownMenuOptions()
 {
     Super::CreateDropDownMenuOptions();
 
-    //@바인딩
+    //@바인딩 - 부모 클래스의 CancelDropDownMenuOptionButton 델리게이트 사용
     for (auto Option : DropDownMenuOptions)
     {
         if (!Option)
@@ -184,7 +188,7 @@ void UItemSlot_DropDownMenu::CreateDropDownMenuOptions()
             continue;
         }
 
-        CancelOptionButton.AddUFunction(Option, "DropDownMenuOptionButtonCanceledNotified");
+        CancelDropDownMenuOptionButton.AddUFunction(Option, "DropDownMenuOptionButtonCanceledNotified");
     }
 
 }
@@ -197,18 +201,22 @@ void UItemSlot_DropDownMenu::HandleVerticalDirectionalInput(int32 Direction)
         return;
     }
 
-    //@Current Hovered Option Name
-    if (CurrentHoveredOptionName.IsNone())
+    //@[리팩토링] Current Hovered Option 확인
+    if (!CurrentHoveredOption)
     {
         return;
     }
 
     //@Current Hovered Option의 Index
-    int32 CurrentIndex = -1;
-
-    CurrentIndex = DropDownMenuOptions.IndexOfByPredicate([this](const UDropDownMenuOption* Option) {
-        return Option && Option->GetOptionName() == CurrentHoveredOptionName;
+    int32 CurrentIndex = DropDownMenuOptions.IndexOfByPredicate([this](const UDropDownMenuOption* Option) {
+        return Option == CurrentHoveredOption;
         });
+
+    if (CurrentIndex == INDEX_NONE)
+    {
+        UE_LOGFMT(LogItemSlot_DropDownMenu, Warning, "현재 호버된 옵션을 찾을 수 없습니다.");
+        return;
+    }
 
     //@다음 Option의 Index;
     int32 NewIndex = CurrentIndex + Direction;
@@ -225,7 +233,6 @@ void UItemSlot_DropDownMenu::HandleVerticalDirectionalInput(int32 Direction)
     UDropDownMenuOption* NewOption = DropDownMenuOptions[NewIndex];
     if (!NewOption)
     {
-        
         return;
     }
 
@@ -233,15 +240,16 @@ void UItemSlot_DropDownMenu::HandleVerticalDirectionalInput(int32 Direction)
     UCustomButton* Button = NewOption->GetDropDownMenuOptionButton();
     if (Button && Button->SetButtonHoveredByKeyboard())
     {
-        CurrentHoveredOptionName = NewOption->GetOptionName();
-        UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "새로운 옵션이 Hover 상태로 설정됨: {0}", *CurrentHoveredOptionName.ToString());
+        //@[리팩토링] 포인터로 직접 설정
+        CurrentHoveredOption = NewOption;
+        UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "새로운 옵션이 Hover 상태로 설정됨: {0}", CurrentHoveredOption->GetOptionName().ToString());
     }
 
 }
 
 void UItemSlot_DropDownMenu::SelectOptionByHotKey(const FName& OptionName)
 {
-    //@단축키에 대응되는 Option
+    //@[리팩토링] TMap으로 O(1) 조회
     UDropDownMenuOption* OptionToSelect = GetDropDownMenuOptionByName(OptionName);
     if (!OptionToSelect)
     {
@@ -257,10 +265,10 @@ void UItemSlot_DropDownMenu::SelectOptionByHotKey(const FName& OptionName)
         return;
     }
 
-    //@현재 Hover 된 Option과 선택하고자 하는 Option이 다르다면 이전 Hover 상태 취소
-    if (!CurrentHoveredOptionName.IsNone() && CurrentHoveredOptionName != OptionName)
+    //@[리팩토링] 현재 Hover 된 Option과 선택하고자 하는 Option이 다르다면 이전 Hover 상태 취소
+    if (CurrentHoveredOption && CurrentHoveredOption != OptionToSelect)
     {
-        CancelDropDownMenuOptionButton.Broadcast(CurrentHoveredOptionName);
+        CancelDropDownMenuOptionButton.Broadcast(CurrentHoveredOption->GetOptionName());
     }
 
     //@Set Button Selected By Keyboard
@@ -275,38 +283,31 @@ void UItemSlot_DropDownMenu::SelectOptionByHotKey(const FName& OptionName)
 
 void UItemSlot_DropDownMenu::ResetSelectedOptionToHovered()
 {
-    //@Current Selected Option Name
-    if (CurrentSelectedOptionName.IsNone())
+    //@[리팩토링] 부모 클래스의 CurrentSelectedOption 사용
+    if (!CurrentSelectedOption)
     {
         UE_LOGFMT(LogItemSlot_DropDownMenu, Warning, "현재 선택된 옵션이 없습니다.");
         return;
     }
 
-    UDropDownMenuOption* SelectedOption = GetDropDownMenuOptionByName(CurrentSelectedOptionName);
-    if (!SelectedOption)
-    {
-        UE_LOGFMT(LogItemSlot_DropDownMenu, Error, "선택된 옵션을 찾을 수 없습니다: {0}", CurrentSelectedOptionName.ToString());
-        return;
-    }
-
-    UCustomButton* Button = SelectedOption->GetDropDownMenuOptionButton();
+    UCustomButton* Button = CurrentSelectedOption->GetDropDownMenuOptionButton();
     if (!Button)
     {
-        UE_LOGFMT(LogItemSlot_DropDownMenu, Error, "선택된 옵션의 버튼을 찾을 수 없습니다: {0}", CurrentSelectedOptionName.ToString());
+        UE_LOGFMT(LogItemSlot_DropDownMenu, Error, "선택된 옵션의 버튼을 찾을 수 없습니다: {0}", CurrentSelectedOption->GetOptionName().ToString());
         return;
     }
 
-    // 현재 선택된 옵션의 상태를 취소
-    CancelOptionButton.Broadcast(CurrentSelectedOptionName);
+    //@[리팩토링] 부모 클래스의 델리게이트 사용
+    CancelDropDownMenuOptionButton.Broadcast(CurrentSelectedOption->GetOptionName());
 
     // 선택된 옵션을 Hover 상태로 다시 설정
     if (!Button->SetButtonHoveredByKeyboard())
     {
-        UE_LOGFMT(LogItemSlot_DropDownMenu, Warning, "현재 선택된 옵션을 Hover 상태로 설정하는데 실패했습니다: {0}", CurrentSelectedOptionName.ToString());
+        UE_LOGFMT(LogItemSlot_DropDownMenu, Warning, "현재 선택된 옵션을 Hover 상태로 설정하는데 실패했습니다: {0}", CurrentSelectedOption->GetOptionName().ToString());
         return;
     }
 
-    UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "현재 선택된 옵션이 Hover 상태로 재설정되었습니다: {0}", CurrentSelectedOptionName.ToString());
+    UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "현재 선택된 옵션이 Hover 상태로 재설정되었습니다: {0}", CurrentSelectedOption->GetOptionName().ToString());
 }
 #pragma endregion
 
@@ -328,7 +329,7 @@ void UItemSlot_DropDownMenu::OnUIVisibilityChanged_Implementation(ESlateVisibili
 
 void UItemSlot_DropDownMenu::OnDropDownMenuOptionButtonHovered_Implementation(FName OptionName, EInteractionMethod InteractionMethodType)
 {
-    //@호버된 Drop Down Menu Option 가져오기
+    //@[리팩토링] TMap으로 O(1) 조회
     UDropDownMenuOption* HoveredOption = GetDropDownMenuOptionByName(OptionName);
     if (!HoveredOption)
     {
@@ -336,27 +337,29 @@ void UItemSlot_DropDownMenu::OnDropDownMenuOptionButtonHovered_Implementation(FN
         return;
     }
 
-    //@현재 호버된 옵션과 새로 호버된 옵션이 같은 경우 처리 중단
-    if (!CurrentHoveredOptionName.IsNone() && CurrentHoveredOptionName == OptionName)
+    //@[리팩토링] 포인터로 직접 비교
+    if (CurrentHoveredOption == HoveredOption)
     {
         UE_LOGFMT(LogItemSlot_DropDownMenu, Verbose, "이미 호버된 옵션입니다. 처리를 무시합니다: {0}", OptionName.ToString());
         return;
     }
 
-    //@이전 호버 상태 취소
-    if (!CurrentHoveredOptionName.IsNone())
+    //@[리팩토링] 이전 호버 상태를 포인터로 직접 취소 (O(1))
+    if (CurrentHoveredOption)
     {
-        CancelOptionButton.Broadcast(CurrentHoveredOptionName);
-        UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "이전에 호버된 옵션 취소: {0}", CurrentHoveredOptionName.ToString());
+        CancelDropDownMenuOptionButton.Broadcast(CurrentHoveredOption->GetOptionName());
+        UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "이전에 호버된 옵션 취소: {0}", CurrentHoveredOption->GetOptionName().ToString());
     }
 
-    if (CurrentSelectedOptionName == OptionName)
+    //@[리팩토링] 부모 클래스의 CurrentSelectedOption과 비교
+    if (CurrentSelectedOption == HoveredOption)
     {
-        CurrentSelectedOptionName = NAME_None;
+        //@선택된 옵션을 다시 호버했을 때는 선택 상태를 해제하지 않음
+        UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "선택된 옵션을 호버했습니다: {0}", OptionName.ToString());
     }
 
-    //@새로운 호버 옵션 설정
-    CurrentHoveredOptionName = OptionName;
+    //@[리팩토링] 새로운 호버 옵션을 포인터로 직접 설정
+    CurrentHoveredOption = HoveredOption;
 
     UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "새로운 옵션이 호버됨: {0}", OptionName.ToString());
 
@@ -369,16 +372,17 @@ void UItemSlot_DropDownMenu::OnDropDownMenuOptionButtonUnhovered_Implementation(
 {
     UE_LOGFMT(LogItemSlot_DropDownMenu, Log, "드롭다운 메뉴 옵션 버튼 언호버됨: 옵션 {0}", OptionName.ToString());
 
-    //@Current Hovered Option
-    if (!CurrentHoveredOptionName.IsNone() && CurrentHoveredOptionName != OptionName)
+    //@[리팩토링] Current Hovered Option 확인 (포인터로 직접 비교)
+    if (!CurrentHoveredOption || CurrentHoveredOption->GetOptionName() != OptionName)
     {
         UE_LOGFMT(LogItemSlot_DropDownMenu, Verbose, "언호버된 옵션이 현재 호버된 옵션과 일치하지 않음: 옵션 {0}", OptionName.ToString());
         return;
     }
 
-    if (!CurrentHoveredOptionName.IsNone() && CurrentHoveredOptionName == OptionName)
+    //@[리팩토링] 포인터 초기화
+    if (CurrentHoveredOption->GetOptionName() == OptionName)
     {
-        CurrentHoveredOptionName = NAME_None;
+        CurrentHoveredOption = nullptr;
 
         UE_LOGFMT(LogItemSlot_DropDownMenu, Verbose, "현재 호버된 옵션 리셋됨: 옵션 {0}", OptionName.ToString());
     }
