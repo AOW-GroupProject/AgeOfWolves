@@ -35,12 +35,16 @@ struct FIndicatorOffsetSettings
 	UPROPERTY(BlueprintReadWrite)
 	float AdditionalOffsetUpRatio = 0.0f;
 
+    UPROPERTY(BlueprintReadWrite)
+    bool bUseInterpolation = true;
+
 	UPROPERTY(BlueprintReadWrite)
 	float InterpolationSpeed = 12.0f;
 
 	FIndicatorOffsetSettings()
 		: AdditionalOffsetRightRatio(0.0f)
 		, AdditionalOffsetUpRatio(0.0f)
+        , bUseInterpolation(true)
 		, InterpolationSpeed(12.0f)
 	{}
 };
@@ -199,11 +203,7 @@ protected:
 private:
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation",
 		meta = (ToolTip = "보간 비활성화 (즉각 반응)"))
-	bool bUseInterpolation = true;
-
-	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation",
-		meta = (ToolTip = "기타 Indicator 보간 속도"))
-	float GeneralInterpolationSpeed = 12.0f;  // 중간
+    bool bDeprecated_GlobalInterpolationFlag_DO_NOT_USE = true; // Deprecated
 
 protected:
 	//@Indicator 설정 - 동일
@@ -239,22 +239,6 @@ protected:
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|General")
 	float GeneralIndicatorHeightOffset = 80.0f;
 
-	//@보간 설정 - ✅ 추가
-	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation")
-	float IndicatorInterpolationSpeed = 5.0f;
-
-	//@DeadZone: 이 거리(픽셀) 이하의 변화는 무시
-	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation", meta = (ClampMin = "0", ClampMax = "20"))
-	float IndicatorDeadZone = 10.0f;
-
-	//@SoftZone: 이 거리(픽셀) 이하는 느리게 보간
-	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation", meta = (ClampMin = "0", ClampMax = "50"))
-	float IndicatorSoftZone = 0.30f;
-
-	//@SoftZone 내에서의 보간 속도 감소율
-	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation", meta = (ClampMin = "0.1", ClampMax = "1.0"))
-	float SoftZoneSpeedMultiplier = 0.15f;
-
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings")
 	bool bHideIndicatorWhenOffScreen = true;
 
@@ -280,8 +264,12 @@ protected:
 		meta = (ToolTip = "LockOn 추가 위쪽 오프셋 비율"))
 	float LockOnScreenOffsetUpRatio = 0.0f;
 
+    UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation",
+        meta = (ToolTip = "LockOn Indicator 보간 사용 여부", EditCondition = "bEnableIndicators && bShowLockOnIndicator"))
+    bool bUseLockOnInterpolation = true;
+
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation",
-		meta = (ToolTip = "LockOn Indicator 보간 속도"))
+        meta = (ToolTip = "LockOn Indicator 보간 속도", EditCondition = "bEnableIndicators && bShowLockOnIndicator && bUseLockOnInterpolation"))
 	float LockOnInterpolationSpeed = 20.0f;
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|LockOn",
@@ -299,9 +287,31 @@ protected:
 		meta = (ToolTip = "Structure 추가 위쪽 오프셋 비율"))
 	float StructureScreenOffsetUpRatio = 0.035f;  // 3.5% 위로 (1440p에서 약 50px)
 
+    UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation",
+        meta = (ToolTip = "Structure Indicator 보간 사용 여부", EditCondition = "bEnableIndicators && bShowStructureIndicator"))
+    bool bUseStructureInterpolation = false;
+
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation",
-		meta = (ToolTip = "Structure Indicator 보간 속도"))
+        meta = (ToolTip = "Structure Indicator 보간 속도", EditCondition = "bEnableIndicators && bShowStructureIndicator && bUseStructureInterpolation"))
 	float StructureInterpolationSpeed = 0.f;
+#pragma region Execution/Ambush Interpolation
+protected:
+    UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Execution",
+        meta = (ToolTip = "Execution Indicator 보간 사용 여부", EditCondition = "bEnableIndicators && bShowExecutionIndicator"))
+    bool bUseExecutionInterpolation = true;
+
+    UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation",
+        meta = (ToolTip = "Execution Indicator 보간 속도", EditCondition = "bEnableIndicators && bShowExecutionIndicator && bUseExecutionInterpolation"))
+    float ExecutionInterpolationSpeed = 12.0f;
+
+    UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Ambush",
+        meta = (ToolTip = "Ambush Indicator 보간 사용 여부", EditCondition = "bEnableIndicators && bShowAmbushIndicator"))
+    bool bUseAmbushInterpolation = true;
+
+    UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Interpolation",
+        meta = (ToolTip = "Ambush Indicator 보간 속도", EditCondition = "bEnableIndicators && bShowAmbushIndicator && bUseAmbushInterpolation"))
+    float AmbushInterpolationSpeed = 12.0f;
+#pragma endregion
 
 	UPROPERTY(EditAnywhere, Category = "UI|Indicator Settings|Structure",
 		meta = (ToolTip = "구조물 3D 중심 높이 오프셋 (cm)"))
@@ -400,21 +410,39 @@ public:
 
 private:
 	// Indicator 위치 업데이트 헬퍼 함수들
+	// 위젯으로부터 Indicator GameplayTag를 역조회
 	FGameplayTag FindIndicatorTagByWidget(UUserWidget* Widget) const;
+	// 픽셀 좌표 → 정규화 좌표 변환 (0~1)
 	FVector2D ConvertToNormalizedCoordinates(const FVector2D& ScreenPos, int32 ViewportSizeX, int32 ViewportSizeY) const;
+	// 인디케이터 타입별 오프셋/보간 설정 반환
 	FIndicatorOffsetSettings GetIndicatorOffsetSettings(const FGameplayTag& IndicatorTag) const;
+	// 정규화 좌표에 공통/개별 오프셋 적용
 	FVector2D ApplyOffsetToNormalizedPosition(const FVector2D& NormalizedPos, const FIndicatorOffsetSettings& OffsetSettings) const;
+	// 정규화 좌표 → 픽셀 좌표 변환
 	FVector2D ConvertToScreenCoordinates(const FVector2D& NormalizedPos, int32 ViewportSizeX, int32 ViewportSizeY) const;
-	FVector2D ApplyInterpolation(const FGameplayTag& IndicatorTag, const FVector2D& TargetScreenPos, float DeltaTime, float InterpolationSpeed);
+	// 화면 위치 보간 적용 (옵션)
+	    FVector2D ApplyInterpolation(const FGameplayTag& IndicatorTag, const FVector2D& TargetScreenPos, float DeltaTime, float InterpolationSpeed, bool bUseInterpolation);
+	// 마지막 화면 위치 캐시 업데이트
 	void UpdateLastIndicatorPosition(const FGameplayTag& IndicatorTag, const FVector2D& NewPosition);
 	
+private:
 	// Indicator 업데이트 헬퍼 함수
 	void UpdateIndicatorByType(const FString& TypeName, bool bShouldShow);
 	
+private:
 	// UI 초기화 헬퍼 함수들
 	void SetupExternalBindings(APlayerController* PC);
 	UUIManagerSubsystem* GetUIManagerSubsystem() const;
 	void CreateWidgetsForAllCategories(APlayerController* PC, UUIManagerSubsystem* UIManagerSubsystem);
+
+private:
+    // World position computation helpers
+	// LockOn 타겟의 월드 중심 위치 계산
+	bool ComputeLockOnWorldPosition(AActor* Target, FVector& OutWorldPosition);
+	// 구조물은 ActorLocation 기반 중심 사용
+	bool ComputeStructureWorldPosition(AActor* Target, FVector& OutWorldPosition);
+	// 일반 인디케이터 중심 위치 계산 (높이 오프셋 포함)
+	bool ComputeGenericIndicatorWorldPosition(AActor* Target, float HeightOffset, FVector& OutWorldPosition);
 #pragma endregion
 
 };

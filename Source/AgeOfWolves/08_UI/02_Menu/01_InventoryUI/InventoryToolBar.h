@@ -10,7 +10,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInventoryToolBar, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
-class UInventoryUIContent;
+class UInventoryUI;
 #pragma endregion
 
 //@이벤트/델리게이트
@@ -32,7 +32,7 @@ DECLARE_DELEGATE_OneParam(FInventoryToolBarButtonClicked, EItemType)
 
 //@친추 클래스
 #pragma region Friend Class
-    friend class UInventoryUIContent;
+    friend class UInventoryUI;
 #pragma endregion
 
     GENERATED_BODY()
@@ -45,6 +45,9 @@ public:
 protected:
     //~ Begin UUserWidget Interface
     virtual void NativeOnInitialized() override;
+    virtual void NativePreConstruct() override;
+    virtual FReply NativeOnFocusReceived(const FGeometry& MyGeometry, const FFocusEvent& InFocusEvent) override;
+    virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
     //~ End UUserWidget Interface
 
 protected:
@@ -65,6 +68,11 @@ protected:
     //@버튼 생성
     virtual void CreateButtons() override;
     void CreateAndAddButton(EItemType ButtonType, float Scale);
+
+protected:
+    //@방향키 좌우 이동 편의 함수 (오버라이드)
+    virtual void MoveLeft() override;
+    virtual void MoveRight() override;
 
 protected:
     virtual void MoveSelection(int32 Direction) override;
@@ -108,6 +116,9 @@ protected:
 protected:
     //@인덱스의 유효성 검사 override
     virtual bool IsValidButtonIndex(uint8 Index) const override;
+
+    //@특정 인덱스의 버튼 가져오기 (파생 클래스에서 구현 필수)
+    virtual UCustomButton* GetButtonByIndex(uint8 Index) const override;
 
 private:
     //@uint8 <-> EItemType 변환 유틸리티

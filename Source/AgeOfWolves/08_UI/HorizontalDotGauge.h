@@ -1,13 +1,10 @@
 #pragma once
-
 #include "CoreMinimal.h"
 #include "Blueprint/UserWidget.h"
 #include "Components/Image.h"
-
 #include "HorizontalDotGauge.generated.h"
 
-DECLARE_LOG_CATEGORY_EXTERN(LogHorizontalDotGaguge, Log, All)
-
+DECLARE_LOG_CATEGORY_EXTERN(LogHorizontalDotGauge, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
@@ -15,33 +12,21 @@ class UHorizontalBox;
 class UDotGaugeUnit;
 #pragma endregion
 
-//@열거형
-#pragma region Enums
-#pragma endregion
-
 //@구조체
 #pragma region Structs
-/*
-*   @FDotGaugeSettings
-* 
-*   Dot Gauge의 설정 내용
-*/
 USTRUCT(BlueprintType)
 struct FDotGaugeSettings
 {
     GENERATED_BODY()
 
-    //@패딩
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dot Gauge")
-        FMargin ItemPadding = FMargin(5, 0, 0, 0);
+    FMargin ItemPadding = FMargin(5, 0, 0, 0);
 
-    //@최대 유닛 갯수
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dot Gauge")
-        int32 MaxCount = 10;
+    int32 MaxCount = 10;
 
-    //@채워넣기 방향 설정
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Dot Gauge")
-        bool bRightToLeft = true;
+    bool bRightToLeft = true;
 };
 #pragma endregion
 
@@ -51,95 +36,104 @@ DECLARE_DELEGATE(FHorizontalDotGaugeInitFinished);
 #pragma endregion
 
 /**
- *	@UHorizontalDotGauge
- * 
- *	가로로 배치된 이미지 형식의 게이지 UI
+ *	@UHorizontalDotGauge (Refactored with Two Pointers)
  */
 UCLASS()
 class AGEOFWOLVES_API UHorizontalDotGauge : public UUserWidget
 {
-
-//@친추 클래스
-#pragma region Friend Class
-#pragma endregion
-
-	GENERATED_BODY()
+    GENERATED_BODY()
 
 #pragma region Default Setting
 public:
-	UHorizontalDotGauge(const FObjectInitializer& ObjectInitializer);
+    UHorizontalDotGauge(const FObjectInitializer& ObjectInitializer);
 
 protected:
-	//~ Begin UUserWidget Interfaces
-	virtual void NativeOnInitialized();
-	//~ End UUserWidget Interface
-
-protected:
-	//@외부 바인딩
-
-protected:
-	//@내부 바인딩
+    virtual void NativeOnInitialized();
 
 public:
-	//@초기화
     UFUNCTION()
-        virtual void InitializeHorizontalDotGauge();
+    virtual void InitializeHorizontalDotGauge();
 #pragma endregion
 
-//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 public:
     //@게이지 유닛 생성
     void CreateDotGaugeUnits();
 
 public:
-    //@게이지 설정 업데이트 함수
+    //@범용 게이지 업데이트
     UFUNCTION(BlueprintCallable, Category = "게이지")
-        void UpdateFilledCount(int32 Count);
+    void UpdateGauge(int32 FilledCount, int32 MaxCount);
 
+    //@최대 개수 설정
     UFUNCTION(BlueprintCallable, Category = "게이지")
-        void UpdateMaxCount(int32 NewMaxCount);
+    void SetMaxCount(int32 MaxCount);
+
+    //@채워진 개수 설정
+    UFUNCTION(BlueprintCallable, Category = "게이지")
+    void SetFilledCount(int32 FilledCount);
+
+private:
+    //@내부 로직 (방향 무관 통합)
+    void ActivateUnits(int32 Count);
+    void DeactivateUnits(int32 Count);
+    void FillUnits(int32 Count);
+    void UnfillUnits(int32 Count);
 
 protected:
-	//@Dot Gauge를 관리하는 가로 박스
-	UPROPERTY(BlueprintReadWrite, Category = "게이지", meta = (BindWidget))
-		UHorizontalBox* HorizontalDotGaugeBox;
+    UPROPERTY(BlueprintReadWrite, Category = "게이지", meta = (BindWidget))
+    UHorizontalBox* HorizontalDotGaugeBox;
 
 protected:
-    //@Dot Gauge 세팅 관련 구조체
     UPROPERTY(EditDefaultsOnly, Category = "게이지 | 설정")
-        FDotGaugeSettings GaugeSettings;
+    FDotGaugeSettings GaugeSettings;
 
 protected:
-    //@Dot Gauge Unit 목록
     UPROPERTY()
-        TArray<UDotGaugeUnit*> DotGaugeUnits;
+    TArray<UDotGaugeUnit*> DotGaugeUnits;
 
-    //@Dot Gauge Unit BP 클래스
     UPROPERTY(EditDefaultsOnly, Category = "게이지 | 게이지 유닛 클래스")
-        TSubclassOf<UDotGaugeUnit> DotGaugeUnitClass;
+    TSubclassOf<UDotGaugeUnit> DotGaugeUnitClass;
 
 protected:
-    //@현재 Gauge에서 Active한 Dot Gauge Unit 총 개수
-    int32 MaxUnitCount;
-
-    //@현재 Gauge에서 Active, Filled 상태의 Dot Gauge Unit 개수
-    int32 FilledUnitCount;
+    //@Two Pointers (Bounds)
+    int32 ActivateUnitBound;  // 활성화 경계
+    int32 FillUnitBound;      // 채움 경계
 #pragma endregion
 
-//@Delegates
 #pragma region Delegates
 public:
-    //@초기화 완료 이벤트
     FHorizontalDotGaugeInitFinished HorizontalDotGaugeInitFinished;
 #pragma endregion
 
-//@Callbacks
-#pragma region Callbacks
+#pragma region Utility
+public:
+    //@현재 최대 개수 (활성화된 게이지 수)
+    FORCEINLINE int32 GetMaxCount() const
+    {
+        return GaugeSettings.bRightToLeft
+            ? (DotGaugeUnits.Num() - ActivateUnitBound)
+            : ActivateUnitBound;
+    }
+
+    //@현재 채워진 개수
+    FORCEINLINE int32 GetFilledCount() const
+    {
+        return GaugeSettings.bRightToLeft
+            ? (DotGaugeUnits.Num() - FillUnitBound)
+            : FillUnitBound;
+    }
+
+private:
+    //@방향 추상화 헬퍼 함수들
+    int32 GetInitialActivateBound() const;
+    int32 GetInitialFillBound() const;
+    int32 GetActivateBoundDelta(int32 Count) const;
+    int32 GetFillBoundDelta(int32 Count) const;
+    int32 ClampActivateBound(int32 Bound) const;
+    int32 ClampFillBound(int32 Bound) const;
+    void GetIterationRange(int32 OldBound, int32 NewBound, int32& OutStart, int32& OutEnd) const;
+
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
-#pragma region Utility
-#pragma endregion
-	
 };

@@ -11,6 +11,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInteractableItemSlot, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
+class UCustomButton;
 #pragma endregion
 
 //@열거형
@@ -45,114 +46,85 @@ DECLARE_MULTICAST_DELEGATE(FNotifyItemSlotButtonCanceled);
 UCLASS()
 class AGEOFWOLVES_API UInteractableItemSlot : public UItemSlot
 {
-//@친추 클래스
-#pragma region Friend Class
     friend class UItemSlots;
-#pragma endregion
 
     GENERATED_BODY()
 
-//@Defualt Setting
+    //@Default Setting
 #pragma region Default Setting
 public:
     UInteractableItemSlot(const FObjectInitializer& ObjectInitializer);
 
 protected:
-    //~ Begin UUserWidget Interfaces
     virtual void NativeOnInitialized() override;
     virtual void NativePreConstruct() override;
     virtual void NativeConstruct() override;
     virtual void NativeDestruct() override;
     virtual FNavigationReply NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply) override;
-    virtual FReply NativeOnFocusReceived(const FGeometry& InGeometry, const FFocusEvent& InFocusEvent) override;
-    virtual void NativeOnFocusLost(const FFocusEvent& InFocusEvent) override;
-    virtual FReply NativeOnMouseButtonDown(const FGeometry& InGeometry, const FPointerEvent& InMouseEvent) override;
-    virtual FReply NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent& InKeyEvent) override;
-    //~ End UUserWidget Interface
 
 protected:
     //@내부 바인딩
-    void InternalBindToItemSlotButton(UCustomButton* InItemSlotButton);
+    void InternalBindToItemSlotButton();
 
 public:
-    //@초기화 함수
     virtual void InitializeItemSlot() override;
 #pragma endregion
 
-//@Property/Info...etc
+    //@Property/Info...etc
 #pragma region SubWidgets
-protected:
-    //@CustomButton 생성
-    void CreateButton();
-
 protected:
     virtual void AssignNewItem_Implementation(const FGuid& ID, FItemInformation ItemInformation, int32 ItemCount = -1) override;
     virtual void AssignNewItemFromSlot_Implementation(UItemSlot* FromSlot) override;
-
     virtual void UpdateItemCount_Implementation(int32 NewCount) override;
     virtual void ClearAssignedItem_Implementation(bool bForceClear = false) override;
 
 public:
-    //@아이템 슬롯 버튼 활성화 함수
+    //@아이템 슬롯 버튼 활성화/비활성화 함수
     UFUNCTION(BlueprintCallable, Category = "Item Slot | Button")
-        void ActivateItemSlotInteraction();
-    //@아이템 슬롯 버튼 비활성화 함수
+    void ActivateItemSlotInteraction();
     UFUNCTION(BlueprintCallable, Category = "Item Slot | Button")
-        void DeactivateItemSlotInteraction();
+    void DeactivateItemSlotInteraction();
 
 protected:
-    //@Slot Overlay에 추가할 사용자 상호작용 가능한 CustomButton
-    UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Item Slot | Button", meta = (AllowPrivateAccess = "true"))
-        TSubclassOf<UCustomButton> ItemSlotButtonClass;
+    //@블루프린트에서 배치된 CustomButton (동적 생성 X)
+    UPROPERTY(BlueprintReadOnly, meta = (BindWidget))
+    UCustomButton* ItemSlotButton;
 #pragma endregion
 
-//@Delegates
+    //@Delegates
 #pragma region Delegates
 public:
-    //@초기화 요청 이벤트
     FRequestStartInitByInteractableItemSlot RequestStartInitByInteractableItemSlot;
-
-public:
-    //@아이템 슬롯 버튼 호버 이벤트
     FItemSlotButtonHovered ItemSlotButtonHovered;
-    //@아이템 슬롯 버튼 언호버 이벤트
     FItemSlotButtonUnhovered ItemSlotButtonUnhovered;
-    //@아이템 슬롯 버튼 클릭 이벤트
     FItemSlotButtonClicked ItemSlotButtonClicked;
-
-public:
-    //@선택된 아이템 슬롯 버튼 선택 취소 알림 이벤트
     FNotifyItemSlotButtonCanceled NotifyItemSlotButtonCanceled;
 #pragma endregion
 
-//@Callbacks
+    //@Callbacks
 #pragma region Callbacks
 protected:
-    //@Button Hovered 이벤트에 등록되는 콜백
     UFUNCTION(BlueprintNativeEvent)
-        void OnItemSlotButtonHovered(EInteractionMethod InteractionMethodType);
+    void OnItemSlotButtonHovered(EInteractionMethod InteractionMethodType);
     virtual void OnItemSlotButtonHovered_Implementation(EInteractionMethod InteractionMethodType);
-    //@Button Unhovered 이벤트에 등록되는 콜백
+
     UFUNCTION(BlueprintNativeEvent)
-        void OnItemSlotButtonUnhovered();
+    void OnItemSlotButtonUnhovered();
     virtual void OnItemSlotButtonUnhovered_Implementation();
-    //@Button Clicked 이벤트에 등록되는 콜백
+
     UFUNCTION(BlueprintNativeEvent)
-        void OnItemSlotButtonClicked(EInteractionMethod InteractionMethodType);
+    void OnItemSlotButtonClicked(EInteractionMethod InteractionMethodType);
     virtual void OnItemSlotButtonClicked_Implementation(EInteractionMethod InteractionMethodType);
 
 protected:
-    //@Button의 선택 취소 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
-        void ItemSlotButtonCanceledNotified(const FGuid& ItemID);
+    void ItemSlotButtonCanceledNotified(const FGuid& ItemID);
     virtual void ItemSlotButtonCanceledNotified_Implementation(const FGuid& ItemID);
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+    //@Utility
 #pragma region Utility
 public:
-    UFUNCTION(BlueprintCallable, Category = "Item Slot | Button")
-        UCustomButton* GetItemSlotButton() const;
+    FORCEINLINE UCustomButton* GetItemSlotButton() const { return ItemSlotButton; }
 #pragma endregion
-
 };

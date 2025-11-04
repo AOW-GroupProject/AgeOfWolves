@@ -163,15 +163,10 @@ FReply UItemSlots::NativeOnKeyDown(const FGeometry& InGeometry, const FKeyEvent&
             int32 CurrentColumn = 0;
             GetSlotRowAndColumn(SlotIndex, CurrentRow, CurrentColumn);
 
-            //@첫 번째 Row에 있으면 상위 위젯에서 처리하도록 Unhandled 반환
+            //@첫 번째 Row에 있으면 상위 위젯에 넘기지 않고 무시(소비)
             if (CurrentRow == 0)
             {
-                //@현재 Hovered 상태의 Item Slot의 상태를 Normal로 변경
-                OnRequestCancelCurrentHoveredItemSlot(ItemType);
-
-                //@현재 Item Slots의 포커스 소실 요청 이벤트
-                RequestCancelItemSlotsFocus.ExecuteIfBound();
-
+                UE_LOGFMT(LogItemSlots, Log, "Up 키: 첫 번째 행이므로 이벤트를 소비하고 상위로 전달하지 않습니다.");
                 return FReply::Handled();
             }
 
@@ -741,6 +736,17 @@ void UItemSlots::OnItemSlotButtonHovered(const FGuid& UniqueItemID, EInteraction
         return;
     }
 
+    //@✅ Drop Down Menu가 열려있으면 Selected 슬롯 외 다른 슬롯의 호버 무시
+    if (ItemSlotDropDownMenu && ItemSlotDropDownMenu->GetVisibility() == ESlateVisibility::SelfHitTestInvisible)
+    {
+        //@Selected 슬롯이 아닌 다른 슬롯의 호버는 무시
+        if (!CurrentSelectedItemSlot.IsValid() || CurrentSelectedItemSlot->GetUniqueItemID() != UniqueItemID)
+        {
+            UE_LOGFMT(LogItemSlots, Log, "Drop Down Menu 열려있어 호버 무시: ID {0}", UniqueItemID.ToString());
+            return;
+        }
+    }
+
     //@Current Hovered Item Slot
     if (CurrentHoveredItemSlot.IsValid() && CurrentHoveredItemSlot->GetUniqueItemID() == UniqueItemID)
     {
@@ -748,13 +754,19 @@ void UItemSlots::OnItemSlotButtonHovered(const FGuid& UniqueItemID, EInteraction
         return;
     }
 
-    //@이전 호버 상태 취소
+    //@✅ 이전 호버 상태 취소 (단, Selected 슬롯은 제외)
     if (CurrentHoveredItemSlot.IsValid())
     {
-        FGuid PreviousItemID = CurrentHoveredItemSlot->GetUniqueItemID();
-        CancelItemSlotButton.Broadcast(PreviousItemID);
-
-        UE_LOGFMT(LogItemSlots, Log, "이전에 호버된 아이템 슬롯 호버 취소: ID {0}", PreviousItemID.ToString());
+        //@Selected 슬롯이 아닐 때만 취소
+        bool bIsSelectedSlot = CurrentSelectedItemSlot.IsValid() && 
+                               CurrentHoveredItemSlot->GetUniqueItemID() == CurrentSelectedItemSlot->GetUniqueItemID();
+        
+        if (!bIsSelectedSlot)
+        {
+            FGuid PreviousItemID = CurrentHoveredItemSlot->GetUniqueItemID();
+            CancelItemSlotButton.Broadcast(PreviousItemID);
+            UE_LOGFMT(LogItemSlots, Log, "이전에 호버된 아이템 슬롯 호버 취소: ID {0}", PreviousItemID.ToString());
+        }
     }
 
     //@Current Hovered Item Slot 업데이트
@@ -763,30 +775,31 @@ void UItemSlots::OnItemSlotButtonHovered(const FGuid& UniqueItemID, EInteraction
 
     //@SetFocus
     SetFocus();
-
-    // TODO: 필요한 경우 여기에 추가 동작 구현
-    // 예: 호버된 아이템 슬롯의 시각적 상태 변경, 아이템 정보 표시 등
 }
 
 void UItemSlots::OnItemSlotButtonUnhovered(const FGuid& UniqueItemID)
 {
     UE_LOGFMT(LogItemSlots, Log, "아이템 슬롯 버튼 언호버됨: ID {0}", UniqueItemID.ToString());
 
+    //@✅ Selected 슬롯의 Unhover는 무시
+    if (CurrentSelectedItemSlot.IsValid() && CurrentSelectedItemSlot->GetUniqueItemID() == UniqueItemID)
+    {
+        UE_LOGFMT(LogItemSlots, Log, "Selected 슬롯의 Unhover 무시: ID {0}", UniqueItemID.ToString());
+        return;
+    }
+
     //@Current Hovered Item Slot
     if (CurrentHoveredItemSlot.IsValid() && CurrentHoveredItemSlot->GetUniqueItemID() != UniqueItemID)
     {
         UE_LOGFMT(LogItemSlots, Log, "언호버된 아이템 슬롯이 현재 호버된 슬롯과 일치하지 않음: ID {0}", UniqueItemID.ToString());
-
         return;
     }
 
     if (CurrentHoveredItemSlot.IsValid() && CurrentHoveredItemSlot->GetUniqueItemID() == UniqueItemID)
     {
         CurrentHoveredItemSlot.Reset();
-
         UE_LOGFMT(LogItemSlots, Log, "현재 호버된 아이템 슬롯 리셋됨: ID {0}", UniqueItemID.ToString());
     }
-
 }
 
 void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID, EInteractionMethod InteractionMethodType)
@@ -820,6 +833,19 @@ void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID, EInteraction
     //@Current Selected Item Slot 업데이트
     CurrentSelectedItemSlot = SelectedItemSlot;
     UE_LOGFMT(LogItemSlots, Log, "새로운 아이템 슬롯이 선택됨: ID {0}", UniqueItemID.ToString());
+
+    //@✅ Selected 슬롯 외 모든 버튼 비활성화
+    for (UInteractableItemSlot* ItemSlot : ItemSlots)
+    {
+        if (ItemSlot && ItemSlot->GetUniqueItemID().IsValid() && 
+            ItemSlot->GetUniqueItemID() != UniqueItemID)
+        {
+            if (UCustomButton* Button = ItemSlot->GetItemSlotButton())
+            {
+                Button->SetIsEnabled(false);
+            }
+        }
+    }
 
     //@Drop Down Menu의 위치
     FVector2D MenuPosition;
@@ -868,9 +894,6 @@ void UItemSlots::OnItemSlotButtonClicked(const FGuid& UniqueItemID, EInteraction
 
     //@DropDownMenu 열기
     OpenDropDownMenu(MenuPosition, InteractionMethodType);
-
-    // TODO: 필요한 경우 여기에 추가 동작 구현
-    // 예: 선택된 아이템 슬롯의 시각적 상태 변경, 아이템 정보 표시 등
 }
 
 void UItemSlots::OnItemSlotDropDownMenuClosed(ESlateVisibility VisibilityType)
@@ -880,12 +903,30 @@ void UItemSlots::OnItemSlotDropDownMenuClosed(ESlateVisibility VisibilityType)
         return;
     }
     
-    UE_LOGFMT(LogItemSlots, Warning, "Drop Down Menu가 닫혔습니다.");
+    UE_LOGFMT(LogItemSlots, Log, "Drop Down Menu가 닫혔습니다.");
+
+    //@✅ 모든 버튼 다시 활성화
+    for (UInteractableItemSlot* ItemSlot : ItemSlots)
+    {
+        if (ItemSlot && ItemSlot->GetUniqueItemID().IsValid())
+        {
+            if (UCustomButton* Button = ItemSlot->GetItemSlotButton())
+            {
+                Button->SetIsEnabled(true);
+            }
+        }
+    }
+
+    //@Selected 슬롯을 Normal 상태로 복원
+    if (CurrentSelectedItemSlot.IsValid())
+    {
+        CancelItemSlotButton.Broadcast(CurrentSelectedItemSlot->GetUniqueItemID());
+        CurrentSelectedItemSlot.Reset();
+    }
 
     //@Set Focus
     SetFocus();
 }
-
 void UItemSlots::OnItemSlotDropDownMenuOptionSelected(FName ItemSlotDropDownMenuOptionName)
 {
 
@@ -1173,8 +1214,11 @@ void UItemSlots::OnItemRemovedFromInventory(const FGuid& UniqueItemID, EItemType
 
     if (ShouldPerformSort(CurrentRow, CurrentCol))
     {
-        UE_LOGFMT(LogItemSlots, Log, "정렬 작업 시작 - Row: {0}, Col: {1}", CurrentRow, CurrentCol);
-        SortItemSlots(RemovedIndex);
+        UE_LOGFMT(LogItemSlots, Log, "압축 작업 시작 - Row: {0}, Col: {1}", CurrentRow, CurrentCol);
+        // 제거된 지점부터 좌상단으로 압축
+        // 먼저 제거 슬롯 비우기
+        RemovedItemSlot->ClearAssignedItem();
+        CompactFromIndex(RemovedIndex);
 
         // 정렬 후에는 제거된 슬롯 위치에 새로운 아이템이 있을 것이므로, 그 위치를 호버 상태로 설정
         if (ItemSlots.IsValidIndex(RemovedIndex))
@@ -1382,6 +1426,52 @@ void UItemSlots::MoveItemSlot(int32 FromIndex, int32 ToIndex)
 
     UE_LOGFMT(LogItemSlots, Log, "아이템 이동 완료 - From: {0}, To: {1}, ID: {2}",
         FromIndex, ToIndex, ItemID.ToString());
+}
+
+void UItemSlots::CompactAllSlots()
+{
+    // 투 포인터 압축: 읽기 포인터(readIdx), 쓰기 포인터(writeIdx)
+    int32 Total = ItemSlots.Num();
+    int32 writeIdx = 0;
+    for (int32 readIdx = 0; readIdx < Total; ++readIdx)
+    {
+        if (!ItemSlots.IsValidIndex(readIdx)) continue;
+        UInteractableItemSlot* ReadSlot = ItemSlots[readIdx];
+        if (!ReadSlot) continue;
+
+        // 아이템이 있는 슬롯만 앞으로 복사
+        if (ReadSlot->GetUniqueItemID().IsValid())
+        {
+            if (readIdx != writeIdx)
+            {
+                MoveItemSlot(readIdx, writeIdx);
+            }
+            ++writeIdx;
+        }
+    }
+}
+
+void UItemSlots::CompactFromIndex(int32 StartIndex)
+{
+    if (!ItemSlots.IsValidIndex(StartIndex)) return;
+
+    // StartIndex부터 끝까지 투 포인터로 압축
+    int32 Total = ItemSlots.Num();
+    int32 writeIdx = StartIndex;
+    for (int32 readIdx = StartIndex; readIdx < Total; ++readIdx)
+    {
+        UInteractableItemSlot* ReadSlot = ItemSlots[readIdx];
+        if (!ReadSlot) continue;
+
+        if (ReadSlot->GetUniqueItemID().IsValid())
+        {
+            if (readIdx != writeIdx)
+            {
+                MoveItemSlot(readIdx, writeIdx);
+            }
+            ++writeIdx;
+        }
+    }
 }
 
 bool UItemSlots::ShouldPerformSort(int32 CurrentRow, int32 CurrentCol) const

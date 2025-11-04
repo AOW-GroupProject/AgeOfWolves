@@ -1,9 +1,11 @@
-// InteractionManagerSubsystem.cpp
 #include "InteractionManagerSubsystem.h"
 #include "Logging/StructuredLog.h"
+
 #include "TimerManager.h"
 #include "Engine/World.h"
 #include "Animation/AnimMontage.h"
+#include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
+#include "Animation/AnimInstance.h"
 
 DEFINE_LOG_CATEGORY(LogInteractionManager)
 
@@ -74,7 +76,8 @@ bool UInteractionManagerSubsystem::RegisterParticipant(
 	UAnimMontage* Montage,
 	float PlayRate,
 	FName StartSectionName,
-	EInteractionRole Role)
+	EInteractionRole Role,
+	UBaseGameplayAbility* AssociatedAbility)
 {
 	//@유효성 검사
 	if (!IsValid(Character))
@@ -124,6 +127,7 @@ bool UInteractionManagerSubsystem::RegisterParticipant(
 	//@참여자 추가
 	FInteractionParticipant NewParticipant(Character, Montage, PlayRate, Role);
 	NewParticipant.StartSectionName = StartSectionName;
+	NewParticipant.AssociatedAbility = AssociatedAbility;
 	Session->Participants.Add(NewParticipant);
 
 	UE_LOGFMT(LogInteractionManager, Log, "참여자 등록 성공 - SessionID: {0} | 캐릭터: {1} | 몽타주: {2} | 참여자 수: {3}/{4}",
@@ -148,7 +152,8 @@ bool UInteractionManagerSubsystem::RegisterPlayerParticipant(
 	ACharacterBase* PlayerCharacter,
 	UAnimMontage* PlayerMontage,
 	float PlayRate,
-	FName StartSectionName)
+	FName StartSectionName,
+	UBaseGameplayAbility* AssociatedAbility)
 {
 	//@기존 RegisterParticipant 함수를 Player 역할로 호출
 	return RegisterParticipant(
@@ -157,7 +162,8 @@ bool UInteractionManagerSubsystem::RegisterPlayerParticipant(
 		PlayerMontage,
 		PlayRate,
 		StartSectionName,
-		EInteractionRole::Player
+		EInteractionRole::Player,
+		AssociatedAbility
 	);
 }
 
@@ -166,7 +172,8 @@ bool UInteractionManagerSubsystem::RegisterTargetParticipant(
 	ACharacterBase* TargetCharacter,
 	UAnimMontage* TargetMontage,
 	float PlayRate,
-	FName StartSectionName)
+	FName StartSectionName,
+	UBaseGameplayAbility* AssociatedAbility)
 {
 	//@기존 RegisterParticipant 함수를 Target 역할로 호출
 	return RegisterParticipant(
@@ -175,7 +182,8 @@ bool UInteractionManagerSubsystem::RegisterTargetParticipant(
 		TargetMontage,
 		PlayRate,
 		StartSectionName,
-		EInteractionRole::Target
+		EInteractionRole::Target,
+		AssociatedAbility
 	);
 }
 
@@ -235,6 +243,25 @@ bool UInteractionManagerSubsystem::ExecuteSynchronizedPlay(FGuid SessionID)
 			break;
 		}
 
+		//@몽타주와 세션 매핑 저장
+		MontageToSessionMap.Add(Montage, SessionID);
+
+		//@몽타주 재생 전 콜백 바인딩
+		if (UAnimInstance* AnimInstance = Character->GetMesh()->GetAnimInstance())
+		{
+			//@기존 델리게이트 클리어
+			AnimInstance->OnMontageBlendingOut.RemoveAll(this);
+			AnimInstance->OnMontageEnded.RemoveAll(this);
+			//AnimInstance->OnMontageInterrupted.RemoveAll(this);
+			//AnimInstance->OnMontageCancelled.RemoveAll(this);
+
+			//@새로운 델리게이트 바인딩
+			AnimInstance->OnMontageBlendingOut.AddDynamic(this, &UInteractionManagerSubsystem::OnMontageBlendOut);
+			AnimInstance->OnMontageEnded.AddDynamic(this, &UInteractionManagerSubsystem::OnMontageCompleted);
+			//AnimInstance->OnMontageInterrupted.AddDynamic(this, &UInteractionManagerSubsystem::OnMontageInterrupted);
+			//AnimInstance->OnMontageCancelled.AddDynamic(this, &UInteractionManagerSubsystem::OnMontageCancelled);
+		}
+
 		//@몽타주 재생
 		float PlayLength = Character->PlayAnimMontage(
 			Montage,
@@ -290,6 +317,19 @@ bool UInteractionManagerSubsystem::CancelSession(FGuid SessionID)
 
 void UInteractionManagerSubsystem::CleanupSession(FGuid SessionID)
 {
+	//@해당 세션의 몽타주 매핑 정리
+	FInteractionSession* Session = ActiveSessions.Find(SessionID);
+	if (Session)
+	{
+		for (const FInteractionParticipant& Participant : Session->Participants)
+		{
+			if (Participant.Montage)
+			{
+				MontageToSessionMap.Remove(Participant.Montage);
+			}
+		}
+	}
+
 	if (ActiveSessions.Remove(SessionID) > 0)
 	{
 		UE_LOGFMT(LogInteractionManager, Log, "세션 정리 완료 - SessionID: {0} | 남은 세션: {1}",
@@ -404,4 +444,143 @@ void UInteractionManagerSubsystem::DrawDebugSession(FGuid SessionID, float Durat
 	// TODO: DrawDebugString 등으로 참여자 위치에 정보 표시
 }
 #endif
+
+//@Montage Callbacks
+#pragma region Montage Callbacks
+void UInteractionManagerSubsystem::OnMontageCompleted(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (!Montage)
+		return;
+
+	//@몽타주로 세션 찾기
+	FGuid* SessionID = MontageToSessionMap.Find(Montage);
+	if (!SessionID)
+		return;
+
+	UE_LOGFMT(LogInteractionManager, Log, "몽타주 재생 완료 - SessionID: {0} | 몽타주: {1} | 인터럽트: {2}", 
+		*SessionID->ToString(), 
+		*Montage->GetName(),
+		bInterrupted ? TEXT("예") : TEXT("아니오"));
+
+	//@해당 세션에서 몽타주에 연결된 어빌리티 찾기
+	FInteractionSession* Session = ActiveSessions.Find(*SessionID);
+	if (Session)
+	{
+		for (const FInteractionParticipant& Participant : Session->Participants)
+		{
+			if (Participant.Montage == Montage && Participant.AssociatedAbility.IsValid())
+			{
+				//@어빌리티의 OnMontageCompleted 콜백 호출
+				Participant.AssociatedAbility->OnMontageCompleted();
+				UE_LOGFMT(LogInteractionManager, Log, "어빌리티 OnMontageCompleted 호출 - 어빌리티: {0}", 
+					*Participant.AssociatedAbility->GetName());
+			}
+		}
+	}
+
+	//@매핑에서 제거
+	MontageToSessionMap.Remove(Montage);
+}
+
+void UInteractionManagerSubsystem::OnMontageBlendOut(UAnimMontage* Montage, bool bInterrupted)
+{
+	if (!Montage)
+		return;
+
+	//@몽타주로 세션 찾기
+	FGuid* SessionID = MontageToSessionMap.Find(Montage);
+	if (!SessionID)
+		return;
+
+	UE_LOGFMT(LogInteractionManager, Log, "몽타주 블렌드 아웃 - SessionID: {0} | 몽타주: {1} | 인터럽트: {2}", 
+		*SessionID->ToString(), 
+		*Montage->GetName(),
+		bInterrupted ? TEXT("예") : TEXT("아니오"));
+
+	//@해당 세션에서 몽타주에 연결된 어빌리티 찾기
+	FInteractionSession* Session = ActiveSessions.Find(*SessionID);
+	if (Session)
+	{
+		for (const FInteractionParticipant& Participant : Session->Participants)
+		{
+			if (Participant.Montage == Montage && Participant.AssociatedAbility.IsValid())
+			{
+				//@어빌리티의 OnMontageBlendOut 콜백 호출
+				Participant.AssociatedAbility->OnMontageBlendOut();
+				UE_LOGFMT(LogInteractionManager, Log, "어빌리티 OnMontageBlendOut 호출 - 어빌리티: {0}", 
+					*Participant.AssociatedAbility->GetName());
+			}
+		}
+	}
+}
+
+void UInteractionManagerSubsystem::OnMontageInterrupted(UAnimMontage* Montage, UAnimMontage* NewMontage)
+{
+	if (!Montage)
+		return;
+
+	//@몽타주로 세션 찾기
+	FGuid* SessionID = MontageToSessionMap.Find(Montage);
+	if (!SessionID)
+		return;
+
+	UE_LOGFMT(LogInteractionManager, Warning, "몽타주 인터럽트 - SessionID: {0} | 몽타주: {1} | 새 몽타주: {2}", 
+		*SessionID->ToString(), 
+		*Montage->GetName(),
+		NewMontage ? *NewMontage->GetName() : TEXT("None"));
+
+	//@해당 세션에서 몽타주에 연결된 어빌리티 찾기
+	FInteractionSession* Session = ActiveSessions.Find(*SessionID);
+	if (Session)
+	{
+		for (const FInteractionParticipant& Participant : Session->Participants)
+		{
+			if (Participant.Montage == Montage && Participant.AssociatedAbility.IsValid())
+			{
+				//@어빌리티의 OnMontageInterrupted 콜백 호출
+				Participant.AssociatedAbility->OnMontageInterrupted();
+				UE_LOGFMT(LogInteractionManager, Log, "어빌리티 OnMontageInterrupted 호출 - 어빌리티: {0}", 
+					*Participant.AssociatedAbility->GetName());
+			}
+		}
+	}
+
+	//@매핑에서 제거
+	MontageToSessionMap.Remove(Montage);
+}
+
+void UInteractionManagerSubsystem::OnMontageCancelled(UAnimMontage* Montage)
+{
+	if (!Montage)
+		return;
+
+	//@몽타주로 세션 찾기
+	FGuid* SessionID = MontageToSessionMap.Find(Montage);
+	if (!SessionID)
+		return;
+
+	UE_LOGFMT(LogInteractionManager, Warning, "몽타주 취소 - SessionID: {0} | 몽타주: {1}", 
+		*SessionID->ToString(), 
+		*Montage->GetName());
+
+	//@해당 세션에서 몽타주에 연결된 어빌리티 찾기
+	FInteractionSession* Session = ActiveSessions.Find(*SessionID);
+	if (Session)
+	{
+		for (const FInteractionParticipant& Participant : Session->Participants)
+		{
+			if (Participant.Montage == Montage && Participant.AssociatedAbility.IsValid())
+			{
+				//@어빌리티의 OnMontageCancelled 콜백 호출
+				Participant.AssociatedAbility->OnMontageCancelled();
+				UE_LOGFMT(LogInteractionManager, Log, "어빌리티 OnMontageCancelled 호출 - 어빌리티: {0}", 
+					*Participant.AssociatedAbility->GetName());
+			}
+		}
+	}
+
+	//@매핑에서 제거
+	MontageToSessionMap.Remove(Montage);
+}
+#pragma endregion
 #pragma endregion

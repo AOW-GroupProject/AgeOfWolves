@@ -1,9 +1,6 @@
 #include "HorizontalToolBar.h"
 #include "Logging/StructuredLog.h"
-
 #include "Components/HorizontalBox.h"
-#include "Components/HorizontalBoxSlot.h"
-
 #include "08_UI/CustomButton.h"
 
 DEFINE_LOG_CATEGORY(LogHorizontalToolBar)
@@ -14,6 +11,7 @@ UHorizontalToolBar::UHorizontalToolBar(const FObjectInitializer& ObjectInitializ
     : Super(ObjectInitializer)
     , DefaultButtonIndex(0)
     , CurrentSelectedIndex(MAX_uint8)
+    , ButtonBox(nullptr)
 {
 }
 
@@ -25,7 +23,6 @@ void UHorizontalToolBar::NativeOnInitialized()
 void UHorizontalToolBar::NativePreConstruct()
 {
     Super::NativePreConstruct();
-
     SetIsFocusable(false);
 }
 
@@ -41,50 +38,34 @@ void UHorizontalToolBar::NativeDestruct()
 
 FNavigationReply UHorizontalToolBar::NativeOnNavigation(const FGeometry& MyGeometry, const FNavigationEvent& InNavigationEvent, const FNavigationReply& InDefaultReply)
 {
+    // 파생 클래스에서 처리하도록 기본 차단
     return FNavigationReply::Explicit(nullptr);
 }
 
 void UHorizontalToolBar::InitializeToolBar()
 {
-    //@Create Buttons
+    //@버튼 생성
     CreateButtons();
 
     //@초기화 완료 이벤트
     ToolBarInitFinished.ExecuteIfBound();
-}
 
-void UHorizontalToolBar::CheckToolBarInitialization()
-{
-    //@파생 클래스에서 구현
+    UE_LOGFMT(LogHorizontalToolBar, Log, "HorizontalToolBar 초기화 완료");
 }
 #pragma endregion
 
 //@Property/Info...etc
 #pragma region SubWidgets
-
-
-void UHorizontalToolBar::CreateButtons()
-{
-    if (!ButtonBox)
-    {
-        UE_LOGFMT(LogHorizontalToolBar, Error, "ButtonBox가 유효하지 않습니다.");
-        return;
-    }
-
-    ButtonBox->ClearChildren();
-    MButtons.Empty();
-
-    //@파생 클래스에서 구현
-}
-
 void UHorizontalToolBar::MoveLeft()
 {
     MoveSelection(-1);
+    UE_LOGFMT(LogHorizontalToolBar, Verbose, "왼쪽으로 이동");
 }
 
 void UHorizontalToolBar::MoveRight()
 {
     MoveSelection(1);
+    UE_LOGFMT(LogHorizontalToolBar, Verbose, "오른쪽으로 이동");
 }
 #pragma endregion
 
@@ -92,50 +73,54 @@ void UHorizontalToolBar::MoveRight()
 #pragma region Callbacks
 void UHorizontalToolBar::OnToolBarButtonClicked_Implementation(EInteractionMethod InteractionMethodType, uint8 ButtonIndex)
 {
-    if (CurrentSelectedIndex == ButtonIndex) return;
+    //@같은 버튼 재선택 무시
+    if (CurrentSelectedIndex == ButtonIndex)
+    {
+        return;
+    }
 
-    //@선택된 버튼 취소
-    CancelToolBarButtonSelected(CurrentSelectedIndex);
+    //@이전 선택 취소
+    if (IsValidButtonIndex(CurrentSelectedIndex))
+    {
+        CancelToolBarButtonSelected(CurrentSelectedIndex);
+    }
 
-    //@Current Index
+    //@현재 인덱스 업데이트
     CurrentSelectedIndex = ButtonIndex;
 
-    //@파생 클래스에서 추가 처리 필요
+    UE_LOGFMT(LogHorizontalToolBar, Log, "버튼 선택됨: 인덱스 {0}", ButtonIndex);
 }
 
 void UHorizontalToolBar::OnToolBarButtonHovered_Implementation(EInteractionMethod InteractionMethodType, uint8 ButtonIndex)
 {
-    //@파생 클래스에서 구현
+    UE_LOGFMT(LogHorizontalToolBar, Verbose, "버튼 호버됨: 인덱스 {0}", ButtonIndex);
 }
 
 void UHorizontalToolBar::OnToolBarButtonUnhovered_Implementation(uint8 ButtonIndex)
 {
-    //@파생 클래스에서 구현
+    UE_LOGFMT(LogHorizontalToolBar, Verbose, "버튼 언호버됨: 인덱스 {0}", ButtonIndex);
 }
 
 void UHorizontalToolBar::CancelToolBarButtonSelected_Implementation(uint8 PreviousIndex)
 {
-    UE_LOGFMT(LogHorizontalToolBar, Log, "{0}", PreviousIndex);
-
-    auto PreviousButton = MButtons.FindRef(PreviousIndex);
-    if (!PreviousButton)
+    //@인덱스 유효성 검사
+    if (!IsValidButtonIndex(PreviousIndex))
     {
-        UE_LOGFMT(LogHorizontalToolBar, Error, "Button이 유효하지 않습니다!");
+        UE_LOGFMT(LogHorizontalToolBar, Warning, "유효하지 않은 인덱스: {0}", PreviousIndex);
         return;
     }
 
+    //@이전 버튼 가져오기
+    UCustomButton* PreviousButton = GetButtonByIndex(PreviousIndex);
+    if (!PreviousButton)
+    {
+        UE_LOGFMT(LogHorizontalToolBar, Error, "버튼을 찾을 수 없음: 인덱스 {0}", PreviousIndex);
+        return;
+    }
+
+    //@선택 취소
     PreviousButton->CancelSelectedButton();
 
-    UE_LOGFMT(LogHorizontalToolBar, Log, "{0} 인덱스의 버튼이 취소되었습니다.", PreviousIndex);
-}
-#pragma endregion
-
-//@Utility(Setter, Getter,...etc)
-#pragma region Utility
-int32 UHorizontalToolBar::GetCurrentButtonIndex() const
-{
-    TArray<uint8> ButtonIndices;
-    MButtons.GetKeys(ButtonIndices);
-    return ButtonIndices.IndexOfByKey(CurrentSelectedIndex);
+    UE_LOGFMT(LogHorizontalToolBar, Log, "버튼 선택 취소됨: 인덱스 {0}", PreviousIndex);
 }
 #pragma endregion

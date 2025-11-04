@@ -22,7 +22,7 @@ class UConfirmationMenu;
 #pragma region Enums
 /*
 * @EHotKey
-* 
+*
 * Drop Down Menu 옵션 선택 시 활용 가능한 단축키 목록
 */
 UENUM(BlueprintType)
@@ -56,7 +56,8 @@ public:
         , OptionName(InOptionName)
         , HotKey(InHotKey)
         , OptionHotKeyInfoBGImage(InOptionHotKeyInfoBGImage)
-    {}
+    {
+    }
 
     FORCEINLINE bool CompareOptionName(const FName& OtherName) const
     {
@@ -74,23 +75,23 @@ public:
 private:
     //@Option 위젯 클래스
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
-        TSubclassOf<UDropDownMenuOption> OptionClass;
+    TSubclassOf<UDropDownMenuOption> OptionClass;
 
     //@Option 명
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
-        FName OptionName;
+    FName OptionName;
 
     //@Option의 단축키
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
-        EHotKey HotKey;
+    EHotKey HotKey;
 
     //@Option과 상호작용 가능한 키를 나타내는 배경 이미지
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
-        TSoftObjectPtr<UTexture2D> OptionHotKeyInfoBGImage;
+    TSoftObjectPtr<UTexture2D> OptionHotKeyInfoBGImage;
 
     //@Option 클릭 시 열리는 Confirmation Menu의 Dialogue Box에 나타낼 설명 문
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option", meta = (AllowPrivateAccess = "true"))
-        FText ConfirmationMenuDialogueText;
+    FText ConfirmationMenuDialogueText;
 
     //@EHotKey -> FText
     static FText GetHotKeyAsText(EHotKey Key)
@@ -131,14 +132,14 @@ DECLARE_MULTICAST_DELEGATE_OneParam(FCancelDropDownMenuOptionButton, FName)
 UCLASS()
 class AGEOFWOLVES_API UDropDownMenu : public UUserWidget
 {
-//@친추 클래스
+    //@친추 클래스
 #pragma region Friend Class
     friend class UItemSlots;
 #pragma endregion
 
     GENERATED_BODY()
 
-//@Defualt Setting
+    //@Defualt Setting
 #pragma region Default Setting
 public:
     UDropDownMenu(const FObjectInitializer& ObjectInitializer);
@@ -164,7 +165,7 @@ protected:
 public:
     //@초기화
     UFUNCTION()
-        virtual void InitializeDropDownMenu();
+    virtual void InitializeDropDownMenu();
 
 protected:
     //@초기화 완료 체크
@@ -172,7 +173,7 @@ protected:
     void CheckAllUIsInitFinished();
 #pragma endregion
 
-//@Property/Info...etc
+    //@Property/Info...etc
 #pragma region Subwidgets
 protected:
     //@Reset
@@ -183,40 +184,49 @@ protected:
 protected:
     //@Open Drop Down Menu
     UFUNCTION(BlueprintNativeEvent, Category = "Drop Down Menu")
-        void OpenDropDownMenu();
+    void OpenDropDownMenu();
     virtual void OpenDropDownMenu_Implementation();
 
     //@Close Drop Down Menu
     UFUNCTION(BlueprintNativeEvent, Category = "Drop Down Menu")
-        void CloseDropDownMenu();
+    void CloseDropDownMenu();
     virtual void CloseDropDownMenu_Implementation();
 
     //@BG
 protected:
     //@BG Image
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-        UImage* DropDownMenuBGImage;
+    UImage* DropDownMenuBGImage;
 
 protected:
     //@Vertical Box
     UPROPERTY(BlueprintReadWrite, meta = (BindWidget))
-        UVerticalBox* DropDownMenuOptionBox;
-    
+    UVerticalBox* DropDownMenuOptionBox;
+
 protected:
     //@Drop Down Menu Option 목록
     UPROPERTY()
-        TArray<UDropDownMenuOption*> DropDownMenuOptions;
+    TArray<UDropDownMenuOption*> DropDownMenuOptions;
 
     //@Drop Down Menu Option 정보를 담고 있는 구조체 목록
     UPROPERTY(EditAnywhere, BlueprintReadWrite, Category = "Drop Down Menu Option | Option", meta = (AllowPrivateAccess = "true"))
-        TArray<FDropDownMenuOptionInformation> OptionInformations;
+    TArray<FDropDownMenuOptionInformation> OptionInformations;
 
 protected:
-    //@현재 선택된 Drop Down Menu Option
-    FName CurrentSelectedOptionName;
+    //@Option 빠른 접근용 맵 (O(1) 탐색)
+    UPROPERTY()
+    TMap<FName, UDropDownMenuOption*> OptionMap;
+
+    //@Option 정보 빠른 접근용 맵 (O(1) 탐색)
+    TMap<FName, FDropDownMenuOptionInformation> OptionInfoMap;
+
+protected:
+    //@현재 선택된 Drop Down Menu Option (포인터로 직접 관리)
+    UPROPERTY()
+    UDropDownMenuOption* CurrentSelectedOption;
 #pragma endregion
 
-//@Delegates
+    //@Delegates
 #pragma region Delegates
 public:
     //@초기화 요청 이벤트
@@ -229,47 +239,47 @@ public:
     FDropDownMenuOptionButtonClicked DropDownMenuOptionButtonClicked;
 
 public:
-    //@Drop Down Menu Option 버튼 선택 취소 이벤트
+    //@Drop Down Menu Option 버튼 선택 취소 이벤트 (하위 호환성 유지)
     FCancelDropDownMenuOptionButton CancelDropDownMenuOptionButton;
 #pragma endregion
 
-//@Callbacks
+    //@Callbacks
 #pragma region Callbacks;
 protected:
     //@가시성 변화 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
-        void OnUIVisibilityChanged(ESlateVisibility VisibilityType);
+    void OnUIVisibilityChanged(ESlateVisibility VisibilityType);
     virtual void OnUIVisibilityChanged_Implementation(ESlateVisibility VisibilityType);
 
 protected:
     //@초기화 완료 이벤트
     UFUNCTION()
-        void OnDropDownMenuOptionInitFinished();
+    void OnDropDownMenuOptionInitFinished();
 
 protected:
     //@Option 선택 이벤트에 등록되는 콜백, 각 Drop Down Menu 에서 제공하는 옵션들에 대한 기능들 오버라이딩 필수!
     UFUNCTION(BlueprintNativeEvent)
-        void OnDropDownMenuOptionSelected(FName SelectedOptionName, EInteractionMethod InteractionMethodType);
+    void OnDropDownMenuOptionSelected(FName SelectedOptionName, EInteractionMethod InteractionMethodType);
     virtual void OnDropDownMenuOptionSelected_Implementation(FName SelectedOptionName, EInteractionMethod InteractionMethodType);
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+    //@Utility(Setter, Getter,...etc)
 #pragma region Utility Functions
 public:
     //@첫 번째 Drop Down Menu Option을 반환
     UFUNCTION(BlueprintCallable, Category = "Drop Down Menu")
-        UDropDownMenuOption* GetFirstDropDownMenuOption() const;
+    UDropDownMenuOption* GetFirstDropDownMenuOption() const;
 
     //@특정 이름의 Drop Down Menu Option을 반환하는 함수
     UFUNCTION(BlueprintCallable, Category = "Drop Down Menu")
-        UDropDownMenuOption* GetDropDownMenuOptionByName(const FName& OptionName) const;
+    UDropDownMenuOption* GetDropDownMenuOptionByName(const FName& OptionName) const;
 
     //@Option의 이름을 가져오는 함수 (DropDownMenuOption 클래스에 추가)
     UFUNCTION(BlueprintCallable, Category = "Drop Down Menu Option")
-        FName GetOptionName() const;
+    FName GetOptionName() const;
 public:
     UFUNCTION(BlueprintCallable, Category = "Drop Down Menu")
-        const FText GetConfirmationMenuDialogueText(const FName& Name) const;
+    const FText GetConfirmationMenuDialogueText(const FName& Name) const;
 #pragma endregion
 
 };

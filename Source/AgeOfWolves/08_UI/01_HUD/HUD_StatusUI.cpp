@@ -1,6 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
-
 #include "HUD_StatusUI.h"
 #include "Logging/StructuredLog.h"
 
@@ -408,90 +405,47 @@ bool UHUD_StatusUI::UpdateStateBarAttribute(const FGameplayAttribute& Attribute,
 
 void UHUD_StatusUI::UpdateManaAttribute(const FGameplayAttribute& Attribute, float NewValue)
 {
-    //@Mana Dot Gauge Ref
+    //@Mana Dot Gauge Ref 체크
     if (!ManaDotGaugeRef)
     {
         UE_LOGFMT(LogStatusUI, Warning, "ManaDotGaugeRef가 유효하지 않습니다.");
         return;
     }
 
-    //@MaxMana 변경 시 (NewValue: 최대 마나 개수)
+    //@MaxMana 변경 → 빈 슬롯 개수 설정
     if (Attribute.AttributeName == "MaxMana")
     {
-        UE_LOGFMT(LogStatusUI, Log, "MaxMana 값 변경: {0}", FString::FromInt(static_cast<int32>(NewValue)));
-        //@Update Max Count
-        ManaDotGaugeRef->UpdateMaxCount(static_cast<int32>(NewValue));
-        //@캐시 값 업데이트
+        //@중복 업데이트 방지
+        if (FMath::IsNearlyEqual(LastMaxManaValue, NewValue, 0.01f))
+        {
+            return;
+        }
+
+        UE_LOGFMT(LogStatusUI, Log, "MaxMana 어트리뷰트 변경: {0}", FString::FromInt(static_cast<int32>(NewValue)));
+
+        //@✅ SetMaxMana → SetMaxCount로 변경
+        ManaDotGaugeRef->SetMaxCount(static_cast<int32>(NewValue));
+
         LastMaxManaValue = NewValue;
     }
-    //@현재 Mana 변경 시 (NewValue: 현재 보유 마나 개수)
+    //@Mana 변경 → 채워진 개수 설정
     else if (Attribute.AttributeName == "Mana")
     {
-        UE_LOGFMT(LogStatusUI, Log, "현재 Mana 값 변경: {0}", FString::FromInt(static_cast<int32>(NewValue)));
-        //@Update Filled Count
-        ManaDotGaugeRef->UpdateFilledCount(static_cast<int32>(NewValue));
-        //@캐시 값 업데이트
+        //@중복 업데이트 방지
+        if (FMath::IsNearlyEqual(LastManaValue, NewValue, 0.01f))
+        {
+            return;
+        }
+
+        UE_LOGFMT(LogStatusUI, Log, "Mana 어트리뷰트 변경: {0}", FString::FromInt(static_cast<int32>(NewValue)));
+
+        //@✅ SetCurrentMana → SetFilledCount로 변경
+        ManaDotGaugeRef->SetFilledCount(static_cast<int32>(NewValue));
+
         LastManaValue = NewValue;
     }
 }
-#pragma endregion
 
-//@Callbacks
-#pragma region Callbacks
-void UHUD_StatusUI::OnManaDotGaugeInitFinished()
-{
-    bManaDotGaugeInitFinished = true;
-
-    CheckAllUIsInitFinished();
-}
-
-void UHUD_StatusUI::OnAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
-{
-    //@성능 최적화: 업데이트 빈도 제한
-    OptimizeUpdateFrequency();
-    
-    //@어트리뷰트 변경 유효성 검사
-    if (!ValidateAttributeChange(Attribute, OldValue, NewValue))
-    {
-        return;
-    }
-    
-    //@중복 업데이트 방지
-    if (!ShouldUpdateAttribute(Attribute.AttributeName, NewValue))
-    {
-        return;
-    }
-
-    //@변경 로그
-    LogAttributeChange(Attribute.AttributeName, OldValue, NewValue);
-
-    //@Player State (캐시된 것 사용)
-    APlayerStateBase* PS = CachedPlayerState.Get();
-    if (!IsValid(PS))
-    {
-        //@캐시가 유효하지 않으면 다시 가져오기
-        PS = GetOwningPlayerState<APlayerStateBase>();
-        if (!IsValid(PS))
-        {
-            UE_LOGFMT(LogStatusUI, Warning, "OnAttributeValueChanged에서 플레이어 스테이트가 유효하지 않습니다.");
-            return;
-        }
-        CachedPlayerState = PS;
-    }
-
-    //@HP, SP 어트리뷰트 처리
-    if (UpdateStateBarAttribute(Attribute, OldValue, NewValue, PS))
-    {
-        return;
-    }
-
-    //@마나 어트리뷰트 처리
-    UpdateManaAttribute(Attribute, NewValue);
-}
-#pragma endregion
-
-//@Interpolation Methods
-#pragma region Interpolation Methods
 void UHUD_StatusUI::StartInterpolation(FStateBarInfo& BarInfo, float StartValue, float TargetValue, const FInterpolationSettings& Settings)
 {
     //@기존 보간 중단
@@ -622,10 +576,7 @@ float UHUD_StatusUI::CalculateInterpolatedValue(const FInterpolationData& Data) 
             return Progress;
     }
 }
-#pragma endregion
 
-//@Performance Optimization Methods
-#pragma region Performance Optimization Methods
 bool UHUD_StatusUI::ShouldUpdateAttribute(const FString& AttributeName, float NewValue) const
 {
     //@값이 실제로 변경되었는지 확인
@@ -743,10 +694,7 @@ void UHUD_StatusUI::CleanupInterpolationTimers()
         }
     }
 }
-#pragma endregion
 
-//@Blueprint Exposed Methods
-#pragma region Blueprint Exposed Methods
 void UHUD_StatusUI::SetHealthInterpolationSettings(const FInterpolationSettings& NewSettings)
 {
     HealthInterpolationSettings = NewSettings;
@@ -767,6 +715,60 @@ void UHUD_StatusUI::SetMaxUpdateFrequency(float NewFrequency)
 {
     MaxUpdateFrequency = FMath::Clamp(NewFrequency, 1.0f, 120.0f);
     UE_LOGFMT(LogStatusUI, Log, "최대 업데이트 빈도가 {0} FPS로 설정되었습니다.", FString::SanitizeFloat(MaxUpdateFrequency));
+}
+#pragma endregion
+
+//@Callbacks
+#pragma region Callbacks
+void UHUD_StatusUI::OnManaDotGaugeInitFinished()
+{
+    bManaDotGaugeInitFinished = true;
+
+    CheckAllUIsInitFinished();
+}
+
+void UHUD_StatusUI::OnAttributeValueChanged(FGameplayAttribute Attribute, float OldValue, float NewValue)
+{
+    //@성능 최적화: 업데이트 빈도 제한
+    OptimizeUpdateFrequency();
+    
+    //@어트리뷰트 변경 유효성 검사
+    if (!ValidateAttributeChange(Attribute, OldValue, NewValue))
+    {
+        return;
+    }
+    
+    //@중복 업데이트 방지
+    if (!ShouldUpdateAttribute(Attribute.AttributeName, NewValue))
+    {
+        return;
+    }
+
+    //@변경 로그
+    LogAttributeChange(Attribute.AttributeName, OldValue, NewValue);
+
+    //@Player State (캐시된 것 사용)
+    APlayerStateBase* PS = CachedPlayerState.Get();
+    if (!IsValid(PS))
+    {
+        //@캐시가 유효하지 않으면 다시 가져오기
+        PS = GetOwningPlayerState<APlayerStateBase>();
+        if (!IsValid(PS))
+        {
+            UE_LOGFMT(LogStatusUI, Warning, "OnAttributeValueChanged에서 플레이어 스테이트가 유효하지 않습니다.");
+            return;
+        }
+        CachedPlayerState = PS;
+    }
+
+    //@HP, SP 어트리뷰트 처리
+    if (UpdateStateBarAttribute(Attribute, OldValue, NewValue, PS))
+    {
+        return;
+    }
+
+    //@마나 어트리뷰트 처리
+    UpdateManaAttribute(Attribute, NewValue);
 }
 #pragma endregion
 
