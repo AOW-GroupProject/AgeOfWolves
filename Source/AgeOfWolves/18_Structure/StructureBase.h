@@ -3,6 +3,8 @@
 #include "CoreMinimal.h"
 #include "16_Level/Area.h"
 #include "19_Interface/InteractionInterface.h"
+#include "NiagaraComponent.h"
+#include "NiagaraSystem.h"
 #include "GameFramework/Actor.h"
 
 #include "StructureBase.generated.h"
@@ -66,6 +68,14 @@ public:
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 	UStaticMeshComponent* StructureMesh;
 
+	// Niagara 컴포넌트
+	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category="VFX")
+	UNiagaraComponent* NiagaraComp;
+
+	// 파티클 시스템
+	UPROPERTY(EditAnywhere, BlueprintReadWrite, Category="VFX")
+	UNiagaraSystem* NiagaraSystemAsset;
+	
 
 public:
 	UPROPERTY(EditAnywhere, Category = "구조물 태그")
@@ -92,16 +102,7 @@ public:
 //@Callbacks
 #pragma region Callbacks
 	
-protected:
-	//@충돌 시작 이벤트를 구독하는 콜백
-	UFUNCTION()
-	void OnOverlapBegin(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
-		bool bFromSweep, const FHitResult& SweepResult);
-	//@충돌 종료 이벤트를 구독하는 콜백
-	UFUNCTION()
-	void OnOverlapEnd(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
-		UPrimitiveComponent* OtherComp, int32 OtherBodyIndex);
+
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
