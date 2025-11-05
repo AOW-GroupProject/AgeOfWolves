@@ -37,7 +37,7 @@ public:
 	/*FInventoryItem(AActor* Actor, AItem* Item, int32 Num, FGuid ItemID);*/
 	FInventoryItem(AActor* Actor, TSubclassOf<AItem> ItemBlueprintClass, int32 Num, FGuid ItemID, bool bRemovable);
 	//@사용자 정의 대입 연산자
-	const bool operator=(const FInventoryItem& OtherInventoryItem) const
+	const bool operator==(const FInventoryItem& OtherInventoryItem) const
 	{
 		if (!ItemCDO || !OtherInventoryItem.ItemCDO)
 		{
@@ -247,7 +247,8 @@ public:
 	bool FindExistingItem(const FGameplayTag& ItemTag, /*OUT*/FGuid& OutItemID);
 	//@Inventory에 저장된 기존 아이템을 Item Class를 통해 찾기
 	bool FindExistingItemByClass(TSubclassOf<AItem> ItemClass, /*OUT*/FGuid& OutItemID);
-
+	//@FGuid로 Inventory에 저장된  아이템데이터 객체를 반환
+	bool GetInventoryItem(const FGameplayTag& ItemId, FInventoryItem& OutItem);
 public:
 	//@Inventory 최대 크기
 	UFUNCTION(BlueprintCallable)
