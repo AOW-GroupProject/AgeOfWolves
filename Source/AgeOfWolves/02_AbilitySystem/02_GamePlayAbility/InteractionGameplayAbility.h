@@ -3,6 +3,7 @@
 #include "CoreMinimal.h"
 #include "02_AbilitySystem/02_GamePlayAbility/BaseGameplayAbility.h"
 #include "04_Component/InteractionComponent.h"
+#include "14_Subsystem/InteractionManagerSubsystem.h"
 
 #include "InteractionGameplayAbility.generated.h"
 
@@ -13,6 +14,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogInteractionGA, Log, All);
 class ACharacterBase;
 class UAnimMontage;
 class UAT_MoveToInteractionZone;
+class UObjectiveDetectionComponent;
 #pragma endregion
 
 //@열거형
@@ -48,17 +50,12 @@ public:
 protected:
 	//@상호작용 이벤트 전송
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")
-		void SendInteractionEvent(const FHitResult& HitResult);
+		void SendInteractionEvent();
 
 protected:
 	//@상호작용 위치로 이동
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")
 		void MoveToInteractionTarget(FName SocketName = FName("ExecuterTarget"), float Duration = 1.0f);
-
-	//@이동 완료 콜백
-	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 상호작용")
-		void OnInteractionMoveCompleted();
-	virtual void OnInteractionMoveCompleted_Implementation();
 
 protected:
 	UPROPERTY(Transient)
@@ -90,6 +87,12 @@ protected:
 
 	//@오버라이드
 	virtual void OnChainActionFinished_Implementation(FGameplayTag ChainActionEventTag) override;
+
+protected:
+	//@이동 완료 콜백
+	UFUNCTION(BlueprintNativeEvent, Category = "어빌리티 | 상호작용")
+	void OnInteractionMoveCompleted();
+	virtual void OnInteractionMoveCompleted_Implementation();
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
@@ -116,6 +119,10 @@ protected:
 	//@상호작용 가능 여부 검사
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")
 		bool CanInteractWith(AActor* Target) const;
+
+	//@페어링 애니메이션 상호작용 참여자 등록 (Player 측)
+	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")
+		void RegisterPairedAnimationParticipants();
 
 protected:
 	UFUNCTION(BlueprintCallable, Category = "어빌리티 | 상호작용")

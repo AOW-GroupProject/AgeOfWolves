@@ -15,6 +15,8 @@ class AController;
 class UBaseAnimInstance;
 class ULockOnComponent;
 class UDynamicCameraComponent;
+class USpringArmComponent;
+class UCameraComponent;
 #pragma endregion
 
 //@열거형
@@ -61,12 +63,15 @@ protected:
 
 protected:
 	//@내부 바인딩
+	// (현재 사용되지 않음)
 
 protected:
 	//@외부 바인딩
+	// (현재 사용되지 않음)
 
 protected:
 	//@초기화
+	// (현재 사용되지 않음)
 
 #pragma endregion
 
@@ -77,18 +82,23 @@ protected:
 		void UpdateFacingTarget();
 
 protected:
+	/** 백 카메라를 위한 스프링 암 컴포넌트 */
 	UPROPERTY(VisibleAnywhere, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class USpringArmComponent* SA_Back;
+		USpringArmComponent* SA_Back;
 
+	/** 플레이어를 따라가는 카메라 컴포넌트 */
 	UPROPERTY(VisibleAnywhere, BlueprintReadOnly, Category = Camera, meta = (AllowPrivateAccess = "true"))
-		class UCameraComponent* FollowCamera;
+		UCameraComponent* FollowCamera;
 
+	/** 인벤토리 관리 컴포넌트 */
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UInventoryComponent* InventoryComponent;
 
+	/** 락온 시스템 컴포넌트 */
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		ULockOnComponent* LockComponent;
 
+	/** 동적 카메라 제어 컴포넌트 */
 	UPROPERTY(VisibleAnywhere, Category = "Components", meta = (AllowPrivateAccess = "true"))
 		UDynamicCameraComponent* DynamicCameraComponent;
 #pragma endregion
@@ -106,14 +116,25 @@ public:
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 public:
-	UFUNCTION(BlueprintCallable)
-		FORCEINLINE UCameraComponent* GetCameraComponent() { return FollowCamera; }
-	UFUNCTION(BlueprintCallable)
-		FORCEINLINE USpringArmComponent* GetSpringArmComponent() { return SA_Back; }
-	UFUNCTION(BlueprintCallable)
-		FORCEINLINE UInventoryComponent* GetInventoryComponent() { return InventoryComponent; }
-	UFUNCTION(BlueprintCallable)
-		FORCEINLINE ULockOnComponent* GetLockOnComponent() { return LockComponent; }
+	/** 카메라 컴포넌트 반환 */
+	UFUNCTION(BlueprintCallable, Category = "Player Character")
+		FORCEINLINE UCameraComponent* GetCameraComponent() const { return FollowCamera; }
+	
+	/** 스프링 암 컴포넌트 반환 */
+	UFUNCTION(BlueprintCallable, Category = "Player Character")
+		FORCEINLINE USpringArmComponent* GetSpringArmComponent() const { return SA_Back; }
+	
+	/** 인벤토리 컴포넌트 반환 */
+	UFUNCTION(BlueprintCallable, Category = "Player Character")
+		FORCEINLINE UInventoryComponent* GetInventoryComponent() const { return InventoryComponent; }
+	
+	/** 락온 컴포넌트 반환 */
+	UFUNCTION(BlueprintCallable, Category = "Player Character")
+		FORCEINLINE ULockOnComponent* GetLockOnComponent() const { return LockComponent; }
+	
+	/** 동적 카메라 컴포넌트 반환 */
+	UFUNCTION(BlueprintCallable, Category = "Player Character")
+		FORCEINLINE UDynamicCameraComponent* GetDynamicCameraComponent() const { return DynamicCameraComponent; }
 #pragma endregion
 
 };

@@ -53,54 +53,7 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
     // ============================================
-    // 1. 인디케이터 표시 처리
-    // ============================================
-    if (IndicatorBillboardComponent)
-    {
-        // 인디케이터 표시가 전체적으로 비활성화된 경우 무조건 숨김
-        if (!bEnableIndicatorDisplay)
-        {
-            IndicatorBillboardComponent->SetVisibility(false);
-        }
-        else
-        {
-            // 표시할 타겟이 있는지 확인하고 해당 설정도 체크
-            bool bShouldShow = false;
-
-            // 현재 타겟이 있고 LockOn 인디케이터 표시가 활성화된 경우
-            if (CurrentTargetAI.IsValid() && (bShowLockOnIndicator || bDebugMode))
-            {
-                bShouldShow = true;
-            }
-            // 처형 타겟이 있고 처형 인디케이터 표시가 활성화된 경우
-            else if (ExecutionTarget.IsValid() && (bShowExecutionIndicator || bDebugMode))
-            {
-                bShouldShow = true;
-            }
-            // AmbushTarget이 있고 암살 인디케이터 표시가 활성화된 경우
-            else if (AmbushTarget.IsValid() && (bShowAmbushIndicator || bDebugMode))
-            {
-                bShouldShow = true;
-            }
-            // 구조물이 감지되고 구조물 인디케이터 표시가 활성화된 경우
-            else if (DetectedStructureActor.IsValid() && (bShowStructureIndicator || bDebugMode))
-            {
-                bShouldShow = true;
-            }
-
-            if (bShouldShow)
-            {
-                UpdateBillboardComponent(true, false);
-            }
-            else
-            {
-                IndicatorBillboardComponent->SetVisibility(false);
-            }
-        }
-    }
-
-    // ============================================
-    // 2. 기존 상태 업데이트 로직 (변경 없음)
+    // 1. 기존 상태 업데이트 로직 (변경 없음)
     // ============================================
     float CurrentTime = GetWorld()->GetTimeSeconds();
 
@@ -156,12 +109,6 @@ void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
     //@Bound Areas
     BoundAreas.Empty();
 
-    if (IndicatorBillboardComponent)
-    {
-        IndicatorBillboardComponent->DestroyComponent();
-        IndicatorBillboardComponent = nullptr;
-    }
-
     Super::EndPlay(EndPlayReason);
 }
 
@@ -169,29 +116,6 @@ void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
 void UObjectiveDetectionComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
-
-    if (PropertyChangedEvent.Property)
-    {
-        FName PropertyName = PropertyChangedEvent.Property->GetFName();
-
-        // 인디케이터 관련 프로퍼티가 변경된 경우 빌보드 업데이트
-        if (PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bEnableIndicatorDisplay) ||
-            PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bShowLockOnIndicator) ||
-            PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bShowExecutionIndicator) ||
-            PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bShowAmbushIndicator) ||
-            PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bShowStructureIndicator) ||
-            PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bDebugMode))
-        {
-            // 에디터에서 실시간으로 변경 사항 반영
-            if (IndicatorBillboardComponent)
-            {
-                UpdateBillboardComponent(true, false);
-            }
-
-            UE_LOGFMT(LogObjectiveDetection, Log, "에디터에서 인디케이터 설정 변경됨: {0}",
-                PropertyName.ToString());
-        }
-    }
 }
 #endif
 
@@ -414,30 +338,6 @@ void UObjectiveDetectionComponent::InitializeODComponent()
 
     UE_LOGFMT(LogObjectiveDetection, Log, "정리 타이머 설정 완료 (간격: {0}초)", CleanupInterval);
 
-    //@Billboard 컴포넌트 등록
-    if (!IndicatorBillboardComponent && ControlledPawn.IsValid())
-    {
-        IndicatorBillboardComponent = NewObject<UBillboardComponent>(ControlledPawn.Get());
-        IndicatorBillboardComponent->SetupAttachment(GetOwner()->GetRootComponent());
-        IndicatorBillboardComponent->SetMobility(EComponentMobility::Movable);
-        IndicatorBillboardComponent->RegisterComponent();
-    }
-
-    //@Billobard Component 초기화
-    if (!LockOnIndicator.IsNull())
-    {
-        LockOnIndicator.LoadSynchronous();
-        if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
-        {
-            IndicatorBillboardComponent->SetSprite(LoadedTexture);
-            // 원래 크기의 0.1배로 설정
-            IndicatorBillboardComponent->SetRelativeScale3D(FVector(0.1f));
-        }
-    }
-
-    IndicatorBillboardComponent->SetVisibility(false);
-    IndicatorBillboardComponent->bHiddenInGame = false;
-
     // 컴포넌트 ID 로그
     UE_LOGFMT(LogObjectiveDetection, Log, "ObjectiveDetectionComponent 초기화 완료 (ID: {0})", *ComponentID.ToString());
 }
@@ -476,214 +376,6 @@ void UObjectiveDetectionComponent::CleanupInvalidReferences()
     if (RemovedCount > 0)
     {
         UE_LOGFMT(LogObjectiveDetection, Log, "참조 정리 완료: 제거된 Area: {0}", RemovedCount);
-    }
-}
-
-void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly)
-{
-    // 기본 유효성 검사
-    if (!IndicatorBillboardComponent)
-    {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 컴포넌트가 유효하지 않음");
-        return;
-    }
-
-    // ============================================
-    // 1. 전체 인디케이터 표시 설정 체크
-    // ============================================
-    if (!bEnableIndicatorDisplay)
-    {
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // ============================================
-    // 2. 가시성 체크
-    // ============================================
-    if (!bVisible)
-    {
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // ============================================
-    // 3. 타겟별 표시 설정 체크
-    // ============================================
-    AActor* TargetActor = DetermineTargetActor();
-    if (!TargetActor)
-    {
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // 해당 타겟에 대한 인디케이터 표시가 허용되는지 확인
-    if (!ShouldShowIndicatorForTarget(TargetActor))
-    {
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // ============================================
-    // 4. 위치 및 텍스처 업데이트
-    // ============================================
-    if (!UpdateBillboardPosition(TargetActor))
-    {
-        // 위치 업데이트 실패 시 가시성 비활성화
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // 텍스처 업데이트가 필요한 경우
-    if (!bChangeTransformOnly)
-    {
-        UpdateBillboardTexture();
-    }
-
-    // 모든 조건을 만족하면 가시성 활성화
-    IndicatorBillboardComponent->SetVisibility(true);
-}
-
-bool UObjectiveDetectionComponent::UpdateBillboardPosition(AActor* TargetActor)
-{
-    // 필요한 컴포넌트 확보
-    APlayerController* PC = Cast<APlayerController>(GetOwner());
-    if (!PC) return false;
-
-    APawn* PlayerPawn = PC->GetPawn();
-    if (!PlayerPawn) return false;
-
-    APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(PlayerPawn);
-    if (!PlayerChar) return false;
-
-    UCameraComponent* CameraComp = PlayerChar->GetCameraComponent();
-    if (!CameraComp) return false;
-
-    // 타겟 메시 및 소켓 확인
-    USkeletalMeshComponent* TargetMesh = Cast<USkeletalMeshComponent>(
-        TargetActor->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
-
-    UStaticMeshComponent* TargetStaticMesh = Cast<UStaticMeshComponent>(
-      TargetActor->GetComponentByClass(UStaticMeshComponent::StaticClass()));
-    
-    if (!TargetMesh && !TargetStaticMesh) return false;
-
-    // 위치 계산
-    FVector SocketLocation = TargetActor->GetActorLocation() + FVector(0.f, 0.f, 40.f);
-    FVector CameraLocation = CameraComp->GetComponentLocation();
-    FVector DirectionToSocket = (SocketLocation - CameraLocation).GetSafeNormal();
-    FVector UpVector = FVector(0.0f, 0.0f, 1.0f);
-    FVector TargetBillboardLocation = SocketLocation - DirectionToSocket * BillboardForwardOffset + UpVector;
-
-    // 현재 위치
-    FVector CurrentLocation = IndicatorBillboardComponent->GetComponentLocation();
-
-    // X, Y축만 보간 (Z축은 즉시 적용)
-    FVector InterpolatedLocation = CurrentLocation;
-    float DeltaX = TargetBillboardLocation.X - CurrentLocation.X;
-    float DeltaY = TargetBillboardLocation.Y - CurrentLocation.Y;
-
-    // Dead Zone 적용 - 변화량이 임계값보다 클 때만 이동
-    float DeadZoneThreshold = 0.05f;
-
-    if (FMath::Abs(DeltaX) > DeadZoneThreshold)
-    {
-        InterpolatedLocation.X = UKismetMathLibrary::FInterpTo(
-            CurrentLocation.X,
-            TargetBillboardLocation.X,
-            GetWorld()->GetDeltaSeconds(),
-            BillboardInterpolationSpeed
-        );
-    }
-    else
-    {
-        // Dead Zone 내에서는 현재 위치 유지
-        InterpolatedLocation.X = CurrentLocation.X;
-    }
-
-    if (FMath::Abs(DeltaY) > DeadZoneThreshold)
-    {
-        InterpolatedLocation.Y = UKismetMathLibrary::FInterpTo(
-            CurrentLocation.Y,
-            TargetBillboardLocation.Y,
-            GetWorld()->GetDeltaSeconds(),
-            BillboardInterpolationSpeed
-        );
-    }
-    else
-    {
-        // Dead Zone 내에서는 현재 위치 유지
-        InterpolatedLocation.Y = CurrentLocation.Y;
-    }
-
-    // Z축은 즉시 적용
-    InterpolatedLocation.Z = TargetBillboardLocation.Z;
-
-    // 회전 보간
-    FRotator TargetRotation = (CameraLocation - SocketLocation).Rotation();
-    FRotator CurrentRotation = IndicatorBillboardComponent->GetComponentRotation();
-    FRotator InterpolatedRotation = UKismetMathLibrary::RInterpTo(
-        CurrentRotation,
-        TargetRotation,
-        GetWorld()->GetDeltaSeconds(),
-        BillboardInterpolationSpeed
-    );
-
-    // 위치, 회전, 크기 적용
-    IndicatorBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
-    IndicatorBillboardComponent->SetWorldRotation(InterpolatedRotation);
-    IndicatorBillboardComponent->SetWorldLocation(InterpolatedLocation);
-
-    return true;
-}
-
-void UObjectiveDetectionComponent::UpdateBillboardTexture()
-{
-    // 현재 상태에 따라 텍스처 결정
-    bool bShouldUseExecutableIndicator = false;
-
-    // 1. 현재 타겟이 처형 가능한 상태인 경우 (정면 노출 + Fragile)
-    if (CurrentTargetAI.IsValid() && ExecutionTarget.IsValid() &&
-        CurrentTargetAI.Get() == ExecutionTarget.Get())
-    {
-        bShouldUseExecutableIndicator = true;
-    }
-    // 2. 현재 타겟이 후면 노출 상태인 경우
-    else if (CurrentTargetAI.IsValid() && AmbushTarget.IsValid() &&
-        CurrentTargetAI.Get() == AmbushTarget.Get())
-    {
-        bShouldUseExecutableIndicator = true;
-    }
-    // 3. 타겟이 없고 처형 가능 타겟이 있는 경우
-    else if (!CurrentTargetAI.IsValid() && ExecutionTarget.IsValid())
-    {
-        bShouldUseExecutableIndicator = true;
-    }
-    // 4. 타겟이 없고 AmbushTarget이 있는 경우
-    else if (!CurrentTargetAI.IsValid() && AmbushTarget.IsValid())
-    {
-        bShouldUseExecutableIndicator = true;
-    }
-    else if (!CurrentTargetAI.IsValid() && DetectedStructureActor.IsValid())
-    {
-        bShouldUseExecutableIndicator = true;
-    }
-
-    // 텍스처 로드 및 설정
-    if (bShouldUseExecutableIndicator && !ExecutableIndicator.IsNull())
-    {
-        ExecutableIndicator.LoadSynchronous();
-        if (UTexture2D* LoadedTexture = ExecutableIndicator.Get())
-        {
-            SetIndicatorTexture(LoadedTexture);
-        }
-    }
-    else if (!LockOnIndicator.IsNull())
-    {
-        LockOnIndicator.LoadSynchronous();
-        if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
-        {
-            SetIndicatorTexture(LoadedTexture);
-        }
     }
 }
 
@@ -913,7 +605,6 @@ void UObjectiveDetectionComponent::UpdateDetectionStructure()
         }
     }
 
-
     //@ 반각(총각도의 절반)
     const float HalfAngleDeg = FMath::Max(0.f, DetectionStructureTotalAngleDegrees * 0.5f);
     const float CosThreshold = FMath::Cos(FMath::DegreesToRadians(HalfAngleDeg));
@@ -990,7 +681,6 @@ void UObjectiveDetectionComponent::UpdateDetectionStructure()
         }
     }
 }
-
 #pragma endregion
 
 //@Callbacks
@@ -1071,45 +761,6 @@ void UObjectiveDetectionComponent::OnLockOnStateChanged(bool bIsLockOn, AActor* 
         SetCurrentTargetAI(nullptr);
     }
 
-    // ============================================
-    // 2. 인디케이터 표시 처리 - 조건부 실행
-    // ============================================
-
-    // Billboard 컴포넌트 유효성 확인
-    if (!IndicatorBillboardComponent)
-    {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "Lock On 표시 실패: Billboard 컴포넌트가 유효하지 않음");
-        return; // 인디케이터만 실패, 핵심 기능은 이미 완료됨
-    }
-
-    // 인디케이터 표시가 전체적으로 비활성화된 경우
-    if (!bEnableIndicatorDisplay)
-    {
-        UE_LOGFMT(LogObjectiveDetection, Log, "인디케이터 표시가 비활성화되어 있어 Lock On 인디케이터를 표시하지 않음");
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // Lock On 상태에 따른 인디케이터 표시 처리
-    if (bIsLockOn && TargetActor)
-    {
-        // LockOn 인디케이터 표시 설정이 활성화된 경우에만 표시
-        if (bShowLockOnIndicator || bDebugMode)
-        {
-            UpdateBillboardComponent(true);
-        }
-        else
-        {
-            UE_LOGFMT(LogObjectiveDetection, Log, "LockOn 인디케이터 표시가 비활성화되어 있어 표시하지 않음");
-            UpdateBillboardComponent(false);
-        }
-    }
-    else if (!bIsLockOn)
-    {
-        // Lock On 비활성화 시 인디케이터 숨김
-        UpdateBillboardComponent(false);
-    }
-
     UE_LOGFMT(LogObjectiveDetection, Log, "Lock On 상태 처리 완료");
 }
 
@@ -1152,9 +803,6 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
             //@타겟 해제
             SetCurrentTargetAI(nullptr);
 
-            //@Billboard 컴포넌트 숨기기
-            UpdateBillboardComponent(false);
-
             UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) 사망하여 인디케이터를 비활성화 및 타겟 해제함", *ObjectiveActor->GetName());
         }
         //@Fragile 상태 변경 시
@@ -1162,11 +810,6 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
         {
             bIsCurrentTargetFragile = true;
             UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Fragile 상태로 변경됨", *ObjectiveActor->GetName());
-
-            // Fragile 상태가 되었을 때 즉시 실행처리 하지 않고, 
-            // UpdateExecutionTargetState()가 다음 틱에서 처리하도록 함
-            // 빌보드 업데이트는 계속 필요하지만 텍스처 변경은 차후 정면 체크 후 결정
-            UpdateBillboardComponent(true, true);
         }
         //@Normal 상태 변경 시
         else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
@@ -1183,9 +826,6 @@ void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* Objective
             }
 
             UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경됨", *ObjectiveActor->GetName());
-
-            // 빌보드 업데이트
-            UpdateBillboardComponent(true, false);
         }
     }
 
@@ -1498,50 +1138,22 @@ bool UObjectiveDetectionComponent::IsActorBackExposed(AActor* TargetActor) const
     return UCombatLibrary::IsActorBackExposed(ControlledPawn.Get(), TargetActor);
 }
 
-AActor* UObjectiveDetectionComponent::DetermineTargetActor()
-{
-    // 1. 현재 LockOn된 타겟이 있으면 우선 사용
-    if (CurrentTargetAI.IsValid())
-    {
-        return CurrentTargetAI.Get();
-    }
-    // 2. 처형 가능 타겟이 있으면 다음 우선순위
-    else if (ExecutionTarget.IsValid())
-    {
-        return ExecutionTarget.Get();
-    }
-    // 3. 매복 가능 타겟이 있으면 다음 우선순위 
-    else if (AmbushTarget.IsValid())
-    {
-        return AmbushTarget.Get();
-    }
-    //4. 감지된구조물 있으면 마지막 우선순위
-    else if (DetectedStructureActor.IsValid())
-    {
-        return DetectedStructureActor.Get();
-    }
-
-    return nullptr;
-}
-
 void UObjectiveDetectionComponent::SetCurrentTargetAI(AActor* NewTargetActor)
 {
-    // 이전 타겟 저장
     AActor* PreviousTarget = CurrentTargetAI.Get();
 
-    // 타겟이 변경될 경우 상태 초기화
     if (PreviousTarget != NewTargetActor)
     {
-        // 타겟이 변경되면 Fragile 상태 초기화
         bIsCurrentTargetFragile = false;
     }
 
-    // 새 타겟 설정
     CurrentTargetAI = NewTargetActor;
 
-    // 로그 출력
+    // ✅ 추가: 타겟 변경 이벤트 발행
     if (PreviousTarget != NewTargetActor)
     {
+        CurrentTargetChanged.Broadcast(NewTargetActor);
+
         UE_LOGFMT(LogObjectiveDetection, Log, "타겟 변경: {0} -> {1}",
             PreviousTarget ? *PreviousTarget->GetName() : TEXT("없음"),
             NewTargetActor ? *NewTargetActor->GetName() : TEXT("없음"));
@@ -1551,58 +1163,5 @@ void UObjectiveDetectionComponent::SetCurrentTargetAI(AActor* NewTargetActor)
 AActor* UObjectiveDetectionComponent::GetCurrentTargetAI() const
 {
     return CurrentTargetAI.IsValid() ? CurrentTargetAI.Get() : nullptr;
-}
-
-void UObjectiveDetectionComponent::SetIndicatorTexture(UTexture2D* NewTexture)
-{
-    // Billboard 컴포넌트 유효성 확인
-    if (!IndicatorBillboardComponent || !NewTexture)
-    {
-        return;
-    }
-
-    // 텍스처 설정
-    IndicatorBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
-    IndicatorBillboardComponent->SetSprite(NewTexture);
-}
-
-bool UObjectiveDetectionComponent::ShouldShowIndicatorForTarget(AActor* TargetActor) const
-{
-    if (!TargetActor)
-    {
-        return false;
-    }
-
-    // 디버그 모드인 경우 모든 인디케이터 표시
-    if (bDebugMode)
-    {
-        return true;
-    }
-
-    // 현재 LockOn된 타겟인 경우
-    if (CurrentTargetAI.IsValid() && CurrentTargetAI.Get() == TargetActor)
-    {
-        return bShowLockOnIndicator;
-    }
-
-    // 처형 가능 타겟인 경우
-    if (ExecutionTarget.IsValid() && ExecutionTarget.Get() == TargetActor)
-    {
-        return bShowExecutionIndicator;
-    }
-
-    // 매복 암살 타겟인 경우
-    if (AmbushTarget.IsValid() && AmbushTarget.Get() == TargetActor)
-    {
-        return bShowAmbushIndicator;
-    }
-
-    // 구조물 감지 타겟인 경우
-    if (DetectedStructureActor.IsValid() && DetectedStructureActor.Get() == TargetActor)
-    {
-        return bShowStructureIndicator;
-    }
-
-    return false;
 }
 #pragma endregion

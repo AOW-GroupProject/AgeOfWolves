@@ -43,6 +43,7 @@ enum class EAbilityActivationPolicy : uint8
 	* @설명: Active GA는 사용자 입력이 Trigger 매개이며, 사용자 입력이 Hold 상태일 때 활성화 됩니다.
 	*/
 	WhileInputActive,
+	
 	/*
 	* @목적: Passive GA 전용 활성화 정책
 	* @설명: Passive GA 중 특정 조건 없이 등록 시 한 번 활성화 될 경우 해당 활성화 정책을 선택하세요.
@@ -261,6 +262,7 @@ class AGEOFWOLVES_API UBaseGameplayAbility : public UGameplayAbility
 	friend class UPlayerAbilitySystemComponent;
 	friend class UBaseMonsterASC;
 	friend class UAttackGameplayAbility;
+	friend class UInteractionManagerSubsystem;
 #pragma endregion
 
 	GENERATED_BODY()

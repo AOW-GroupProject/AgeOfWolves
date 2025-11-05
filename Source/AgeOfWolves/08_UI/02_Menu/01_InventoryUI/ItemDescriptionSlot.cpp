@@ -6,7 +6,7 @@
 
 #include "Kismet/GameplayStatics.h"
 
-#include "08_UI/02_Menu/01_InventoryUI/InventoryUIContent.h"
+#include "08_UI/02_Menu/01_InventoryUI/InventoryUI.h"
 #include "08_UI/02_Menu/01_InventoryUI/ItemSlots.h"
 #include "08_UI/InteractableItemSlot.h"
 
@@ -173,12 +173,12 @@ FString UItemDescriptionSlot::ArrangeItemDescriptionStringToText(FString String)
 
 //@Callbacks
 #pragma region Callbacks
-void UItemDescriptionSlot::OnItemSlotsReadyForBinding(const UInventoryUIContent* InventoryUIContent)
+void UItemDescriptionSlot::OnItemSlotsReadyForBinding(const UInventoryUI* InventoryUI)
 {
-    //@Inventory UI Content
-    if (!InventoryUIContent)
+    //@Inventory UI
+    if (!InventoryUI)
     {
-        UE_LOGFMT(LogItemDescription, Error, "InventoryUIContent가 유효하지 않습니다.");
+        UE_LOGFMT(LogItemDescription, Error, "InventoryUI가 유효하지 않습니다.");
         return;
     }
 
@@ -192,7 +192,7 @@ void UItemDescriptionSlot::OnItemSlotsReadyForBinding(const UInventoryUIContent*
     for (EItemType ItemType : ItemTypes)
     {
         //@Item Slots
-        UUserWidget* ItemSlotsWidget = InventoryUIContent->GetItemSlotsUI(ItemType);
+        UUserWidget* ItemSlotsWidget = InventoryUI->GetItemSlotsUI(ItemType);
         if (!ItemSlotsWidget)
         {
             UE_LOGFMT(LogItemDescription, Warning, "{0} 타입의 ItemSlots 위젯을 찾을 수 없습니다.", *UEnum::GetValueAsString(ItemType));

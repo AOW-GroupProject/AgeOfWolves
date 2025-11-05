@@ -1565,8 +1565,6 @@ void AArea::OnStructureInteractionTriggered(AStructureBase* TriggeredStucture)
 
     FStructureData Structure = MStructureBindings[StructureID];
 
-
-
     //@  게임모드에게 구조물데이터 전달후, 활성값 true로 전환
     //@ 최초 상호작요이라면 bIsActive 가 false 임 
     if (!Structure.bIsActive)

@@ -130,8 +130,9 @@ public:
 public:
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE FGuid GetUniqueItemID() const { return UniqueItemID; } 
-	UFUNCTION(BlueprintCallable)
-		FSlateBrush GetSlotImage() const;
+    UFUNCTION(BlueprintCallable)
+        const FSlateBrush& GetSlotImage() const;
+
 	UFUNCTION(BlueprintCallable)
 		FORCEINLINE bool GetIsStackable() const { return bStackable; }
 	FORCEINLINE bool IsRemovable() const { return bRemovable; }

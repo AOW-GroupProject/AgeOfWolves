@@ -12,7 +12,7 @@ DECLARE_LOG_CATEGORY_EXTERN(LogItemDescription, Log, All)
 
 //@전방 선언
 #pragma region Forward Declaration
-class UInventoryUIContent;
+class UInventoryUI;
 class UItemSlots;
 class UVerticalBox;
 class UEditableTextBox;
@@ -44,7 +44,7 @@ class AGEOFWOLVES_API UItemDescriptionSlot : public UItemSlot
 
 //@친추 클래스
 #pragma region Friend Class
-    friend class UInventoryUIContent;
+    friend class UInventoryUI;
 #pragma endregion
 
     GENERATED_BODY()
@@ -125,7 +125,7 @@ public:
 protected:
     //@Item Slots의 바인딩 준비 완료 이벤트
     UFUNCTION()
-        void OnItemSlotsReadyForBinding(const UInventoryUIContent* InventoryUIContent);
+        void OnItemSlotsReadyForBinding(const UInventoryUI* InventoryUI);
 
 protected:
     //@Inventory Comp의 아이템 할당 이벤트에 등록되는 콜백

@@ -32,6 +32,7 @@ void UItemSlot::NativePreConstruct()
 {
     Super::NativePreConstruct();
 
+    //@ItemSlot은 포커스를 받지 않습니다 (포커스/네비게이션은 상위/버튼에서 처리)
     SetIsFocusable(false);
 
 }
@@ -105,7 +106,7 @@ void UItemSlot::AssignNewItemFromSlot_Implementation(UItemSlot* FromSlot)
 
     //@정보 가져오기
     const FGuid FromID = FromSlot->GetUniqueItemID();
-    const FSlateBrush FromImageBrush = FromSlot->GetSlotImage();
+    const FSlateBrush& FromImageBrush = FromSlot->GetSlotImage();
     const bool FromCanRemove = FromSlot->IsRemovable();
     const bool FromIsStackable = FromSlot->GetIsStackable();
     const int32 FromItemCount = FromSlot->GetSlotItemNum();
@@ -113,10 +114,7 @@ void UItemSlot::AssignNewItemFromSlot_Implementation(UItemSlot* FromSlot)
     //@ID
     UniqueItemID = FromID;
     //@Image
-    if (SlotImage)
-    {
-        SlotImage->SetBrush(FromImageBrush);
-    }
+    if (SlotImage) { SlotImage->SetBrush(FromImageBrush); }
     //@Removable
     SetIsRemovable(FromCanRemove);
     //@Stackable
@@ -201,15 +199,16 @@ void UItemSlot::SetSlotItemNum(int32 InNum)
     }
 }
 
-FSlateBrush UItemSlot::GetSlotImage() const
+const FSlateBrush& UItemSlot::GetSlotImage() const
 {
     if (SlotImage)
     {
         UE_LOGFMT(LogItemSlot, Verbose, "슬롯 이미지를 반환합니다.");
         return SlotImage->GetBrush();
     }
-    UE_LOGFMT(LogItemSlot, Warning, "슬롯 이미지가 유효하지 않습니다. 빈 FSlateBrush를 반환합니다.");
-    return FSlateBrush();
+    UE_LOGFMT(LogItemSlot, Warning, "슬롯 이미지가 유효하지 않습니다. 기본 브러시를 반환합니다.");
+    static FSlateBrush DummyBrush; // 안전한 기본 참조 반환
+    return DummyBrush;
 }
 
 int32 UItemSlot::GetSlotItemNum() const
