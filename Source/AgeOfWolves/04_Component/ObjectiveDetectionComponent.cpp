@@ -506,7 +506,20 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
 
 void UObjectiveDetectionComponent::UpdateDetectionStructure()
 {
+<<<<<<< HEAD
     FVector PawnLocation = GetPawnLocation();
+=======
+    FVector OwnerLocation;
+    FVector OwnerForwardDir  ;
+    if (const APlayerController* PC = Cast<APlayerController>(GetOwner()))
+    {
+        if (const APawn* P = PC->GetPawn())
+        {
+            OwnerLocation = P->GetActorLocation();
+            OwnerForwardDir = P->GetActorForwardVector();
+        }
+    }
+>>>>>>> origin/develop
 
     const float HalfAngleDeg = FMath::Max(0.f, DetectionStructureTotalAngleDegrees * 0.5f);
     const float CosThreshold = FMath::Cos(FMath::DegreesToRadians(HalfAngleDeg));
@@ -527,6 +540,7 @@ void UObjectiveDetectionComponent::UpdateDetectionStructure()
             AActor* Target = StructureData.GetStructureActor();
             if (!IsValid(Target)) continue;
 
+<<<<<<< HEAD
             const FVector ToOwner = PawnLocation - Target->GetActorLocation();
             float DistSq = ToOwner.SizeSquared();
 
@@ -536,12 +550,28 @@ void UObjectiveDetectionComponent::UpdateDetectionStructure()
 
             FVector TargetForwardDir = Target->GetActorForwardVector();
             FVector OwnerToTargetDir = ToOwner.GetSafeNormal();
+=======
+            
+            //@ 감지 거리 체크
+            const FVector ToTarget =  Target->GetActorLocation() - OwnerLocation;
+            float DistSq  = FVector::Dist(Target->GetActorLocation(), OwnerLocation);
+            if (DistSq > DistLimit)
+                continue;
+
+            FVector TargetForwardDir = Target->GetActorForwardVector();
+            FVector OwerToTargetDir = ToTarget;
+>>>>>>> origin/develop
 
             if (!TargetForwardDir.Normalize())
                 continue;
 
+<<<<<<< HEAD
             //2단계: 내적, 지정 각도 내 캐릭터가 위치하는지 체크
             const float CosAngle = FVector::DotProduct(TargetForwardDir, OwnerToTargetDir);
+=======
+            //@구조물 보는 방향 x각도 이내에 있는지 체크
+            const float CosAngle = FVector::DotProduct(OwnerForwardDir, OwerToTargetDir);
+>>>>>>> origin/develop
             if (CosAngle < CosThreshold)
                 continue;
 

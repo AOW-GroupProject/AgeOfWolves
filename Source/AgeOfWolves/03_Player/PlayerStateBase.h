@@ -50,6 +50,7 @@ class AGEOFWOLVES_API APlayerStateBase : public APlayerState, public IAbilitySys
 #pragma region Friend Class
 	friend class ABasePlayerController;
 	friend class ASpecUpItem;
+	friend class AToolItem;
 #pragma endregion
 
 	GENERATED_BODY()
