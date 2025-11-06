@@ -3,7 +3,6 @@
 
 #include "03_Player/BasePlayerController.h"
 #include "03_Player/PlayerStateBase.h"
-
 #include "04_Component/BaseAbilitySystemComponent.h"
 #include "04_Component/ObjectiveDetectionComponent.h"
 #include "19_Interface/InteractionInterface.h"
@@ -14,29 +13,25 @@ DEFINE_LOG_CATEGORY(LogInteraction)
 #pragma region Default Setting
 UInteractionComponent::UInteractionComponent()
 {
-    PrimaryComponentTick.bCanEverTick = true; 
-
-    //@캐싱
-    OwnerPawn.Reset();
-
-    //@Potention Interactions
-    PotentialInteractions.Empty();
-    MPotentialInteractions.Reset();
-
+    PrimaryComponentTick.bCanEverTick = true;
 }
 
 void UInteractionComponent::BeginPlay()
 {
-	Super::BeginPlay();
-
+    Super::BeginPlay();
 }
 
 void UInteractionComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    //@매 틱마다 상호작용 거리 업데이트
-    CommitInteraction();
+    //@거리 체크 Interval 기반 최적화
+    float CurrentTime = GetWorld()->GetTimeSeconds();
+    if (CurrentTime - LastDistanceCheckTime >= DistanceCheckInterval)
+    {
+        CommitInteraction();
+        LastDistanceCheckTime = CurrentTime;
+    }
 }
 
 void UInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
@@ -45,150 +40,25 @@ void UInteractionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
     UnbindExeternalBindToASCComp();
     UnbindExternalBindToODComp();
 
-    //@캐싱
+    //@Heap 정리
+    InteractionHeap.Reset();
+
+    //@캐시 정리
     OwnerPawn.Reset();
 
-	Super::EndPlay(EndPlayReason);
+    Super::EndPlay(EndPlayReason);
 }
-
-void UInteractionComponent::ExeternalBindToASComp()
-{
-    //@PC
-    APlayerController* PC = Cast<APlayerController>(GetOwner());
-    if (!PC)
-    {
-        UE_LOGFMT(LogInteraction, Error, "ASC 바인딩 실패: 소유자가 PlayerController가 아님");
-        return;
-    }
-
-    ABasePlayerController* BasePC = Cast< ABasePlayerController>(PC);
-    if (!BasePC)
-    {
-        UE_LOGFMT(LogInteraction, Error, "{0}: Base Player Controller가 유효하지 않습니다.", __FUNCDNAME__);
-        return;
-    }
-
-    APlayerStateBase* PS = BasePC->GetPlayerState<APlayerStateBase>();
-    if (!PS)
-    {
-        UE_LOGFMT(LogInteraction, Error, "{0}: Player State가 유효하지 않습니다.", __FUNCDNAME__);
-        return;
-    }
-
-    UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent());
-    if (!ASC)
-    {
-        UE_LOGFMT(LogInteraction, Error, "{0}: Base ASC가 유효하지 않습니다.", __FUNCDNAME__);
-        return;
-    }
-
-    //@외부 바인딩...
-    ASC->CharacterStateEventOnGameplay.AddUFunction(this, "OnOwnerStateEventOnGameplay");
-
-    UE_LOGFMT(LogInteraction, Log, "BaseAbilitySystemComponent와 바인딩 완료");
-}
-
-void UInteractionComponent::UnbindExeternalBindToASCComp()
-{
-    //@PC
-    APlayerController* PC = Cast<APlayerController>(GetOwner());
-    if (!PC)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "ASC 언바인딩: 소유자가 PlayerController가 아님");
-        return;
-    }
-
-    //@Base PC
-    ABasePlayerController* BasePC = Cast<ABasePlayerController>(PC);
-    if (!BasePC)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: Base Player Controller가 유효하지 않음", __FUNCDNAME__);
-        return;
-    }
-
-    //@Player State
-    APlayerStateBase* PS = BasePC->GetPlayerState<APlayerStateBase>();
-    if (!PS)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: Player State가 유효하지 않음", __FUNCDNAME__);
-        return;
-    }
-
-    //@Base ASC
-    UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent());
-    if (!ASC)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: Base ASC가 유효하지 않음", __FUNCDNAME__);
-        return;
-    }
-
-    //@외부 바인딩 해제...
-    ASC->CharacterStateEventOnGameplay.RemoveAll(this);
-
-    UE_LOGFMT(LogInteraction, Log, "BaseAbilitySystemComponent와 바인딩 해제 완료");
-}
-
-void UInteractionComponent::ExternalBindToODComp()
-{
-    //@PC
-    APlayerController* PC = Cast<APlayerController>(GetOwner());
-    if (!PC)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "ASC 바인딩 실패: 소유자가 PlayerController가 아님");
-        return;
-    }
-
-    //@Objective Detection Component
-    auto ODComp = PC->FindComponentByClass<UObjectiveDetectionComponent>();
-    if (!ODComp)
-    {
-        return;
-    }
-
-    //@외부 바인딩...
-    ODComp->DetectedAIStateChanged.AddUFunction(this, "OnDetectedAIStateChanged");
-
-    ODComp->ExecutionTargetChanged.AddUFunction(this, "OnExecutionTargetChanged");
-    ODComp->AmbushTargetChanged.AddUFunction(this, "OnAmbushTargetChanged");
-
-    ODComp->DetectedStructureChanged.AddUFunction(this, "OnDetectedStructureChanged");
-}
-
-void UInteractionComponent::UnbindExternalBindToODComp()
-{
-    //@PC
-    APlayerController* PC = Cast<APlayerController>(GetOwner());
-    if (!PC)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "OD 언바인딩: 소유자가 PlayerController가 아님");
-        return;
-    }
-
-    //@Objective Detection Component
-    UObjectiveDetectionComponent* ODComp = PC->FindComponentByClass<UObjectiveDetectionComponent>();
-    if (!ODComp)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: ObjectiveDetectionComponent가 유효하지 않음", __FUNCDNAME__);
-        return;
-    }
-
-    //@외부 바인딩 해제...
-    ODComp->DetectedAIStateChanged.RemoveAll(this);
-
-    UE_LOGFMT(LogInteraction, Log, "ObjectiveDetectionComponent와 바인딩 해제 완료");
-}
-
 void UInteractionComponent::InitializeInteractionComp()
 {
-    //@외부 바인딩...
+    //@외부 컴포넌트 바인딩
     ExternalBindToODComp();
     ExeternalBindToASComp();
 
-    //@PC
+    //@PC 캐싱
     APlayerController* PC = Cast<APlayerController>(GetOwner());
     if (!PC)
     {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 거리 업데이트 실패: 소유자가 PlayerController가 아님", __FUNCDNAME__);
+        UE_LOGFMT(LogInteraction, Warning, "{0}: PC 캐싱 실패", __FUNCDNAME__);
         return;
     }
 
@@ -196,14 +66,119 @@ void UInteractionComponent::InitializeInteractionComp()
     OwnerPawn = PC->GetPawn();
     if (!OwnerPawn.IsValid())
     {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 거리 업데이트 실패: 유효한 플레이어 Pawn이 없음", __FUNCDNAME__);
+        UE_LOGFMT(LogInteraction, Warning, "{0}: Pawn 캐싱 실패", __FUNCDNAME__);
         return;
     }
 
-    //@맵 초기화
-    MPotentialInteractions.Reset();
+    //@Heap 초기화
+    InteractionHeap.Reset();
+    InteractionHeap.Reserve(10);  // 예상 최대 상호작용 개수
 
-    UE_LOGFMT(LogInteraction, Log, "{0}: Interaction Component 초기화 완료", __FUNCDNAME__);
+    UE_LOGFMT(LogInteraction, Log, "{0}: 초기화 완료", __FUNCDNAME__);
+}
+
+void UInteractionComponent::ExeternalBindToASComp()
+{
+    //@PC 유효성 체크
+    APlayerController* PC = Cast<APlayerController>(GetOwner());
+    if (!PC)
+    {
+        UE_LOGFMT(LogInteraction, Error, "ASC 바인딩 실패: PC 없음");
+        return;
+    }
+
+    //@BasePC 캐스팅
+    ABasePlayerController* BasePC = Cast<ABasePlayerController>(PC);
+    if (!BasePC)
+    {
+        UE_LOGFMT(LogInteraction, Error, "{0}: BasePC 캐스팅 실패", __FUNCDNAME__);
+        return;
+    }
+
+    //@PlayerState 가져오기
+    APlayerStateBase* PS = BasePC->GetPlayerState<APlayerStateBase>();
+    if (!PS)
+    {
+        UE_LOGFMT(LogInteraction, Error, "{0}: PlayerState 없음", __FUNCDNAME__);
+        return;
+    }
+
+    //@ASC 가져오기
+    UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent());
+    if (!ASC)
+    {
+        UE_LOGFMT(LogInteraction, Error, "{0}: ASC 캐스팅 실패", __FUNCDNAME__);
+        return;
+    }
+
+    //@델리게이트 바인딩
+    ASC->CharacterStateEventOnGameplay.AddUFunction(this, "OnOwnerStateEventOnGameplay");
+
+    UE_LOGFMT(LogInteraction, Log, "ASC 바인딩 완료");
+}
+
+void UInteractionComponent::UnbindExeternalBindToASCComp()
+{
+    //@PC 유효성 체크
+    APlayerController* PC = Cast<APlayerController>(GetOwner());
+    if (!PC) return;
+
+    //@BasePC 캐스팅
+    ABasePlayerController* BasePC = Cast<ABasePlayerController>(PC);
+    if (!BasePC) return;
+
+    //@PlayerState 가져오기
+    APlayerStateBase* PS = BasePC->GetPlayerState<APlayerStateBase>();
+    if (!PS) return;
+
+    //@ASC 가져오기
+    UBaseAbilitySystemComponent* ASC = Cast<UBaseAbilitySystemComponent>(PS->GetAbilitySystemComponent());
+    if (!ASC) return;
+
+    //@델리게이트 언바인딩
+    ASC->CharacterStateEventOnGameplay.RemoveAll(this);
+
+    UE_LOGFMT(LogInteraction, Log, "ASC 언바인딩 완료");
+}
+
+void UInteractionComponent::ExternalBindToODComp()
+{
+    //@PC 유효성 체크
+    APlayerController* PC = Cast<APlayerController>(GetOwner());
+    if (!PC)
+    {
+        UE_LOGFMT(LogInteraction, Warning, "OD 바인딩 실패: PC 없음");
+        return;
+    }
+
+    //@OD 컴포넌트 찾기
+    UObjectiveDetectionComponent* ODComp = PC->FindComponentByClass<UObjectiveDetectionComponent>();
+    if (!ODComp) return;
+
+    //@델리게이트 바인딩
+    ODComp->DetectedAIStateChanged.AddUFunction(this, "OnDetectedAIStateChanged");
+    ODComp->ExecutionTargetChanged.AddUFunction(this, "OnExecutionTargetChanged");
+    ODComp->AmbushTargetChanged.AddUFunction(this, "OnAmbushTargetChanged");
+    ODComp->DetectedStructureChanged.AddUFunction(this, "OnDetectedStructureChanged");
+}
+
+void UInteractionComponent::UnbindExternalBindToODComp()
+{
+    //@PC 유효성 체크
+    APlayerController* PC = Cast<APlayerController>(GetOwner());
+    if (!PC) return;
+
+    //@OD 컴포넌트 찾기
+    UObjectiveDetectionComponent* ODComp = PC->FindComponentByClass<UObjectiveDetectionComponent>();
+    if (!ODComp) return;
+
+    //@델리게이트 언바인딩
+    ODComp->DetectedAIStateChanged.RemoveAll(this);
+    ODComp->ExecutionTargetChanged.RemoveAll(this);
+    ODComp->AmbushTargetChanged.RemoveAll(this);
+    ODComp->DetectedStructureChanged.RemoveAll(this);
+
+    UE_LOGFMT(LogInteraction, Log, "OD 언바인딩 완료");
 }
 #pragma endregion
 
@@ -211,528 +186,250 @@ void UInteractionComponent::InitializeInteractionComp()
 #pragma region Property or Subwidgets or Infos...etc
 void UInteractionComponent::RegisterPotentialInteraction(AActor* TargetActor)
 {
-    //@Target
-    if (!TargetActor)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 등록 실패: 유효하지 않은 액터", __FUNCDNAME__);
-        return;
-    }
+    if (!TargetActor) return;
 
-    //@Character Tag
+    //@ObjectTag 가져오기 (Character 타입)
     FGameplayTag ObjectTag;
-    ACharacterBase* Character = Cast<ACharacterBase>(TargetActor);
-    if (Character)
+    if (ACharacterBase* Character = Cast<ACharacterBase>(TargetActor))
     {
         ObjectTag = Character->GetCharacterTag();
     }
 
-    if (!ObjectTag.IsValid())
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 등록 실패: 액터({1})에서 유효한 캐릭터 태그를 찾을 수 없음",
-            __FUNCDNAME__, *TargetActor->GetName());
-        return;
-    }
+    if (!ObjectTag.IsValid()) return;
 
-    //@MatchingInteractions
-    TArray<FPotentialInteraction> MatchingInteractions;
+    //@매칭되는 상호작용 템플릿 찾기
     for (const FPotentialInteraction& Interaction : PotentialInteractions)
     {
         if (Interaction.ObjectTag == ObjectTag)
         {
-            MatchingInteractions.Add(Interaction);
+            //@타입별로 개별 등록
+            RegisterPotentialInteraction(TargetActor, Interaction.InteractionType);
         }
     }
-
-    //@MatchingInteractions 0개
-    if (MatchingInteractions.Num() == 0)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 등록 실패: 태그({1})에 대한 정의된 상호작용 템플릿이 없음",
-            __FUNCDNAME__, *ObjectTag.ToString());
-        return;
-    }
-
-    //@기존의 상호작용들
-    if (MPotentialInteractions.Contains(TargetActor))
-    {
-        MPotentialInteractions.Remove(TargetActor);
-    }
-
-    //@MatchingInteractions 등록
-    for (const FPotentialInteraction& Interaction : MatchingInteractions)
-    {
-        //@Contains?
-        if (!MPotentialInteractions.Contains(TargetActor))
-        {
-            MPotentialInteractions.Add(TargetActor, TMap<EInteractionType, FPotentialInteraction>());
-        }
-
-        //@Add
-        MPotentialInteractions[TargetActor].Add(Interaction.InteractionType, Interaction);
-
-        UE_LOGFMT(LogInteraction, Log, "{0}: 잠재적 상호작용 등록 - 액터: {1} | 태그: {2} | 타입: {3} | 이벤트: {4}",
-            __FUNCDNAME__,
-            *TargetActor->GetName(),
-            *ObjectTag.ToString(),
-            static_cast<uint8>(Interaction.InteractionType),
-            *Interaction.EventTag.ToString());
-    }
-
-    UE_LOGFMT(LogInteraction, Log, "{0}: 액터({1})에 대해 총 {2}개의 상호작용 유형 등록 완료",
-        __FUNCDNAME__, *TargetActor->GetName(), MatchingInteractions.Num());
 }
 
 void UInteractionComponent::RegisterPotentialInteraction(AActor* TargetActor, EInteractionType InteractionType)
 {
-    //@Target
-    if (!TargetActor)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 등록 실패: 유효하지 않은 액터", __FUNCDNAME__);
+    //@유효성 체크
+    if (!TargetActor || InteractionType == EInteractionType::None || InteractionType >= EInteractionType::MAX)
         return;
-    }
 
-    //@Interaction Type
-    if (InteractionType == EInteractionType::None || InteractionType >= EInteractionType::MAX)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 등록 실패: 유효하지 않은 상호작용 유형", __FUNCDNAME__);
-        return;
-    }
-
-    //@Object Tag
+    //@ObjectTag 가져오기
     FGameplayTag ObjectTag;
-    ACharacterBase* Character = Cast<ACharacterBase>(TargetActor);
-    if (Character)
+    if (ACharacterBase* Character = Cast<ACharacterBase>(TargetActor))
     {
         ObjectTag = Character->GetCharacterTag();
     }
-
-    IInteractionInterface* InteractionInterface = Cast<IInteractionInterface>(TargetActor);
-    if (InteractionInterface)
+    else if (IInteractionInterface* InteractionInterface = Cast<IInteractionInterface>(TargetActor))
     {
         ObjectTag = InteractionInterface->GetObjectTag();
     }
-    
-    if (!ObjectTag.IsValid())
+
+    if (!ObjectTag.IsValid()) return;
+
+    //@중복 체크
+    for (const FPotentialInteraction& Existing : InteractionHeap)
     {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 등록 실패: 액터({1})에서 유효한 오브젝트 태그를 찾을 수 없음",
-            __FUNCDNAME__, *TargetActor->GetName());
-        return;
+        if (Existing.TargetActor == TargetActor && Existing.InteractionType == InteractionType)
+        {
+            UE_LOGFMT(LogInteraction, Warning, "이미 등록된 상호작용: {0} - {1}",
+                *TargetActor->GetName(), static_cast<uint8>(InteractionType));
+            return;
+        }
     }
 
-    //@FoundInteraction
-    FPotentialInteraction FoundInteraction;
-    bool bFoundMatch = false;
-
-    for (int32 i = 0; i < PotentialInteractions.Num(); i++)
+    //@템플릿에서 매칭되는 상호작용 찾기
+    const FPotentialInteraction* FoundInteraction = nullptr;
+    for (const FPotentialInteraction& Interaction : PotentialInteractions)
     {
-        if (PotentialInteractions[i].ObjectTag == ObjectTag && PotentialInteractions[i].InteractionType == InteractionType)
+        if (Interaction.ObjectTag == ObjectTag && Interaction.InteractionType == InteractionType)
         {
-            FoundInteraction = PotentialInteractions[i];
-            bFoundMatch = true;
+            FoundInteraction = &Interaction;
             break;
         }
     }
 
-    //@Found?
-    if (!bFoundMatch)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 등록 실패: 태그({1})와 타입({2})에 대한 정의된 상호작용 템플릿이 없음",
-            __FUNCDNAME__, *ObjectTag.ToString(), static_cast<uint8>(InteractionType));
-        return;
-    }
+    if (!FoundInteraction) return;
 
-    //@Contains?
-    if (!MPotentialInteractions.Contains(TargetActor))
-    {
-        MPotentialInteractions.Add(TargetActor, TMap<EInteractionType, FPotentialInteraction>());
-    }
+    //@새 상호작용 생성 (Actor 포함)
+    FPotentialInteraction NewInteraction = *FoundInteraction;
+    NewInteraction.TargetActor = TargetActor;
 
-    //@Add
-    MPotentialInteractions[TargetActor].Add(InteractionType, FoundInteraction);
+    //@Heap에 추가 (TArray::HeapPush 사용)
+    InteractionHeap.HeapPush(NewInteraction);
 
-    UE_LOGFMT(LogInteraction, Log, "{0}: 잠재적 상호작용 등록 - 액터: {1} | 태그: {2} | 타입: {3} | 이벤트: {4}",
-        __FUNCDNAME__,
-        *TargetActor->GetName(),
-        *ObjectTag.ToString(),
-        static_cast<uint8>(InteractionType),
-        *FoundInteraction.EventTag.ToString());
+    UE_LOGFMT(LogInteraction, Log, "상호작용 등록: {0} - Type: {1} | Priority: {2}",
+        *TargetActor->GetName(), static_cast<uint8>(InteractionType), NewInteraction.Priority);
 }
 
 void UInteractionComponent::RemovePotentialInteraction(AActor* TargetActor)
 {
-    if (!TargetActor)
+    if (!TargetActor) return;
+
+    bool bRemoved = false;
+
+    //@역순으로 순회하며 제거 (인덱스 안전)
+    for (int32 i = InteractionHeap.Num() - 1; i >= 0; --i)
     {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 제거 실패: 유효하지 않은 액터", __FUNCDNAME__);
-        return;
+        if (InteractionHeap[i].TargetActor == TargetActor)
+        {
+            InteractionHeap.HeapRemoveAt(i);
+            bRemoved = true;
+        }
     }
 
-    if (MPotentialInteractions.Remove(TargetActor) <= 0)
+    if (bRemoved)
     {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 제거할 상호작용을 찾을 수 없음 - 액터: {1}",
-            __FUNCDNAME__, *TargetActor->GetName());
-        return;
+        UE_LOGFMT(LogInteraction, Log, "모든 상호작용 제거 - 액터: {0}", *TargetActor->GetName());
+        UpdateCurrentPriorityInteraction();
     }
-
-    UE_LOGFMT(LogInteraction, Log, "{0}: 모든 잠재적 상호작용 제거 - 액터: {1}",
-        __FUNCDNAME__, *TargetActor->GetName());
-
-    UpdateCurrentPriorityInteraction();
 }
 
 void UInteractionComponent::RemovePotentialInteraction(AActor* TargetActor, EInteractionType InteractionType)
 {
-    if (!TargetActor)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 제거 실패: 유효하지 않은 액터", __FUNCDNAME__);
+    //@유효성 체크
+    if (!TargetActor || InteractionType == EInteractionType::None || InteractionType >= EInteractionType::MAX)
         return;
-    }
 
-    if (InteractionType == EInteractionType::None || InteractionType >= EInteractionType::MAX)
+    //@매칭되는 항목 찾기
+    for (int32 i = 0; i < InteractionHeap.Num(); ++i)
     {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 제거 실패: 유효하지 않은 상호작용 유형", __FUNCDNAME__);
-        return;
+        const FPotentialInteraction& Interaction = InteractionHeap[i];
+
+        if (Interaction.TargetActor == TargetActor && Interaction.InteractionType == InteractionType)
+        {
+            //@Heap에서 제거
+            InteractionHeap.HeapRemoveAt(i);
+
+            UE_LOGFMT(LogInteraction, Log, "상호작용 제거: {0} - Type: {1}",
+                *TargetActor->GetName(), static_cast<uint8>(InteractionType));
+
+            //@우선순위 재평가
+            UpdateCurrentPriorityInteraction();
+            return;
+        }
     }
-
-    TMap<EInteractionType, FPotentialInteraction>* ActorInteractions = MPotentialInteractions.Find(TargetActor);
-    if (!ActorInteractions)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 제거할 상호작용을 찾을 수 없음 - 액터: {1}",
-            __FUNCDNAME__, *TargetActor->GetName());
-        return;
-    }
-
-    if (ActorInteractions->Remove(InteractionType) <= 0)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 제거할 특정 상호작용 타입을 찾을 수 없음 - 액터: {1} | 타입: {2}",
-            __FUNCDNAME__, *TargetActor->GetName(), static_cast<uint8>(InteractionType));
-        return;
-    }
-
-    UE_LOGFMT(LogInteraction, Log, "{0}: 특정 잠재적 상호작용 제거 - 액터: {1} | 타입: {2}",
-        __FUNCDNAME__, *TargetActor->GetName(), static_cast<uint8>(InteractionType));
-
-    if (ActorInteractions->Num() == 0)
-    {
-        MPotentialInteractions.Remove(TargetActor);
-    }
-
-    UpdateCurrentPriorityInteraction();
 }
 
 void UInteractionComponent::CommitInteraction()
 {
-    //@PC
-    APlayerController* PC = Cast<APlayerController>(GetOwner());
-    if (!PC)
+    //@거리 조건 업데이트
+    UpdateDistanceConditions();
+
+    //@우선순위 재평가
+    UpdateCurrentPriorityInteraction();
+}
+
+void UInteractionComponent::UpdateDistanceConditions()
+{
+    if (!OwnerPawn.IsValid()) return;
+
+    FVector PlayerLocation = OwnerPawn->GetActorLocation();
+    bool bAnyChanged = false;
+
+    //@모든 상호작용의 거리 조건 업데이트
+    for (FPotentialInteraction& Interaction : InteractionHeap)
     {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 거리 업데이트 실패: 소유자가 PlayerController가 아님", __FUNCDNAME__);
-        return;
+        if (!Interaction.TargetActor.IsValid()) continue;
+
+        //@거리 제곱 비교 (최적화)
+        float DistSq = FVector::DistSquared(PlayerLocation, Interaction.TargetActor->GetActorLocation());
+        bool bInRange = (DistSq <= FMath::Square(Interaction.RequiredDistance));
+
+        //@조건 변경 감지
+        if (Interaction.bAdditionalConditionsMet != bInRange)
+        {
+            Interaction.bAdditionalConditionsMet = bInRange;
+            bAnyChanged = true;
+        }
     }
 
-    //@Pawn
-    APawn* PlayerPawn = PC->GetPawn();
-    if (!PlayerPawn)
+    //@변경 사항이 있으면 Heap 재정렬
+    if (bAnyChanged)
     {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 거리 업데이트 실패: 유효한 플레이어 Pawn이 없음", __FUNCDNAME__);
-        return;
+        InteractionHeap.Heapify();
     }
+}
 
-    //@플레이어 위치
-    FVector PlayerLocation = PlayerPawn->GetActorLocation();
+void UInteractionComponent::UpdateCurrentPriorityInteraction()
+{
+    //@이전 상호작용 백업
+    FPotentialInteraction PreviousInteraction = CurrentPriorityInteraction;
+    AActor* PreviousActor = PreviousInteraction.TargetActor.Get();
 
-    //@우선순위 상호작용 추적을 위한 변수
-    FPotentialInteraction NewPriorityInteraction;
-    bool bFoundPriority = false;
+    //@새로운 최고 우선순위 찾기
     AActor* NewPriorityActor = nullptr;
+    CurrentPriorityInteraction = FindHighestPriorityInteraction(NewPriorityActor);
 
-    //@모든 등록된 액터에 대한 상호작용 거리 업데이트
-    TArray<TWeakObjectPtr<AActor>> ActorsToRemove;
+    //@우선순위 변경 감지
+    bool bPriorityChanged = (CurrentPriorityInteraction.ObjectTag != PreviousInteraction.ObjectTag ||
+        CurrentPriorityInteraction.InteractionType != PreviousInteraction.InteractionType);
 
-    for (auto& ActorInteractionPair : MPotentialInteractions)
+    if (!bPriorityChanged) return;
+
+    //@이전 상호작용 취소
+    if (PreviousInteraction.ObjectTag.IsValid() && PreviousActor)
     {
-        //@상호작용 대상 액터
-        TWeakObjectPtr<AActor> TargetActorWeak = ActorInteractionPair.Key;
-        if (!TargetActorWeak.IsValid())
-        {
-            //@유효하지 않은 액터는 제거 목록에 추가
-            ActorsToRemove.Add(TargetActorWeak);
-            continue;
-        }
-
-        AActor* TargetActor = TargetActorWeak.Get();
-
-        //@타겟 위치
-        FVector TargetLocation = TargetActor->GetActorLocation();
-
-        //@플레이어와 타겟 간 거리 계산
-        float DistanceSq = FVector::DistSquared(PlayerLocation, TargetLocation);
-
-        //@액터의 모든 상호작용에 대한 처리
-        TMap<EInteractionType, FPotentialInteraction>& ActorInteractions = ActorInteractionPair.Value;
-        TArray<EInteractionType> InteractionTypesToRemove;
-
-        for (auto& TypeInteractionPair : ActorInteractions)
-        {
-            EInteractionType InteractionType = TypeInteractionPair.Key;
-            FPotentialInteraction& Interaction = TypeInteractionPair.Value;
-
-            //@필요 거리의 제곱값 (성능 최적화를 위해 제곱 비교)
-            float RequiredDistanceSq = Interaction.RequiredDistance * Interaction.RequiredDistance;
-
-            //@거리 조건 만족 여부 - 이전 상태와 비교하여 변경 감지
-            bool bWasAvailable = Interaction.bAdditionalConditionsMet;
-            bool bIsAvailable = (DistanceSq <= RequiredDistanceSq);
-
-            //@거리 조건 업데이트
-            Interaction.bAdditionalConditionsMet = bIsAvailable;
-
-            //@상태 변경 시 로그 출력
-            if (bWasAvailable != bIsAvailable)
-            {
-                UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 거리 조건 변경 - 액터: {1} | 타입: {2} | 가능 여부: {3} | 거리: {4} | 필요 거리: {5}",
-                    __FUNCDNAME__,
-                    *TargetActor->GetName(),
-                    static_cast<uint8>(InteractionType),
-                    bIsAvailable ? TEXT("가능") : TEXT("불가능"),
-                    FMath::Sqrt(DistanceSq),
-                    Interaction.RequiredDistance);
-
-                //@현재 우선순위 상호작용이 불가능하게 되었으면 취소 이벤트 발생
-                if (!bIsAvailable && CurrentPriorityInteraction == Interaction)
-                {
-                    UE_LOGFMT(LogInteraction, Log, "{0}: 현재 우선순위 상호작용 불가능으로 변경 - 액터: {1} | 타입: {2}",
-                        __FUNCDNAME__, *TargetActor->GetName(), static_cast<uint8>(InteractionType));
-
-                    CancelInteractionActivated(TargetActor, Interaction);
-
-                    //@현재 우선순위 상호작용 초기화
-                    CurrentPriorityInteraction = FPotentialInteraction();
-                }
-            }
-
-            //@완전히 사용 가능한 상호작용이면서 현재까지의 최우선순위보다 높은 경우 업데이트
-            if (Interaction.IsFullyAvailable() && (!bFoundPriority || Interaction.Priority > NewPriorityInteraction.Priority))
-            {
-                NewPriorityInteraction = Interaction;
-                NewPriorityActor = TargetActor;
-                bFoundPriority = true;
-            }
-        }
-
-        //@제거 대상 상호작용 타입 처리
-        for (EInteractionType TypeToRemove : InteractionTypesToRemove)
-        {
-            ActorInteractions.Remove(TypeToRemove);
-        }
-
-        //@모든 상호작용이 제거된 경우, 액터도 제거 목록에 추가
-        if (ActorInteractions.Num() == 0)
-        {
-            ActorsToRemove.Add(TargetActorWeak);
-        }
+        CancelInteractionActivated(PreviousActor, PreviousInteraction);
     }
 
-    //@유효하지 않거나 빈 액터 항목 제거
-    for (const TWeakObjectPtr<AActor>& ActorToRemove : ActorsToRemove)
+    //@새 상호작용 활성화
+    if (CurrentPriorityInteraction.ObjectTag.IsValid() && NewPriorityActor)
     {
-        MPotentialInteractions.Remove(ActorToRemove);
-    }
-
-    //@현재 사용 가능한 모든 상호작용 로그 출력
-    UE_LOGFMT(LogInteraction, Log, "{0}: === 현재 사용 가능한 상호작용 목록 ===", __FUNCDNAME__);
-    int32 AvailableCount = 0;
-
-    for (const auto& ActorInteractionPair : MPotentialInteractions)
-    {
-        TWeakObjectPtr<AActor> TargetActorWeak = ActorInteractionPair.Key;
-        if (!TargetActorWeak.IsValid())
-        {
-            continue;
-        }
-
-        AActor* TargetActor = TargetActorWeak.Get();
-        const TMap<EInteractionType, FPotentialInteraction>& ActorInteractions = ActorInteractionPair.Value;
-
-        for (const auto& TypeInteractionPair : ActorInteractions)
-        {
-            const FPotentialInteraction& Interaction = TypeInteractionPair.Value;
-
-            //@상호작용 가능한 상태
-            if (Interaction.IsFullyAvailable())
-            {
-                AvailableCount++;
-
-                //@타겟 위치와 플레이어 위치 계산
-                FVector TargetLocation = TargetActor->GetActorLocation();
-                const float CurrentDistance = FVector::Dist(PlayerLocation, TargetLocation);
-                const float RequiredDistance = Interaction.RequiredDistance;
-
-                UE_LOGFMT(LogInteraction, Log, "   - 액터: {0} | 태그: {1} | 타입: {2} | 우선순위: {3} | 현재 거리: {4} | 요구 거리: {5}",
-                    *TargetActor->GetName(),
-                    *Interaction.ObjectTag.ToString(),
-                    static_cast<uint8>(Interaction.InteractionType),
-                    Interaction.Priority,
-                    CurrentDistance,
-                    RequiredDistance);
-            }
-        }
-    }
-
-    if (AvailableCount == 0)
-    {
-        UE_LOGFMT(LogInteraction, Log, "사용 가능한 상호작용이 없습니다.");
-    }
-
-    //@새로운 우선순위 상호작용이 현재와 다를 경우 업데이트
-    if (bFoundPriority && (CurrentPriorityInteraction != NewPriorityInteraction))
-    {
-        //@우선순위 상호작용 변경
-        CurrentPriorityInteraction = NewPriorityInteraction;
-
-        //@새로운 우선순위 상호작용 이벤트 발생
         TryActivateInteraction(NewPriorityActor, CurrentPriorityInteraction);
-    }
-    //@사용 가능한 상호작용이 없는데 현재 우선순위 상호작용이 있을 경우 초기화
-    else if (!bFoundPriority && CurrentPriorityInteraction.ObjectTag.IsValid())
-    {
-        //@가능한 상호작용이 없어짐
-        CancelInteractionActivated(nullptr, CurrentPriorityInteraction);
-        CurrentPriorityInteraction = FPotentialInteraction();
     }
 }
 
 void UInteractionComponent::TryActivateInteraction(AActor* TargetActor, const FPotentialInteraction& Interaction)
 {
-    if (!Interaction.IsFullyAvailable() || !TargetActor)
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상호작용 활성화 실패: 유효하지 않은 파라미터", __FUNCDNAME__);
-        return;
-    }
+    //@유효성 체크
+    if (!Interaction.IsFullyAvailable() || !TargetActor) return;
 
-    //@이벤트 발생 (델리게이트 호출)
+    //@델리게이트 브로드캐스트
     PotentialInteractionChanged.Broadcast(TargetActor, Interaction);
 
-    UE_LOGFMT(LogInteraction, Log, "{0}: 상호작용 활성화 - 액터: {1} | 태그: {2} | 타입: {3} | 이벤트: {4}",
-        __FUNCDNAME__,
-        *TargetActor->GetName(),
-        *Interaction.ObjectTag.ToString(),
-        static_cast<uint8>(Interaction.InteractionType),
-        *Interaction.EventTag.ToString());
+    UE_LOGFMT(LogInteraction, Log, "{0}: 상호작용 활성화 - 액터: {1} | 타입: {2}",
+        __FUNCDNAME__, *TargetActor->GetName(), static_cast<uint8>(Interaction.InteractionType));
 }
 
 void UInteractionComponent::CancelInteractionActivated(AActor* TargetActor, const FPotentialInteraction& Interaction)
 {
-    if (!Interaction.ObjectTag.IsValid())
-    {
-        return;
-    }
+    if (!Interaction.ObjectTag.IsValid()) return;
 
     //@취소된 상호작용 생성 (bAdditionalConditionsMet = false)
     FPotentialInteraction CancelledInteraction = Interaction;
     CancelledInteraction.bAdditionalConditionsMet = false;
 
-    //@이벤트 발생 (델리게이트 호출)
+    //@델리게이트 브로드캐스트
     PotentialInteractionChanged.Broadcast(TargetActor, CancelledInteraction);
 
-    UE_LOGFMT(LogInteraction, Log, "{0}: 상호작용 취소 - 액터: {1} | 태그: {2} | 타입: {3}",
+    UE_LOGFMT(LogInteraction, Log, "{0}: 상호작용 취소 - 액터: {1} | 타입: {2}",
         __FUNCDNAME__,
         TargetActor ? *TargetActor->GetName() : TEXT("없음"),
-        *Interaction.ObjectTag.ToString(),
         static_cast<uint8>(Interaction.InteractionType));
 }
 
-void UInteractionComponent::UpdateCurrentPriorityInteraction()
+void UInteractionComponent::HandleTargetTransition(AActor* NewTarget, EInteractionType TargetType)
 {
-    //@이전 상호작용 정보 백업
-    FPotentialInteraction PreviousInteraction = CurrentPriorityInteraction;
-    AActor* PreviousActor = nullptr;
-
-    //@이전 우선순위 액터 찾기
-    if (PreviousInteraction.ObjectTag.IsValid())
+    //@역순으로 순회하며 해당 타입 제거
+    for (int32 i = InteractionHeap.Num() - 1; i >= 0; --i)
     {
-        for (const auto& ActorPair : MPotentialInteractions)
+        if (InteractionHeap[i].InteractionType == TargetType)
         {
-            if (!ActorPair.Key.IsValid()) continue;
-
-            for (const auto& InteractionPair : ActorPair.Value)
-            {
-                if (InteractionPair.Value.ObjectTag == PreviousInteraction.ObjectTag &&
-                    InteractionPair.Value.InteractionType == PreviousInteraction.InteractionType)
-                {
-                    PreviousActor = ActorPair.Key.Get();
-                    break;
-                }
-            }
-            if (PreviousActor) break;
+            InteractionHeap.HeapRemoveAt(i);
         }
     }
 
-    //@현재 우선순위 상호작용 초기화
-    CurrentPriorityInteraction = FPotentialInteraction();
-    AActor* NewPriorityActor = nullptr;
-
-    UE_LOGFMT(LogInteraction, Log, "{0}: 우선순위 상호작용 업데이트 시작", __FUNCDNAME__);
-
-    //@모든 유효한 상호작용 중 가장 높은 우선순위 찾기
-    for (const auto& ActorPair : MPotentialInteractions)
+    //@새 타겟 등록
+    if (NewTarget)
     {
-        //@액터 유효성 확인
-        if (!ActorPair.Key.IsValid()) continue;
-
-        for (const auto& InteractionPair : ActorPair.Value)
-        {
-            const FPotentialInteraction& Interaction = InteractionPair.Value;
-
-            //@상호작용 가용성 및 우선순위 확인
-            if (!Interaction.IsFullyAvailable()) continue;
-            if (Interaction.Priority <= CurrentPriorityInteraction.Priority) continue;
-
-            CurrentPriorityInteraction = Interaction;
-            NewPriorityActor = ActorPair.Key.Get();
-
-            UE_LOGFMT(LogInteraction, Log, "{0}: 새로운 최우선 상호작용 발견 - 액터: {1} | 타입: {2} | 우선순위: {3}",
-                __FUNCDNAME__,
-                *NewPriorityActor->GetName(),
-                static_cast<uint8>(Interaction.InteractionType),
-                Interaction.Priority);
-        }
+        RegisterPotentialInteraction(NewTarget, TargetType);
     }
+}
 
-    //@우선순위 상호작용 변경 감지
-    bool bPriorityChanged = (CurrentPriorityInteraction.ObjectTag != PreviousInteraction.ObjectTag ||
-        CurrentPriorityInteraction.InteractionType != PreviousInteraction.InteractionType);
-
-    //@변경사항 없음 - 얼리 리턴
-    if (!bPriorityChanged)
-    {
-        UE_LOGFMT(LogInteraction, Log, "{0}: 우선순위 상호작용 변경사항 없음", __FUNCDNAME__);
-        return;
-    }
-
-    //@이전 상호작용 취소 처리
-    if (PreviousInteraction.ObjectTag.IsValid())
-    {
-        UE_LOGFMT(LogInteraction, Log, "{0}: 이전 우선순위 상호작용 취소 - 액터: {1} | 타입: {2}",
-            __FUNCDNAME__,
-            PreviousActor ? *PreviousActor->GetName() : TEXT("없음"),
-            static_cast<uint8>(PreviousInteraction.InteractionType));
-
-        CancelInteractionActivated(PreviousActor, PreviousInteraction);
-    }
-
-    //@새로운 우선순위 상호작용 활성화
-    if (CurrentPriorityInteraction.ObjectTag.IsValid())
-    {
-        UE_LOGFMT(LogInteraction, Log, "{0}: 새로운 우선순위 상호작용 활성화 - 액터: {1} | 타입: {2}",
-            __FUNCDNAME__,
-            NewPriorityActor ? *NewPriorityActor->GetName() : TEXT("없음"),
-            static_cast<uint8>(CurrentPriorityInteraction.InteractionType));
-
-        TryActivateInteraction(NewPriorityActor, CurrentPriorityInteraction);
-    }
-    else
-    {
-        UE_LOGFMT(LogInteraction, Log, "{0}: 모든 우선순위 상호작용 제거됨", __FUNCDNAME__);
-    }
+void UInteractionComponent::CleanupEmptyActorEntries()
+{
+    InteractionHeap.Empty();
 }
 #pragma endregion
 
@@ -740,217 +437,153 @@ void UInteractionComponent::UpdateCurrentPriorityInteraction()
 #pragma region Callbacks
 void UInteractionComponent::OnOwnerStateEventOnGameplay(AActor* OwnerActor, const FGameplayTag& StateTag)
 {
+    //@현재 미사용
 }
 
 void UInteractionComponent::OnDetectedAIStateChanged(const FGameplayTag& StateTag, AActor* ObjectiveActor)
 {
-    //@Objective Actor, State Tag
-    if (!ObjectiveActor || !StateTag.IsValid())
-    {
-        UE_LOGFMT(LogInteraction, Warning, "{0}: 상태 변경 이벤트 처리 실패: 유효하지 않은 매개변수", __FUNCDNAME__);
-        return;
-    }
+    //@유효성 체크
+    if (!ObjectiveActor || !StateTag.IsValid()) return;
 
-    UE_LOGFMT(LogInteraction, Log, "{0}: 상태 변경 감지 - 액터: {1} | 상태: {2}",
-        __FUNCDNAME__, *ObjectiveActor->GetName(), *StateTag.ToString());
-
-    // Fragile 상태 처리는 제거하고 Dead 상태만 처리
+    //@Dead 상태인 경우 모든 상호작용 제거
     if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
     {
         RemovePotentialInteraction(ObjectiveActor);
     }
-
-    // State.Normal 처리도 제거 (ExecutionTargetChanged에서 처리)
 }
 
 void UInteractionComponent::OnExecutionTargetChanged(AActor* PotentialExecutionTarget)
 {
-    // 처형 타겟이 없으면 모든 처형 상호작용 제거
-    if (!PotentialExecutionTarget)
-    {
-        TArray<TWeakObjectPtr<AActor>> ActorsToCheck;
-        MPotentialInteractions.GetKeys(ActorsToCheck);
-
-        for (const auto& ActorWeak : ActorsToCheck)
-        {
-            if (ActorWeak.IsValid())
-            {
-                RemovePotentialInteraction(ActorWeak.Get(), EInteractionType::Execution);
-            }
-        }
-
-        UE_LOGFMT(LogInteraction, Log, "{0}: 처형 타겟 초기화 - 모든 처형 상호작용 제거", __FUNCDNAME__);
-        return;
-    }
-
-    UE_LOGFMT(LogInteraction, Log, "{0}: 처형 타겟 변경 감지 - 액터: {1}",
-        __FUNCDNAME__, *PotentialExecutionTarget->GetName());
-
-    //@새로운 처형 타겟 등록
-    RegisterPotentialInteraction(PotentialExecutionTarget, EInteractionType::Execution);
-
-    //@다른 액터들의 처형 상호작용 제거
-    TArray<TWeakObjectPtr<AActor>> ActorsToCheck;
-    MPotentialInteractions.GetKeys(ActorsToCheck);
-
-    for (const auto& ActorWeak : ActorsToCheck)
-    {
-        if (ActorWeak.IsValid() && ActorWeak.Get() != PotentialExecutionTarget)
-        {
-            RemovePotentialInteraction(ActorWeak.Get(), EInteractionType::Execution);
-        }
-    }
-
-    UE_LOGFMT(LogInteraction, Log, "{0}: 처형 타겟 처리 완료 - 액터: {1}에 대한 처형 상호작용 등록",
-        __FUNCDNAME__, *PotentialExecutionTarget->GetName());
+    //@처형 타겟 전체 교체
+    HandleTargetTransition(PotentialExecutionTarget, EInteractionType::Execution);
 }
 
 void UInteractionComponent::OnAmbushTargetChanged(AActor* PotentialAmbushTarget)
 {
-    //@PotentialAmbushTarget
-    if (!PotentialAmbushTarget)
-    {
-        TArray<TWeakObjectPtr<AActor>> ActorsToCheck;
-        MPotentialInteractions.GetKeys(ActorsToCheck);
-
-        for (const auto& ActorWeak : ActorsToCheck)
-        {
-            //@Remove
-            if (ActorWeak.IsValid())
-            {
-                RemovePotentialInteraction(ActorWeak.Get(), EInteractionType::Ambush);
-            }
-        }
-
-        UE_LOGFMT(LogInteraction, Log, "{0}: 암살 타겟 초기화 - 모든 암살 상호작용 제거", __FUNCDNAME__);
-        return;
-    }
-
-    UE_LOGFMT(LogInteraction, Log, "{0}: 암살 타겟 변경 감지 - 액터: {1}",
-        __FUNCDNAME__, *PotentialAmbushTarget->GetName());
-
-    //@새로운 잠재적 암살 타겟 등록
-    RegisterPotentialInteraction(PotentialAmbushTarget, EInteractionType::Ambush);
-
-    //@다른 액터들의 암살 유형 상호작용 제거 
-    TArray<TWeakObjectPtr<AActor>> ActorsToCheck;
-    MPotentialInteractions.GetKeys(ActorsToCheck);
-
-    for (const auto& ActorWeak : ActorsToCheck)
-    {
-        //@Remove
-        if (ActorWeak.IsValid() && ActorWeak.Get() != PotentialAmbushTarget)
-        {
-            // 해당 액터의 암살 유형 상호작용 제거
-            RemovePotentialInteraction(ActorWeak.Get(), EInteractionType::Ambush);
-        }
-    }
-
-    UE_LOGFMT(LogInteraction, Log, "{0}: 암살 타겟 처리 완료 - 액터: {1}에 대한 암살 상호작용 등록",
-        __FUNCDNAME__, *PotentialAmbushTarget->GetName());
+    //@암살 타겟 전체 교체
+    HandleTargetTransition(PotentialAmbushTarget, EInteractionType::Ambush);
 }
 
 void UInteractionComponent::OnDetectedStructureChanged(AActor* DetectedStructureActor, bool isEnteredDetection)
 {
-
-    //@ 구조물  오브젝트 감지에서 벗어나면 상호작용 제거
+    //@감지 벗어남: 상호작용 제거
     if (DetectedStructureActor && !isEnteredDetection)
     {
         RemovePotentialInteraction(DetectedStructureActor, EInteractionType::Shrine);
-
-        UE_LOGFMT(LogInteraction, Log, " 구조물 감지 초기화 - 모든 구조물  상호작용 제거");
+        UE_LOGFMT(LogInteraction, Log, "구조물 감지 해제");
         return;
     }
 
-    UE_LOGFMT(LogInteraction, Log, " 구조물 감지 - 액터: {1}",
-         *DetectedStructureActor->GetName());
-
-    //@새로운 처형 타겟 등록
-    RegisterPotentialInteraction(DetectedStructureActor, EInteractionType::Shrine);
-
-    //@다른 구조물 상호작용 정보 제거?
-    //..
-
-    
-    UE_LOGFMT(LogInteraction, Log, "구조물감지 - 액터: {1}에 대한 구조물 감지 상호작용 등록",
-         *DetectedStructureActor->GetName());
-    
+    //@감지 진입: 상호작용 등록
+    if (DetectedStructureActor && isEnteredDetection)
+    {
+        RegisterPotentialInteraction(DetectedStructureActor, EInteractionType::Shrine);
+        UE_LOGFMT(LogInteraction, Log, "구조물 감지 등록 - 액터: {0}", *DetectedStructureActor->GetName());
+    }
 }
 #pragma endregion
 
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
-
 bool UInteractionComponent::IsInteractionTypeAvailable(EInteractionType InteractionType) const
 {
-	return false;
+    //@해당 타입의 가용 상호작용 찾기
+    for (const FPotentialInteraction& Interaction : InteractionHeap)
+    {
+        if (Interaction.InteractionType == InteractionType &&
+            Interaction.IsFullyAvailable() &&
+            Interaction.TargetActor.IsValid())
+        {
+            return true;
+        }
+    }
+
+    return false;
 }
 
-TArray<FPotentialInteraction> UInteractionComponent::FindInteraction(AActor* TargetActor)
+TArray<FPotentialInteraction> UInteractionComponent::FindInteraction(OUT AActor* TargetActor)
 {
     TArray<FPotentialInteraction> Result;
+    if (!TargetActor) return Result;
 
-    if (!TargetActor)
+    //@해당 Actor의 모든 상호작용 수집
+    for (const FPotentialInteraction& Interaction : InteractionHeap)
     {
-        return Result;
-    }
-
-    TMap<EInteractionType, FPotentialInteraction>* ActorInteractions = MPotentialInteractions.Find(TargetActor);
-    if (!ActorInteractions)
-    {
-        return Result;
-    }
-
-    // 액터에 대한 모든 상호작용 정보 수집
-    for (const auto& Pair : *ActorInteractions)
-    {
-        Result.Add(Pair.Value);
+        if (Interaction.TargetActor == TargetActor)
+        {
+            Result.Add(Interaction);
+        }
     }
 
     return Result;
 }
 
-FPotentialInteraction* UInteractionComponent::FindInteraction(AActor* TargetActor, EInteractionType Type)
+FPotentialInteraction* UInteractionComponent::FindInteraction(OUT AActor* TargetActor, EInteractionType Type)
 {
-    if (!TargetActor)
+    if (!TargetActor) return nullptr;
+
+    //@해당 Actor의 특정 타입 상호작용 찾기
+    for (FPotentialInteraction& Interaction : InteractionHeap)
     {
-        return nullptr;
+        if (Interaction.TargetActor == TargetActor && Interaction.InteractionType == Type)
+        {
+            return &Interaction;
+        }
     }
 
-    TMap<EInteractionType, FPotentialInteraction>* ActorInteractions = MPotentialInteractions.Find(TargetActor);
-    if (!ActorInteractions)
+    return nullptr;
+}
+
+FPotentialInteraction UInteractionComponent::FindHighestPriorityInteraction(OUT AActor*& OutActor)
+{
+    OutActor = nullptr;
+
+    //@Heap이 비어있으면 빈 상호작용 반환
+    if (InteractionHeap.Num() == 0)
     {
-        return nullptr;
+        return FPotentialInteraction();
     }
 
-    return ActorInteractions->Find(Type);
+    //@Top부터 순회하며 가용한 상호작용 찾기
+    for (int32 i = 0; i < InteractionHeap.Num(); ++i)
+    {
+        const FPotentialInteraction& Interaction = InteractionHeap[i];
+
+        //@Actor 유효성 체크
+        if (!Interaction.TargetActor.IsValid())
+        {
+            continue;
+        }
+
+        //@완전 가용 상태 확인
+        if (Interaction.IsFullyAvailable())
+        {
+            OutActor = Interaction.TargetActor.Get();
+            return Interaction;
+        }
+    }
+
+    return FPotentialInteraction();
 }
 
 FPotentialInteraction UInteractionComponent::GetHighestPriorityInteraction() const
 {
-	return FPotentialInteraction();
+    return CurrentPriorityInteraction;
 }
 
 FPotentialInteraction UInteractionComponent::GetHighestPriorityInteractionForActor(AActor* TargetActor)
 {
-    if (!TargetActor)
-    {
-        return FPotentialInteraction();
-    }
-
-    TMap<EInteractionType, FPotentialInteraction>* ActorInteractions = MPotentialInteractions.Find(TargetActor);
-    if (!ActorInteractions || ActorInteractions->Num() == 0)
-    {
-        return FPotentialInteraction();
-    }
+    if (!TargetActor) return FPotentialInteraction();
 
     FPotentialInteraction HighestPriority;
     bool bFound = false;
 
-    for (const auto& Pair : *ActorInteractions)
+    //@해당 Actor의 모든 상호작용 중 최고 우선순위 찾기
+    for (const FPotentialInteraction& Interaction : InteractionHeap)
     {
-        const FPotentialInteraction& Interaction = Pair.Value;
-        if (Interaction.IsFullyAvailable() && (!bFound || Interaction.Priority > HighestPriority.Priority))
+        if (Interaction.TargetActor == TargetActor &&
+            Interaction.IsFullyAvailable() &&
+            (!bFound || Interaction.Priority > HighestPriority.Priority))
         {
             HighestPriority = Interaction;
             bFound = true;
