@@ -92,30 +92,7 @@ void UCustomButton::UpdateButtonImage()
         return;
     }
 
-    //@FButtonStateInformation
-    for (auto& StateInfo : ButtonStateInfos)
-    {
-        if (StateInfo.State == CurrentButtonState)
-        {
-            UTexture2D* LoadedTexture = StateInfo.Texture.LoadSynchronous();
-            if (!LoadedTexture)
-            {
-                //@Normal 상태일 경우 ButtonImage를 비우고 tint를 0로 설정
-                ButtonImage->SetBrushFromTexture(nullptr);
-                ButtonImage->SetBrushTintColor(FLinearColor::Transparent);
-                UE_LOGFMT(LogCustomButton, Log, "{0}의 이미지가 {1} 상태로 초기화됨", *GetName(), StaticEnum<EButtonState>()->GetNameStringByValue((int64)CurrentButtonState));
-            }
-            else
-            {
-                //@다른 상태의 경우 해당 Texture 적용
-                ButtonImage->SetBrushFromTexture(LoadedTexture);
-                ButtonImage->SetBrushTintColor(FLinearColor::White);
-                ButtonImage->SetColorAndOpacity(FLinearColor::White);
-                UE_LOGFMT(LogCustomButton, Log, "{0}의 이미지가 {1} 상태로 업데이트됨", *GetName(), StaticEnum<EButtonState>()->GetNameStringByValue((int64)CurrentButtonState));
-            }
-            break;
-        }
-    }
+    ApplyImageForCurrentState();
 }
 
 void UCustomButton::ActivateButton()
@@ -165,55 +142,12 @@ void UCustomButton::DeactivateButton(bool bIsClicked)
 
 bool UCustomButton::SetButtonHoveredByKeyboard_Implementation()
 {
-    if (CurrentButtonState == EButtonState::Disabled
-        || CurrentButtonState == EButtonState::Selected
-        || CurrentButtonState == EButtonState::Hovered)
-    {
-        return false;
-    }
-
-    if (BlendInAndOutAnimation)
-    {
-        PlayAnimation(BlendInAndOutAnimation, 0.0f, 0, EUMGSequencePlayMode::Forward);
-    }
-
-    //@Button State를 Hovered 상태로 전환
-    SetButtonState(EButtonState::Hovered);
-
-    //@Button의 호버 이벤트
-    ButtonHovered.Broadcast(EInteractionMethod::Keyboard);
-
-    UE_LOGFMT(LogCustomButton, Error, "Hovered");
-
-    return true;
+    return TrySetHovered(EInteractionMethod::Keyboard);
 }
 
 bool UCustomButton::SetButtonSelectedByKeyboard_Implementation()
 {
-    if (CurrentButtonState == EButtonState::Disabled)
-    {
-        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 비활성화 상태입니다. Click 무시.");
-        return false;
-    }
-
-    //@Animation
-    if (BlendInAndOutAnimation && IsAnimationPlaying(BlendInAndOutAnimation))
-    {
-        StopAnimation(BlendInAndOutAnimation);
-    }
-
-    //@Clicke에 의한 비활성화
-    DeactivateButton(true);
-
-    //@Clicked/Selected 이벤트
-    ButtonSelected.Broadcast(EInteractionMethod::Keyboard);
-
-    UE_LOGFMT(LogCustomButton, Log, "버튼이 선택되었습니다.");
-
-    //@블루프린트에서 가져와 오버라이딩 합니다...
-    //@eg. 애니메이션
-    return true;
-
+    return TrySelect(EInteractionMethod::Keyboard);
 }
 #pragma endregion
 
@@ -221,22 +155,7 @@ bool UCustomButton::SetButtonSelectedByKeyboard_Implementation()
 #pragma region Callbacks
 void UCustomButton::OnButtonHovered_Implementation()
 {
-
-    if (CurrentButtonState == EButtonState::Disabled
-        || CurrentButtonState == EButtonState::Selected
-        || CurrentButtonState == EButtonState::Hovered)
-    {
-        return;
-    }
-
-    if (BlendInAndOutAnimation)
-    {
-        PlayAnimation(BlendInAndOutAnimation, 0.0f, 0, EUMGSequencePlayMode::Forward);
-    }
-
-    SetButtonState(EButtonState::Hovered);
-
-    ButtonHovered.Broadcast(EInteractionMethod::Mouse);
+    TrySetHovered(EInteractionMethod::Mouse);
 }
 
 void UCustomButton::OnButtonUnhovered_Implementation()
@@ -293,17 +212,8 @@ void UCustomButton::OnButtonClicked_Implementation()
         return;
     }
 
-    // 애니메이션 정지
-    if (BlendInAndOutAnimation && IsAnimationPlaying(BlendInAndOutAnimation))
-    {
-        StopAnimation(BlendInAndOutAnimation);
-    }
-
-    DeactivateButton(true);
-
-    ButtonSelected.Broadcast(EInteractionMethod::Mouse);
-
-    UE_LOGFMT(LogCustomButton, Log, "버튼이 선택되었습니다.");
+    StopHoverAnimationIfPlaying();
+    TrySelect(EInteractionMethod::Mouse);
 }
 
 void UCustomButton::CancelSelectedButton_Implementation()
@@ -314,10 +224,7 @@ void UCustomButton::CancelSelectedButton_Implementation()
         return;
     }
 
-    if (BlendOutAnimation && !IsAnimationPlaying(BlendInAndOutAnimation))
-    {
-        PlayAnimation(BlendOutAnimation, 0.0f, 1, EUMGSequencePlayMode::Forward);
-    }
+    PlayBlendOutOnce();
 
     //@Button 상호작용 활성화
     ActivateButton();
@@ -340,3 +247,85 @@ void UCustomButton::OnBlendOutAnimationFinished()
 //@Utility(Setter, Getter,...etc)
 #pragma region Utility
 #pragma endregion
+
+// 지역 유틸 구현
+void UCustomButton::PlayHoverAnimation()
+{
+    if (BlendInAndOutAnimation)
+    {
+        PlayAnimation(BlendInAndOutAnimation, 0.0f, 0, EUMGSequencePlayMode::Forward);
+    }
+}
+
+void UCustomButton::StopHoverAnimationIfPlaying()
+{
+    if (BlendInAndOutAnimation && IsAnimationPlaying(BlendInAndOutAnimation))
+    {
+        StopAnimation(BlendInAndOutAnimation);
+    }
+}
+
+void UCustomButton::PlayBlendOutOnce()
+{
+    if (BlendOutAnimation && !IsAnimationPlaying(BlendInAndOutAnimation))
+    {
+        PlayAnimation(BlendOutAnimation, 0.0f, 1, EUMGSequencePlayMode::Forward);
+    }
+}
+
+void UCustomButton::ApplyImageForCurrentState()
+{
+    //@FButtonStateInformation
+    for (auto& StateInfo : ButtonStateInfos)
+    {
+        if (StateInfo.State == CurrentButtonState)
+        {
+            UTexture2D* LoadedTexture = StateInfo.Texture.LoadSynchronous();
+            if (!LoadedTexture)
+            {
+                ButtonImage->SetBrushFromTexture(nullptr);
+                ButtonImage->SetBrushTintColor(FLinearColor::Transparent);
+                UE_LOGFMT(LogCustomButton, Log, "{0}의 이미지가 {1} 상태로 초기화됨", *GetName(), StaticEnum<EButtonState>()->GetNameStringByValue((int64)CurrentButtonState));
+            }
+            else
+            {
+                ButtonImage->SetBrushFromTexture(LoadedTexture);
+                ButtonImage->SetBrushTintColor(FLinearColor::White);
+                ButtonImage->SetColorAndOpacity(FLinearColor::White);
+                UE_LOGFMT(LogCustomButton, Log, "{0}의 이미지가 {1} 상태로 업데이트됨", *GetName(), StaticEnum<EButtonState>()->GetNameStringByValue((int64)CurrentButtonState));
+            }
+            return;
+        }
+    }
+    UE_LOGFMT(LogCustomButton, Warning, "현재 상태에 대한 이미지 정보를 찾지 못했습니다: {0}", StaticEnum<EButtonState>()->GetNameStringByValue((int64)CurrentButtonState));
+}
+
+bool UCustomButton::TrySetHovered(EInteractionMethod InteractionMethod)
+{
+    if (CurrentButtonState == EButtonState::Disabled
+        || CurrentButtonState == EButtonState::Selected
+        || CurrentButtonState == EButtonState::Hovered)
+    {
+        return false;
+    }
+
+    PlayHoverAnimation();
+    SetButtonState(EButtonState::Hovered);
+    ButtonHovered.Broadcast(InteractionMethod);
+    return true;
+}
+
+bool UCustomButton::TrySelect(EInteractionMethod InteractionMethod)
+{
+    if (CurrentButtonState == EButtonState::Disabled)
+    {
+        UE_LOGFMT(LogCustomButton, Verbose, "버튼이 비활성화 상태입니다. 선택을 무시합니다.");
+        return false;
+    }
+
+    StopHoverAnimationIfPlaying();
+    DeactivateButton(true);
+    ButtonSelected.Broadcast(InteractionMethod);
+    UE_LOGFMT(LogCustomButton, Log, "버튼이 선택되었습니다.");
+    return true;
+}

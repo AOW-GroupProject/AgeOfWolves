@@ -441,7 +441,7 @@ void UHUD_QuickSlotsUI::OnAbilitySpecGiven(FGameplayAbilitySpec AbilitySpec)
         FString TagString = AbilityTag.ToString();
 
         //@Battoujutsu Ability
-        if (TagString.StartsWith("Ability.Passive.Battoujutsu"))
+        if (TagString.StartsWith("Ability.Active.Battoujutsu"))
         {
             if (BattoujutsuAbilitySlotRef && !BattoujutsuAbilitySlotRef->GetIsFilled())
             {
@@ -694,7 +694,7 @@ void UHUD_QuickSlotsUI::OnUIInputTriggeredWithValue(const FGameplayTag& InputTag
             JujutsuSlots.CurrentMainIndex, firstExtraIndex, secondExtraIndex);
 
         JujutsuRotationState.Reset();
-    }
+    }   
 }
 
 void UHUD_QuickSlotsUI::OnQuickSlotItemsLoaded(int32 QuickSlotNum, const FGuid& UniqueItemID, EItemType ItemType, const FGameplayTag& ItemTag, int32 ItemCount)

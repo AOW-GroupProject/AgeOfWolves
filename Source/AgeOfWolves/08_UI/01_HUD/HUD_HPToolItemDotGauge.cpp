@@ -106,20 +106,22 @@ void UHUD_HPToolItemDotGauge::OnQuickSlotItemsLoaded(int32 QuickSlotNum, const F
     //@FGuid
     HPToolItemID = UniqueItemID;
 
-    //@Max Count 설정
-    int32 NewMaxCount = FMath::Clamp(ItemCount, 0, GaugeSettings.MaxCount);
-    UpdateMaxCount(NewMaxCount);
+    //@범위 제한
+    int32 ClampedCount = FMath::Clamp(ItemCount, 0, GaugeSettings.MaxCount);
+
+    //@✅ 한 번에 설정 (MaxCount + FilledCount 동시)
+    UpdateGauge(ClampedCount, ClampedCount);
 
     //@텍스트 업데이트
     UpdateHPToolItemCount(ItemCount);
 
-    UE_LOGFMT(LogHPToolItemDotGauge, Log, "퀵슬롯 {0}에 HP 포션 {1}개가 로드되었습니다. Max Count가 {2}로 설정되었습니다.",
-        QuickSlotNum, ItemCount, ItemCount);
+    UE_LOGFMT(LogHPToolItemDotGauge, Log, "퀵슬롯 {0}에 HP 포션 {1}개가 로드되었습니다. 게이지: {2}/{3}",
+        QuickSlotNum, ItemCount, ClampedCount, ClampedCount);
 }
+
 
 void UHUD_HPToolItemDotGauge::OnQuickSlotItemUpdated(int32 QuickSlotNum, const FGuid& UniqueItemID, int32 ItemCount)
 {
-
     //@FGuid 체크
     if (UniqueItemID != HPToolItemID)
     {
@@ -127,7 +129,8 @@ void UHUD_HPToolItemDotGauge::OnQuickSlotItemUpdated(int32 QuickSlotNum, const F
     }
 
     //@충전 Dot Gauge Unit 업데이트
-    UpdateFilledCount(ItemCount);
+    SetFilledCount(ItemCount);  // ✅ UpdateFilledCount → SetFilledCount 변경
+
     //@텍스트 업데이트
     UpdateHPToolItemCount(ItemCount);
 

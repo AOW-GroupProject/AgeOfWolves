@@ -23,6 +23,7 @@ public class AgeOfWolves : ModuleRules
             "NavigationSystem",
             "Niagara",
             "DeveloperSettings",
+            "NiagaraUIRenderer",
         });
 
         PrivateDependencyModuleNames.AddRange(new string[] {
@@ -38,6 +39,7 @@ public class AgeOfWolves : ModuleRules
             "MovieScene",
             "Niagara",
             "DeveloperSettings",
+            "NiagaraUIRenderer",
         });
     }
 }

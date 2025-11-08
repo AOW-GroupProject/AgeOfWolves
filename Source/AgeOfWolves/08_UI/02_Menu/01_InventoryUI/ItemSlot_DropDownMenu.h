@@ -1,5 +1,3 @@
-// Fill out your copyright notice in the Description page of Project Settings.
-
 #pragma once
 
 #include "CoreMinimal.h"
@@ -26,8 +24,6 @@ class UItemSlots;
 
 //@이벤트/델리게이트
 #pragma region Delegates
-//@Option 버튼의 선택/호버 취소 이벤트
-DECLARE_MULTICAST_DELEGATE_OneParam(FCancelOptionButton, const FName&)
 #pragma endregion
 
 /**
@@ -39,14 +35,14 @@ UCLASS()
 class AGEOFWOLVES_API UItemSlot_DropDownMenu : public UDropDownMenu
 {
 
-//@친추 클래스
+    //@친추 클래스
 #pragma region Friend Class
     friend class UItemSlots;
 #pragma endregion
 
     GENERATED_BODY()
 
-//@Defualt Setting
+    //@Defualt Setting
 #pragma region Default Setting
 public:
     UItemSlot_DropDownMenu(const FObjectInitializer& ObjectInitializer);
@@ -75,7 +71,7 @@ public:
     virtual void InitializeDropDownMenu() override;
 #pragma endregion
 
-//@Property/Info...etc
+    //@Property/Info...etc
 #pragma region Subwidgets
 protected:
     //@Reset, 오버라이딩
@@ -96,15 +92,14 @@ protected:
     void ResetSelectedOptionToHovered();
 
 protected:
-    //@현재 Hovered 된 Option의 이름
-    FName CurrentHoveredOptionName;
+    //@[리팩토링] 현재 Hovered 된 Option (포인터로 직접 관리)
+    UPROPERTY()
+    UDropDownMenuOption* CurrentHoveredOption;
 #pragma endregion
 
-//@Delegates
+    //@Delegates
 #pragma region Delegates
-public:
-    //@Option 버튼의 선택/호버 취소 이벤트
-    FCancelOptionButton CancelOptionButton;
+    //@Note: 부모 클래스의 CancelDropDownMenuOptionButton 델리게이트 사용
 #pragma endregion
 
 //@Callbacks
@@ -116,19 +111,19 @@ protected:
 protected:
     //@옵션 버튼의 Hover 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
-        void OnDropDownMenuOptionButtonHovered(FName OptionName, EInteractionMethod InteractionMethodType);
+    void OnDropDownMenuOptionButtonHovered(FName OptionName, EInteractionMethod InteractionMethodType);
     virtual void OnDropDownMenuOptionButtonHovered_Implementation(FName OptionName, EInteractionMethod InteractionMethodType);
 
     //@옵션 버튼의 Unhover 이벤트 구독
     UFUNCTION(BlueprintNativeEvent)
-        void OnDropDownMenuOptionButtonUnhovered(FName OptionName);
+    void OnDropDownMenuOptionButtonUnhovered(FName OptionName);
     virtual void OnDropDownMenuOptionButtonUnhovered_Implementation(FName OptionName);
 
     //@옵션 버튼의 Click 이벤트 구독
     virtual void OnDropDownMenuOptionSelected_Implementation(FName SelectedOptionName, EInteractionMethod InteractionMethodType) override;
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
+    //@Utility(Setter, Getter,...etc)
 #pragma region Utility
     //@EKey 와 EHotKey 비교
     bool CompareKeyWithHotKey(const FKey& Key, EHotKey HotKey);

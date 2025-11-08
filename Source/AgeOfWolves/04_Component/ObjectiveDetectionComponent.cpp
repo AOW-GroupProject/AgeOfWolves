@@ -13,34 +13,25 @@
 
 #include "Components/CapsuleComponent.h"
 #include "04_Component/LockOnComponent.h"
-#include "Chaos/PBDSuspensionConstraintData.h"
-#include "Components/BillboardComponent.h"
 
 DEFINE_LOG_CATEGORY(LogObjectiveDetection)
 
-//@Defualt Setting
 #pragma region Default Setting
 UObjectiveDetectionComponent::UObjectiveDetectionComponent()
 {
     PrimaryComponentTick.bCanEverTick = true;
-
     SetComponentTickEnabled(true);
 
-    // 기본적으로 감지할 상태 태그 설정
     StateTagsToDetect.Add(FGameplayTag::RequestGameplayTag("State.Fragile"));
     StateTagsToDetect.Add(FGameplayTag::RequestGameplayTag("State.Dead"));
     StateTagsToDetect.Add(FGameplayTag::RequestGameplayTag("State.Normal"));
 
-    // 컴포넌트 고유 ID 생성
     ComponentID = FGuid::NewGuid();
-
-    // 배열 초기화
     BoundAreas.Empty();
 
-    //@현재 락온된 타겟 AI
     CurrentTargetAI.Reset();
-    //@현재 등을 돌려 잠재 매복 타겟 AI
     AmbushTarget.Reset();
+    ExecutionTarget.Reset();
 }
 
 void UObjectiveDetectionComponent::BeginPlay()
@@ -52,73 +43,28 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
 {
     Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
 
-    // ============================================
-    // 1. 인디케이터 표시 처리
-    // ============================================
-    if (IndicatorBillboardComponent)
+    bPawnLocationCached = false;
+
+    if (GFrameCounter != LastViewCacheFrame)
     {
-        // 인디케이터 표시가 전체적으로 비활성화된 경우 무조건 숨김
-        if (!bEnableIndicatorDisplay)
-        {
-            IndicatorBillboardComponent->SetVisibility(false);
-        }
-        else
-        {
-            // 표시할 타겟이 있는지 확인하고 해당 설정도 체크
-            bool bShouldShow = false;
-
-            // 현재 타겟이 있고 LockOn 인디케이터 표시가 활성화된 경우
-            if (CurrentTargetAI.IsValid() && (bShowLockOnIndicator || bDebugMode))
-            {
-                bShouldShow = true;
-            }
-            // 처형 타겟이 있고 처형 인디케이터 표시가 활성화된 경우
-            else if (ExecutionTarget.IsValid() && (bShowExecutionIndicator || bDebugMode))
-            {
-                bShouldShow = true;
-            }
-            // AmbushTarget이 있고 암살 인디케이터 표시가 활성화된 경우
-            else if (AmbushTarget.IsValid() && (bShowAmbushIndicator || bDebugMode))
-            {
-                bShouldShow = true;
-            }
-            // 구조물이 감지되고 구조물 인디케이터 표시가 활성화된 경우
-            else if (DetectedStructureActor.IsValid() && (bShowStructureIndicator || bDebugMode))
-            {
-                bShouldShow = true;
-            }
-
-            if (bShouldShow)
-            {
-                UpdateBillboardComponent(true, false);
-            }
-            else
-            {
-                IndicatorBillboardComponent->SetVisibility(false);
-            }
-        }
+        CachedViewResults.Empty();
+        LastViewCacheFrame = GFrameCounter;
     }
 
-    // ============================================
-    // 2. 기존 상태 업데이트 로직 (변경 없음)
-    // ============================================
     float CurrentTime = GetWorld()->GetTimeSeconds();
 
-    // 일정 간격으로 후면 노출 체크
     if (CurrentTime - LastBackExposureCheckTime >= BackExposureCheckInterval)
     {
         UpdateAIBackExposureState();
         LastBackExposureCheckTime = CurrentTime;
     }
 
-    // 일정 간격으로 처형 가능 상태 체크
     if (CurrentTime - LastExecutionCheckTime >= ExecutionCheckInterval)
     {
         UpdateExecutionTargetState();
         LastExecutionCheckTime = CurrentTime;
     }
 
-    // 일정 간격으로 구조물 감지 체크
     if (CurrentTime - LastExecutionStructureCheckTime >= ExecutionStructureCheckInterval)
     {
         UpdateDetectionStructure();
@@ -128,16 +74,13 @@ void UObjectiveDetectionComponent::TickComponent(float DeltaTime, ELevelTick Tic
 
 void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayReason)
 {
-    //@타이머 정리
     if (GetWorld())
     {
         GetWorld()->GetTimerManager().ClearTimer(CleanupTimerHandle);
     }
 
-    //@Pawn 이벤트 바인딩 해제
     UnbindFromPawnCapsuleEvents();
 
-    //@모든 Area 바인딩 해제
     TArray<AArea*> AreasToUnbind;
     for (const FAreaBindingInfo& AreaInfo : BoundAreas)
     {
@@ -147,20 +90,14 @@ void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
         }
     }
 
-    //@바인딩 된 Area 정리
     for (AArea* Area : AreasToUnbind)
     {
         UnbindFromAreaEvents(Area);
     }
 
-    //@Bound Areas
     BoundAreas.Empty();
-
-    if (IndicatorBillboardComponent)
-    {
-        IndicatorBillboardComponent->DestroyComponent();
-        IndicatorBillboardComponent = nullptr;
-    }
+    CachedAreaAIs.Empty();
+    AIsDetectingPawn.Empty();
 
     Super::EndPlay(EndPlayReason);
 }
@@ -169,35 +106,11 @@ void UObjectiveDetectionComponent::EndPlay(const EEndPlayReason::Type EndPlayRea
 void UObjectiveDetectionComponent::PostEditChangeProperty(FPropertyChangedEvent& PropertyChangedEvent)
 {
     Super::PostEditChangeProperty(PropertyChangedEvent);
-
-    if (PropertyChangedEvent.Property)
-    {
-        FName PropertyName = PropertyChangedEvent.Property->GetFName();
-
-        // 인디케이터 관련 프로퍼티가 변경된 경우 빌보드 업데이트
-        if (PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bEnableIndicatorDisplay) ||
-            PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bShowLockOnIndicator) ||
-            PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bShowExecutionIndicator) ||
-            PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bShowAmbushIndicator) ||
-            PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bShowStructureIndicator) ||
-            PropertyName == GET_MEMBER_NAME_CHECKED(UObjectiveDetectionComponent, bDebugMode))
-        {
-            // 에디터에서 실시간으로 변경 사항 반영
-            if (IndicatorBillboardComponent)
-            {
-                UpdateBillboardComponent(true, false);
-            }
-
-            UE_LOGFMT(LogObjectiveDetection, Log, "에디터에서 인디케이터 설정 변경됨: {0}",
-                PropertyName.ToString());
-        }
-    }
 }
 #endif
 
 void UObjectiveDetectionComponent::ExternalBindToPawnCapsuleComponent()
 {
-    //@Capsule Component
     UCapsuleComponent* CapsuleComp = GetPawnCapsuleComponent();
     if (!CapsuleComp)
     {
@@ -205,7 +118,6 @@ void UObjectiveDetectionComponent::ExternalBindToPawnCapsuleComponent()
         return;
     }
 
-    //@외부 바인딩...
     CapsuleComp->OnComponentBeginOverlap.AddDynamic(this, &UObjectiveDetectionComponent::OnPawnBeginOverlap);
     CapsuleComp->OnComponentEndOverlap.AddDynamic(this, &UObjectiveDetectionComponent::OnPawnEndOverlap);
 
@@ -215,73 +127,56 @@ void UObjectiveDetectionComponent::ExternalBindToPawnCapsuleComponent()
 
 void UObjectiveDetectionComponent::UnbindFromPawnCapsuleEvents()
 {
-    //@Capusle Component
     UCapsuleComponent* CapsuleComp = GetPawnCapsuleComponent();
     if (!CapsuleComp)
     {
         return;
     }
 
-    //@외부 바인딩 해제...
     CapsuleComp->OnComponentBeginOverlap.RemoveAll(this);
     CapsuleComp->OnComponentEndOverlap.RemoveAll(this);
-
-    UE_LOGFMT(LogObjectiveDetection, Log, "Pawn의 캡슐 이벤트 언바인딩 완료");
 }
 
 void UObjectiveDetectionComponent::ExternalBindToArea(AArea* Area)
 {
-    //@Area
     if (!Area)
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "유효하지 않은 Area와 바인딩 시도");
         return;
     }
 
-    //@FGuid
     FGuid AreaID = Area->GetAreaID();
 
-    for (const FAreaBindingInfo& AreaInfo : BoundAreas)
+    if (IsAreaBound(AreaID))
     {
-        if (AreaInfo.AreaID == AreaID)
-        {
-            UE_LOGFMT(LogObjectiveDetection, Warning, "이미 바인딩된 Area: {0}", *Area->GetName());
-            return;
-        }
+        UE_LOGFMT(LogObjectiveDetection, Warning, "이미 바인딩된 Area: {0}", *Area->GetName());
+        return;
     }
 
-    //@현재 시간
     float CurrentTime = GetWorld()->GetTimeSeconds();
 
-    //@외부 바인딩...
     Area->AreaAIStateChanged.AddUFunction(this, "OnAreaObjectiveStateChanged");
     Area->AIDetectsPlayer.AddUFunction(this, "OnDetectedByAI");
 
-    //@바인딩 정보 생성 및 추가
     FAreaBindingInfo BindingInfo(Area, AreaID, CurrentTime);
     BoundAreas.Add(BindingInfo);
 
-    //@바인딩 이벤트 호출
-    PlyaerBoundToArea.Broadcast(BindingInfo, true);
+    CachedAreaAIs.Remove(AreaID);
 
-    UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}와 바인딩 완료", *Area->GetName());
+    PlyaerBoundToArea.Broadcast(BindingInfo, true);
 }
 
 void UObjectiveDetectionComponent::UnbindFromAreaEvents(AArea* Area)
 {
-    //@Area
     if (!IsValid(Area))
     {
         return;
     }
 
-    //@FGuid
     FGuid AreaID = Area->GetAreaID();
 
-    //@외부 바인딩 해제...
     Area->AreaAIStateChanged.RemoveAll(this);
+    Area->AIDetectsPlayer.RemoveAll(this);
 
-    // 제거할 항목 찾기
     int32 IndexToRemove = -1;
     for (int32 i = 0; i < BoundAreas.Num(); i++)
     {
@@ -292,54 +187,40 @@ void UObjectiveDetectionComponent::UnbindFromAreaEvents(AArea* Area)
         }
     }
 
-    // 항목이 있으면 이벤트 호출 후 제거
     if (IndexToRemove != -1)
     {
-        // 제거 전에 이벤트 호출
         PlyaerBoundToArea.Broadcast(BoundAreas[IndexToRemove], false);
         BoundAreas.RemoveAt(IndexToRemove);
     }
 
-    UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}와 바인딩 해제 완료", *Area->GetName());
+    CachedAreaAIs.Remove(AreaID);
 }
 
 void UObjectiveDetectionComponent::ExternalBindToLockOnComponent()
 {
-    //@Player Controller
     APlayerController* PC = Cast<APlayerController>(GetOwner());
     if (!PC)
     {
-        UE_LOGFMT(LogObjectiveDetection, Error, "Owner가 PlayerController가 아닙니다.");
         return;
     }
 
-    //@Pawn 가져오기
     APawn* PlayerPawn = PC->GetPawn();
     if (!PlayerPawn)
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "PlayerController의 Pawn이 유효하지 않습니다.");
         return;
     }
 
-    //@LockOnComponent 찾기
     ULockOnComponent* LockOnComp = PlayerPawn->FindComponentByClass<ULockOnComponent>();
     if (!LockOnComp)
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "Pawn에서 LockOnComponent를 찾을 수 없습니다.");
         return;
     }
 
-    //@LockOnStateChanged 델리게이트에 콜백 바인딩
     LockOnComp->LockOnStateChanged.AddUObject(this, &UObjectiveDetectionComponent::OnLockOnStateChanged);
-
-    UE_LOGFMT(LogObjectiveDetection, Log, "LockOnComponent의 상태 변경 이벤트에 성공적으로 바인딩되었습니다.");
 }
 
 void UObjectiveDetectionComponent::InitializeODComponent()
 {
-    //@외부 바인딩...
-
-    //@Controller
     AController* Controller = Cast<AController>(GetOwner());
     if (!Controller)
     {
@@ -347,7 +228,6 @@ void UObjectiveDetectionComponent::InitializeODComponent()
         return;
     }
 
-    //@Pawn
     APawn* CurrentPawn = Controller->GetPawn();
     if (!CurrentPawn)
     {
@@ -355,55 +235,31 @@ void UObjectiveDetectionComponent::InitializeODComponent()
         return;
     }
 
-    //@Controlled Pawn 업데이트
     ControlledPawn = CurrentPawn;
-    UE_LOGFMT(LogObjectiveDetection, Log, "Controlled Pawn 설정: {0}", *CurrentPawn->GetName());
 
-    //@AI
     if (IsOwnerAIController())
     {
-        // AI는 시야 체크를 사용하지 않음
         bOnlyDetectInCameraView = false;
-
-        UE_LOGFMT(LogObjectiveDetection, Log, "AI용 ObjectiveDetectionComponent 초기화 (소유자: {0}, Pawn: {1})",
-            *Controller->GetName(), *CurrentPawn->GetName());
     }
-    //@Player
     else if (IsOwnerPlayerController())
     {
-        // PlayerController는 기본적으로 시야 체크 사용
         bOnlyDetectInCameraView = true;
-
-        UE_LOGFMT(LogObjectiveDetection, Log, "플레이어용 ObjectiveDetectionComponent 초기화 (소유자: {0}, Pawn: {1})",
-            *Controller->GetName(), *CurrentPawn->GetName());
-    }
-    else
-    {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "알 수 없는 컨트롤러 유형: {0}", *Controller->GetClass()->GetName());
     }
 
-    // Pawn이 유효한 경우 캡슐 컴포넌트 이벤트 바인딩
     if (!ControlledPawn.IsValid())
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "초기화 중 유효한 Pawn을 찾을 수 없음");
         return;
     }
 
-    // 캡슐 컴포넌트 확인
     UCapsuleComponent* CapsuleComp = GetPawnCapsuleComponent();
     if (!CapsuleComp)
     {
-        UE_LOGFMT(LogObjectiveDetection, Error, "Pawn({0})에 CapsuleComponent가 없음", *CurrentPawn->GetName());
         return;
     }
 
     ExternalBindToPawnCapsuleComponent();
-    UE_LOGFMT(LogObjectiveDetection, Log, "초기 Pawn 바인딩 완료: {0} (컴포넌트: {1})",
-        *ControlledPawn->GetName(), *CapsuleComp->GetName());
-
     ExternalBindToLockOnComponent();
 
-    //@Timer
     GetWorld()->GetTimerManager().SetTimer(
         CleanupTimerHandle,
         this,
@@ -411,421 +267,182 @@ void UObjectiveDetectionComponent::InitializeODComponent()
         CleanupInterval,
         true
     );
-
-    UE_LOGFMT(LogObjectiveDetection, Log, "정리 타이머 설정 완료 (간격: {0}초)", CleanupInterval);
-
-    //@Billboard 컴포넌트 등록
-    if (!IndicatorBillboardComponent && ControlledPawn.IsValid())
-    {
-        IndicatorBillboardComponent = NewObject<UBillboardComponent>(ControlledPawn.Get());
-        IndicatorBillboardComponent->SetupAttachment(GetOwner()->GetRootComponent());
-        IndicatorBillboardComponent->SetMobility(EComponentMobility::Movable);
-        IndicatorBillboardComponent->RegisterComponent();
-    }
-
-    //@Billobard Component 초기화
-    if (!LockOnIndicator.IsNull())
-    {
-        LockOnIndicator.LoadSynchronous();
-        if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
-        {
-            IndicatorBillboardComponent->SetSprite(LoadedTexture);
-            // 원래 크기의 0.1배로 설정
-            IndicatorBillboardComponent->SetRelativeScale3D(FVector(0.1f));
-        }
-    }
-
-    IndicatorBillboardComponent->SetVisibility(false);
-    IndicatorBillboardComponent->bHiddenInGame = false;
-
-    // 컴포넌트 ID 로그
-    UE_LOGFMT(LogObjectiveDetection, Log, "ObjectiveDetectionComponent 초기화 완료 (ID: {0})", *ComponentID.ToString());
 }
 #pragma endregion
 
-//@Property/Info...etc
 #pragma region Property or Subwidgets or Infos...etc
 void UObjectiveDetectionComponent::UpdateControlledPawn(APawn* NewPawn)
 {
-    // 이전 Pawn의 이벤트 바인딩 해제
     UnbindFromPawnCapsuleEvents();
 
-    // 새 Pawn 설정
     ControlledPawn = NewPawn;
 
-    // 유효성 검사
     if (!ControlledPawn.IsValid())
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "Pawn이 유효하지 않음");
         return;
     }
 
-    // 새 Pawn의 이벤트 바인딩
-    ExternalBindToPawnCapsuleComponent();
+    bPawnLocationCached = false;
+    CachedAreaAIs.Empty();
 
-    UE_LOGFMT(LogObjectiveDetection, Log, "컨트롤된 Pawn 업데이트: {0}", *NewPawn->GetName());
+    ExternalBindToPawnCapsuleComponent();
 }
 
 void UObjectiveDetectionComponent::CleanupInvalidReferences()
 {
-    // 무효한 Area 참조 수집
-    int32 RemovedCount = BoundAreas.RemoveAll([](const FAreaBindingInfo& AreaInfo) {
+    int32 RemovedAreas = BoundAreas.RemoveAll([](const FAreaBindingInfo& AreaInfo) {
         return !AreaInfo.IsValid();
         });
 
-    if (RemovedCount > 0)
+    int32 RemovedAIs = 0;
+    for (auto It = AIsDetectingPawn.CreateIterator(); It; ++It)
     {
-        UE_LOGFMT(LogObjectiveDetection, Log, "참조 정리 완료: 제거된 Area: {0}", RemovedCount);
-    }
-}
-
-void UObjectiveDetectionComponent::UpdateBillboardComponent(bool bVisible, bool bChangeTransformOnly)
-{
-    // 기본 유효성 검사
-    if (!IndicatorBillboardComponent)
-    {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "빌보드 업데이트 실패: 컴포넌트가 유효하지 않음");
-        return;
-    }
-
-    // ============================================
-    // 1. 전체 인디케이터 표시 설정 체크
-    // ============================================
-    if (!bEnableIndicatorDisplay)
-    {
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // ============================================
-    // 2. 가시성 체크
-    // ============================================
-    if (!bVisible)
-    {
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // ============================================
-    // 3. 타겟별 표시 설정 체크
-    // ============================================
-    AActor* TargetActor = DetermineTargetActor();
-    if (!TargetActor)
-    {
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // 해당 타겟에 대한 인디케이터 표시가 허용되는지 확인
-    if (!ShouldShowIndicatorForTarget(TargetActor))
-    {
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // ============================================
-    // 4. 위치 및 텍스처 업데이트
-    // ============================================
-    if (!UpdateBillboardPosition(TargetActor))
-    {
-        // 위치 업데이트 실패 시 가시성 비활성화
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // 텍스처 업데이트가 필요한 경우
-    if (!bChangeTransformOnly)
-    {
-        UpdateBillboardTexture();
-    }
-
-    // 모든 조건을 만족하면 가시성 활성화
-    IndicatorBillboardComponent->SetVisibility(true);
-}
-
-bool UObjectiveDetectionComponent::UpdateBillboardPosition(AActor* TargetActor)
-{
-    // 필요한 컴포넌트 확보
-    APlayerController* PC = Cast<APlayerController>(GetOwner());
-    if (!PC) return false;
-
-    APawn* PlayerPawn = PC->GetPawn();
-    if (!PlayerPawn) return false;
-
-    APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(PlayerPawn);
-    if (!PlayerChar) return false;
-
-    UCameraComponent* CameraComp = PlayerChar->GetCameraComponent();
-    if (!CameraComp) return false;
-
-    // 타겟 메시 및 소켓 확인
-    USkeletalMeshComponent* TargetMesh = Cast<USkeletalMeshComponent>(
-        TargetActor->GetComponentByClass(USkeletalMeshComponent::StaticClass()));
-
-    UStaticMeshComponent* TargetStaticMesh = Cast<UStaticMeshComponent>(
-      TargetActor->GetComponentByClass(UStaticMeshComponent::StaticClass()));
-    
-    if (!TargetMesh && !TargetStaticMesh) return false;
-
-    // 위치 계산
-    FVector SocketLocation = TargetActor->GetActorLocation() + FVector(0.f, 0.f, 40.f);
-    FVector CameraLocation = CameraComp->GetComponentLocation();
-    FVector DirectionToSocket = (SocketLocation - CameraLocation).GetSafeNormal();
-    FVector UpVector = FVector(0.0f, 0.0f, 1.0f);
-    FVector TargetBillboardLocation = SocketLocation - DirectionToSocket * BillboardForwardOffset + UpVector;
-
-    // 현재 위치
-    FVector CurrentLocation = IndicatorBillboardComponent->GetComponentLocation();
-
-    // X, Y축만 보간 (Z축은 즉시 적용)
-    FVector InterpolatedLocation = CurrentLocation;
-    float DeltaX = TargetBillboardLocation.X - CurrentLocation.X;
-    float DeltaY = TargetBillboardLocation.Y - CurrentLocation.Y;
-
-    // Dead Zone 적용 - 변화량이 임계값보다 클 때만 이동
-    float DeadZoneThreshold = 0.05f;
-
-    if (FMath::Abs(DeltaX) > DeadZoneThreshold)
-    {
-        InterpolatedLocation.X = UKismetMathLibrary::FInterpTo(
-            CurrentLocation.X,
-            TargetBillboardLocation.X,
-            GetWorld()->GetDeltaSeconds(),
-            BillboardInterpolationSpeed
-        );
-    }
-    else
-    {
-        // Dead Zone 내에서는 현재 위치 유지
-        InterpolatedLocation.X = CurrentLocation.X;
-    }
-
-    if (FMath::Abs(DeltaY) > DeadZoneThreshold)
-    {
-        InterpolatedLocation.Y = UKismetMathLibrary::FInterpTo(
-            CurrentLocation.Y,
-            TargetBillboardLocation.Y,
-            GetWorld()->GetDeltaSeconds(),
-            BillboardInterpolationSpeed
-        );
-    }
-    else
-    {
-        // Dead Zone 내에서는 현재 위치 유지
-        InterpolatedLocation.Y = CurrentLocation.Y;
-    }
-
-    // Z축은 즉시 적용
-    InterpolatedLocation.Z = TargetBillboardLocation.Z;
-
-    // 회전 보간
-    FRotator TargetRotation = (CameraLocation - SocketLocation).Rotation();
-    FRotator CurrentRotation = IndicatorBillboardComponent->GetComponentRotation();
-    FRotator InterpolatedRotation = UKismetMathLibrary::RInterpTo(
-        CurrentRotation,
-        TargetRotation,
-        GetWorld()->GetDeltaSeconds(),
-        BillboardInterpolationSpeed
-    );
-
-    // 위치, 회전, 크기 적용
-    IndicatorBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
-    IndicatorBillboardComponent->SetWorldRotation(InterpolatedRotation);
-    IndicatorBillboardComponent->SetWorldLocation(InterpolatedLocation);
-
-    return true;
-}
-
-void UObjectiveDetectionComponent::UpdateBillboardTexture()
-{
-    // 현재 상태에 따라 텍스처 결정
-    bool bShouldUseExecutableIndicator = false;
-
-    // 1. 현재 타겟이 처형 가능한 상태인 경우 (정면 노출 + Fragile)
-    if (CurrentTargetAI.IsValid() && ExecutionTarget.IsValid() &&
-        CurrentTargetAI.Get() == ExecutionTarget.Get())
-    {
-        bShouldUseExecutableIndicator = true;
-    }
-    // 2. 현재 타겟이 후면 노출 상태인 경우
-    else if (CurrentTargetAI.IsValid() && AmbushTarget.IsValid() &&
-        CurrentTargetAI.Get() == AmbushTarget.Get())
-    {
-        bShouldUseExecutableIndicator = true;
-    }
-    // 3. 타겟이 없고 처형 가능 타겟이 있는 경우
-    else if (!CurrentTargetAI.IsValid() && ExecutionTarget.IsValid())
-    {
-        bShouldUseExecutableIndicator = true;
-    }
-    // 4. 타겟이 없고 AmbushTarget이 있는 경우
-    else if (!CurrentTargetAI.IsValid() && AmbushTarget.IsValid())
-    {
-        bShouldUseExecutableIndicator = true;
-    }
-    else if (!CurrentTargetAI.IsValid() && DetectedStructureActor.IsValid())
-    {
-        bShouldUseExecutableIndicator = true;
-    }
-
-    // 텍스처 로드 및 설정
-    if (bShouldUseExecutableIndicator && !ExecutableIndicator.IsNull())
-    {
-        ExecutableIndicator.LoadSynchronous();
-        if (UTexture2D* LoadedTexture = ExecutableIndicator.Get())
+        if (!It->IsValid())
         {
-            SetIndicatorTexture(LoadedTexture);
+            It.RemoveCurrent();
+            RemovedAIs++;
         }
     }
-    else if (!LockOnIndicator.IsNull())
+
+    if (CurrentTargetAI.IsValid() && !IsValid(CurrentTargetAI.Get()))
     {
-        LockOnIndicator.LoadSynchronous();
-        if (UTexture2D* LoadedTexture = LockOnIndicator.Get())
+        SetCurrentTargetAI(nullptr);
+    }
+
+    if (AmbushTarget.IsValid() && !IsValid(AmbushTarget.Get()))
+    {
+        AmbushTarget.Reset();
+        AmbushTargetChanged.Broadcast(nullptr);
+    }
+
+    if (ExecutionTarget.IsValid() && !IsValid(ExecutionTarget.Get()))
+    {
+        ExecutionTarget.Reset();
+        ExecutionTargetChanged.Broadcast(nullptr);
+    }
+
+    TArray<FGuid> InvalidCacheKeys;
+    for (auto& Pair : CachedAreaAIs)
+    {
+        if (!FindAreaByGuid(Pair.Key))
         {
-            SetIndicatorTexture(LoadedTexture);
+            InvalidCacheKeys.Add(Pair.Key);
         }
+    }
+
+    for (const FGuid& Key : InvalidCacheKeys)
+    {
+        CachedAreaAIs.Remove(Key);
+    }
+
+    if (RemovedAreas > 0 || RemovedAIs > 0 || InvalidCacheKeys.Num() > 0)
+    {
+        UE_LOGFMT(LogObjectiveDetection, Log, "참조 정리 완료 - Area: {0}, AI: {1}, 캐시: {2}",
+            RemovedAreas, RemovedAIs, InvalidCacheKeys.Num());
     }
 }
 
 void UObjectiveDetectionComponent::UpdateExecutionTargetState()
 {
-    // 이전 타겟 저장 및 현재 타겟 초기화
     AActor* PreviousExecutionTarget = ExecutionTarget.Get();
     ExecutionTarget.Reset();
 
-    // 현재 타겟 AI 처리 (우선순위 높음)
+    //1단계: '락온' 타겟이 있다면, 최우선 순위
     if (CurrentTargetAI.IsValid() && bIsCurrentTargetFragile)
     {
         AActor* AIActor = CurrentTargetAI.Get();
-        TWeakObjectPtr<AActor> AIActorPtr(AIActor);
 
-        // 정면 노출 상태 체크
         if (IsActorFrontExposed(AIActor))
         {
             ExecutionTarget = AIActor;
-            UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 정면 노출되어 처형 가능 상태, ExecutionTarget으로 설정",
-                *AIActor->GetName());
-            goto CHECK_TARGET_CHANGED;
-        }
 
-        UE_LOGFMT(LogObjectiveDetection, Warning, "현재 타겟({0})이 정면에 노출되지 않아 처형 불가",
-            *AIActor->GetName());
+            if (ExecutionTarget.Get() != PreviousExecutionTarget)
+            {
+                ExecutionTargetChanged.Broadcast(ExecutionTarget.Get());
+            }
+            return;
+        }
     }
 
-    //@현재 타겟이 없거나 처형 불가능한 경우, 주변 AI 검색
+    FVector PawnLocation = GetPawnLocation();
+    float ClosestDistance = MAX_FLT;
+    AActor* ClosestActor = nullptr;
+
+    for (const FAreaBindingInfo& AreaInfo : BoundAreas)
     {
-        float ClosestDistance = MAX_FLT;
-        AActor* ClosestActor = nullptr;
+        if (!AreaInfo.IsValid()) continue;
 
-        for (const FAreaBindingInfo& AreaInfo : BoundAreas)
+        FGuid AreaID = AreaInfo.AreaID;
+
+        if (!CachedAreaAIs.Contains(AreaID))
         {
-            if (!AreaInfo.IsValid()) continue;
-
             AArea* Area = AreaInfo.AreaRef.Get();
-            TArray<FAreaAIInfo> AreaAIInfos = Area->GetAreaAIInfos();
+            CachedAreaAIs.Add(AreaID, Area->GetAreaAIInfos());
+        }
 
-            for (auto AIInfo : AreaAIInfos)
+        const TArray<FAreaAIInfo>& AreaAIs = CachedAreaAIs[AreaID];
+
+        for (const FAreaAIInfo& AIInfo : AreaAIs)
+        {
+            if (!AIInfo.AIActor.IsValid()) continue;
+
+            AActor* AI = AIInfo.AIActor.Get();
+
+            //2단계: 최소 요구조건 체크(죽음 상태인지, 카메라 뷰에 보이는지)
+            if (!MeetsMinimumDetectionConditions(AI, AIInfo.CurrentState))
             {
-                // 기본 조건 검사 (유효성, 상태)
-                if (!AIInfo.AIActor.IsValid() ||
-                    AIInfo.CurrentState.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")) ||
-                    !AIInfo.CurrentState.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
-                {
-                    continue;
-                }
+                continue;
+            }
 
-                auto AI = AIInfo.AIActor.Get();
-                TWeakObjectPtr<AActor> AIPtr(AI);
+            //3단계: '취약'상태 체크
+            if (!AIInfo.CurrentState.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
+            {
+                continue;
+            }
 
-                // 카메라 시야 내 확인
-                if (bOnlyDetectInCameraView && !IsActorInCameraView(AI))
-                {
-                    UE_LOGFMT(LogObjectiveDetection, Warning, "AI({0})가 시야 밖에 있어 처형 대상에서 제외",
-                        *AI->GetName());
-                    continue;
-                }
+            //4단계: 캐릭터와 마주보고 있는지 체크
+            if (!IsActorFrontExposed(AI))
+            {
+                continue;
+            }
 
-                // 정면 노출 상태 체크
-                if (!IsActorFrontExposed(AI))
-                {
-                    UE_LOGFMT(LogObjectiveDetection, Warning, "AI({0})가 정면에 노출되지 않아 처형 불가",
-                        *AI->GetName());
-                    continue;
-                }
+            float Distance = FVector::Distance(PawnLocation, AI->GetActorLocation());
 
-                // 거리 계산 및 가장 가까운 AI 선택
-                FVector PawnLocation = GetPawnLocation();
-                FVector AILocation = AI->GetActorLocation();
-                float Distance = FVector::Distance(PawnLocation, AILocation);
-
-                if (Distance < ClosestDistance)
-                {
-                    ClosestDistance = Distance;
-                    ClosestActor = AI;
-                    UE_LOGFMT(LogObjectiveDetection, Log, "더 가까운 처형 대상 발견: {0}, 거리: {1}",
-                        *AI->GetName(), Distance);
-                }
+            //5단계: 가장 가까이 있는 타겟 업데이트
+            if (Distance < ClosestDistance)
+            {
+                ClosestDistance = Distance;
+                ClosestActor = AI;
             }
         }
-
-        //@가장 가까운 처형 가능 AI 선택
-        if (ClosestActor)
-        {
-            ExecutionTarget = ClosestActor;
-            UE_LOGFMT(LogObjectiveDetection, Log, "가장 가까운 처형 가능 AI({0})를 ExecutionTarget으로 설정, 거리: {1}",
-                *ClosestActor->GetName(), ClosestDistance);
-        }
     }
 
-CHECK_TARGET_CHANGED:
-    // 타겟 변경 확인 및 이벤트 발생
+    ExecutionTarget = ClosestActor;
+
     if (ExecutionTarget.Get() != PreviousExecutionTarget)
     {
-        UE_LOGFMT(LogObjectiveDetection, Log, "ExecutionTarget 변경: {0} -> {1}",
-            PreviousExecutionTarget ? *PreviousExecutionTarget->GetName() : TEXT("없음"),
-            ExecutionTarget.IsValid() ? *ExecutionTarget->GetName() : TEXT("없음"));
-
         ExecutionTargetChanged.Broadcast(ExecutionTarget.Get());
     }
 }
 
 void UObjectiveDetectionComponent::UpdateAIBackExposureState()
 {
-    //@이전 AmbushTarget 초기화
     AActor* PreviousAmbushTarget = AmbushTarget.Get();
     AmbushTarget.Reset();
 
-    //@CurrentTargetAI가 유효한 경우, 해당 타겟만 체크
     if (CurrentTargetAI.IsValid())
     {
         AActor* AIActor = CurrentTargetAI.Get();
+        TWeakObjectPtr<AActor> AIPtr(AIActor);
 
-        //@AI가 플레이어를 인지 중인지 확인
-        TWeakObjectPtr<AActor> AIActorPtr(AIActor);
-        if (AIsDetectingPawn.Contains(AIActorPtr))
+        if (!AIsDetectingPawn.Contains(AIPtr) && IsActorBackExposed(AIActor))
         {
-            UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 플레이어를 인지 중이어서 암살 불가", *AIActor->GetName());
-        }
-        else
-        {
-            //@후면 노출 상태 체크
-            bool bIsBackExposed = IsActorBackExposed(AIActor);
-
-            //@후면 노출된 경우 AmbushTarget으로 설정
-            if (bIsBackExposed)
-            {
-                AmbushTarget = AIActor;
-                UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 후면 노출됨, AmbushTarget으로 설정", *AIActor->GetName());
-            }
-            else
-            {
-                UE_LOGFMT(LogObjectiveDetection, Log, "현재 타겟({0})이 후면 노출되지 않음", *AIActor->GetName());
-            }
+            AmbushTarget = AIActor;
         }
     }
     else
     {
-        //@현재 타겟이 없는 경우, 주변 AI 검색
+        FVector PawnLocation = GetPawnLocation();
         float ClosestDistance = MAX_FLT;
         AActor* ClosestActor = nullptr;
 
@@ -833,460 +450,304 @@ void UObjectiveDetectionComponent::UpdateAIBackExposureState()
         {
             if (!AreaInfo.IsValid()) continue;
 
-            //@Area
-            AArea* Area = AreaInfo.AreaRef.Get();
-            //@Area AI
-            TArray<FAreaAIInfo> AreaAIInfos = Area->GetAreaAIInfos();
+            FGuid AreaID = AreaInfo.AreaID;
 
-            for (auto AIInfo : AreaAIInfos)
+            if (!CachedAreaAIs.Contains(AreaID))
             {
-                //@AI Actor, Current State != State.Dead
-                if (!AIInfo.AIActor.IsValid() || AIInfo.CurrentState.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead"))) continue;
+                AArea* Area = AreaInfo.AreaRef.Get();
+                CachedAreaAIs.Add(AreaID, Area->GetAreaAIInfos());
+            }
 
-                auto AI = AIInfo.AIActor.Get();
+            const TArray<FAreaAIInfo>& AreaAIs = CachedAreaAIs[AreaID];
 
-                //@AI가 플레이어를 인지 중인지 확인
+            for (const FAreaAIInfo& AIInfo : AreaAIs)
+            {
+                if (!AIInfo.AIActor.IsValid()) continue;
+
+                AActor* AI = AIInfo.AIActor.Get();
+
+                //2단계: 최소 요구 조건 체크
+                if (!MeetsMinimumDetectionConditions(AI, AIInfo.CurrentState))
+                {
+                    continue;
+                }
+
                 TWeakObjectPtr<AActor> AIPtr(AI);
                 if (AIsDetectingPawn.Contains(AIPtr))
                 {
                     continue;
                 }
 
-                //@카메라 시야 내에 있는지 확인
-                if (bOnlyDetectInCameraView && !IsActorInCameraView(AI))
-                    continue;
-
-                //@후면 노출 상태 체크
-                bool bIsBackExposed = IsActorBackExposed(AI);
-
-                //@가장 가까운 AI 타겟
-                if (bIsBackExposed)
+                //3단계: 등을 보이고 있는지 체크
+                if (!IsActorBackExposed(AI))
                 {
-                    FVector PawnLocation = GetPawnLocation();
-                    FVector AILocation = AI->GetActorLocation();
-                    float Distance = FVector::Distance(PawnLocation, AILocation);
+                    continue;
+                }
 
-                    if (Distance < ClosestDistance)
-                    {
-                        ClosestDistance = Distance;
-                        ClosestActor = AI;
-                    }
+                float Distance = FVector::Distance(PawnLocation, AI->GetActorLocation());
+
+                //4단계: 가장 가까운 AI로 타겟을 업데이트
+                if (Distance < ClosestDistance)
+                {
+                    ClosestDistance = Distance;
+                    ClosestActor = AI;
                 }
             }
         }
 
-        //@가장 가까운 AI
-        if (ClosestActor)
-        {
-            AmbushTarget = ClosestActor;
-            UE_LOGFMT(LogObjectiveDetection, Log, "가장 가까운 후면 노출 AI({0})를 AmbushTarget으로 설정", *ClosestActor->GetName());
-        }
-        else
-        {
-            //@조건을 만족하는 AI가 없는 경우
-            UE_LOGFMT(LogObjectiveDetection, Log, "후면 노출된 AI가 없어서 AmbushTarget 해제");
-        }
+        AmbushTarget = ClosestActor;
     }
 
-    //@AmbushTarget 변경 확인 및 이벤트 발생
     if (AmbushTarget.Get() != PreviousAmbushTarget)
     {
-        UE_LOGFMT(LogObjectiveDetection, Log, "AmbushTarget 변경: {0} -> {1}",
-            PreviousAmbushTarget ? *PreviousAmbushTarget->GetName() : TEXT("없음"),
-            AmbushTarget.IsValid() ? *AmbushTarget->GetName() : TEXT("없음"));
-
-        //@잠재적 매복 암살 타겟 변경 이벤트
         AmbushTargetChanged.Broadcast(AmbushTarget.Get());
     }
 }
 
 void UObjectiveDetectionComponent::UpdateDetectionStructure()
 {
+<<<<<<< HEAD
+    FVector PawnLocation = GetPawnLocation();
+=======
     FVector OwnerLocation;
+    FVector OwnerForwardDir  ;
     if (const APlayerController* PC = Cast<APlayerController>(GetOwner()))
     {
         if (const APawn* P = PC->GetPawn())
         {
             OwnerLocation = P->GetActorLocation();
+            OwnerForwardDir = P->GetActorForwardVector();
         }
     }
+>>>>>>> origin/develop
 
-
-    //@ 반각(총각도의 절반)
     const float HalfAngleDeg = FMath::Max(0.f, DetectionStructureTotalAngleDegrees * 0.5f);
     const float CosThreshold = FMath::Cos(FMath::DegreesToRadians(HalfAngleDeg));
-    const float DistLimit  = DetectionStructureDistance;
+    const float DistLimit = DetectionStructureDistance;
 
-    TArray<AActor*> NewList;
-    NewList.Reserve(BoundAreas.Num());
+    AActor* ClosestStructure = nullptr;
+    float LowestDistSq = FLT_MAX;
+    bool HasFound = false;
 
-    
     for (const FAreaBindingInfo& AreaInfo : BoundAreas)
     {
+        if (!AreaInfo.IsValid()) continue;
 
         TArray<FStructureData> StructureDatas = AreaInfo.AreaRef.Get()->GetStructureDatas();
-        
-        float LowestDistSq =FLT_MAX;
-        bool HasFound = false;
+
         for (const FStructureData& StructureData : StructureDatas)
         {
             AActor* Target = StructureData.GetStructureActor();
             if (!IsValid(Target)) continue;
 
+<<<<<<< HEAD
+            const FVector ToOwner = PawnLocation - Target->GetActorLocation();
+            float DistSq = ToOwner.SizeSquared();
+
+            //1단계: 최대 거리 내 캐릭터가 존재하는지 체크
+            if (DistSq > (DistLimit * DistLimit))
+                continue;
+
+            FVector TargetForwardDir = Target->GetActorForwardVector();
+            FVector OwnerToTargetDir = ToOwner.GetSafeNormal();
+=======
             
             //@ 감지 거리 체크
-            const FVector ToOwner = OwnerLocation - Target->GetActorLocation();
+            const FVector ToTarget =  Target->GetActorLocation() - OwnerLocation;
             float DistSq  = FVector::Dist(Target->GetActorLocation(), OwnerLocation);
             if (DistSq > DistLimit)
                 continue;
 
             FVector TargetForwardDir = Target->GetActorForwardVector();
-            FVector OwerToTargetDir = ToOwner;
+            FVector OwerToTargetDir = ToTarget;
+>>>>>>> origin/develop
 
-            // if (bIgnoreZ) { TargetForwardDir.Z = 0; OwerToTargetDir.Z = 0; }
-            if (!TargetForwardDir.Normalize() || !OwerToTargetDir.Normalize())
+            if (!TargetForwardDir.Normalize())
                 continue;
 
+<<<<<<< HEAD
+            //2단계: 내적, 지정 각도 내 캐릭터가 위치하는지 체크
+            const float CosAngle = FVector::DotProduct(TargetForwardDir, OwnerToTargetDir);
+=======
             //@구조물 보는 방향 x각도 이내에 있는지 체크
-            const float CosAngle = FVector::DotProduct(TargetForwardDir, OwerToTargetDir);
+            const float CosAngle = FVector::DotProduct(OwnerForwardDir, OwerToTargetDir);
+>>>>>>> origin/develop
             if (CosAngle < CosThreshold)
                 continue;
 
-            if (DistSq >= LowestDistSq) continue;        //@ 이미 더 가까운 게 있음
+            if (DistSq >= LowestDistSq) continue;
 
-            UE_LOGFMT(LogObjectiveDetection, Warning, "구조물 감지됨!!! {0}", Target->GetName());
-            
             HasFound = true;
-            
             LowestDistSq = DistSq;
-
-            //@감지된 구조물 액터 캐싱
-            DetectedStructureActor = Target;
-        }
-
-        if (!HasFound)
-        {
-            if (DetectedStructureActor != nullptr)
-            {
-                //@ 이전 감지한 구조물이 범위 밖인지 체크
-                const FVector ToOwner = OwnerLocation - DetectedStructureActor->GetActorLocation();
-                float DistSq  = FVector::Dist(ToOwner, OwnerLocation);
-                if (DistSq > DistLimit)
-                {
-                    //@이전 감지한 구조물 감지 해제됨 이벤트
-                    DetectedStructureChanged.Broadcast(DetectedStructureActor.Get(), false);
-                }
-            }
-
-            //@ 아무것도 못찾았으니 이전 감지된 액터 null
-            DetectedStructureActor = nullptr;
-        }
-        else
-        {
-            //@ 구조물 감지됨 이벤트
-            DetectedStructureChanged.Broadcast(DetectedStructureActor.Get(), true);
+            ClosestStructure = Target;
         }
     }
-}
 
+    if (!HasFound)
+    {
+        if (DetectedStructureActor.IsValid())
+        {
+            DetectedStructureChanged.Broadcast(DetectedStructureActor.Get(), false);
+        }
+        DetectedStructureActor = nullptr;
+    }
+    else if (DetectedStructureActor.Get() != ClosestStructure)
+    {
+        DetectedStructureActor = ClosestStructure;
+        DetectedStructureChanged.Broadcast(DetectedStructureActor.Get(), true);
+    }
+}
 #pragma endregion
 
-//@Callbacks
 #pragma region Callbacks
 void UObjectiveDetectionComponent::OnPawnBeginOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex,
     bool bFromSweep, const FHitResult& SweepResult)
 {
-    //@Ohter Actor
     if (!IsValid(OtherActor))
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "오버랩 이벤트: 유효하지 않은 액터");
         return;
     }
 
-    UE_LOGFMT(LogObjectiveDetection, Log, "({0})과 충돌!", OtherActor->GetName());
-
-    //@Area 확인
     AArea* Area = Cast<AArea>(OtherActor);
     if (!Area)
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "오버랩 이벤트: {0}은(는) Area가 아님 (클래스: {1})",
-            *OtherActor->GetName(), *OtherActor->GetClass()->GetName());
         return;
     }
 
-    UE_LOGFMT(LogObjectiveDetection, Log, "Pawn이 Area({0})에 진입, 바인딩 시작", *Area->GetName());
-
-    //@외부 바인딩...
     ExternalBindToArea(Area);
 }
 
 void UObjectiveDetectionComponent::OnPawnEndOverlap(UPrimitiveComponent* OverlappedComp, AActor* OtherActor,
     UPrimitiveComponent* OtherComp, int32 OtherBodyIndex)
 {
-    // 충돌한 액터가 유효한지 확인
     if (!IsValid(OtherActor))
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "오버랩 종료 이벤트: 유효하지 않은 액터");
         return;
     }
 
-    UE_LOGFMT(LogObjectiveDetection, Log, "({0})과 충돌 종료", OtherActor->GetName());
-
-    // Area 확인
     AArea* Area = Cast<AArea>(OtherActor);
     if (!Area)
     {
-        // Area가 아닌 경우 무시
-        UE_LOGFMT(LogObjectiveDetection, Warning, "오버랩 종료 이벤트: {0}은(는) Area가 아님", *OtherActor->GetName());
         return;
     }
 
-    UE_LOGFMT(LogObjectiveDetection, Log, "Pawn이 Area({0})에서 이탈, 바인딩 해제 시작", *Area->GetName());
-
-    // Area 이벤트에서 언바인딩
     UnbindFromAreaEvents(Area);
 }
 
 void UObjectiveDetectionComponent::OnLockOnStateChanged(bool bIsLockOn, AActor* TargetActor)
 {
-    // 기본 상태 변화 로그 - 이벤트 발생 시 항상 출력
-    UE_LOGFMT(LogObjectiveDetection, Log, "Lock On 상태 변경: {0}, 타겟: {1}",
-        bIsLockOn ? TEXT("활성화") : TEXT("비활성화"),
-        TargetActor ? *TargetActor->GetName() : TEXT("없음"));
-
-    // ============================================
-    // 1. 핵심 기능 - 항상 실행 (인디케이터 설정과 무관)
-    // ============================================
     if (bIsLockOn && TargetActor)
     {
-        // Lock On 활성화 시 타겟 설정 - 항상 실행
         SetCurrentTargetAI(TargetActor);
     }
     else if (!bIsLockOn)
     {
-        // Lock On 비활성화 시 타겟 제거 - 항상 실행
         SetCurrentTargetAI(nullptr);
     }
-
-    // ============================================
-    // 2. 인디케이터 표시 처리 - 조건부 실행
-    // ============================================
-
-    // Billboard 컴포넌트 유효성 확인
-    if (!IndicatorBillboardComponent)
-    {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "Lock On 표시 실패: Billboard 컴포넌트가 유효하지 않음");
-        return; // 인디케이터만 실패, 핵심 기능은 이미 완료됨
-    }
-
-    // 인디케이터 표시가 전체적으로 비활성화된 경우
-    if (!bEnableIndicatorDisplay)
-    {
-        UE_LOGFMT(LogObjectiveDetection, Log, "인디케이터 표시가 비활성화되어 있어 Lock On 인디케이터를 표시하지 않음");
-        IndicatorBillboardComponent->SetVisibility(false);
-        return;
-    }
-
-    // Lock On 상태에 따른 인디케이터 표시 처리
-    if (bIsLockOn && TargetActor)
-    {
-        // LockOn 인디케이터 표시 설정이 활성화된 경우에만 표시
-        if (bShowLockOnIndicator || bDebugMode)
-        {
-            UpdateBillboardComponent(true);
-        }
-        else
-        {
-            UE_LOGFMT(LogObjectiveDetection, Log, "LockOn 인디케이터 표시가 비활성화되어 있어 표시하지 않음");
-            UpdateBillboardComponent(false);
-        }
-    }
-    else if (!bIsLockOn)
-    {
-        // Lock On 비활성화 시 인디케이터 숨김
-        UpdateBillboardComponent(false);
-    }
-
-    UE_LOGFMT(LogObjectiveDetection, Log, "Lock On 상태 처리 완료");
 }
 
 void UObjectiveDetectionComponent::OnAreaObjectiveStateChanged(AActor* ObjectiveActor, const FGameplayTag& StateTag, AArea* SourceArea, const FGuid& AreaID)
 {
-    //@인자 유효성 검사
     if (!IsValid(ObjectiveActor) || !IsValid(SourceArea))
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "유효하지 않은 객체: {0} 또는 {1}",
-            ObjectiveActor ? TEXT("유효한 객체") : TEXT("유효하지 않은 객체"),
-            SourceArea ? TEXT("유효한 Area") : TEXT("유효하지 않은 Area"));
         return;
     }
 
-    //@StateTagsToDetect 필터링 - 관심 있는 상태 태그만 처리
     if (!StateTagsToDetect.Contains(StateTag))
     {
         return;
     }
 
-    //@시야 내 액터만 감지하는 옵션이 켜져있는 경우, 시야 체크
     if (bOnlyDetectInCameraView && IsOwnerPlayerController())
     {
-        if (!IsActorInCameraView(ObjectiveActor))
+        if (!IsInCameraView(ObjectiveActor))
         {
-            UE_LOGFMT(LogObjectiveDetection, Warning, "시야 밖 목표물 무시: {0}", *ObjectiveActor->GetName());
             return;
         }
     }
 
-    //@현재 타겟 액터와 동일한지 확인
+    CachedAreaAIs.Remove(AreaID);
+
     if (CurrentTargetAI.IsValid() && CurrentTargetAI.Get() == ObjectiveActor)
     {
-        //@Dead 상태 태그 확인
         if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
         {
-            //@Fragile 여부 해제
             bIsCurrentTargetFragile = false;
-
-            //@타겟 해제
             SetCurrentTargetAI(nullptr);
-
-            //@Billboard 컴포넌트 숨기기
-            UpdateBillboardComponent(false);
-
-            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) 사망하여 인디케이터를 비활성화 및 타겟 해제함", *ObjectiveActor->GetName());
         }
-        //@Fragile 상태 변경 시
         else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Fragile")))
         {
             bIsCurrentTargetFragile = true;
-            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Fragile 상태로 변경됨", *ObjectiveActor->GetName());
-
-            // Fragile 상태가 되었을 때 즉시 실행처리 하지 않고, 
-            // UpdateExecutionTargetState()가 다음 틱에서 처리하도록 함
-            // 빌보드 업데이트는 계속 필요하지만 텍스처 변경은 차후 정면 체크 후 결정
-            UpdateBillboardComponent(true, true);
         }
-        //@Normal 상태 변경 시
         else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
         {
             bIsCurrentTargetFragile = false;
 
-            // ExecutionTarget이 현재 타겟과 동일한 경우 ExecutionTarget 초기화
             if (ExecutionTarget.IsValid() && ExecutionTarget.Get() == ObjectiveActor)
             {
                 ExecutionTarget.Reset();
-                // 이벤트 발생
                 ExecutionTargetChanged.Broadcast(nullptr);
-                UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경되어 처형 가능 타겟에서 제외됨", *ObjectiveActor->GetName());
             }
-
-            UE_LOGFMT(LogObjectiveDetection, Log, "타겟 {0}이(가) Normal 상태로 변경됨", *ObjectiveActor->GetName());
-
-            // 빌보드 업데이트
-            UpdateBillboardComponent(true, false);
         }
     }
 
-    //@현재 AmbushTarget이 상태 변경된 경우에만 처리 - 수정된 부분
     if (AmbushTarget.IsValid() && AmbushTarget.Get() == ObjectiveActor)
     {
-        bool bShouldClearAmbushTarget = false;
-
-        //@Dead 상태가 되면 암살 불가능
         if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
-        {
-            bShouldClearAmbushTarget = true;
-            UE_LOGFMT(LogObjectiveDetection, Log, "현재 암살 대상 {0}이(가) 사망하여 즉시 AmbushTarget 해제", *ObjectiveActor->GetName());
-        }
-
-        if (bShouldClearAmbushTarget)
         {
             AmbushTarget.Reset();
-            //@암살 대상 변경 이벤트 발생
             AmbushTargetChanged.Broadcast(nullptr);
-            UE_LOGFMT(LogObjectiveDetection, Log, "AmbushTarget 즉시 해제 및 이벤트 발생");
         }
     }
 
-    //@현재 ExecutionTarget이 상태 변경된 경우에만 처리 - 수정된 부분  
     if (ExecutionTarget.IsValid() && ExecutionTarget.Get() == ObjectiveActor)
     {
-        bool bShouldClearExecutionTarget = false;
+        bool bShouldClear = StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")) ||
+            StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal"));
 
-        if (StateTag.MatchesTag(FGameplayTag::RequestGameplayTag("State.Dead")))
-        {
-            bShouldClearExecutionTarget = true;
-            UE_LOGFMT(LogObjectiveDetection, Log, "현재 처형 대상 {0}이(가) 사망하여 즉시 ExecutionTarget 해제", *ObjectiveActor->GetName());
-        }
-        else if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Normal")))
-        {
-            bShouldClearExecutionTarget = true;
-            UE_LOGFMT(LogObjectiveDetection, Log, "현재 처형 대상 {0}이(가) Normal 상태로 변경되어 즉시 ExecutionTarget 해제", *ObjectiveActor->GetName());
-        }
-
-        if (bShouldClearExecutionTarget)
+        if (bShouldClear)
         {
             ExecutionTarget.Reset();
-            //@처형 대상 변경 이벤트 발생
             ExecutionTargetChanged.Broadcast(nullptr);
-            UE_LOGFMT(LogObjectiveDetection, Log, "ExecutionTarget 즉시 해제 및 이벤트 발생");
         }
     }
 
-    //@감지 가능한 AI의 상태 변화 이벤트 호출
     DetectedAIStateChanged.Broadcast(StateTag, ObjectiveActor);
-
-    UE_LOGFMT(LogObjectiveDetection, Log, "Area {0}에서 상태 변경 처리 완료: {1} -> {2}",
-        *SourceArea->GetName(), *ObjectiveActor->GetName(), *StateTag.ToString());
 }
 
 void UObjectiveDetectionComponent::OnDetectedByAI(bool bIsDetected, AActor* AI, APlayerCharacter* DetectedPlayer)
 {
-    //@인자 유효성 검사
     if (!IsValid(AI) || !IsValid(DetectedPlayer))
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "ComponentID: {0} - 유효하지 않은 AI 또는 플레이어", ComponentID.ToString());
         return;
     }
 
-    //@ControlledPawn
     APawn* CurrentPawn = GetControlledPawn();
     if (!IsValid(CurrentPawn))
     {
-        UE_LOGFMT(LogObjectiveDetection, Warning, "ComponentID: {0} - 유효하지 않은 ControlledPawn", ComponentID.ToString());
         return;
     }
 
-    //@ControlledPawn == DetectedPlayer?
     APlayerCharacter* PlayerPawn = Cast<APlayerCharacter>(CurrentPawn);
     if (!PlayerPawn || PlayerPawn != DetectedPlayer)
     {
         return;
     }
 
-    //@AI의 인지 상태에 따라 목록 업데이트
     TWeakObjectPtr<AActor> AIPtr(AI);
 
     if (bIsDetected)
     {
-        //@인지 중인 AI 목록에 추가
-        AIsDetectingPawn.AddUnique(AIPtr);
-
-        UE_LOGFMT(LogObjectiveDetection, Log, "ComponentID: {0} - AI {1}가 플레이어를 인지함",
-            ComponentID.ToString(), AI->GetName());
+        AIsDetectingPawn.Add(AIPtr);
     }
     else
     {
-        //@인지가 해제된 경우 목록에서 제거
         AIsDetectingPawn.Remove(AIPtr);
-
-        UE_LOGFMT(LogObjectiveDetection, Log, "ComponentID: {0} - AI {1}가 플레이어 인지를 해제함",
-            ComponentID.ToString(), AI->GetName());
     }
 }
 #pragma endregion
 
-//@Utility(Setter, Getter,...etc)
 #pragma region Utility
 bool UObjectiveDetectionComponent::IsOwnerAIController() const
 {
@@ -1300,58 +761,58 @@ bool UObjectiveDetectionComponent::IsOwnerPlayerController() const
 
 APawn* UObjectiveDetectionComponent::GetControlledPawn() const
 {
-    // 소유자가 컨트롤러인지 확인
     AController* Controller = Cast<AController>(GetOwner());
     if (!Controller)
     {
         return nullptr;
     }
 
-    // 컨트롤러의 Pawn 반환
     return Controller->GetPawn();
 }
 
-FVector UObjectiveDetectionComponent::GetPawnLocation() const
+FVector UObjectiveDetectionComponent::GetPawnLocation()
 {
-    // ControlledPawn이 유효한 경우 해당 위치 반환
-    if (ControlledPawn.IsValid())
+    if (bPawnLocationCached)
     {
-        return ControlledPawn->GetActorLocation();
+        return CachedPawnLocation;
     }
 
-    // 그렇지 않으면 현재 컨트롤 중인 Pawn의 위치 계산
+    if (ControlledPawn.IsValid())
+    {
+        CachedPawnLocation = ControlledPawn->GetActorLocation();
+        bPawnLocationCached = true;
+        return CachedPawnLocation;
+    }
+
     APawn* CurrentPawn = GetControlledPawn();
     if (CurrentPawn)
     {
-        return CurrentPawn->GetActorLocation();
+        CachedPawnLocation = CurrentPawn->GetActorLocation();
+        bPawnLocationCached = true;
+        return CachedPawnLocation;
     }
 
-    // 실패 시 Zero 반환
     return FVector::ZeroVector;
 }
 
 UCapsuleComponent* UObjectiveDetectionComponent::GetPawnCapsuleComponent() const
 {
-    //@ControlledPawn이 유효한지 확인
     if (!ControlledPawn.IsValid())
     {
         return nullptr;
     }
 
-    // Pawn의 캡슐 컴포넌트 찾기
     return ControlledPawn->FindComponentByClass<UCapsuleComponent>();
 }
 
 UCameraComponent* UObjectiveDetectionComponent::GetPlayerCameraComponent() const
 {
-    // 플레이어 컨트롤러 확인
     APlayerController* PC = Cast<APlayerController>(GetOwner());
     if (!PC)
     {
         return nullptr;
     }
 
-    // 컨트롤된 폰 확인
     APawn* PlayerPawn = PC->GetPawn();
     if (!PlayerPawn)
     {
@@ -1364,60 +825,77 @@ UCameraComponent* UObjectiveDetectionComponent::GetPlayerCameraComponent() const
         return nullptr;
     }
 
-    // 카메라 컴포넌트 직접 찾기
     return PlayerCharacter->GetCameraComponent();
 }
 
-bool UObjectiveDetectionComponent::IsActorInCameraView(AActor* Actor) const
+bool UObjectiveDetectionComponent::MeetsMinimumDetectionConditions(AActor* AIActor, const FGameplayTag& StateTag) const
 {
-    // 유효성 검사
+    if (!AIActor->IsValidLowLevel())
+    {
+        return false;
+    }
+
+    if (StateTag.MatchesTagExact(FGameplayTag::RequestGameplayTag("State.Dead")))
+    {
+        return false;
+    }
+
+    if (bOnlyDetectInCameraView && !const_cast<UObjectiveDetectionComponent*>(this)->IsInCameraView(AIActor))
+    {
+        return false;
+    }
+
+    return true;
+}
+
+bool UObjectiveDetectionComponent::IsInCameraView(AActor* Actor)
+{
     if (!IsValid(Actor))
     {
         return false;
     }
 
-    // PlayerController가 아니면 항상 true 반환
+    TWeakObjectPtr<AActor> ActorPtr(Actor);
+    if (const bool* CachedResult = CachedViewResults.Find(ActorPtr))
+    {
+        return *CachedResult;
+    }
+
     if (!IsOwnerPlayerController())
     {
         return true;
     }
 
-    // 플레이어 컨트롤러와 폰 가져오기
     APlayerController* PC = Cast<APlayerController>(GetOwner());
     if (!PC || !ControlledPawn.IsValid())
     {
         return false;
     }
 
-    // 플레이어 캐릭터 확인
     APlayerCharacter* PlayerChar = Cast<APlayerCharacter>(ControlledPawn.Get());
     if (!PlayerChar)
     {
         return false;
     }
 
-    // 카메라 컴포넌트 가져오기
     UCameraComponent* Camera = PlayerChar->FindComponentByClass<UCameraComponent>();
     if (!Camera)
     {
         return false;
     }
 
-    // 카메라 위치와 전방 벡터 가져오기
     FVector CameraLocation = Camera->GetComponentLocation();
     FVector CameraForward = Camera->GetForwardVector();
-
-    // 카메라에서 액터까지의 방향 벡터 계산
     FVector DirectionToActor = (Actor->GetActorLocation() - CameraLocation).GetSafeNormal();
 
-    // 카메라 시야 내에 있는지 확인 (내적 사용)
     float DotProduct = FVector::DotProduct(CameraForward, DirectionToActor);
-
-    // FOV 확장을 적용한 시야각 계산
     float HalfFOV = FMath::Cos(FMath::DegreesToRadians((Camera->FieldOfView + FOVExpansion) * 0.5f));
 
-    // 시야 내에 있으면 true 반환
-    return DotProduct > HalfFOV;
+    bool bInView = DotProduct > HalfFOV;
+
+    CachedViewResults.Add(ActorPtr, bInView);
+
+    return bInView;
 }
 
 AArea* UObjectiveDetectionComponent::FindAreaByGuid(const FGuid& AreaGuid) const
@@ -1456,34 +934,18 @@ FGuid UObjectiveDetectionComponent::GetComponentID() const
 
 bool UObjectiveDetectionComponent::IsActorFrontExposed(AActor* Actor) const
 {
-    if (!ControlledPawn.IsValid() || !IsValid(Actor))
+    if (!bPawnLocationCached || !IsValid(Actor))
     {
         return false;
     }
 
-    //@플레이어 위치
-    FVector PlayerLocation = ControlledPawn->GetActorLocation();
-    //@AI 위치
     FVector ActorLocation = Actor->GetActorLocation();
-
-    //@플레이어에서 AI로 향하는 방향 벡터
-    FVector DirectionToActor = (ActorLocation - PlayerLocation).GetSafeNormal();
-
-    //@AI의 전방 벡터
+    FVector DirectionToActor = (ActorLocation - CachedPawnLocation).GetSafeNormal();
     FVector ActorForward = Actor->GetActorForwardVector();
 
-    //@두 벡터 간의 각도 계산 (내적 사용)
     float DotProduct = FVector::DotProduct(DirectionToActor, ActorForward);
 
-    //@지정된 임계값보다 크면 정면에서 바라보는 것으로 판단 (cos 값이 클수록 각도가 작음)
-    //@ExecutionAngleThreshold는 0~1 사이 값 (1에 가까울수록 엄격한 각도)
-    bool bIsFrontExposed = FMath::Abs(DotProduct) >= ExecutionAngleThreshold;
-
-    UE_LOGFMT(LogObjectiveDetection, Log, "정면 노출 체크 - 액터: {0}, 결과: {1}, 내적값: {2}, 임계값: {3}",
-        *Actor->GetName(), bIsFrontExposed ? TEXT("노출됨") : TEXT("노출 안됨"),
-        DotProduct, ExecutionAngleThreshold);
-
-    return bIsFrontExposed;
+    return FMath::Abs(DotProduct) >= ExecutionAngleThreshold;
 }
 
 bool UObjectiveDetectionComponent::IsActorBackExposed(AActor* TargetActor) const
@@ -1496,111 +958,25 @@ bool UObjectiveDetectionComponent::IsActorBackExposed(AActor* TargetActor) const
     return UCombatLibrary::IsActorBackExposed(ControlledPawn.Get(), TargetActor);
 }
 
-AActor* UObjectiveDetectionComponent::DetermineTargetActor()
-{
-    // 1. 현재 LockOn된 타겟이 있으면 우선 사용
-    if (CurrentTargetAI.IsValid())
-    {
-        return CurrentTargetAI.Get();
-    }
-    // 2. 처형 가능 타겟이 있으면 다음 우선순위
-    else if (ExecutionTarget.IsValid())
-    {
-        return ExecutionTarget.Get();
-    }
-    // 3. 매복 가능 타겟이 있으면 다음 우선순위 
-    else if (AmbushTarget.IsValid())
-    {
-        return AmbushTarget.Get();
-    }
-    //4. 감지된구조물 있으면 마지막 우선순위
-    else if (DetectedStructureActor.IsValid())
-    {
-        return DetectedStructureActor.Get();
-    }
-
-    return nullptr;
-}
-
 void UObjectiveDetectionComponent::SetCurrentTargetAI(AActor* NewTargetActor)
 {
-    // 이전 타겟 저장
     AActor* PreviousTarget = CurrentTargetAI.Get();
 
-    // 타겟이 변경될 경우 상태 초기화
     if (PreviousTarget != NewTargetActor)
     {
-        // 타겟이 변경되면 Fragile 상태 초기화
         bIsCurrentTargetFragile = false;
     }
 
-    // 새 타겟 설정
     CurrentTargetAI = NewTargetActor;
 
-    // 로그 출력
     if (PreviousTarget != NewTargetActor)
     {
-        UE_LOGFMT(LogObjectiveDetection, Log, "타겟 변경: {0} -> {1}",
-            PreviousTarget ? *PreviousTarget->GetName() : TEXT("없음"),
-            NewTargetActor ? *NewTargetActor->GetName() : TEXT("없음"));
+        CurrentTargetChanged.Broadcast(NewTargetActor);
     }
 }
 
 AActor* UObjectiveDetectionComponent::GetCurrentTargetAI() const
 {
     return CurrentTargetAI.IsValid() ? CurrentTargetAI.Get() : nullptr;
-}
-
-void UObjectiveDetectionComponent::SetIndicatorTexture(UTexture2D* NewTexture)
-{
-    // Billboard 컴포넌트 유효성 확인
-    if (!IndicatorBillboardComponent || !NewTexture)
-    {
-        return;
-    }
-
-    // 텍스처 설정
-    IndicatorBillboardComponent->SetRelativeScale3D(FVector(TextureScale));
-    IndicatorBillboardComponent->SetSprite(NewTexture);
-}
-
-bool UObjectiveDetectionComponent::ShouldShowIndicatorForTarget(AActor* TargetActor) const
-{
-    if (!TargetActor)
-    {
-        return false;
-    }
-
-    // 디버그 모드인 경우 모든 인디케이터 표시
-    if (bDebugMode)
-    {
-        return true;
-    }
-
-    // 현재 LockOn된 타겟인 경우
-    if (CurrentTargetAI.IsValid() && CurrentTargetAI.Get() == TargetActor)
-    {
-        return bShowLockOnIndicator;
-    }
-
-    // 처형 가능 타겟인 경우
-    if (ExecutionTarget.IsValid() && ExecutionTarget.Get() == TargetActor)
-    {
-        return bShowExecutionIndicator;
-    }
-
-    // 매복 암살 타겟인 경우
-    if (AmbushTarget.IsValid() && AmbushTarget.Get() == TargetActor)
-    {
-        return bShowAmbushIndicator;
-    }
-
-    // 구조물 감지 타겟인 경우
-    if (DetectedStructureActor.IsValid() && DetectedStructureActor.Get() == TargetActor)
-    {
-        return bShowStructureIndicator;
-    }
-
-    return false;
 }
 #pragma endregion

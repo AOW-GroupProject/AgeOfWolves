@@ -111,6 +111,16 @@ public:
 		FGameplayAttributeData MaxStamina;
 	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxStamina)
 
+		// ✅ 추가: ManaStack - 마나 스택 누적 시스템
+		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Mana")
+	FGameplayAttributeData ManaStack;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, ManaStack)
+
+		// ✅ 추가: MaxManaStack - 마나 스택 최대치
+		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Mana")
+	FGameplayAttributeData MaxManaStack;
+	ATTRIBUTE_ACCESSORS(UBaseAttributeSet, MaxManaStack)
+
 		// Stamina regen rate will passively increase Stamina every second
 		UPROPERTY(BlueprintReadOnly, Category = "Attribute | Stamina")
 		FGameplayAttributeData StaminaRegenRate;

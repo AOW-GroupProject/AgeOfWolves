@@ -212,8 +212,25 @@ void AAgeOfWolvesGameMode::HandleFirstStructureActivation(const FStructureData& 
         CachedGameState->SetLevelTransitionRespawnInfo(FirstPlayer, DefaultTransform);
     }
 
-    // 로딩 UI 표시
-    ShowLoadingUI();
+    // WolfStatue 상호작용 UI 표시
+    ShowWolfStatueInteractionUI();
+
+    // 5초 후 WolfStatue UI 숨기고 LoadingUI 표시
+    GetWorld()->GetTimerManager().SetTimer(
+        WolfStatueUITimerHandle,
+        [this]()
+        {
+            // WolfStatue UI 숨김
+            HideWolfStatueInteractionUI();
+
+            // LoadingUI 표시
+            ShowLoadingUI();
+
+            UE_LOGFMT(LogAOWGameMode, Log, "WolfStatue UI → Loading UI 전환 완료");
+        },
+        5.0f,  // WolfStatue UI 표시 시간
+        false
+    );
 
     UE_LOGFMT(LogAOWGameMode, Log, "구조물 활성화 처리 완료");
 }
@@ -317,7 +334,6 @@ void AAgeOfWolvesGameMode::NotifyQuestCompleteViaGameState(FGameplayTag AreaTag,
     
     UE_LOGFMT(LogAOWGameMode, Log, "Game State를 통한 퀘스트 완료 알림 호출 완료");
 }
-
 
 bool AAgeOfWolvesGameMode::PerformPlayerTeleport(APawn* PlayerPawn, const FTransform& TargetTransform)
 {
@@ -471,6 +487,39 @@ void AAgeOfWolvesGameMode::HideLoadingUI()
         UE_LOGFMT(LogAOWGameMode, Warning, "로딩 UI 숨김 실패");
     }
 }
+
+void AAgeOfWolvesGameMode::ShowWolfStatueInteractionUI()
+{
+    if (!CachedUIManager)
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "WolfStatue 상호작용 UI 표시 실패: UIManager 없음");
+        return;
+    }
+
+    UE_LOGFMT(LogAOWGameMode, Log, "WolfStatue 상호작용 UI 표시 요청");
+
+    // UIManager에 직접 WolfStatue 상호작용 UI 표시 요청
+    if (!CachedUIManager->ShowSystemUI(FGameplayTag::RequestGameplayTag("UI.System.WolfStatueInteractionUI")))
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "WolfStatue 상호작용 UI 표시 실패");
+    }
+}
+
+void AAgeOfWolvesGameMode::HideWolfStatueInteractionUI()
+{
+    if (!CachedUIManager)
+    {
+        UE_LOGFMT(LogAOWGameMode, Error, "WolfStatue 상호작용 UI 숨김 실패: UIManager 없음");
+        return;
+    }
+
+    UE_LOGFMT(LogAOWGameMode, Log, "WolfStatue 상호작용 UI 숨김 요청");
+
+    if (!CachedUIManager->HideSystemUI(FGameplayTag::RequestGameplayTag("UI.System.WolfStatueInteractionUI")))
+    {
+        UE_LOGFMT(LogAOWGameMode, Warning, "WolfStatue 상호작용 UI 숨김 실패");
+    }
+}
 #pragma endregion
 
 //@Callbacks
@@ -594,7 +643,6 @@ void AAgeOfWolvesGameMode::OnLevelTransitionCompleted(const FGameplayTag& Comple
         UE_LOGFMT(LogAOWGameMode, Log, "레벨 전환 완료 델리게이트 바인딩 해제 완료");
     }
 }
-
 #pragma endregion
 
 //@유틸리티

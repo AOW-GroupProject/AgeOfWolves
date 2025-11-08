@@ -11,7 +11,13 @@ DEFINE_LOG_CATEGORY(LogAttributeSet)
 //@Defualt Setting
 #pragma region Default Setting
 UBaseAttributeSet::UBaseAttributeSet()
-{}
+{
+	// ✅ 추가: ManaStack 초기화 (기본값 0)
+	ManaStack = 0.f;
+
+	// ✅ 추가: MaxManaStack 초기화 (기본값 설정, 예: 10)
+	MaxManaStack = 3.f;
+}
 
 void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, float& NewValue)
 {
@@ -33,6 +39,17 @@ void UBaseAttributeSet::PreAttributeChange(const FGameplayAttribute& Attribute, 
 		AdjustAttributeForMaxChange(Stamina, MaxStamina, NewValue, GetStaminaAttribute());
 
 		UE_LOGFMT(LogAttributeSet, Error, "{0} : Stamina", NewValue);
+	}
+	// ✅ 추가: MaxManaStack 변경 시 ManaStack 조정
+	else if (Attribute == GetMaxManaStackAttribute())
+	{
+		// MaxManaStack이 변경될 때 현재 ManaStack이 새로운 최대값을 초과하지 않도록 조정
+		AdjustAttributeForMaxChange(ManaStack, MaxManaStack, NewValue, GetManaStackAttribute());
+	}
+	// ✅ 추가: ManaStack 클램핑 (0 ~ MaxManaStack)
+	else if (Attribute == GetManaStackAttribute())
+	{
+		NewValue = FMath::Clamp<float>(NewValue, 0.f, GetMaxManaStack());
 	}
 	//@Move Speed
 	else if (Attribute == GetMoveSpeedAttribute())
@@ -67,6 +84,31 @@ void UBaseAttributeSet::PostGameplayEffectExecute(const FGameplayEffectModCallba
 	if (Data.EvaluatedData.Attribute == GetStaminaAttribute())
 	{
 		SetStamina(FMath::Clamp(GetStamina(), 0.f, GetMaxStamina()));
+	}
+
+	// ✅ 추가: ManaStack 처리 - MaxManaStack 도달 시 Mana 증가 및 스택 초기화
+	if (Data.EvaluatedData.Attribute == GetManaStackAttribute())
+	{
+		// 현재 ManaStack 클램핑
+		SetManaStack(FMath::Clamp(GetManaStack(), 0.f, GetMaxManaStack()));
+
+		UE_LOGFMT(LogAttributeSet, Log, "마나 스택 현재 수치: {0}", GetManaStack());
+
+		// MaxManaStack에 도달했는지 확인
+		if (GetManaStack() >= GetMaxManaStack())
+		{
+			UE_LOGFMT(LogAttributeSet, Log, "마나 스택 최대치 도달! Mana +1, 스택 초기화");
+
+			// ManaStack 초기화
+			SetManaStack(0.f);
+
+			// Mana 1 증가 (MaxMana를 초과하지 않도록)
+			float NewMana = FMath::Min(GetMana() + 1.f, GetMaxMana());
+			SetMana(NewMana);
+
+			UE_LOGFMT(LogAttributeSet, Log, "현재 Mana: {0}/{1}, ManaStack: {2}/{3}",
+				GetMana(), GetMaxMana(), GetManaStack(), GetMaxManaStack());
+		}
 	}
 }
 #pragma endregion
@@ -113,6 +155,9 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 	AllAttributes.Add(GetManaAttribute());
 	AllAttributes.Add(GetMaxManaAttribute());
 	AllAttributes.Add(GetManaRegenRateAttribute());
+	// ✅ 추가: ManaStack 관련 Attribute
+	AllAttributes.Add(GetManaStackAttribute());
+	AllAttributes.Add(GetMaxManaStackAttribute());
 
 	AllAttributes.Add(GetStaminaAttribute());
 	AllAttributes.Add(GetMaxStaminaAttribute());
@@ -121,7 +166,7 @@ TArray<FGameplayAttribute> UBaseAttributeSet::GetAllAttributes() const
 	AllAttributes.Add(GetPoiseAttribute());
 
 	AllAttributes.Add(GetDefenseAttribute());
-	
+
 	AllAttributes.Add(GetOffenseAttribute());
 
 	AllAttributes.Add(GetMoveSpeedAttribute());

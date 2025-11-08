@@ -16,6 +16,7 @@ UUICollection::UUICollection(const FObjectInitializer& ObjectInitializer)
     MenuUIInformations.Empty();
     InteractionUIInformations.Empty();
     SystemUIInformations.Empty();
+    IndicatorUIInformations.Empty(); // 새로 추가
 }
 
 #if WITH_EDITOR
@@ -94,10 +95,11 @@ FUICollectionValidationResult UUICollection::ValidateUIArrays() const
         &HUDUIInformations,         //@Category 0 - HUD
         &MenuUIInformations,        //@Category 1 - Menu
         &InteractionUIInformations, //@Category 2 - Interaction
-        &SystemUIInformations       //@Category 3 - System
+        &SystemUIInformations,      //@Category 3 - System
+        &IndicatorUIInformations    //@Category 4 - Indicator (새로 추가)
     };
 
-    for (int32 CategoryIndex = 0; CategoryIndex < 4; ++CategoryIndex)
+    for (int32 CategoryIndex = 0; CategoryIndex < 5; ++CategoryIndex)
     {
         const TArray<FUIInformation>& UIArray = *UIArrays[CategoryIndex];
 
@@ -161,10 +163,11 @@ FUICollectionValidationResult UUICollection::ValidateUITagUniqueness() const
         &HUDUIInformations,         //@Category 0
         &MenuUIInformations,        //@Category 1
         &InteractionUIInformations, //@Category 2
-        &SystemUIInformations       //@Category 3
+        &SystemUIInformations,       //@Category 3
+        &IndicatorUIInformations
     };
 
-    for (int32 CategoryIndex = 0; CategoryIndex < 4; ++CategoryIndex)
+    for (int32 CategoryIndex = 0; CategoryIndex < 5; ++CategoryIndex)
     {
         const TArray<FUIInformation>& UIArray = *UIArrays[CategoryIndex];
 
@@ -207,10 +210,11 @@ FUICollectionValidationResult UUICollection::ValidateInputTagUniqueness() const
         &HUDUIInformations,
         &MenuUIInformations,
         &InteractionUIInformations,
-        &SystemUIInformations
+        &SystemUIInformations,
+        &IndicatorUIInformations    // 새로 추가
     };
 
-    for (int32 CategoryIndex = 0; CategoryIndex < 4; ++CategoryIndex)
+    for (int32 CategoryIndex = 0; CategoryIndex < 5; ++CategoryIndex)
     {
         const TArray<FUIInformation>& UIArray = *UIArrays[CategoryIndex];
 
@@ -259,10 +263,11 @@ FUICollectionValidationResult UUICollection::ValidateUILogicalConsistency() cons
         &HUDUIInformations,
         &MenuUIInformations,
         &InteractionUIInformations,
-        &SystemUIInformations
+        &SystemUIInformations,
+        &IndicatorUIInformations
     };
 
-    for (int32 CategoryIndex = 0; CategoryIndex < 4; ++CategoryIndex)
+    for (int32 CategoryIndex = 0; CategoryIndex < 5; ++CategoryIndex)
     {
         const TArray<FUIInformation>& UIArray = *UIArrays[CategoryIndex];
 
@@ -308,20 +313,22 @@ FUICollectionValidationResult UUICollection::ValidateUILogicalConsistency() cons
 FUICollectionValidationResult UUICollection::ValidateCategoryConsistency() const
 {
     const TArray<FUIInformation>* UIArrays[] = {
-        &HUDUIInformations,         //@Should be EUICategory::HUD
-        &MenuUIInformations,        //@Should be EUICategory::Menu
-        &InteractionUIInformations, //@Should be EUICategory::Interaction
-        &SystemUIInformations       //@Should be EUICategory::System
+        &HUDUIInformations,
+        &MenuUIInformations,
+        &InteractionUIInformations,
+        &SystemUIInformations,
+        &IndicatorUIInformations  // 새로 추가
     };
 
     const EUICategory ExpectedCategories[] = {
         EUICategory::HUD,
         EUICategory::Menu,
         EUICategory::Interaction,
-        EUICategory::System
+        EUICategory::System,
+        EUICategory::Indicator  // 새로 추가
     };
 
-    for (int32 CategoryIndex = 0; CategoryIndex < 4; ++CategoryIndex)
+    for (int32 CategoryIndex = 0; CategoryIndex < 5; ++CategoryIndex)
     {
         const TArray<FUIInformation>& UIArray = *UIArrays[CategoryIndex];
         const EUICategory ExpectedCategory = ExpectedCategories[CategoryIndex];
@@ -588,26 +595,26 @@ bool UUICollection::IsValidInputTag(const FGameplayTag& Tag) const
 
 const TCHAR* UUICollection::GetCategoryName(int32 CategoryIndex) const
 {
-    //@Category index to name mapping
     switch (CategoryIndex)
     {
     case 0: return TEXT("HUD");
     case 1: return TEXT("Menu");
     case 2: return TEXT("Interaction");
     case 3: return TEXT("System");
+    case 4: return TEXT("Indicator");  // 새로 추가
     default: return TEXT("Unknown");
     }
 }
 
 const TCHAR* UUICollection::GetCategoryName(EUICategory Category) const
 {
-    //@Category enum to name mapping
     switch (Category)
     {
     case EUICategory::HUD: return TEXT("HUD");
     case EUICategory::Menu: return TEXT("Menu");
     case EUICategory::Interaction: return TEXT("Interaction");
     case EUICategory::System: return TEXT("System");
+    case EUICategory::Indicator: return TEXT("Indicator");  // 새로 추가
     case EUICategory::MAX: return TEXT("MAX");
     default: return TEXT("Unknown");
     }
@@ -615,26 +622,26 @@ const TCHAR* UUICollection::GetCategoryName(EUICategory Category) const
 
 TArray<FUIInformation>* UUICollection::GetUIArrayByCategory(int32 Category)
 {
-    //@Helper function to get mutable array reference
     switch (Category)
     {
     case 0: return &HUDUIInformations;
     case 1: return &MenuUIInformations;
     case 2: return &InteractionUIInformations;
     case 3: return &SystemUIInformations;
+    case 4: return &IndicatorUIInformations;  // 새로 추가
     default: return nullptr;
     }
 }
 
 const TArray<FUIInformation>* UUICollection::GetUIArrayByCategory(int32 Category) const
 {
-    //@Helper function to get const array reference
     switch (Category)
     {
     case 0: return &HUDUIInformations;
     case 1: return &MenuUIInformations;
     case 2: return &InteractionUIInformations;
     case 3: return &SystemUIInformations;
+    case 4: return &IndicatorUIInformations;  // 새로 추가
     default: return nullptr;
     }
 }
@@ -794,6 +801,39 @@ void UUICollection::ValidateSystemUIOnly()
         }
     }
 }
+
+void UUICollection::ValidateIndicatorUIOnly()
+{
+    bool bHasErrors = false;
+
+    for (int32 i = 0; i < IndicatorUIInformations.Num(); ++i)
+    {
+        const FUIInformation& UIInfo = IndicatorUIInformations[i];
+
+        if (!IsValid(UIInfo.UIClass))
+        {
+            UE_LOGFMT(LogUICollection, Error, "Indicator UI 인덱스 {0}에 null UI 클래스가 있습니다", i);
+            bHasErrors = true;
+        }
+
+        if (!IsValidUITag(UIInfo.UITag))
+        {
+            UE_LOGFMT(LogUICollection, Error, "Indicator UI 인덱스 {0}에 유효하지 않은 UI 태그가 있습니다: {1}",
+                i, *UIInfo.UITag.ToString());
+            bHasErrors = true;
+        }
+    }
+
+    if (!bHasErrors)
+    {
+        UE_LOGFMT(LogUICollection, Log, "✅ Indicator UI 무결성 검사 성공");
+        if (GEngine)
+        {
+            GEngine->AddOnScreenDebugMessage(-1, 3.0f, FColor::Green,
+                TEXT("✅ Indicator UI 무결성 검사 성공!"));
+        }
+    }
+}
 #endif // WITH_EDITOR
 #pragma endregion
 
@@ -810,6 +850,8 @@ const TArray<FUIInformation>& UUICollection::GetUICategoryInformations(const EUI
         return InteractionUIInformations;
     case EUICategory::System:
         return SystemUIInformations;
+    case EUICategory::Indicator:  // 새로 추가
+        return IndicatorUIInformations;
     default:
         UE_LOGFMT(LogUICollection, Warning, "유효하지 않은 UI Category 입니다!");
         static const TArray<FUIInformation> EmptyArray;

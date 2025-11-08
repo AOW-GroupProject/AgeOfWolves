@@ -1098,6 +1098,22 @@ bool UInventoryComponent::FindExistingItemByClass(TSubclassOf<AItem> ItemClass, 
     return false;
 }
 
+bool UInventoryComponent::GetInventoryItem(const FGameplayTag& ItemTag, FInventoryItem& OutItem)
+{
+    for (const auto& Pair : Inventory)
+    {
+        if (Pair.Value.GetItemTag() == ItemTag)
+        {
+            UE_LOG(LogTemp, Warning, TEXT("Assigned. OutItem111"));
+            OutItem = Pair.Value;
+            UE_LOG(LogTemp, Warning, TEXT("Assigned. Pair.Value.Count=%d"), Pair.Value.ItemCount);
+            UE_LOG(LogTemp, Warning, TEXT("Assigned. OutItem.Count=%d"), OutItem.ItemCount);
+            return true;
+        }
+    }
+    return false;
+}
+
 bool UInventoryComponent::FindExistingItem(const FGameplayTag& ItemTag, FGuid& OutItemID)
 {
     for (const auto& Pair : Inventory)
